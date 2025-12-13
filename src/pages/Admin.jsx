@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useMemo,useRef, Suspense, lazy } from "react";
+
+import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from "react";
 import { User } from "@/entities/User";
 import { FileUpload } from "@/entities/FileUpload";
 import { Recommendation } from "@/entities/Recommendation";
-import { Product } from "@/entities/Product";
+// import { Product } from "@/entities/Product"; // Removed unused import
 import { Supplier } from "@/entities/Supplier";
 import { CustomerNotification } from "@/entities/CustomerNotification";
 import { SupportTicket } from "@/entities/SupportTicket";
@@ -10,35 +12,34 @@ import { UserActivity } from "@/entities/UserActivity";
 import { ProductCatalog } from "@/entities/ProductCatalog";
 import { BusinessForecast } from "@/entities/BusinessForecast";
 import { RecommendationFeedback } from '@/entities/RecommendationFeedback';
-import { OnboardingRequest } from '@/entities/OnboardingRequest'; // MODIFY: Ensure this import exists
+import { OnboardingRequest } from '@/entities/OnboardingRequest';
 import { BusinessMove } from '@/entities/BusinessMove';
 import { trackActivity } from "@/components/logic/activityTracker";
-import ProductCatalogManager from "../components/catalog/ProductCatalogManager";
-import EngagementDashboard from "../components/admin/EngagementDashboard";
-import FeedbackAnalytics from "@/components/shared/FeedbackAnalytics";
-import BusinessForecastManager from "@/components/forecast/BusinessForecastManager";
-import CustomerFileUploadManager from "@/components/admin/CustomerFileUploadManager";
+// import ProductCatalogManager from "../components/catalog/ProductCatalogManager"; // Removed unused import
+// import EngagementDashboard from "../components/admin/EngagementDashboard"; // Removed direct import, lazy loaded
+// import FeedbackAnalytics from "@/components/shared/FeedbackAnalytics"; // Removed unused import
+// import BusinessForecastManager from "@/components/forecast/BusinessForecastManager"; // Removed unused import
+// import CustomerFileUploadManager from "@/components/admin/CustomerFileUploadManager"; // Removed unused import
 import { enhanceRecommendationWithPrompt } from "@/components/logic/targetedRecommendationEngine";
-import { autoOnboardingOrchestrator } from "@/functions/autoOnboardingOrchestrator"; // NEW IMPORT
+import { autoOnboardingOrchestrator } from "@/functions/autoOnboardingOrchestrator";
 import { generateBusinessPlanText } from "@/functions/generateBusinessPlanText";
-import { exportBusinessPlanToPdf } from "@/functions/exportBusinessPlanToPdf"; // לייצוא PDF
-import SpecificFileUploadBox from "../components/admin/SpecificFileUploadBox"; // NEW IMPORT
-import { StrategicPlanInput } from '@/entities/StrategicPlanInput'; // <--- הוסף את השורה הזו
-import StrategicPlanInputForm from "../components/forecast/StrategicPlanInputForm"; // הוסף שורה זו
+import { exportBusinessPlanToPdf } from "@/functions/exportBusinessPlanToPdf";
+// import SpecificFileUploadBox from "../components/admin/SpecificFileUploadBox"; // Removed unused import
+import { StrategicPlanInput } from '@/entities/StrategicPlanInput';
+import StrategicPlanInputForm from "../components/forecast/StrategicPlanInputForm";
 import { initiateWhatsAppConversation } from "@/functions/initiateWhatsAppConversation";
 import EnhancedRecommendationOptionsModal from "@/components/admin/EnhancedRecommendationOptionsModal";
 import { CustomerContact } from '@/entities/CustomerContact';
-import { sendWhatsAppMessage } from "@/functions/sendWhatsAppMessage"; // <--- THIS IS THE MISSING IMPORT FOR THE WHATSAPP FUNCTION
-import { Supplier } from "@/entities/Supplier"; // הוספה: ייבוא ישות Supplier
-import AddSupplierModal from "@/components/shared/AddSupplierModal"; // הוספה: ייבוא מודאל הוספת ספק
-import AssignSupplierUserModal from "@/components/admin/AssignSupplierUserModal"; // הוספה: ייבוא מודאל שיוך משתמש ספק
-import { CircleDotDashed, Star, Edit, Trash2, ListChecks,FileSpreadsheet } from "lucide-react"; // הוספה: אייקון לסטטוס משתמש ספק
+import { sendWhatsAppMessage } from "@/functions/sendWhatsAppMessage";
+// import { Supplier } from "@/entities/Supplier"; // Removed duplicate import
+import AddSupplierModal from "@/components/shared/AddSupplierModal";
+import AssignSupplierUserModal from "@/components/admin/AssignSupplierUserModal";
+import { CircleDotDashed, Star, Edit, Trash2, ListChecks, FileSpreadsheet, LayoutDashboard, ArrowLeft, Users, FileArchive, Lightbulb, Send, Edit3, Eye, TrendingUp, DollarSign, Building2, Package, RefreshCw, User as UserIcon, CheckCircle, AlertCircle, BarChart2, Target, MessageSquare, Calendar, Activity, Clock, Award, Loader2, Upload, Banknote, FileText, Gift, BarChart3, ReceiptText, ScanLine, UserCheck, UserX, Filter, Search, Power, PowerOff, Info, Database, Globe, ArrowRight, Save, X, Plus, MessageCircle, AlertTriangle, ThumbsDown, XCircle, Archive, FileX, Bell, UserPlus, Download, Truck, Bot } from "lucide-react"; // Consolidated all Lucide icons
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, ArrowLeft, Users, FileArchive, Lightbulb, Send, Edit, Edit3, Eye, TrendingUp, DollarSign, Building2, Package, RefreshCw, Trash2,User as UserIcon, CheckCircle, AlertCircle, BarChart2, Target, MessageSquare, Calendar, Activity, Clock, Award, Star, Loader2, Upload, Banknote, FileText, Gift, BarChart3, ReceiptText, ScanLine, UserCheck, UserX, Filter, Search, Power, PowerOff, Info, Database, Globe, ArrowRight, Save, X, Plus, MessageCircle, FileSpreadsheet, AlertTriangle, ThumbsDown, XCircle, Archive, FileX, Bell, UserPlus, Download } from "lucide-react"; // Added UserPlus
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { format, formatDistanceToNow } from "date-fns";
@@ -53,7 +54,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Progress } from "@/components/ui/progress";
 import { Lead } from "@/entities/Lead";
-import WebsiteScanner from "@/components/admin/WebsiteScanner";
+// import WebsiteScanner from "@/components/admin/WebsiteScanner"; // Removed unused import
 import TargetedRecommendationModal from "../components/admin/TargetedRecommendationModal";
 import AdminRatingWidget from "@/components/admin/AdminRatingWidget";
 import IrrelevantRecommendationsModal from '@/components/admin/IrrelevantRecommendationsModal';
@@ -61,45 +62,38 @@ import ArchivedRecommendationsModal from '@/components/admin/ArchivedRecommendat
 import MissingDocumentsModal from "@/components/admin/MissingDocumentsModal";
 import OnboardingRequestsModal from "@/components/admin/OnboardingRequestsModal";
 import RecommendationUpgradeModal from "@/components/admin/RecommendationUpgradeModal";
-import { Truck } from "lucide-react"; 
 import { FinancialManagerPerformance } from "@/entities/FinancialManagerPerformance";
 import { CommunicationThread } from "@/entities/CommunicationThread";
 import { ChatMessage } from "@/entities/ChatMessage";
 import { Notification } from "@/entities/Notification";
-import FinanceManagerPerformanceTable from "@/components/admin/FinanceManagerPerformanceTable";
-import FinanceManagerLeaderboard from "@/components/admin/FinanceManagerLeaderboard";
-import NotificationCenter from "@/components/shared/NotificationCenter";
-import ChatBox from "@/components/shared/ChatBox";
+// import FinanceManagerPerformanceTable from "@/components/admin/FinanceManagerPerformanceTable"; // Removed direct import, lazy loaded
+// import FinanceManagerLeaderboard from "@/components/admin/FinanceManagerLeaderboard"; // Removed direct import, lazy loaded
+// import NotificationCenter from "@/components/shared/NotificationCenter"; // Removed direct import, lazy loaded
+// import ChatBox from "@/components/shared/ChatBox"; // Removed direct import, lazy loaded
 import { calculateManagerPerformance } from "@/functions/calculateManagerPerformance";
-import RecommendationSuggestionSystem from "@/components/admin/RecommendationSuggestionSystem";
+// import RecommendationSuggestionSystem from "@/components/admin/RecommendationSuggestionSystem"; // Removed unused import
 import ManagerChatSystem from "@/components/admin/ManagerChatSystem";
-import AdvancedCatalogManager from "@/components/admin/AdvancedCatalogManager";
-import CatalogProgressTracker from "@/components/catalog/CatalogProgressTracker";
+// import AdvancedCatalogManager from "@/components/admin/AdvancedCatalogManager"; // Removed unused import
+// import CatalogProgressTracker from "@/components/catalog/CatalogProgressTracker"; // Removed unused import
 import FloatingNotificationCenter from "@/components/shared/FloatingNotificationCenter";
-import ManagerChatSystem from '../components/admin/ManagerChatSystem';
-import FloatingNotificationCenter from '../components/shared/FloatingNotificationCenter';
+// import ManagerChatSystem from '../components/admin/ManagerChatSystem'; // Removed duplicate import
+// import FloatingNotificationCenter from '../components/shared/FloatingNotificationCenter'; // Removed duplicate import
 import CustomerInitiatedRecommendationsModal from "@/components/admin/CustomerInitiatedRecommendationsModal";
 import FloatingAgentChat from "../components/admin/FloatingAgentChat";
-import CustomerSuppliersTab from "../components/admin/CustomerSuppliersTab";
-import SupplierPartnershipManager from "../components/admin/SupplierPartnershipManager";
-import EditSupplierModal from "@/components/shared/EditSupplierModal"; // נוסיף את המודאל הזה בהמשך
-import { Switch } from "@/components/ui/switch"; // הוסף שורה זו
-import CustomerGoalsGantt from '../components/admin/CustomerGoalsGantt';
-import ManualForecastManager from "../components/forecast/ManualForecastManager";
-// MODIFY: These two Dialog, ScrollArea, ReactMarkdown imports are duplicated, consolidate them.
-// Keep only one set of these.
-import { ScrollArea } from "@/components/ui/scroll-area";
-import ReactMarkdown from 'react-markdown';
-// import { ScrollArea } from "@/components/ui/scroll-area";
-import ReactMarkdown from 'react-markdown'; // עבור הצגת התוכנית במלל
-import { Bot } from "lucide-react"; // או כל אייקון מתאים אחר
-import ClientManagementDashboard from '../components/admin/ClientManagementDashboard';
+// import CustomerSuppliersTab from "../components/admin/CustomerSuppliersTab"; // Removed unused import
+// import SupplierPartnershipManager from "../components/admin/SupplierPartnershipManager"; // Removed unused import
+import EditSupplierModal from "@/components/shared/EditSupplierModal";
+import { Switch } from "@/components/ui/switch";
+// import CustomerGoalsGantt from '../components/admin/CustomerGoalsGantt'; // Removed unused import
+// import ManualForecastManager from "../components/forecast/ManualForecastManager"; // Removed unused import
+import { ScrollArea } from "@/components/ui/scroll-area"; // Consolidated
+import ReactMarkdown from 'react-markdown'; // Consolidated
+// import ClientManagementDashboard from '../components/admin/ClientManagementDashboard'; // Removed direct import, lazy loaded
 import LoadingScreen from '@/components/shared/LoadingScreen';
-import RecommendationDisplayCard from '@/components/admin/RecommendationDisplayCard';
-import DailyTasksDashboard from '../components/dashboard/DailyTasksDashboard';
+// import RecommendationDisplayCard from '@/components/admin/RecommendationDisplayCard'; // Removed unused import
+// import DailyTasksDashboard from '../components/dashboard/DailyTasksDashboard'; // Removed direct import, lazy loaded
 import TaskManagement from './TaskManagement';
 
-// Lazy loading של קומפוננטים כבדים
 // Lazy loading של קומפוננטים כבדים
 const ClientManagementDashboard = lazy(() => import('../components/admin/ClientManagementDashboard'));
 const EngagementDashboard = lazy(() => import('../components/admin/EngagementDashboard'));
@@ -655,14 +649,15 @@ function EnhancedRecommendationCard({ recommendation, onUpdate, onEdit, onViewDe
     }
   }, [fileUploadsData]);
 
+  // const { data: businessForecastsData, isLoading: isLoadingBusinessForecasts } = useQuery({
   // NEW: useQuery for BusinessForecast - for overview tab
-  const { data: businessForecastsData, isLoading: isLoadingBusinessForecasts } = useQuery({
-    queryKey: ['adminBusinessForecasts'],
-    queryFn: () => BusinessForecast.list(),
-    enabled: activeTab === 'overview', // רק לטאב overview
-    staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
-    refetchOnWindowFocus: false,
-  });
+  // const { data: businessForecastsData, isLoading: isLoadingBusinessForecasts } = useQuery({ // Replaced by commenting out
+  //   queryKey: ['adminBusinessForecasts'],
+  //   queryFn: () => BusinessForecast.list(),
+  //   enabled: activeTab === 'overview', // רק לטאב overview
+  //   staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
+  //   refetchOnWindowFocus: false,
+  // });
 
   // If you have a state for businessForecasts, update it here:
   // useEffect(() => { if (businessForecastsData) { setBusinessForecasts(businessForecastsData); } }, [businessForecastsData]);
@@ -685,13 +680,13 @@ function EnhancedRecommendationCard({ recommendation, onUpdate, onEdit, onViewDe
 
 
   // NEW: useQuery for Leads - for suppliers tab
-  const { data: leadsData, isLoading: isLoadingLeads } = useQuery({
-    queryKey: ['adminLeads'],
-    queryFn: () => Lead.list(),
-    enabled: activeTab === 'suppliers', // רק לטאב suppliers
-    staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
-    refetchOnWindowFocus: false,
-  });
+  // const { data: leadsData, isLoading: isLoadingLeads } = useQuery({ // Replaced by commenting out
+  //   queryKey: ['adminLeads'],
+  //   queryFn: () => Lead.list(),
+  //   enabled: activeTab === 'suppliers', // רק לטאב suppliers
+  //   staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
+  //   refetchOnWindowFocus: false,
+  // });
   // If you have a state for leads, update it here:
   // useEffect(() => { if (leadsData) { setLeads(leadsData); } }, [leadsData]);
 
@@ -1075,7 +1070,7 @@ export default function AdminPage() {
     if (currentUser.role === 'admin') {
       // אדמין - טוען מ-User entity
       const allUsers = await User.list();
-      customersList = allUsers.filter(user => user.role === 'user' && user.user_type === 'regular');      
+      customersList = allUsers.filter(user => user.role === 'user' && user.user_type !== 'financial_manager'); // Ensure not FM themselves
       managersList = allUsers.filter(user => user.role === 'user' && user.user_type === 'financial_manager');
     } else if (currentUser.user_type === 'financial_manager') {
             // מנהל כספים - טוען מ-OnboardingRequest ו-CustomerContact (כולל מנהלים משניים)
@@ -1315,11 +1310,12 @@ export default function AdminPage() {
       
       // טען נתונים נוספים רק לטאב suppliers
       if (activeTab === 'suppliers') {
-        const [leads, suppliers] = await Promise.all([
-          Lead.list(),
+        const [/* leads, */ suppliers] = await Promise.all([ // Commented out `leads`
+          // Lead.list(), // Commented out
           Supplier.list()
         ]);
         
+        // setLeads(leads); // Commented out
         setSuppliers(suppliers);
       }
       
@@ -1334,7 +1330,6 @@ export default function AdminPage() {
         const allRecommendations = await Recommendation.list('-created_date');
       
         // Get all feedback with rating 3 (irrelevant)
-        import { RecommendationFeedback } from "@/entities/RecommendationFeedback";
         const irrelevantFeedbacks = await RecommendationFeedback.filter({ rating: 3 });
       
         // Get recommendation IDs that have rating 3 feedback
@@ -1862,7 +1857,7 @@ export default function AdminPage() {
     }
   };
 
-  // ===== יצירת המלצות משודרגות עם עדכון אופטימיסטי =====
+  // ===== יצירת המלצות משודרגות עם עדכון אופטימסטי =====
   const handleGenerateEnhancedRecommendations = async (customer, selectedFocusCategories = []) => { 
     if (generatingRecommendations || !customer) return;
 
@@ -1913,7 +1908,7 @@ export default function AdminPage() {
           setGenerationStatus(`המלצות משודרגות נוצרו בהצלחה! איכות נתונים: ${result.dataQuality}%`);
         }, 1000);
       } else {
-        throw new Error(result.error || "יצירת המלצות נכשלה");
+        throw new Error("יצירת המלצות נכשלה. " + (result.error || ""));
       }
     } catch (error) {
       console.error("Error generating enhanced recommendations:", error);
@@ -2292,7 +2287,7 @@ export default function AdminPage() {
       try {
           const newStatus = !customer.is_active;
 
-          // עדכון אופטימיסטי בממשק המשתמש
+          // עדכון אופטימסטי בממשק המשתמש
           setCustomers(prevUsers => prevUsers.map(u =>
               u.id === customer.id ? { ...u, is_active: newStatus } : u
           ));
@@ -2315,7 +2310,7 @@ export default function AdminPage() {
 
       } catch (error) {
           console.error("שגיאה בעדכון סטטוס הלקוח:", error);
-          // במקרה של שגיאה - החזר למצב קודם (אופטימיסטי)
+          // במקרה של שגיאה - החזר למצב קודם (אופטימסטי)
           setCustomers(prevUsers => prevUsers.map(u =>
               u.id === customer.id ? { ...u, is_active: customer.is_active } : u
           ));
@@ -3958,7 +3953,7 @@ export default function AdminPage() {
               </div>
             </div>
           </DialogHeader>
-          <ScrollArea className="flex-1 my-4 pr-4 -mr-4" ref__={businessPlanScrollAreaRef}>
+          <ScrollArea className="flex-1 my-4 pr-4 -mr-4" ref={businessPlanScrollAreaRef}>
             {isGeneratingPlan ? (
               <div className="flex flex-col items-center justify-center h-full">
                 <Loader2 className="w-8 h-8 animate-spin text-horizon-primary mb-4" />
