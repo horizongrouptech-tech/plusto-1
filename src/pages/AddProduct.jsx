@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Product } from "@/entities/Product";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +9,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { ArrowLeft, PlusCircle, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { User } from "@/entities/User";
-import { suggestNewProductIdea } from "@/components/logic/recommendationEngine"; // Keep suggestNewProductIdea for useEffect
 
 export default function AddProduct() {
   const navigate = useNavigate();
@@ -35,9 +33,6 @@ export default function AddProduct() {
         try {
             const user = await User.me();
             setCurrentUser(user);
-            if (user) {
-                 await suggestNewProductIdea(user.email);
-            }
         } catch (error) {
             console.error("User not logged in or error fetching user:", error);
         }
