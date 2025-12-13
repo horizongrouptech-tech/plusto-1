@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
@@ -121,22 +120,24 @@ export default function GoalCommentsModal({ goal, isOpen, onClose, users }) {
                     )}
                 </div>
                 <div className="mt-6 pt-4 border-t border-horizon-border">
-                    <div className="relative">
-                        <Textarea
-                            placeholder="הוסף הערה..."
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleAddComment())}
-                            className="w-full bg-horizon-card border-horizon text-horizon-text pr-10 text-right"
-                            disabled={isSubmitting}
-                        />
+                    <Textarea
+                        placeholder="הוסף הערה..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleAddComment())}
+                        className="w-full bg-horizon-card border-horizon text-horizon-text text-right mb-2"
+                        disabled={isSubmitting}
+                        rows={3}
+                    />
+                    <div className="flex justify-end">
                         <Button 
-                            size="icon" 
-                            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full w-8 h-8 btn-horizon-primary"
+                            size="sm"
+                            className="btn-horizon-primary"
                             onClick={handleAddComment}
                             disabled={isSubmitting || !newComment.trim()}
                         >
-                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin"/> : <Send className="w-4 h-4" />}
+                            {isSubmitting ? <Loader2 className="w-3 h-3 ml-2 animate-spin"/> : <Send className="w-3 h-3 ml-2" />}
+                            שלח הערה
                         </Button>
                     </div>
                 </div>

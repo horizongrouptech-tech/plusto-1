@@ -13,13 +13,16 @@ import {
   GripVertical,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
+  ChevronUp,
   DollarSign,
   Package,
   AlertCircle,
   Loader2,
   CheckCircle,
   Percent,
-  TrendingUp
+  TrendingUp,
+  Search
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { formatCurrency } from './utils/numberFormatter';
@@ -28,6 +31,7 @@ import { base44 } from '@/api/base44Client';
 export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, onNext, onBack }) {
   const [services, setServices] = useState(forecastData.services || []);
   const [collapsedServices, setCollapsedServices] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
   
   // ⭐ State לבחירת קטלוג
   const [selectedCatalogForLoad, setSelectedCatalogForLoad] = useState(null);
@@ -296,6 +300,16 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
 
   const catalogProductsCount = services.filter(s => s.loaded_from_catalog).length;
 
+  // סינון מוצרים לפי חיפוש
+  const filteredServices = useMemo(() => {
+    if (!searchTerm.trim()) return services;
+    const term = searchTerm.toLowerCase();
+    return services.filter(service => 
+      service.service_name?.toLowerCase().includes(term) ||
+      service.costs?.some(cost => cost.cost_name?.toLowerCase().includes(term))
+    );
+  }, [services, searchTerm]);
+
   return (
     <div className="space-y-6" dir="rtl">
       {/* ⭐ בחירת קטלוג - מוצג תמיד */}
@@ -399,7 +413,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
       {/* כרטיס השירותים והמוצרים */}
       <Card className="card-horizon">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <CardTitle className="text-horizon-text">רשימת שירותים ומוצרים</CardTitle>
               <p className="text-horizon-accent mt-1">הגדר את השירותים והמוצרים שלך ואת עלויות הגלם</p>
@@ -410,6 +424,19 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                 </Badge>
               )}
             </div>
+            {services.length > 3 && (
+              <div className="w-full md:w-64">
+                <div className="relative">
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-horizon-accent" />
+                  <Input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="חפש מוצר או עלות..."
+                    className="bg-horizon-card border-horizon text-horizon-text pr-10"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -425,8 +452,16 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
               <Droppable droppableId="services-list">
                 {(provided) => (
                   <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
-                    {services.map((service, serviceIndex) => (
-                      <Draggable key={`service-${serviceIndex}`} draggableId={`service-${serviceIndex}`} index={serviceIndex}>
+                    {searchTerm && filteredServices.length === 0 && (
+                      <div className="text-center py-8 text-horizon-accent">
+                        <Search className="w-8 h-8 mx-auto mb-2" />
+                        לא נמצאו תוצאות עבור "{searchTerm}"
+                      </div>
+                    )}
+                    {(searchTerm ? filteredServices : services).map((service, serviceIndex) => {
+                      const actualIndex = services.indexOf(service);
+                      return (
+                      <Draggable key={`service-${actualIndex}`} draggableId={`service-${actualIndex}`} index={actualIndex} isDragDisabled={!!searchTerm}>
                         {(provided, snapshot) => (
                           <div
                             ref={provided.innerRef}
@@ -450,7 +485,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                        </Label>
                                        <Input
                                          value={service.service_name}
-                                         onChange={(e) => updateService(serviceIndex, 'service_name', e.target.value)}
+                                         onChange={(e) => updateService(actualIndex, 'service_name', e.target.value)}
                                          placeholder="לדוגמה: שירות ייעוץ, מוצר X"
                                          className="bg-horizon-card border-horizon text-horizon-text h-11 text-base"
                                        />
@@ -472,7 +507,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                          <Input
                                            type="number"
                                            value={service.price}
-                                           onChange={(e) => updateService(serviceIndex, 'price', parseFloat(e.target.value) || 0)}
+                                           onChange={(e) => updateService(actualIndex, 'price', parseFloat(e.target.value) || 0)}
                                            className="bg-horizon-card border-green-400/30 text-horizon-text h-11 text-base pr-8 font-semibold"
                                            placeholder="0"
                                          />
@@ -486,7 +521,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                        <Button
                                          type="button"
                                          variant="ghost"
-                                         onClick={() => updateService(serviceIndex, 'has_vat', !service.has_vat)}
+                                         onClick={() => updateService(actualIndex, 'has_vat', !service.has_vat)}
                                          className={`w-full h-11 border rounded-lg flex items-center justify-center gap-2 transition-all ${
                                            service.has_vat 
                                              ? 'bg-horizon-primary/20 border-horizon-primary text-horizon-primary' 
@@ -512,7 +547,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                      <div className="md:col-span-2">
                                        <Label className="text-horizon-text mb-2 block opacity-0 pointer-events-none">מחק</Label>
                                        <Button
-                                         onClick={() => removeService(serviceIndex)}
+                                         onClick={() => removeService(actualIndex)}
                                          variant="ghost"
                                          className="w-full h-11 text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20"
                                        >
@@ -529,7 +564,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                           עלויות גלם ומשתנות
                                         </Label>
                                         <Button
-                                          onClick={() => addCost(serviceIndex)}
+                                          onClick={() => addCost(actualIndex)}
                                           size="sm"
                                           className="bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30"
                                         >
@@ -547,7 +582,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                                 <Label className="text-xs text-horizon-accent mb-1 block">שם העלות</Label>
                                                 <Input
                                                   value={cost.cost_name}
-                                                  onChange={(e) => updateCost(serviceIndex, costIndex, 'cost_name', e.target.value)}
+                                                  onChange={(e) => updateCost(actualIndex, costIndex, 'cost_name', e.target.value)}
                                                   placeholder="לדוגמה: חומר גלם"
                                                   className="bg-horizon-dark border-horizon text-horizon-text h-9 text-sm"
                                                 />
@@ -560,11 +595,11 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                                   value={cost.is_percentage ? 'percentage' : 'fixed'}
                                                   onValueChange={(value) => {
                                                     const isPercentage = value === 'percentage';
-                                                    updateCost(serviceIndex, costIndex, 'is_percentage', isPercentage);
+                                                    updateCost(actualIndex, costIndex, 'is_percentage', isPercentage);
                                                     if (isPercentage) {
-                                                      updateCost(serviceIndex, costIndex, 'amount', 0);
+                                                      updateCost(actualIndex, costIndex, 'amount', 0);
                                                     } else {
-                                                      updateCost(serviceIndex, costIndex, 'percentage_of_price', 0);
+                                                      updateCost(actualIndex, costIndex, 'percentage_of_price', 0);
                                                     }
                                                   }}
                                                 >
@@ -596,7 +631,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                                     <Input
                                                       type="number"
                                                       value={cost.percentage_of_price || 0}
-                                                      onChange={(e) => updateCost(serviceIndex, costIndex, 'percentage_of_price', parseFloat(e.target.value) || 0)}
+                                                      onChange={(e) => updateCost(actualIndex, costIndex, 'percentage_of_price', parseFloat(e.target.value) || 0)}
                                                       placeholder="0"
                                                       className="bg-horizon-dark border-blue-400/30 text-horizon-text h-9 text-sm pr-6 font-semibold"
                                                       min="0"
@@ -610,7 +645,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                                     <Input
                                                       type="number"
                                                       value={cost.amount || 0}
-                                                      onChange={(e) => updateCost(serviceIndex, costIndex, 'amount', parseFloat(e.target.value) || 0)}
+                                                      onChange={(e) => updateCost(actualIndex, costIndex, 'amount', parseFloat(e.target.value) || 0)}
                                                       placeholder="0"
                                                       className="bg-horizon-dark border-orange-400/30 text-horizon-text h-9 text-sm pr-6 font-semibold"
                                                     />
@@ -625,7 +660,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                                 <Button
                                                   type="button"
                                                   variant="ghost"
-                                                  onClick={() => updateCost(serviceIndex, costIndex, 'has_vat', !cost.has_vat)}
+                                                  onClick={() => updateCost(actualIndex, costIndex, 'has_vat', !cost.has_vat)}
                                                   className={`w-full h-9 border rounded flex items-center justify-center gap-1.5 transition-all ${
                                                     cost.has_vat 
                                                       ? 'bg-horizon-primary/20 border-horizon-primary text-horizon-primary' 
@@ -649,7 +684,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                               <div className="col-span-1">
                                                 <Label className="text-xs text-horizon-accent mb-1 block opacity-0">X</Label>
                                                 <Button
-                                                  onClick={() => removeCost(serviceIndex, costIndex)}
+                                                  onClick={() => removeCost(actualIndex, costIndex)}
                                                   size="sm"
                                                   variant="ghost"
                                                   className="h-9 w-9 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
@@ -711,7 +746,8 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                           </div>
                         )}
                       </Draggable>
-                    ))}
+                    );
+                    })}
                     {provided.placeholder}
                   </div>
                 )}

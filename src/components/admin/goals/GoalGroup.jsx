@@ -6,8 +6,13 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import GoalRow from './GoalRow';
 import { base44 } from '@/api/base44Client';
 
-export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals, isDragging }) {
-    const [isExpanded, setIsExpanded] = useState(true);
+export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals, isDragging, isCollapsed, onToggleCollapse }) {
+    const [isExpanded, setIsExpanded] = useState(!isCollapsed);
+
+    // סנכרון עם state מהקומפוננטה האב
+    React.useEffect(() => {
+        setIsExpanded(!isCollapsed);
+    }, [isCollapsed]);
 
     const handleAddSubtask = async () => {
         try {
@@ -66,7 +71,10 @@ export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => setIsExpanded(!isExpanded)}
+                                onClick={() => {
+                                    setIsExpanded(!isExpanded);
+                                    if (onToggleCollapse) onToggleCollapse();
+                                }}
                                 className="text-horizon-accent hover:text-horizon-text"
                             >
                                 {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
