@@ -1,0 +1,400 @@
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&family=Rubik:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+
+/* ========================================
+   HORIZON THEME SYSTEM
+   ======================================== */
+
+/* Light Mode (Default) */
+:root,
+[data-theme="light"] {
+  --horizon-dark: #f8f9fa;
+  --horizon-card-bg: #ffffff;
+  --horizon-border: #e1e8ed;
+  
+  --horizon-primary: #32acc1;
+  --horizon-secondary: #fc9f67;
+  
+  --horizon-text: #121725;
+  --horizon-accent: #5a6c7d;
+  
+  --horizon-green: #38A169;
+  --horizon-red: #E53E3E;
+  --horizon-yellow: #fc9f67;
+  --horizon-blue: #32acc1;
+  
+  --gradient-primary: linear-gradient(135deg, #32acc1 0%, #83ddec 100%);
+  --gradient-secondary: linear-gradient(135deg, #fc9f67 0%, #fc8a68 100%);
+  --gradient-card: linear-gradient(135deg, rgba(50, 172, 193, 0.03) 0%, rgba(252, 159, 103, 0.03) 100%);
+  --gradient-bg: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+  --shadow-xl: 0 12px 32px rgba(50, 172, 193, 0.2);
+  --shadow-horizon: 0 4px 14px 0 rgba(0, 0, 0, 0.1);
+  --shadow-horizon-strong: 0 10px 30px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Dark Mode - Based on Welcome Page */
+[data-theme="dark"] {
+  --horizon-dark: #0A192F;
+  --horizon-card-bg: #112240;
+  --horizon-border: rgba(255, 255, 255, 0.1);
+  
+  --horizon-primary: #32acc1;
+  --horizon-secondary: #fc9f67;
+  
+  --horizon-text: #ffffff;
+  --horizon-accent: #cbd5e0;
+  
+  --horizon-green: #48BB78;
+  --horizon-red: #FC8181;
+  --horizon-yellow: #fc9f67;
+  --horizon-blue: #63B3ED;
+  
+  --gradient-primary: linear-gradient(135deg, #32acc1 0%, #83ddec 100%);
+  --gradient-secondary: linear-gradient(135deg, #fc9f67 0%, #fc8a68 100%);
+  --gradient-card: linear-gradient(135deg, rgba(50, 172, 193, 0.05) 0%, rgba(252, 159, 103, 0.05) 100%);
+  --gradient-bg: linear-gradient(135deg, #0A192F 0%, #112240 50%, #0A192F 100%);
+  
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 12px 32px rgba(50, 172, 193, 0.3);
+  --shadow-horizon: 0 4px 14px 0 rgba(0, 0, 0, 0.3);
+  --shadow-horizon-strong: 0 10px 30px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* ========================================
+   COMMON RADIUS & TRANSITIONS
+   ======================================== */
+:root {
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  
+  --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+/* Background Colors */
+.bg-horizon-primary { background-color: var(--horizon-primary); }
+.bg-horizon-secondary { background-color: var(--horizon-secondary); }
+.bg-horizon-dark { background-color: var(--horizon-dark); }
+.bg-horizon-card { background-color: var(--horizon-card-bg); }
+
+/* Text Colors */
+.text-horizon-primary { color: var(--horizon-primary); }
+.text-horizon-secondary { color: var(--horizon-secondary); }
+.text-horizon-dark { color: var(--horizon-dark); }
+.text-horizon-text { color: var(--horizon-text); }
+.text-horizon-accent { color: var(--horizon-accent); }
+
+/* Border Colors */
+.border-horizon { border-color: var(--horizon-border); }
+.border-horizon-primary { border-color: var(--horizon-primary); }
+
+/* ========================================
+   BUTTON STYLES
+   ======================================== */
+.btn-horizon-primary {
+  background: linear-gradient(135deg, #fc9f67 0%, #fc8a68 100%);
+  color: #FFFFFF;
+  border: none;
+  font-weight: 700;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  transition: var(--transition-base);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-horizon-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #fc8a68 0%, #fc9f67 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 0;
+}
+
+.btn-horizon-primary:hover::before {
+  opacity: 1;
+}
+
+.btn-horizon-primary:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--shadow-xl);
+}
+
+.btn-horizon-primary:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-horizon-primary > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ========================================
+   CARD STYLES
+   ======================================== */
+.card-horizon {
+  background: var(--horizon-card-bg);
+  border: 2px solid var(--horizon-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-base);
+  color: var(--horizon-text);
+  position: relative;
+  overflow: hidden;
+}
+
+.card-horizon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-primary);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-horizon:hover::before {
+  transform: scaleX(1);
+}
+
+.card-horizon:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
+  border-color: var(--horizon-primary);
+}
+
+/* ========================================
+   TYPOGRAPHY
+   ======================================== */
+body {
+  font-family: 'Inter', 'Heebo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 400;
+  line-height: 1.6;
+  background-color: var(--horizon-dark);
+  color: var(--horizon-text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  color: var(--horizon-text);
+}
+
+/* ========================================
+   SIDEBAR STYLES
+   ======================================== */
+.sidebar-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 40;
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: 280px;
+  background: var(--horizon-dark);
+  border-left: 1px solid var(--horizon-border);
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  z-index: 50;
+  overflow-y: auto;
+}
+
+.sidebar.open {
+  transform: translateX(0);
+}
+
+@media (min-width: 1024px) {
+  .sidebar {
+    position: relative;
+    transform: translateX(0);
+    border-left: none;
+    border-right: 1px solid var(--horizon-border);
+  }
+
+  .sidebar-backdrop {
+    display: none;
+  }
+}
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.animate-fadeInScale {
+  animation: fadeInScale 0.4s ease-out;
+}
+
+.stagger-item {
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.stagger-item:nth-child(1) { animation-delay: 0.05s; }
+.stagger-item:nth-child(2) { animation-delay: 0.1s; }
+.stagger-item:nth-child(3) { animation-delay: 0.15s; }
+.stagger-item:nth-child(4) { animation-delay: 0.2s; }
+.stagger-item:nth-child(5) { animation-delay: 0.25s; }
+
+.hover-lift {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+}
+
+.hover-scale {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* ========================================
+   SCROLLBAR STYLES
+   ======================================== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--horizon-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--horizon-border);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--horizon-accent);
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--horizon-border) var(--horizon-dark);
+}
+
+/* ========================================
+   THEME TOGGLE BUTTON
+   ======================================== */
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--horizon-card-bg);
+  border: 1px solid var(--horizon-border);
+  color: var(--horizon-text);
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.theme-toggle-btn:hover {
+  background: var(--horizon-primary);
+  color: #ffffff;
+  transform: rotate(15deg) scale(1.1);
+}
+
+.theme-toggle-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.theme-toggle-btn:hover svg {
+  transform: rotate(-15deg);
+}
+
+/* ========================================
+   GRADIENT BACKGROUND FOR DARK MODE
+   ======================================== */
+[data-theme="dark"] .bg-horizon-dark {
+  background: linear-gradient(135deg, #0A192F 0%, #112240 50%, #0A192F 100%);
+}
+
+/* Glass Effect for Dark Mode Cards */
+[data-theme="dark"] .card-horizon {
+  background: rgba(17, 34, 64, 0.8);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Input fields in dark mode */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background-color: var(--horizon-card-bg);
+  border-color: var(--horizon-border);
+  color: var(--horizon-text);
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--horizon-accent);
+}
