@@ -13,6 +13,7 @@ export default function CustomerGoalsGantt({ customer }) {
     const [goals, setGoals] = useState([]);
     const [currentUser, setCurrentUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [collapsedGoals, setCollapsedGoals] = useState({});
 
     const fetchData = useCallback(async (showLoadingSpinner = true) => {
         if (!customer?.email) {
@@ -45,6 +46,14 @@ export default function CustomerGoalsGantt({ customer }) {
             fetchData(true);
         }
     }, [customer?.email]);
+
+    const toggleAllGoals = (shouldCollapse) => {
+        const newState = {};
+        topLevelGoals.forEach(goal => {
+            newState[goal.id] = shouldCollapse;
+        });
+        setCollapsedGoals(newState);
+    };
 
     const handleAddGoal = async () => {
         try {

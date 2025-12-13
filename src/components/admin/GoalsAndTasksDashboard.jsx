@@ -23,7 +23,10 @@ import {
   AlertCircle,
   Download,
   Edit,
-  Save
+  Save,
+  UserPlus,
+  Mail,
+  X
 } from "lucide-react";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -266,7 +269,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
       </div>
 
       {/* קוביות סטטיסטיקה */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <Card 
           className={`card-horizon cursor-pointer transition-all ${activeStatFilter === 'today' ? 'ring-2 ring-horizon-primary' : ''}`}
           onClick={() => setActiveStatFilter(activeStatFilter === 'today' ? null : 'today')}
@@ -289,7 +292,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
           <CardContent className="p-4">
             <div className="flex justify-between items-center">
               <div className="text-right">
-                <p className="text-sm text-horizon-accent">משימות השבוע</p>
+                <p className="text-sm text-horizon-accent">משימות בייחור</p>
                 <p className="text-2xl font-bold text-blue-400">{stats.tasksThisWeek}</p>
               </div>
               <Clock className="w-8 h-8 text-blue-400" />
@@ -297,62 +300,14 @@ export default function GoalsAndTasksDashboard({ customer }) {
           </CardContent>
         </Card>
 
-        <Card 
-          className={`card-horizon cursor-pointer transition-all ${activeStatFilter === 'delayed' ? 'ring-2 ring-red-500' : ''}`}
-          onClick={() => setActiveStatFilter(activeStatFilter === 'delayed' ? null : 'delayed')}
-        >
+        <Card className="card-horizon">
           <CardContent className="p-4">
             <div className="flex justify-between items-center">
               <div className="text-right">
-                <p className="text-sm text-horizon-accent">משימות באיחור</p>
-                <p className="text-2xl font-bold text-red-400">{stats.delayedTasks}</p>
+                <p className="text-sm text-horizon-accent">יעדים בייחור</p>
+                <p className="text-2xl font-bold text-green-400">{stats.openGoals}</p>
               </div>
-              <AlertTriangle className="w-8 h-8 text-red-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card 
-          className={`card-horizon cursor-pointer transition-all ${activeStatFilter === 'open' ? 'ring-2 ring-yellow-500' : ''}`}
-          onClick={() => setActiveStatFilter(activeStatFilter === 'open' ? null : 'open')}
-        >
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center">
-              <div className="text-right">
-                <p className="text-sm text-horizon-accent">משימות פתוחות</p>
-                <p className="text-2xl font-bold text-yellow-400">{stats.openTasks}</p>
-              </div>
-              <ListTodo className="w-8 h-8 text-yellow-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card 
-          className={`card-horizon cursor-pointer transition-all ${activeStatFilter === 'linked' ? 'ring-2 ring-purple-500' : ''}`}
-          onClick={() => setActiveStatFilter(activeStatFilter === 'linked' ? null : 'linked')}
-        >
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center">
-              <div className="text-right">
-                <p className="text-sm text-horizon-accent">משויכות ליעדים</p>
-                <p className="text-2xl font-bold text-purple-400">{stats.linkedToGoals}</p>
-              </div>
-              <LinkIcon className="w-8 h-8 text-purple-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card 
-          className={`card-horizon cursor-pointer transition-all ${activeStatFilter === 'notLinked' ? 'ring-2 ring-gray-500' : ''}`}
-          onClick={() => setActiveStatFilter(activeStatFilter === 'notLinked' ? null : 'notLinked')}
-        >
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center">
-              <div className="text-right">
-                <p className="text-sm text-horizon-accent">לא משויכות</p>
-                <p className="text-2xl font-bold text-gray-400">{stats.notLinkedToGoals}</p>
-              </div>
-              <Circle className="w-8 h-8 text-gray-400" />
+              <Target className="w-8 h-8 text-green-400" />
             </div>
           </CardContent>
         </Card>
@@ -629,6 +584,7 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
   const [reminderTime, setReminderTime] = useState('09:00');
   const [parentGoalId, setParentGoalId] = useState('');
   const [assigneeEmail, setAssigneeEmail] = useState('');
+  const [taggedUsers, setTaggedUsers] = useState([]);
   const [status, setStatus] = useState('open');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -703,10 +659,35 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
         parent_id: (parentGoalId && parentGoalId !== 'no_goal') ? parentGoalId : null,
         status,
         assignee_email: assigneeEmail || currentUser?.email,
+        tagged_users: taggedUsers,
         task_type: 'one_time',
         is_active: true,
         order_index: 0
       });
+
+      // שליחת נוטיפיקציות ומיילים למשתמשים מתויגים
+      for (const taggedEmail of taggedUsers) {
+        try {
+          await base44.entities.Notification.create({
+            recipient_email: taggedEmail,
+            sender_email: currentUser?.email,
+            type: 'tagged_in_task',
+            title: `תויגת במשימה: ${name.trim()}`,
+            message: `${currentUser?.full_name || currentUser?.email} תייג/תייגה אותך במשימה "${name.trim()}"`,
+            related_entity_id: newTask.id,
+            related_entity_type: 'CustomerGoal',
+            priority: 'high'
+          });
+
+          await base44.integrations.Core.SendEmail({
+            to: taggedEmail,
+            subject: `תויגת במשימה חדשה - ${name.trim()}`,
+            body: `שלום,\n\n${currentUser?.full_name || currentUser?.email} תייג/תייגה אותך במשימה חדשה:\n\nשם המשימה: ${name.trim()}\nתאריך יעד: ${endDate}\n\n${notes ? `פרטים: ${notes}\n\n` : ''}היכנס למערכת לצפייה ועדכון.`
+          });
+        } catch (error) {
+          console.error('Error sending notification/email to tagged user:', error);
+        }
+      }
 
       // סנכרון לפיירברי
       try {
@@ -727,6 +708,7 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
       setParentGoalId('');
       setStatus('open');
       setAssigneeEmail(currentUser?.email || '');
+      setTaggedUsers([]);
 
       onSuccess();
     } catch (error) {
@@ -870,6 +852,56 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
             </Select>
           </div>
 
+          <div>
+            <Label className="text-right block mb-2 text-horizon-text flex items-center gap-2">
+              <UserPlus className="w-4 h-4 text-horizon-primary" />
+              תיוג משתמשים (יקבלו נוטיפיקציה ומייל)
+            </Label>
+            <div className="space-y-2">
+              <Select 
+                value="" 
+                onValueChange={(email) => {
+                  if (email && !taggedUsers.includes(email)) {
+                    setTaggedUsers([...taggedUsers, email]);
+                  }
+                }}
+              >
+                <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
+                  <SelectValue placeholder="בחר משתמש לתיוג..." />
+                </SelectTrigger>
+                <SelectContent className="bg-horizon-dark border-horizon">
+                  {relevantUsers
+                    .filter(u => !taggedUsers.includes(u.email))
+                    .map(u => (
+                      <SelectItem key={u.id} value={u.email}>
+                        {u.full_name} ({u.email})
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
+              {taggedUsers.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {taggedUsers.map(email => {
+                    const user = relevantUsers.find(u => u.email === email);
+                    return (
+                      <Badge key={email} className="bg-horizon-primary/20 text-horizon-primary flex items-center gap-1">
+                        <Mail className="w-3 h-3" />
+                        {user?.full_name || email}
+                        <button
+                          onClick={() => setTaggedUsers(taggedUsers.filter(e => e !== email))}
+                          className="mr-1 hover:bg-red-500/20 rounded-full p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
           <DialogFooter className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={onClose} className="border-horizon text-horizon-text">
               ביטול
@@ -890,6 +922,7 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
   const [editedTask, setEditedTask] = useState(null);
   const [endTime, setEndTime] = useState('09:00');
   const [reminderTime, setReminderTime] = useState('09:00');
+  const [taggedUsers, setTaggedUsers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { data: allUsers = [] } = useQuery({
@@ -967,6 +1000,7 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
       });
       setEndTime(time);
       setReminderTime(reminderTimeStr);
+      setTaggedUsers(task.tagged_users || []);
     }
   }, [task]);
 
@@ -1004,7 +1038,36 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
         dataToUpdate.reminder_date = null;
       }
 
+      dataToUpdate.tagged_users = taggedUsers;
+
+      const oldTaggedUsers = task.tagged_users || [];
+      const newlyTagged = taggedUsers.filter(email => !oldTaggedUsers.includes(email));
+
       await base44.entities.CustomerGoal.update(id, dataToUpdate);
+
+      // שליחת נוטיפיקציות למשתמשים חדשים שתויגו
+      for (const taggedEmail of newlyTagged) {
+        try {
+          await base44.entities.Notification.create({
+            recipient_email: taggedEmail,
+            sender_email: currentUser?.email,
+            type: 'tagged_in_task',
+            title: `תויגת במשימה: ${dataToUpdate.name}`,
+            message: `${currentUser?.full_name || currentUser?.email} תייג/תייגה אותך במשימה "${dataToUpdate.name}"`,
+            related_entity_id: id,
+            related_entity_type: 'CustomerGoal',
+            priority: 'high'
+          });
+
+          await base44.integrations.Core.SendEmail({
+            to: taggedEmail,
+            subject: `תויגת במשימה - ${dataToUpdate.name}`,
+            body: `שלום,\n\n${currentUser?.full_name || currentUser?.email} תייג/תייגה אותך במשימה:\n\nשם המשימה: ${dataToUpdate.name}\nתאריך יעד: ${dataToUpdate.end_date}\n\n${dataToUpdate.notes ? `פרטים: ${dataToUpdate.notes}\n\n` : ''}היכנס למערכת לצפייה ועדכון.`
+          });
+        } catch (error) {
+          console.error('Error sending notification/email to tagged user:', error);
+        }
+      }
 
       // סנכרון לפיירברי
       try {
@@ -1162,6 +1225,56 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
             </Select>
           </div>
 
+          <div>
+            <Label className="text-right block mb-2 text-horizon-text flex items-center gap-2">
+              <UserPlus className="w-4 h-4 text-horizon-primary" />
+              תיוג משתמשים (יקבלו נוטיפיקציה ומייל)
+            </Label>
+            <div className="space-y-2">
+              <Select 
+                value="" 
+                onValueChange={(email) => {
+                  if (email && !taggedUsers.includes(email)) {
+                    setTaggedUsers([...taggedUsers, email]);
+                  }
+                }}
+              >
+                <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
+                  <SelectValue placeholder="בחר משתמש לתיוג..." />
+                </SelectTrigger>
+                <SelectContent className="bg-horizon-dark border-horizon">
+                  {relevantUsers
+                    .filter(u => !taggedUsers.includes(u.email))
+                    .map(u => (
+                      <SelectItem key={u.id} value={u.email}>
+                        {u.full_name} ({u.email})
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
+              {taggedUsers.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {taggedUsers.map(email => {
+                    const user = relevantUsers.find(u => u.email === email);
+                    return (
+                      <Badge key={email} className="bg-horizon-primary/20 text-horizon-primary flex items-center gap-1">
+                        <Mail className="w-3 h-3" />
+                        {user?.full_name || email}
+                        <button
+                          onClick={() => setTaggedUsers(taggedUsers.filter(e => e !== email))}
+                          className="mr-1 hover:bg-red-500/20 rounded-full p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
           <DialogFooter className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={onClose} className="border-horizon text-horizon-text">
               ביטול
@@ -1187,6 +1300,9 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
   const [reminderDate, setReminderDate] = useState('');
   const [reminderTime, setReminderTime] = useState('09:00');
   const [assigneeEmail, setAssigneeEmail] = useState('');
+  const [responsibleUsers, setResponsibleUsers] = useState([]);
+  const [externalResponsible, setExternalResponsible] = useState('');
+  const [taggedUsers, setTaggedUsers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { data: allUsers = [] } = useQuery({
@@ -1246,10 +1362,37 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
         reminder_date: reminderDateTime,
         status: 'open',
         assignee_email: assigneeEmail || currentUser?.email,
+        responsible_users: responsibleUsers,
+        external_responsible: externalResponsible.trim() || null,
+        tagged_users: taggedUsers,
         is_active: true,
         order_index: existingGoalsCount,
         task_type: 'goal'
       });
+
+      // שליחת נוטיפיקציות ומיילים למשתמשים מתויגים
+      for (const taggedEmail of taggedUsers) {
+        try {
+          await base44.entities.Notification.create({
+            recipient_email: taggedEmail,
+            sender_email: currentUser?.email,
+            type: 'tagged_in_goal',
+            title: `תויגת ביעד: ${name.trim()}`,
+            message: `${currentUser?.full_name || currentUser?.email} תייג/תייגה אותך ביעד "${name.trim()}"`,
+            related_entity_id: newGoal.id,
+            related_entity_type: 'CustomerGoal',
+            priority: 'high'
+          });
+
+          await base44.integrations.Core.SendEmail({
+            to: taggedEmail,
+            subject: `תויגת ביעד חדש - ${name.trim()}`,
+            body: `שלום,\n\n${currentUser?.full_name || currentUser?.email} תייג/תייגה אותך ביעד חדש:\n\nשם היעד: ${name.trim()}\nתאריך יעד: ${endDate}\n\n${notes ? `פרטים: ${notes}\n\n` : ''}היכנס למערכת לצפייה ועדכון.`
+          });
+        } catch (error) {
+          console.error('Error sending notification/email to tagged user:', error);
+        }
+      }
 
       // סנכרון לפיירברי
       try {
@@ -1267,6 +1410,9 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
       setReminderDate('');
       setReminderTime('09:00');
       setAssigneeEmail(currentUser?.email || '');
+      setResponsibleUsers([]);
+      setExternalResponsible('');
+      setTaggedUsers([]);
 
       onSuccess();
     } catch (error) {
@@ -1362,7 +1508,7 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
           </div>
 
           <div>
-            <Label className="text-right block mb-2 text-horizon-text">אחראי</Label>
+            <Label className="text-right block mb-2 text-horizon-text">אחראי ביצוע</Label>
             <Select value={assigneeEmail} onValueChange={setAssigneeEmail}>
               <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
                 <SelectValue placeholder="בחר אחראי" />
@@ -1375,6 +1521,115 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div>
+            <Label className="text-right block mb-2 text-horizon-text flex items-center gap-2">
+              <UserPlus className="w-4 h-4 text-horizon-primary" />
+              אחראים על היעד (מנהלי כספים)
+            </Label>
+            <div className="space-y-2">
+              <Select 
+                value="" 
+                onValueChange={(email) => {
+                  if (email && !responsibleUsers.includes(email)) {
+                    setResponsibleUsers([...responsibleUsers, email]);
+                  }
+                }}
+              >
+                <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
+                  <SelectValue placeholder="הוסף מנהל כספים אחראי..." />
+                </SelectTrigger>
+                <SelectContent className="bg-horizon-dark border-horizon">
+                  {relevantUsers
+                    .filter(u => u.user_type === 'financial_manager' && !responsibleUsers.includes(u.email))
+                    .map(u => (
+                      <SelectItem key={u.id} value={u.email}>
+                        {u.full_name}
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
+              {responsibleUsers.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {responsibleUsers.map(email => {
+                    const user = relevantUsers.find(u => u.email === email);
+                    return (
+                      <Badge key={email} className="bg-blue-500/20 text-blue-400 flex items-center gap-1">
+                        {user?.full_name || email}
+                        <button
+                          onClick={() => setResponsibleUsers(responsibleUsers.filter(e => e !== email))}
+                          className="mr-1 hover:bg-red-500/20 rounded-full p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-right block mb-2 text-horizon-text">אחראים חיצוניים (רו״ח, יועצים וכו׳)</Label>
+            <Input
+              value={externalResponsible}
+              onChange={(e) => setExternalResponsible(e.target.value)}
+              placeholder="למשל: רואה חשבון - משה כהן, יועץ עסקי - דני לוי"
+              className="bg-horizon-card border-horizon text-horizon-text"
+            />
+          </div>
+
+          <div>
+            <Label className="text-right block mb-2 text-horizon-text flex items-center gap-2">
+              <UserPlus className="w-4 h-4 text-horizon-primary" />
+              תיוג משתמשים (יקבלו נוטיפיקציה ומייל)
+            </Label>
+            <div className="space-y-2">
+              <Select 
+                value="" 
+                onValueChange={(email) => {
+                  if (email && !taggedUsers.includes(email)) {
+                    setTaggedUsers([...taggedUsers, email]);
+                  }
+                }}
+              >
+                <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
+                  <SelectValue placeholder="בחר משתמש לתיוג..." />
+                </SelectTrigger>
+                <SelectContent className="bg-horizon-dark border-horizon">
+                  {relevantUsers
+                    .filter(u => !taggedUsers.includes(u.email))
+                    .map(u => (
+                      <SelectItem key={u.id} value={u.email}>
+                        {u.full_name} ({u.email})
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
+              {taggedUsers.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {taggedUsers.map(email => {
+                    const user = relevantUsers.find(u => u.email === email);
+                    return (
+                      <Badge key={email} className="bg-horizon-primary/20 text-horizon-primary flex items-center gap-1">
+                        <Mail className="w-3 h-3" />
+                        {user?.full_name || email}
+                        <button
+                          onClick={() => setTaggedUsers(taggedUsers.filter(e => e !== email))}
+                          className="mr-1 hover:bg-red-500/20 rounded-full p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           <DialogFooter className="flex gap-2 justify-end">
