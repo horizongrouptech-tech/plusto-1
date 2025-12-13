@@ -8,13 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { 
-  Target, 
-  Plus, 
-  Loader2, 
-  CheckCircle2, 
-  Clock, 
-  AlertTriangle, 
+import {
+  Target,
+  Plus,
+  Loader2,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
   Calendar,
   ListTodo,
   LayoutGrid,
@@ -26,8 +26,8 @@ import {
   Save,
   UserPlus,
   Mail,
-  X
-} from "lucide-react";
+  X } from
+"lucide-react";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -57,9 +57,9 @@ export default function GoalsAndTasksDashboard({ customer }) {
   // טעינת יעדים ומשימות מ-CustomerGoal
   const { data: allGoals = [], isLoading: isLoadingGoals } = useQuery({
     queryKey: ['customerGoals', customer?.email],
-    queryFn: () => base44.entities.CustomerGoal.filter({ 
-      customer_email: customer.email, 
-      is_active: true 
+    queryFn: () => base44.entities.CustomerGoal.filter({
+      customer_email: customer.email,
+      is_active: true
     }, 'order_index'),
     enabled: !!customer?.email,
     refetchInterval: 30000 // רענון אוטומטי כל 30 שניות לקבלת עדכונים מפיירברי
@@ -69,93 +69,93 @@ export default function GoalsAndTasksDashboard({ customer }) {
   // 1. יש לו task_type === 'goal' או
   // 2. יש לו תת-משימות (פריטים אחרים עם parent_id שלו)
   const identifyGoals = useMemo(() => {
-    const goalsWithSubtasks = allGoals.filter(g => 
-      allGoals.some(t => t.parent_id === g.id)
+    const goalsWithSubtasks = allGoals.filter((g) =>
+    allGoals.some((t) => t.parent_id === g.id)
     );
-    const explicitGoals = allGoals.filter(g => g.task_type === 'goal');
-    const parentGoalIds = new Set([...goalsWithSubtasks.map(g => g.id), ...explicitGoals.map(g => g.id)]);
-    return { parentGoalIds, parentGoals: allGoals.filter(g => parentGoalIds.has(g.id)) };
+    const explicitGoals = allGoals.filter((g) => g.task_type === 'goal');
+    const parentGoalIds = new Set([...goalsWithSubtasks.map((g) => g.id), ...explicitGoals.map((g) => g.id)]);
+    return { parentGoalIds, parentGoals: allGoals.filter((g) => parentGoalIds.has(g.id)) };
   }, [allGoals]);
 
   // חישוב סטטיסטיקות
   const stats = useMemo(() => {
     const { parentGoals, parentGoalIds } = identifyGoals;
-    const allTasks = allGoals.filter(g => !parentGoalIds.has(g.id));
-    const tasks = allTasks.filter(g => g.parent_id); // sub-tasks
-    const tasksNotLinkedToGoal = allTasks.filter(g => !g.parent_id); // standalone tasks
+    const allTasks = allGoals.filter((g) => !parentGoalIds.has(g.id));
+    const tasks = allTasks.filter((g) => g.parent_id); // sub-tasks
+    const tasksNotLinkedToGoal = allTasks.filter((g) => !g.parent_id); // standalone tasks
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const thisWeekEnd = new Date(today);
     thisWeekEnd.setDate(thisWeekEnd.getDate() + 7);
-    
+
     return {
       totalGoals: parentGoals.length,
-      openGoals: parentGoals.filter(g => g.status === 'open' || g.status === 'in_progress').length,
-      completedGoals: parentGoals.filter(g => g.status === 'done').length,
-      delayedGoals: parentGoals.filter(g => g.status === 'delayed').length,
-      
+      openGoals: parentGoals.filter((g) => g.status === 'open' || g.status === 'in_progress').length,
+      completedGoals: parentGoals.filter((g) => g.status === 'done').length,
+      delayedGoals: parentGoals.filter((g) => g.status === 'delayed').length,
+
       totalTasks: allTasks.length,
-      openTasks: allTasks.filter(t => t.status !== 'done' && t.status !== 'cancelled').length,
-      completedTasks: allTasks.filter(t => t.status === 'done').length,
-      delayedTasks: allTasks.filter(t => t.status === 'delayed').length,
-      
-      tasksToday: allTasks.filter(t => {
+      openTasks: allTasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled').length,
+      completedTasks: allTasks.filter((t) => t.status === 'done').length,
+      delayedTasks: allTasks.filter((t) => t.status === 'delayed').length,
+
+      tasksToday: allTasks.filter((t) => {
         if (!t.end_date) return false;
         const endDate = new Date(t.end_date);
         endDate.setHours(0, 0, 0, 0);
         return endDate.getTime() === today.getTime() && t.status !== 'done' && t.status !== 'cancelled';
       }).length,
-      
-      tasksThisWeek: allTasks.filter(t => {
+
+      tasksThisWeek: allTasks.filter((t) => {
         if (!t.end_date) return false;
         const endDate = new Date(t.end_date);
         endDate.setHours(0, 0, 0, 0);
         return endDate >= today && endDate <= thisWeekEnd && t.status !== 'done' && t.status !== 'cancelled';
       }).length,
 
-      linkedToGoals: allTasks.filter(t => t.parent_id).length,
-      notLinkedToGoals: allTasks.filter(t => !t.parent_id).length
+      linkedToGoals: allTasks.filter((t) => t.parent_id).length,
+      notLinkedToGoals: allTasks.filter((t) => !t.parent_id).length
     };
   }, [allGoals, identifyGoals]);
 
   // סינון משימות לפי הקטגוריה שנבחרה
   const filteredTasks = useMemo(() => {
     const { parentGoalIds } = identifyGoals;
-    const allTasks = allGoals.filter(g => !parentGoalIds.has(g.id));
-    
+    const allTasks = allGoals.filter((g) => !parentGoalIds.has(g.id));
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const thisWeekEnd = new Date(today);
     thisWeekEnd.setDate(thisWeekEnd.getDate() + 7);
 
     switch (activeStatFilter) {
       case 'today':
-        return allTasks.filter(t => {
+        return allTasks.filter((t) => {
           if (!t.end_date) return false;
           const endDate = new Date(t.end_date);
           endDate.setHours(0, 0, 0, 0);
           return endDate.getTime() === today.getTime() && t.status !== 'done' && t.status !== 'cancelled';
         });
       case 'week':
-        return allTasks.filter(t => {
+        return allTasks.filter((t) => {
           if (!t.end_date) return false;
           const endDate = new Date(t.end_date);
           endDate.setHours(0, 0, 0, 0);
           return endDate >= today && endDate <= thisWeekEnd && t.status !== 'done' && t.status !== 'cancelled';
         });
       case 'delayed':
-        return allTasks.filter(t => t.status === 'delayed');
+        return allTasks.filter((t) => t.status === 'delayed');
       case 'open':
-        return allTasks.filter(t => t.status !== 'done' && t.status !== 'cancelled');
+        return allTasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled');
       case 'linked':
-        return allTasks.filter(t => t.parent_id);
+        return allTasks.filter((t) => t.parent_id);
       case 'notLinked':
-        return allTasks.filter(t => !t.parent_id);
+        return allTasks.filter((t) => !t.parent_id);
       default:
-        return allTasks.filter(t => t.status !== 'done' && t.status !== 'cancelled');
+        return allTasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled');
     }
   }, [allGoals, activeStatFilter, identifyGoals]);
 
@@ -207,17 +207,17 @@ export default function GoalsAndTasksDashboard({ customer }) {
     return (
       <div dir="rtl">
         <div className="mb-4">
-          <Button 
-            onClick={() => setShowGanttView(false)} 
-            variant="outline" 
-            className="border-horizon text-horizon-accent"
-          >
+          <Button
+            onClick={() => setShowGanttView(false)}
+            variant="outline"
+            className="border-horizon text-horizon-accent">
+
             חזור לדשבורד יעדים ומשימות
           </Button>
         </div>
         <CustomerGoalsGantt customer={customer} />
-      </div>
-    );
+      </div>);
+
   }
 
   if (isLoadingGoals) {
@@ -225,12 +225,12 @@ export default function GoalsAndTasksDashboard({ customer }) {
       <div className="flex items-center justify-center p-8 text-horizon-accent">
         <Loader2 className="w-6 h-6 animate-spin mr-2" />
         טוען יעדים ומשימות...
-      </div>
-    );
+      </div>);
+
   }
 
   const { parentGoals } = identifyGoals;
-  const openParentGoals = parentGoals.filter(g => g.status !== 'done' && g.status !== 'cancelled');
+  const openParentGoals = parentGoals.filter((g) => g.status !== 'done' && g.status !== 'cancelled');
 
   return (
     <div className="p-4 md:p-6 space-y-6" dir="rtl">
@@ -241,19 +241,19 @@ export default function GoalsAndTasksDashboard({ customer }) {
           יעדים ומשימות
         </h2>
         <div className="flex gap-2 flex-wrap">
-          <Button 
+          <Button
             onClick={handleExportPDF}
             variant="outline"
-            className="border-green-500 text-green-400 hover:bg-green-500/10"
-          >
+            className="border-green-500 text-green-400 hover:bg-green-500/10">
+
             <Download className="w-4 h-4 ml-2" />
             ייצא PDF
           </Button>
-          <Button 
-            onClick={() => setShowGanttView(true)} 
-            variant="outline" 
-            className="border-horizon-primary text-horizon-primary"
-          >
+          <Button
+            onClick={() => setShowGanttView(true)}
+            variant="outline"
+            className="border-horizon-primary text-horizon-primary">
+
             <LayoutGrid className="w-4 h-4 ml-2" />
             גאנט יעדים מלא
           </Button>
@@ -270,10 +270,10 @@ export default function GoalsAndTasksDashboard({ customer }) {
 
       {/* קוביות סטטיסטיקה */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <Card 
+        <Card
           className={`card-horizon cursor-pointer transition-all ${activeStatFilter === 'today' ? 'ring-2 ring-horizon-primary' : ''}`}
-          onClick={() => setActiveStatFilter(activeStatFilter === 'today' ? null : 'today')}
-        >
+          onClick={() => setActiveStatFilter(activeStatFilter === 'today' ? null : 'today')}>
+
           <CardContent className="p-4">
             <div className="flex justify-between items-center">
               <div className="text-right">
@@ -285,14 +285,14 @@ export default function GoalsAndTasksDashboard({ customer }) {
           </CardContent>
         </Card>
 
-        <Card 
+        <Card
           className={`card-horizon cursor-pointer transition-all ${activeStatFilter === 'week' ? 'ring-2 ring-horizon-primary' : ''}`}
-          onClick={() => setActiveStatFilter(activeStatFilter === 'week' ? null : 'week')}
-        >
+          onClick={() => setActiveStatFilter(activeStatFilter === 'week' ? null : 'week')}>
+
           <CardContent className="p-4">
             <div className="flex justify-between items-center">
               <div className="text-right">
-                <p className="text-sm text-horizon-accent">משימות בייחור</p>
+                <p className="text-sm text-horizon-accent">משימות באיחור</p>
                 <p className="text-2xl font-bold text-blue-400">{stats.tasksThisWeek}</p>
               </div>
               <Clock className="w-8 h-8 text-blue-400" />
@@ -304,7 +304,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
           <CardContent className="p-4">
             <div className="flex justify-between items-center">
               <div className="text-right">
-                <p className="text-sm text-horizon-accent">יעדים בייחור</p>
+                <p className="text-sm text-horizon-accent">יעדים באיחור</p>
                 <p className="text-2xl font-bold text-green-400">{stats.openGoals}</p>
               </div>
               <Target className="w-8 h-8 text-green-400" />
@@ -380,75 +380,75 @@ export default function GoalsAndTasksDashboard({ customer }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {filteredTasks.length === 0 ? (
-            <div className="text-center py-8">
+          {filteredTasks.length === 0 ?
+          <div className="text-center py-8">
               <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-green-400" />
               <p className="text-horizon-accent">אין משימות בקטגוריה זו - מצוין!</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredTasks.map(task => {
-                const statusDisplay = getStatusDisplay(task.status);
-                const StatusIcon = statusDisplay.icon;
-                const parentGoal = task.parent_id ? allGoals.find(g => g.id === task.parent_id) : null;
-                
-                return (
-                  <div 
-                    key={task.id} 
-                    className="bg-horizon-card/50 p-4 rounded-lg border border-horizon hover:border-horizon-primary/50 transition-colors cursor-pointer"
-                    onClick={(e) => {
-                      if (e.target.closest('button')) return;
-                      handleEditTask(task);
-                    }}
-                  >
+            </div> :
+
+          <div className="space-y-3">
+              {filteredTasks.map((task) => {
+              const statusDisplay = getStatusDisplay(task.status);
+              const StatusIcon = statusDisplay.icon;
+              const parentGoal = task.parent_id ? allGoals.find((g) => g.id === task.parent_id) : null;
+
+              return (
+                <div
+                  key={task.id}
+                  className="bg-horizon-card/50 p-4 rounded-lg border border-horizon hover:border-horizon-primary/50 transition-colors cursor-pointer"
+                  onClick={(e) => {
+                    if (e.target.closest('button')) return;
+                    handleEditTask(task);
+                  }}>
+
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
                         <h4 className="font-medium text-horizon-text mb-1">{task.name}</h4>
-                        {task.notes && (
-                          <p className="text-sm text-horizon-accent mb-2">{task.notes}</p>
-                        )}
+                        {task.notes &&
+                      <p className="text-sm text-horizon-accent mb-2">{task.notes}</p>
+                      }
                         <div className="flex items-center gap-2 flex-wrap">
                           <Badge className={statusDisplay.bgColor}>
                             <StatusIcon className={`w-3 h-3 ml-1 ${statusDisplay.color}`} />
                             <span className={statusDisplay.color}>{statusDisplay.label}</span>
                           </Badge>
-                          {task.end_date && (
-                            <Badge variant="outline" className="border-horizon-accent text-horizon-accent">
+                          {task.end_date &&
+                        <Badge variant="outline" className="border-horizon-accent text-horizon-accent">
                               <Calendar className="w-3 h-3 ml-1" />
                               {format(new Date(task.end_date), 'dd/MM/yyyy', { locale: he })}
                             </Badge>
-                          )}
-                          {parentGoal && (
-                            <Badge className="bg-purple-500/20 text-purple-400">
+                        }
+                          {parentGoal &&
+                        <Badge className="bg-purple-500/20 text-purple-400">
                               <LinkIcon className="w-3 h-3 ml-1" />
                               {parentGoal.name}
                             </Badge>
-                          )}
-                          {task.assignee_email && (
-                            <Badge variant="outline" className="border-horizon text-horizon-accent">
+                        }
+                          {task.assignee_email &&
+                        <Badge variant="outline" className="border-horizon text-horizon-accent">
                               {task.assignee_email}
                             </Badge>
-                          )}
+                        }
                         </div>
                       </div>
-                      {task.status !== 'done' && (
-                        <Button
-                          size="sm"
-                          onClick={(e) => {
-                              e.stopPropagation();
-                              handleMarkAsDone(task.id);
-                          }}
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                        >
+                      {task.status !== 'done' &&
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMarkAsDone(task.id);
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white">
+
                           <CheckCircle2 className="w-4 h-4" />
                         </Button>
-                      )}
+                    }
                     </div>
-                  </div>
-                );
-              })}
+                  </div>);
+
+            })}
             </div>
-          )}
+          }
         </CardContent>
       </Card>
 
@@ -462,22 +462,22 @@ export default function GoalsAndTasksDashboard({ customer }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {openParentGoals.length === 0 ? (
-            <div className="text-center py-8">
+          {openParentGoals.length === 0 ?
+          <div className="text-center py-8">
               <Target className="w-12 h-12 mx-auto mb-3 text-gray-400" />
               <p className="text-horizon-accent">אין יעדים פתוחים להצגה.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {openParentGoals.map(goal => {
-                const statusDisplay = getStatusDisplay(goal.status);
-                const StatusIcon = statusDisplay.icon;
-                const subtasks = allGoals.filter(t => t.parent_id === goal.id);
-                const completedSubtasks = subtasks.filter(t => t.status === 'done').length;
-                const progress = subtasks.length > 0 ? (completedSubtasks / subtasks.length) * 100 : (goal.status === 'done' ? 100 : 0);
+            </div> :
 
-                return (
-                  <div key={goal.id} className="bg-horizon-card/50 p-4 rounded-lg border border-horizon hover:border-horizon-primary/50 transition-colors cursor-pointer" onClick={() => handleEditTask(goal)}>
+          <div className="space-y-3">
+              {openParentGoals.map((goal) => {
+              const statusDisplay = getStatusDisplay(goal.status);
+              const StatusIcon = statusDisplay.icon;
+              const subtasks = allGoals.filter((t) => t.parent_id === goal.id);
+              const completedSubtasks = subtasks.filter((t) => t.status === 'done').length;
+              const progress = subtasks.length > 0 ? completedSubtasks / subtasks.length * 100 : goal.status === 'done' ? 100 : 0;
+
+              return (
+                <div key={goal.id} className="bg-horizon-card/50 p-4 rounded-lg border border-horizon hover:border-horizon-primary/50 transition-colors cursor-pointer" onClick={() => handleEditTask(goal)}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
                         <h4 className="font-semibold text-horizon-text mb-2">{goal.name}</h4>
@@ -486,52 +486,52 @@ export default function GoalsAndTasksDashboard({ customer }) {
                             <StatusIcon className={`w-4 h-4 ${statusDisplay.color}`} />
                             <span>{statusDisplay.label}</span>
                           </div>
-                          {(goal.start_date || goal.end_date) && (
-                            <div className="flex items-center gap-2">
+                          {(goal.start_date || goal.end_date) &&
+                        <div className="flex items-center gap-2">
                               <Calendar className="w-4 h-4" />
                               <span>
                                 {goal.start_date ? format(new Date(goal.start_date), 'dd/MM/yy', { locale: he }) : '?'} - {goal.end_date ? format(new Date(goal.end_date), 'dd/MM/yy', { locale: he }) : '?'}
                               </span>
                             </div>
-                          )}
+                        }
                           <div className="flex items-center gap-2">
                             <ListTodo className="w-4 h-4" />
                             <span>{subtasks.length} משימות</span>
                           </div>
                         </div>
-                        {subtasks.length > 0 && (
-                          <div>
+                        {subtasks.length > 0 &&
+                      <div>
                             <div className="w-full bg-horizon-card rounded-full h-2.5">
                               <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${progress}%`, transition: 'width 0.5s ease-in-out' }}></div>
                             </div>
                             <p className="text-xs text-horizon-accent mt-1">{Math.round(progress)}% הושלם ({completedSubtasks}/{subtasks.length})</p>
                           </div>
-                        )}
+                      }
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditTask(goal);
-                          }}
-                          className="text-horizon-primary"
-                        >
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditTask(goal);
+                        }}
+                        className="text-horizon-primary">
+
                           <Edit className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  </div>);
+
+            })}
             </div>
-          )}
+          }
         </CardContent>
       </Card>
 
       {/* מודל יצירת משימה */}
-      <CreateTaskModal 
+      <CreateTaskModal
         isOpen={showCreateTaskModal}
         onClose={() => setShowCreateTaskModal(false)}
         customer={customer}
@@ -540,8 +540,8 @@ export default function GoalsAndTasksDashboard({ customer }) {
         onSuccess={() => {
           queryClient.invalidateQueries(['customerGoals', customer.email]);
           setShowCreateTaskModal(false);
-        }}
-      />
+        }} />
+
 
       {/* מודל יצירת יעד */}
       <CreateGoalModal
@@ -553,11 +553,11 @@ export default function GoalsAndTasksDashboard({ customer }) {
         onSuccess={() => {
           queryClient.invalidateQueries(['customerGoals', customer.email]);
           setShowCreateGoalModal(false);
-        }}
-      />
+        }} />
+
       
       {/* מודל עריכת משימה */}
-      <EditTaskModal 
+      <EditTaskModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         task={editingTask}
@@ -567,10 +567,10 @@ export default function GoalsAndTasksDashboard({ customer }) {
           queryClient.invalidateQueries(['customerGoals', customer.email]);
           setIsEditModalOpen(false);
           setEditingTask(null);
-        }}
-      />
-    </div>
-  );
+        }} />
+
+    </div>);
+
 }
 
 // מודל יצירת משימה חדשה
@@ -587,13 +587,13 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
   const [taggedUsers, setTaggedUsers] = useState([]);
   const [status, setStatus] = useState('open');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const { data: allUsers = [] } = useQuery({
     queryKey: ['allUsersForTask'],
     queryFn: async () => {
       const users = await base44.entities.User.list();
       // סינון רק משתמשים שקיימים בטבלת User
-      return users.filter(u => u.email && u.full_name);
+      return users.filter((u) => u.email && u.full_name);
     },
     enabled: isOpen
   });
@@ -601,20 +601,20 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
   // סינון משתמשים לפי הלוגיקה: משתמשים רגילים + מנהלי כספים המשויכים ללקוח
   const relevantUsers = useMemo(() => {
     if (!customer || !allUsers || allUsers.length === 0) return [];
-    
+
     const assignedPrimary = customer.assigned_financial_manager_email;
     const assignedAdditional = customer.additional_assigned_financial_manager_emails || [];
-    
+
     // אם אין מנהלי כספים משויכים - להציג רק משתמשים רגילים
     if (!assignedPrimary && assignedAdditional.length === 0) {
-      return allUsers.filter(u => u.user_type !== 'financial_manager');
+      return allUsers.filter((u) => u.user_type !== 'financial_manager');
     }
-    
+
     // משתמשים רגילים + מנהלי כספים משויכים בלבד
-    return allUsers.filter(u => {
+    return allUsers.filter((u) => {
       // אם זה לא מנהל כספים - להציג
       if (u.user_type !== 'financial_manager') return true;
-      
+
       // אם זה מנהל כספים - להציג רק אם הוא משויך ללקוח
       return u.email === assignedPrimary || assignedAdditional.includes(u.email);
     });
@@ -656,7 +656,7 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
         end_date: endDate,
         end_date_time: endDateTime,
         reminder_date: reminderDateTime,
-        parent_id: (parentGoalId && parentGoalId !== 'no_goal') ? parentGoalId : null,
+        parent_id: parentGoalId && parentGoalId !== 'no_goal' ? parentGoalId : null,
         status,
         assignee_email: assigneeEmail || currentUser?.email,
         tagged_users: taggedUsers,
@@ -737,8 +737,8 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
               onChange={(e) => setName(e.target.value)}
               placeholder="הזן שם למשימה..."
               className="bg-horizon-card border-horizon text-horizon-text"
-              required
-            />
+              required />
+
           </div>
 
           <div>
@@ -747,8 +747,8 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="פרטים נוספים..."
-              className="bg-horizon-card border-horizon text-horizon-text h-20"
-            />
+              className="bg-horizon-card border-horizon text-horizon-text h-20" />
+
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -759,8 +759,8 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="bg-horizon-card border-horizon text-horizon-text"
-                required
-              />
+                required />
+
             </div>
             <div>
               <Label className="text-right block mb-2 text-horizon-text">תאריך סיום *</Label>
@@ -769,8 +769,8 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="bg-horizon-card border-horizon text-horizon-text"
-                required
-              />
+                required />
+
             </div>
           </div>
 
@@ -780,8 +780,8 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
               type="time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className="bg-horizon-card border-horizon text-horizon-text"
-            />
+              className="bg-horizon-card border-horizon text-horizon-text" />
+
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -791,8 +791,8 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
                 type="date"
                 value={reminderDate}
                 onChange={(e) => setReminderDate(e.target.value)}
-                className="bg-horizon-card border-horizon text-horizon-text"
-              />
+                className="bg-horizon-card border-horizon text-horizon-text" />
+
             </div>
             <div>
               <Label className="text-right block mb-2 text-horizon-text">שעת תזכורת</Label>
@@ -800,8 +800,8 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
                 type="time"
                 value={reminderTime}
                 onChange={(e) => setReminderTime(e.target.value)}
-                className="bg-horizon-card border-horizon text-horizon-text"
-              />
+                className="bg-horizon-card border-horizon text-horizon-text" />
+
             </div>
           </div>
 
@@ -813,11 +813,11 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
               </SelectTrigger>
               <SelectContent className="bg-horizon-dark border-horizon">
                 <SelectItem value="no_goal">ללא שיוך ליעד</SelectItem>
-                {allGoals.map(goal => (
-                  <SelectItem key={goal.id} value={goal.id}>
+                {allGoals.map((goal) =>
+                <SelectItem key={goal.id} value={goal.id}>
                     {goal.name}
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
             <p className="text-xs text-horizon-accent mt-1">אם יש יעד קיים, אפשר לשייך את המשימה אליו</p>
@@ -830,11 +830,11 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
                 <SelectValue placeholder="בחר אחראי" />
               </SelectTrigger>
               <SelectContent className="bg-horizon-dark border-horizon">
-                {relevantUsers.map(u => (
-                  <SelectItem key={u.id} value={u.email}>
+                {relevantUsers.map((u) =>
+                <SelectItem key={u.id} value={u.email}>
                     {u.full_name}
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -858,47 +858,47 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
               תיוג משתמשים (יקבלו נוטיפיקציה ומייל)
             </Label>
             <div className="space-y-2">
-              <Select 
-                value="" 
+              <Select
+                value=""
                 onValueChange={(email) => {
                   if (email && !taggedUsers.includes(email)) {
                     setTaggedUsers([...taggedUsers, email]);
                   }
-                }}
-              >
+                }}>
+
                 <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
                   <SelectValue placeholder="בחר משתמש לתיוג..." />
                 </SelectTrigger>
                 <SelectContent className="bg-horizon-dark border-horizon">
-                  {relevantUsers
-                    .filter(u => !taggedUsers.includes(u.email))
-                    .map(u => (
-                      <SelectItem key={u.id} value={u.email}>
+                  {relevantUsers.
+                  filter((u) => !taggedUsers.includes(u.email)).
+                  map((u) =>
+                  <SelectItem key={u.id} value={u.email}>
                         {u.full_name} ({u.email})
                       </SelectItem>
-                    ))
+                  )
                   }
                 </SelectContent>
               </Select>
-              {taggedUsers.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {taggedUsers.map(email => {
-                    const user = relevantUsers.find(u => u.email === email);
-                    return (
-                      <Badge key={email} className="bg-horizon-primary/20 text-horizon-primary flex items-center gap-1">
+              {taggedUsers.length > 0 &&
+              <div className="flex flex-wrap gap-2">
+                  {taggedUsers.map((email) => {
+                  const user = relevantUsers.find((u) => u.email === email);
+                  return (
+                    <Badge key={email} className="bg-horizon-primary/20 text-horizon-primary flex items-center gap-1">
                         <Mail className="w-3 h-3" />
                         {user?.full_name || email}
                         <button
-                          onClick={() => setTaggedUsers(taggedUsers.filter(e => e !== email))}
-                          className="mr-1 hover:bg-red-500/20 rounded-full p-0.5"
-                        >
+                        onClick={() => setTaggedUsers(taggedUsers.filter((e) => e !== email))}
+                        className="mr-1 hover:bg-red-500/20 rounded-full p-0.5">
+
                           <X className="w-3 h-3" />
                         </button>
-                      </Badge>
-                    );
-                  })}
+                      </Badge>);
+
+                })}
                 </div>
-              )}
+              }
             </div>
           </div>
 
@@ -913,8 +913,8 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
           </DialogFooter>
         </form>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 }
 
 // מודל עריכת משימה
@@ -924,13 +924,13 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
   const [reminderTime, setReminderTime] = useState('09:00');
   const [taggedUsers, setTaggedUsers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const { data: allUsers = [] } = useQuery({
     queryKey: ['allUsersForEdit'],
     queryFn: async () => {
       const users = await base44.entities.User.list();
       // סינון רק משתמשים שקיימים בטבלת User
-      return users.filter(u => u.email && u.full_name);
+      return users.filter((u) => u.email && u.full_name);
     },
     enabled: isOpen
   });
@@ -949,18 +949,18 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
   // סינון משתמשים
   const relevantUsers = useMemo(() => {
     if (!allUsers || allUsers.length === 0) return [];
-    
+
     // אם אין נתוני לקוח עדיין, להציג את כל המשתמשים
     if (!customerData) return allUsers;
-    
+
     const assignedPrimary = customerData.assigned_financial_manager_email;
     const assignedAdditional = customerData.additional_assigned_financial_manager_emails || [];
-    
+
     if (!assignedPrimary && assignedAdditional.length === 0) {
-      return allUsers.filter(u => u.user_type !== 'financial_manager');
+      return allUsers.filter((u) => u.user_type !== 'financial_manager');
     }
-    
-    return allUsers.filter(u => {
+
+    return allUsers.filter((u) => {
       if (u.user_type !== 'financial_manager') return true;
       return u.email === assignedPrimary || assignedAdditional.includes(u.email);
     });
@@ -978,7 +978,7 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
           console.error('Error parsing end_date_time:', e);
         }
       }
-      
+
       // חילוץ תאריך ושעה מ-reminder_date אם קיים
       let reminderDateStr = '';
       let reminderTimeStr = '09:00';
@@ -991,12 +991,12 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
           console.error('Error parsing reminder_date:', e);
         }
       }
-      
+
       setEditedTask({
         ...task,
         start_date: task.start_date ? format(new Date(task.start_date), 'yyyy-MM-dd') : '',
         end_date: task.end_date ? format(new Date(task.end_date), 'yyyy-MM-dd') : '',
-        reminder_date_only: reminderDateStr,
+        reminder_date_only: reminderDateStr
       });
       setEndTime(time);
       setReminderTime(reminderTimeStr);
@@ -1005,7 +1005,7 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
   }, [task]);
 
   const handleFieldChange = (field, value) => {
-    setEditedTask(prev => ({ ...prev, [field]: value }));
+    setEditedTask((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -1041,7 +1041,7 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
       dataToUpdate.tagged_users = taggedUsers;
 
       const oldTaggedUsers = task.tagged_users || [];
-      const newlyTagged = taggedUsers.filter(email => !oldTaggedUsers.includes(email));
+      const newlyTagged = taggedUsers.filter((email) => !oldTaggedUsers.includes(email));
 
       await base44.entities.CustomerGoal.update(id, dataToUpdate);
 
@@ -1077,7 +1077,7 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
       }
 
       // המתנה קצרה לוודא שהעדכון התקבל
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       onSuccess();
     } catch (error) {
@@ -1087,7 +1087,7 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
       setIsSubmitting(false);
     }
   };
-  
+
   if (!isOpen || !editedTask) return null;
 
   return (
@@ -1108,8 +1108,8 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
               onChange={(e) => handleFieldChange('name', e.target.value)}
               placeholder="הזן שם למשימה..."
               className="bg-horizon-card border-horizon text-horizon-text"
-              required
-            />
+              required />
+
           </div>
 
           <div>
@@ -1118,8 +1118,8 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
               value={editedTask.notes || ''}
               onChange={(e) => handleFieldChange('notes', e.target.value)}
               placeholder="פרטים נוספים..."
-              className="bg-horizon-card border-horizon text-horizon-text h-20"
-            />
+              className="bg-horizon-card border-horizon text-horizon-text h-20" />
+
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -1130,8 +1130,8 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
                 value={editedTask.start_date}
                 onChange={(e) => handleFieldChange('start_date', e.target.value)}
                 className="bg-horizon-card border-horizon text-horizon-text"
-                required
-              />
+                required />
+
             </div>
             <div>
               <Label className="text-right block mb-2 text-horizon-text">תאריך סיום *</Label>
@@ -1140,8 +1140,8 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
                 value={editedTask.end_date}
                 onChange={(e) => handleFieldChange('end_date', e.target.value)}
                 className="bg-horizon-card border-horizon text-horizon-text"
-                required
-              />
+                required />
+
             </div>
           </div>
 
@@ -1151,8 +1151,8 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
               type="time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className="bg-horizon-card border-horizon text-horizon-text"
-            />
+              className="bg-horizon-card border-horizon text-horizon-text" />
+
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -1162,8 +1162,8 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
                 type="date"
                 value={editedTask.reminder_date_only || ''}
                 onChange={(e) => handleFieldChange('reminder_date_only', e.target.value)}
-                className="bg-horizon-card border-horizon text-horizon-text"
-              />
+                className="bg-horizon-card border-horizon text-horizon-text" />
+
             </div>
             <div>
               <Label className="text-right block mb-2 text-horizon-text">שעת תזכורת</Label>
@@ -1171,8 +1171,8 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
                 type="time"
                 value={reminderTime}
                 onChange={(e) => setReminderTime(e.target.value)}
-                className="bg-horizon-card border-horizon text-horizon-text"
-              />
+                className="bg-horizon-card border-horizon text-horizon-text" />
+
             </div>
           </div>
 
@@ -1184,11 +1184,11 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
               </SelectTrigger>
               <SelectContent className="bg-horizon-dark border-horizon">
                 <SelectItem value="no_goal">ללא שיוך ליעד</SelectItem>
-                {allGoals.map(goal => (
-                  <SelectItem key={goal.id} value={goal.id}>
+                {allGoals.map((goal) =>
+                <SelectItem key={goal.id} value={goal.id}>
                     {goal.name}
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -1200,11 +1200,11 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
                 <SelectValue placeholder="בחר אחראי" />
               </SelectTrigger>
               <SelectContent className="bg-horizon-dark border-horizon">
-                {relevantUsers.map(u => (
-                  <SelectItem key={u.id} value={u.email}>
+                {relevantUsers.map((u) =>
+                <SelectItem key={u.id} value={u.email}>
                     {u.full_name}
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -1231,47 +1231,47 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
               תיוג משתמשים (יקבלו נוטיפיקציה ומייל)
             </Label>
             <div className="space-y-2">
-              <Select 
-                value="" 
+              <Select
+                value=""
                 onValueChange={(email) => {
                   if (email && !taggedUsers.includes(email)) {
                     setTaggedUsers([...taggedUsers, email]);
                   }
-                }}
-              >
+                }}>
+
                 <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
                   <SelectValue placeholder="בחר משתמש לתיוג..." />
                 </SelectTrigger>
                 <SelectContent className="bg-horizon-dark border-horizon">
-                  {relevantUsers
-                    .filter(u => !taggedUsers.includes(u.email))
-                    .map(u => (
-                      <SelectItem key={u.id} value={u.email}>
+                  {relevantUsers.
+                  filter((u) => !taggedUsers.includes(u.email)).
+                  map((u) =>
+                  <SelectItem key={u.id} value={u.email}>
                         {u.full_name} ({u.email})
                       </SelectItem>
-                    ))
+                  )
                   }
                 </SelectContent>
               </Select>
-              {taggedUsers.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {taggedUsers.map(email => {
-                    const user = relevantUsers.find(u => u.email === email);
-                    return (
-                      <Badge key={email} className="bg-horizon-primary/20 text-horizon-primary flex items-center gap-1">
+              {taggedUsers.length > 0 &&
+              <div className="flex flex-wrap gap-2">
+                  {taggedUsers.map((email) => {
+                  const user = relevantUsers.find((u) => u.email === email);
+                  return (
+                    <Badge key={email} className="bg-horizon-primary/20 text-horizon-primary flex items-center gap-1">
                         <Mail className="w-3 h-3" />
                         {user?.full_name || email}
                         <button
-                          onClick={() => setTaggedUsers(taggedUsers.filter(e => e !== email))}
-                          className="mr-1 hover:bg-red-500/20 rounded-full p-0.5"
-                        >
+                        onClick={() => setTaggedUsers(taggedUsers.filter((e) => e !== email))}
+                        className="mr-1 hover:bg-red-500/20 rounded-full p-0.5">
+
                           <X className="w-3 h-3" />
                         </button>
-                      </Badge>
-                    );
-                  })}
+                      </Badge>);
+
+                })}
                 </div>
-              )}
+              }
             </div>
           </div>
 
@@ -1286,8 +1286,8 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
           </DialogFooter>
         </form>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 }
 
 // מודל יצירת יעד חדש
@@ -1304,13 +1304,13 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
   const [externalResponsible, setExternalResponsible] = useState('');
   const [taggedUsers, setTaggedUsers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const { data: allUsers = [] } = useQuery({
     queryKey: ['allUsersForGoal'],
     queryFn: async () => {
       const users = await base44.entities.User.list();
       // סינון רק משתמשים שקיימים בטבלת User
-      return users.filter(u => u.email && u.full_name);
+      return users.filter((u) => u.email && u.full_name);
     },
     enabled: isOpen
   });
@@ -1318,15 +1318,15 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
   // סינון משתמשים
   const relevantUsers = useMemo(() => {
     if (!customer || !allUsers || allUsers.length === 0) return [];
-    
+
     const assignedPrimary = customer.assigned_financial_manager_email;
     const assignedAdditional = customer.additional_assigned_financial_manager_emails || [];
-    
+
     if (!assignedPrimary && assignedAdditional.length === 0) {
-      return allUsers.filter(u => u.user_type !== 'financial_manager');
+      return allUsers.filter((u) => u.user_type !== 'financial_manager');
     }
-    
-    return allUsers.filter(u => {
+
+    return allUsers.filter((u) => {
       if (u.user_type !== 'financial_manager') return true;
       return u.email === assignedPrimary || assignedAdditional.includes(u.email);
     });
@@ -1441,8 +1441,8 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
               onChange={(e) => setName(e.target.value)}
               placeholder="הזן שם ליעד..."
               className="bg-horizon-card border-horizon text-horizon-text"
-              required
-            />
+              required />
+
           </div>
 
           <div>
@@ -1451,8 +1451,8 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="פרטים נוספים על היעד..."
-              className="bg-horizon-card border-horizon text-horizon-text h-20"
-            />
+              className="bg-horizon-card border-horizon text-horizon-text h-20" />
+
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -1462,8 +1462,8 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="bg-horizon-card border-horizon text-horizon-text"
-              />
+                className="bg-horizon-card border-horizon text-horizon-text" />
+
             </div>
             <div>
               <Label className="text-right block mb-2 text-horizon-text">תאריך יעד</Label>
@@ -1471,8 +1471,8 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="bg-horizon-card border-horizon text-horizon-text"
-              />
+                className="bg-horizon-card border-horizon text-horizon-text" />
+
             </div>
           </div>
 
@@ -1482,8 +1482,8 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
               type="time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className="bg-horizon-card border-horizon text-horizon-text"
-            />
+              className="bg-horizon-card border-horizon text-horizon-text" />
+
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -1493,8 +1493,8 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
                 type="date"
                 value={reminderDate}
                 onChange={(e) => setReminderDate(e.target.value)}
-                className="bg-horizon-card border-horizon text-horizon-text"
-              />
+                className="bg-horizon-card border-horizon text-horizon-text" />
+
             </div>
             <div>
               <Label className="text-right block mb-2 text-horizon-text">שעת תזכורת</Label>
@@ -1502,8 +1502,8 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
                 type="time"
                 value={reminderTime}
                 onChange={(e) => setReminderTime(e.target.value)}
-                className="bg-horizon-card border-horizon text-horizon-text"
-              />
+                className="bg-horizon-card border-horizon text-horizon-text" />
+
             </div>
           </div>
 
@@ -1514,11 +1514,11 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
                 <SelectValue placeholder="בחר אחראי" />
               </SelectTrigger>
               <SelectContent className="bg-horizon-dark border-horizon">
-                {relevantUsers.map(u => (
-                  <SelectItem key={u.id} value={u.email}>
+                {relevantUsers.map((u) =>
+                <SelectItem key={u.id} value={u.email}>
                     {u.full_name} {u.user_type === 'financial_manager' ? '(מנהל)' : ''}
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -1529,46 +1529,46 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
               אחראים על היעד (מנהלי כספים)
             </Label>
             <div className="space-y-2">
-              <Select 
-                value="" 
+              <Select
+                value=""
                 onValueChange={(email) => {
                   if (email && !responsibleUsers.includes(email)) {
                     setResponsibleUsers([...responsibleUsers, email]);
                   }
-                }}
-              >
+                }}>
+
                 <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
                   <SelectValue placeholder="הוסף מנהל כספים אחראי..." />
                 </SelectTrigger>
                 <SelectContent className="bg-horizon-dark border-horizon">
-                  {relevantUsers
-                    .filter(u => u.user_type === 'financial_manager' && !responsibleUsers.includes(u.email))
-                    .map(u => (
-                      <SelectItem key={u.id} value={u.email}>
+                  {relevantUsers.
+                  filter((u) => u.user_type === 'financial_manager' && !responsibleUsers.includes(u.email)).
+                  map((u) =>
+                  <SelectItem key={u.id} value={u.email}>
                         {u.full_name}
                       </SelectItem>
-                    ))
+                  )
                   }
                 </SelectContent>
               </Select>
-              {responsibleUsers.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {responsibleUsers.map(email => {
-                    const user = relevantUsers.find(u => u.email === email);
-                    return (
-                      <Badge key={email} className="bg-blue-500/20 text-blue-400 flex items-center gap-1">
+              {responsibleUsers.length > 0 &&
+              <div className="flex flex-wrap gap-2">
+                  {responsibleUsers.map((email) => {
+                  const user = relevantUsers.find((u) => u.email === email);
+                  return (
+                    <Badge key={email} className="bg-blue-500/20 text-blue-400 flex items-center gap-1">
                         {user?.full_name || email}
                         <button
-                          onClick={() => setResponsibleUsers(responsibleUsers.filter(e => e !== email))}
-                          className="mr-1 hover:bg-red-500/20 rounded-full p-0.5"
-                        >
+                        onClick={() => setResponsibleUsers(responsibleUsers.filter((e) => e !== email))}
+                        className="mr-1 hover:bg-red-500/20 rounded-full p-0.5">
+
                           <X className="w-3 h-3" />
                         </button>
-                      </Badge>
-                    );
-                  })}
+                      </Badge>);
+
+                })}
                 </div>
-              )}
+              }
             </div>
           </div>
 
@@ -1578,8 +1578,8 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
               value={externalResponsible}
               onChange={(e) => setExternalResponsible(e.target.value)}
               placeholder="למשל: רואה חשבון - משה כהן, יועץ עסקי - דני לוי"
-              className="bg-horizon-card border-horizon text-horizon-text"
-            />
+              className="bg-horizon-card border-horizon text-horizon-text" />
+
           </div>
 
           <div>
@@ -1588,47 +1588,47 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
               תיוג משתמשים (יקבלו נוטיפיקציה ומייל)
             </Label>
             <div className="space-y-2">
-              <Select 
-                value="" 
+              <Select
+                value=""
                 onValueChange={(email) => {
                   if (email && !taggedUsers.includes(email)) {
                     setTaggedUsers([...taggedUsers, email]);
                   }
-                }}
-              >
+                }}>
+
                 <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
                   <SelectValue placeholder="בחר משתמש לתיוג..." />
                 </SelectTrigger>
                 <SelectContent className="bg-horizon-dark border-horizon">
-                  {relevantUsers
-                    .filter(u => !taggedUsers.includes(u.email))
-                    .map(u => (
-                      <SelectItem key={u.id} value={u.email}>
+                  {relevantUsers.
+                  filter((u) => !taggedUsers.includes(u.email)).
+                  map((u) =>
+                  <SelectItem key={u.id} value={u.email}>
                         {u.full_name} ({u.email})
                       </SelectItem>
-                    ))
+                  )
                   }
                 </SelectContent>
               </Select>
-              {taggedUsers.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {taggedUsers.map(email => {
-                    const user = relevantUsers.find(u => u.email === email);
-                    return (
-                      <Badge key={email} className="bg-horizon-primary/20 text-horizon-primary flex items-center gap-1">
+              {taggedUsers.length > 0 &&
+              <div className="flex flex-wrap gap-2">
+                  {taggedUsers.map((email) => {
+                  const user = relevantUsers.find((u) => u.email === email);
+                  return (
+                    <Badge key={email} className="bg-horizon-primary/20 text-horizon-primary flex items-center gap-1">
                         <Mail className="w-3 h-3" />
                         {user?.full_name || email}
                         <button
-                          onClick={() => setTaggedUsers(taggedUsers.filter(e => e !== email))}
-                          className="mr-1 hover:bg-red-500/20 rounded-full p-0.5"
-                        >
+                        onClick={() => setTaggedUsers(taggedUsers.filter((e) => e !== email))}
+                        className="mr-1 hover:bg-red-500/20 rounded-full p-0.5">
+
                           <X className="w-3 h-3" />
                         </button>
-                      </Badge>
-                    );
-                  })}
+                      </Badge>);
+
+                })}
                 </div>
-              )}
+              }
             </div>
           </div>
 
@@ -1643,6 +1643,6 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
           </DialogFooter>
         </form>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 }
