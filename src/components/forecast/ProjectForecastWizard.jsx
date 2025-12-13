@@ -29,6 +29,9 @@ export default function ProjectForecastWizard({
     project_name: '',
     project_description: '',
     forecast_year: new Date().getFullYear(),
+    input_mode: 'manual',
+    manual_revenue: 0,
+    manual_materials_cost: 0,
     products: [],
     labor_costs: {
       num_workers: 0,
@@ -36,7 +39,7 @@ export default function ProjectForecastWizard({
       project_duration_days: 0,
       total_labor_cost: 0
     },
-    desired_margin_percentage: 30, // Default to a more standard margin
+    desired_margin_percentage: 30,
     calculated: {},
     status: 'draft'
   });
@@ -89,7 +92,7 @@ export default function ProjectForecastWizard({
 
   const steps = [
     { number: 1, title: "פרטי הפרויקט" },
-    { number: 2, title: "בחירת מוצרים" },
+    { number: 2, title: "הכנסות ועלויות" },
     { number: 3, title: "עלויות עובדים" },
     { number: 4, title: "רווח רצוי" },
     { number: 5, title: "סיכום" }
