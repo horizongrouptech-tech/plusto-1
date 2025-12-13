@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
+import anime from 'animejs';
 import { 
   Package, 
   Lightbulb, 
@@ -78,6 +79,21 @@ export default function RecentActivity({
   };
 
   const recentItems = getRecentItems();
+  const itemsRef = useRef(null);
+
+  useEffect(() => {
+    if (itemsRef.current && !isLoading && recentItems.length > 0) {
+      const items = itemsRef.current.children;
+      anime({
+        targets: items,
+        translateX: [50, 0],
+        opacity: [0, 1],
+        duration: 600,
+        delay: anime.stagger(100),
+        easing: 'easeOutExpo'
+      });
+    }
+  }, [isLoading, recentItems.length]);
 
   return (
     <Card className="card-horizon border-0 shadow-lg">
@@ -112,9 +128,9 @@ export default function RecentActivity({
             <p className="text-sm">העלה קבצים או הוסף מוצרים כדי להתחיל לקבל תובנות</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div ref={itemsRef} className="space-y-4">
             {recentItems.map((item, index) => (
-              <div key={index} className="flex items-center gap-4 p-3 rounded-xl hover:bg-horizon-card transition-colors duration-200">
+              <div key={index} className="flex items-center gap-4 p-3 rounded-xl hover:bg-horizon-card transition-colors duration-200" style={{ opacity: 0 }}>
                 <div className="p-2 rounded-xl bg-horizon-primary/10 border border-horizon-primary/20 shadow-sm">
                   <item.icon className="w-5 h-5 text-horizon-primary" />
                 </div>
