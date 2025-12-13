@@ -1,10 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ResponsiveBar } from '@nivo/bar';
-import { ResponsiveLine } from '@nivo/line';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { formatCurrency } from './utils/numberFormatter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, Calendar, Filter } from 'lucide-react';
+import { TrendingUp, Calendar, Filter, BarChart3 } from 'lucide-react';
 
 export default function ManualForecastCharts({ profitLossData, yearlyTotals, salesForecast, detailedExpenses }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -119,48 +118,39 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
     }
   };
 
-  const nivoTheme = {
-    text: {
-      fontSize: 13,
-      fontWeight: 600,
-      fill: '#5a6c7d',
-      fontFamily: 'Heebo, Inter, system-ui, sans-serif'
-    },
-    tooltip: {
-      container: {
-        background: 'rgba(255, 255, 255, 0.98)',
-        backdropFilter: 'blur(12px)',
-        color: '#121725',
-        fontSize: '13px',
-        borderRadius: '12px',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-        padding: '16px',
-        border: '1px solid rgba(50, 172, 193, 0.2)'
-      }
-    },
-    grid: {
-      line: {
-        stroke: '#f3f4f6',
-        strokeWidth: 1.5,
-        strokeOpacity: 0.6
-      }
-    },
-    axis: {
-      ticks: {
-        text: {
-          fontSize: 12,
-          fill: '#6b7280',
-          fontWeight: 600
-        }
-      },
-      legend: {
-        text: {
-          fontSize: 13,
-          fill: '#5a6c7d',
-          fontWeight: 700
-        }
-      }
+  // Tooltip מותאם אישית עם עיצוב מודרני
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white/98 backdrop-blur-xl border-2 border-horizon-primary/30 p-4 rounded-2xl shadow-2xl">
+          <p className="text-horizon-text font-bold mb-3 text-base pb-2 border-b-2 border-horizon-primary/20">
+            {label}
+          </p>
+          <div className="space-y-2">
+            {payload.map((entry, index) => (
+              <div key={index} className="flex items-center justify-between gap-8">
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-4 h-4 rounded-md shadow-md" 
+                    style={{ backgroundColor: entry.color }}
+                  />
+                  <span className="text-sm font-semibold text-horizon-accent">
+                    {entry.name}:
+                  </span>
+                </div>
+                <span 
+                  className="font-bold text-base" 
+                  style={{ color: entry.color }}
+                >
+                  {formatCurrency(entry.value, 0)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
     }
+    return null;
   };
 
   if (!profitLossData || profitLossData.length === 0) {
@@ -188,73 +178,79 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-8 pb-6 bg-gradient-to-br from-white to-gray-50">
-          <div style={{ height: '400px' }}>
-            <ResponsiveBar
-              data={salesComparisonData}
-              keys={['תכנון מכירות', 'ביצוע מכירות']}
-              indexBy="name"
-              margin={{ top: 50, right: 130, bottom: 60, left: 80 }}
-              padding={0.25}
-              groupMode="grouped"
-              valueScale={{ type: 'linear' }}
-              colors={['#32acc1', '#10B981']}
-              theme={nivoTheme}
-              borderRadius={6}
-              axisBottom={{
-                tickSize: 0,
-                tickPadding: 10,
-                tickRotation: -15
-              }}
-              axisLeft={{
-                tickSize: 0,
-                tickPadding: 10,
-                format: (value) => `₪${(value / 1000).toFixed(0)}K`
-              }}
-              labelSkipWidth={12}
-              labelSkipHeight={12}
-              labelTextColor="#ffffff"
-              enableGridY={true}
-              gridYValues={5}
-              legends={[
-                {
-                  dataFrom: 'keys',
-                  anchor: 'bottom-right',
-                  direction: 'column',
-                  justify: false,
-                  translateX: 120,
-                  translateY: 0,
-                  itemsSpacing: 8,
-                  itemWidth: 100,
-                  itemHeight: 24,
-                  itemDirection: 'left-to-right',
-                  itemOpacity: 0.85,
-                  symbolSize: 16,
-                  symbolShape: 'circle',
-                  effects: [
-                    {
-                      on: 'hover',
-                      style: {
-                        itemOpacity: 1
-                      }
-                    }
-                  ]
-                }
-              ]}
-              animate={true}
-              motionConfig="wobbly"
-              tooltip={({ id, value, color }) => (
-                <div className="bg-white/98 backdrop-blur-xl border border-gray-200/60 p-4 rounded-xl shadow-2xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-                    <span className="text-sm font-semibold text-gray-700">{id}:</span>
-                  </div>
-                  <span className="text-lg font-bold" style={{ color }}>
-                    {formatCurrency(value, 0)}
-                  </span>
-                </div>
-              )}
-            />
-          </div>
+          <ResponsiveContainer width="100%" height={450}>
+            <BarChart 
+              data={salesComparisonData} 
+              margin={{ top: 30, right: 30, left: 30, bottom: 70 }}
+              barGap={10}
+              barCategoryGap="25%"
+            >
+              <defs>
+                <linearGradient id="planGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#32acc1" stopOpacity={0.95}/>
+                  <stop offset="95%" stopColor="#32acc1" stopOpacity={0.7}/>
+                </linearGradient>
+                <linearGradient id="actualGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.95}/>
+                  <stop offset="95%" stopColor="#10B981" stopOpacity={0.7}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                stroke="#e5e7eb" 
+                vertical={false}
+                strokeOpacity={0.5}
+              />
+              <XAxis 
+                dataKey="name" 
+                tick={{ 
+                  fill: '#374151', 
+                  fontSize: 14, 
+                  fontWeight: 600,
+                  fontFamily: 'Heebo, sans-serif'
+                }}
+                tickLine={false}
+                axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
+                angle={0}
+                height={60}
+              />
+              <YAxis 
+                tick={{ 
+                  fill: '#374151', 
+                  fontSize: 13, 
+                  fontWeight: 600,
+                  fontFamily: 'Heebo, sans-serif'
+                }}
+                tickFormatter={(value) => `₪${(value / 1000).toFixed(0)}K`}
+                tickLine={false}
+                axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
+                width={90}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(50, 172, 193, 0.1)' }} />
+              <Legend 
+                wrapperStyle={{ 
+                  paddingTop: '20px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  fontFamily: 'Heebo, sans-serif'
+                }}
+                iconType="circle"
+                iconSize={12}
+              />
+              <Bar 
+                dataKey="תכנון מכירות" 
+                fill="url(#planGradient)" 
+                radius={[8, 8, 0, 0]}
+                maxBarSize={80}
+              />
+              <Bar 
+                dataKey="ביצוע מכירות" 
+                fill="url(#actualGradient)" 
+                radius={[8, 8, 0, 0]}
+                maxBarSize={80}
+              />
+            </BarChart>
+          </ResponsiveContainer>
         </CardContent>
       </Card>
 
@@ -290,73 +286,79 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
           </div>
         </CardHeader>
         <CardContent className="pt-8 pb-6 bg-gradient-to-br from-white to-gray-50">
-          <div style={{ height: '400px' }}>
-            <ResponsiveBar
-              data={getFilteredExpensesData()}
-              keys={['תכנון', 'ביצוע']}
-              indexBy="name"
-              margin={{ top: 50, right: 130, bottom: 60, left: 80 }}
-              padding={0.25}
-              groupMode="grouped"
-              valueScale={{ type: 'linear' }}
-              colors={['#A855F7', '#EC4899']}
-              theme={nivoTheme}
-              borderRadius={6}
-              axisBottom={{
-                tickSize: 0,
-                tickPadding: 10,
-                tickRotation: -15
-              }}
-              axisLeft={{
-                tickSize: 0,
-                tickPadding: 10,
-                format: (value) => `₪${(value / 1000).toFixed(0)}K`
-              }}
-              labelSkipWidth={12}
-              labelSkipHeight={12}
-              labelTextColor="#ffffff"
-              enableGridY={true}
-              gridYValues={5}
-              legends={[
-                {
-                  dataFrom: 'keys',
-                  anchor: 'bottom-right',
-                  direction: 'column',
-                  justify: false,
-                  translateX: 120,
-                  translateY: 0,
-                  itemsSpacing: 8,
-                  itemWidth: 100,
-                  itemHeight: 24,
-                  itemDirection: 'left-to-right',
-                  itemOpacity: 0.85,
-                  symbolSize: 16,
-                  symbolShape: 'circle',
-                  effects: [
-                    {
-                      on: 'hover',
-                      style: {
-                        itemOpacity: 1
-                      }
-                    }
-                  ]
-                }
-              ]}
-              animate={true}
-              motionConfig="wobbly"
-              tooltip={({ id, value, color }) => (
-                <div className="bg-white/98 backdrop-blur-xl border border-gray-200/60 p-4 rounded-xl shadow-2xl">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-                    <span className="text-sm font-semibold text-gray-700">{id}:</span>
-                  </div>
-                  <span className="text-lg font-bold" style={{ color }}>
-                    {formatCurrency(value, 0)}
-                  </span>
-                </div>
-              )}
-            />
-          </div>
+          <ResponsiveContainer width="100%" height={450}>
+            <BarChart 
+              data={getFilteredExpensesData()} 
+              margin={{ top: 30, right: 30, left: 30, bottom: 70 }}
+              barGap={10}
+              barCategoryGap="25%"
+            >
+              <defs>
+                <linearGradient id="expensePlanGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#A855F7" stopOpacity={0.95}/>
+                  <stop offset="95%" stopColor="#A855F7" stopOpacity={0.7}/>
+                </linearGradient>
+                <linearGradient id="expenseActualGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#EC4899" stopOpacity={0.95}/>
+                  <stop offset="95%" stopColor="#EC4899" stopOpacity={0.7}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                stroke="#e5e7eb" 
+                vertical={false}
+                strokeOpacity={0.5}
+              />
+              <XAxis 
+                dataKey="name" 
+                tick={{ 
+                  fill: '#374151', 
+                  fontSize: 14, 
+                  fontWeight: 600,
+                  fontFamily: 'Heebo, sans-serif'
+                }}
+                tickLine={false}
+                axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
+                angle={0}
+                height={60}
+              />
+              <YAxis 
+                tick={{ 
+                  fill: '#374151', 
+                  fontSize: 13, 
+                  fontWeight: 600,
+                  fontFamily: 'Heebo, sans-serif'
+                }}
+                tickFormatter={(value) => `₪${(value / 1000).toFixed(0)}K`}
+                tickLine={false}
+                axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
+                width={90}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(168, 85, 247, 0.1)' }} />
+              <Legend 
+                wrapperStyle={{ 
+                  paddingTop: '20px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  fontFamily: 'Heebo, sans-serif'
+                }}
+                iconType="circle"
+                iconSize={12}
+              />
+              <Bar 
+                dataKey="תכנון" 
+                fill="url(#expensePlanGradient)" 
+                radius={[8, 8, 0, 0]}
+                maxBarSize={80}
+              />
+              <Bar 
+                dataKey="ביצוע" 
+                fill="url(#expenseActualGradient)" 
+                radius={[8, 8, 0, 0]}
+                maxBarSize={80}
+              />
+            </BarChart>
+          </ResponsiveContainer>
         </CardContent>
       </Card>
 
@@ -373,73 +375,89 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-8 pb-6 bg-gradient-to-br from-white to-gray-50">
-          <div style={{ height: '420px' }}>
-            <ResponsiveBar
-              data={chartData}
-              keys={['הכנסות', 'עלות מכר', 'רווח גולמי']}
-              indexBy="name"
-              margin={{ top: 50, right: 130, bottom: 60, left: 80 }}
-              padding={0.2}
-              groupMode="grouped"
-              valueScale={{ type: 'linear' }}
-              colors={['#32acc1', '#fb7185', '#34d399']}
-              theme={nivoTheme}
-              borderRadius={4}
-              axisBottom={{
-                tickSize: 0,
-                tickPadding: 10,
-                tickRotation: -15
-              }}
-              axisLeft={{
-                tickSize: 0,
-                tickPadding: 10,
-                format: (value) => `₪${(value / 1000).toFixed(0)}K`
-              }}
-              labelSkipWidth={12}
-              labelSkipHeight={12}
-              labelTextColor="#ffffff"
-              enableGridY={true}
-              gridYValues={5}
-              legends={[
-                {
-                  dataFrom: 'keys',
-                  anchor: 'bottom-right',
-                  direction: 'column',
-                  justify: false,
-                  translateX: 120,
-                  translateY: 0,
-                  itemsSpacing: 8,
-                  itemWidth: 100,
-                  itemHeight: 24,
-                  itemDirection: 'left-to-right',
-                  itemOpacity: 0.85,
-                  symbolSize: 16,
-                  symbolShape: 'circle',
-                  effects: [
-                    {
-                      on: 'hover',
-                      style: {
-                        itemOpacity: 1
-                      }
-                    }
-                  ]
-                }
-              ]}
-              animate={true}
-              motionConfig="wobbly"
-              tooltip={({ id, value, color }) => (
-                <div className="bg-white/98 backdrop-blur-xl border border-gray-200/60 p-4 rounded-xl shadow-2xl">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-                    <span className="text-sm font-semibold text-gray-700">{id}:</span>
-                  </div>
-                  <span className="text-lg font-bold" style={{ color }}>
-                    {formatCurrency(value, 0)}
-                  </span>
-                </div>
-              )}
-            />
-          </div>
+          <ResponsiveContainer width="100%" height={460}>
+            <BarChart 
+              data={chartData} 
+              margin={{ top: 30, right: 30, left: 30, bottom: 70 }}
+              barGap={8}
+              barCategoryGap="20%"
+            >
+              <defs>
+                <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#32acc1" stopOpacity={0.95}/>
+                  <stop offset="95%" stopColor="#32acc1" stopOpacity={0.7}/>
+                </linearGradient>
+                <linearGradient id="cogsGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#fb7185" stopOpacity={0.95}/>
+                  <stop offset="95%" stopColor="#fb7185" stopOpacity={0.7}/>
+                </linearGradient>
+                <linearGradient id="grossProfitGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#34d399" stopOpacity={0.95}/>
+                  <stop offset="95%" stopColor="#34d399" stopOpacity={0.7}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                stroke="#e5e7eb" 
+                vertical={false}
+                strokeOpacity={0.5}
+              />
+              <XAxis 
+                dataKey="name" 
+                tick={{ 
+                  fill: '#374151', 
+                  fontSize: 14, 
+                  fontWeight: 600,
+                  fontFamily: 'Heebo, sans-serif'
+                }}
+                tickLine={false}
+                axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
+                angle={0}
+                height={60}
+              />
+              <YAxis 
+                tick={{ 
+                  fill: '#374151', 
+                  fontSize: 13, 
+                  fontWeight: 600,
+                  fontFamily: 'Heebo, sans-serif'
+                }}
+                tickFormatter={(value) => `₪${(value / 1000).toFixed(0)}K`}
+                tickLine={false}
+                axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
+                width={90}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(50, 172, 193, 0.08)' }} />
+              <Legend 
+                wrapperStyle={{ 
+                  paddingTop: '20px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  fontFamily: 'Heebo, sans-serif'
+                }}
+                iconType="circle"
+                iconSize={12}
+              />
+              <Bar 
+                dataKey="הכנסות" 
+                fill="url(#revenueGradient)" 
+                radius={[8, 8, 0, 0]}
+                maxBarSize={70}
+              />
+              <Bar 
+                dataKey="עלות מכר" 
+                fill="url(#cogsGradient)" 
+                radius={[8, 8, 0, 0]}
+                maxBarSize={70}
+              />
+              <Bar 
+                dataKey="רווח גולמי" 
+                fill="url(#grossProfitGradient)" 
+                radius={[8, 8, 0, 0]}
+                maxBarSize={70}
+              />
+            </BarChart>
+          </ResponsiveContainer>
         </CardContent>
       </Card>
 
@@ -456,100 +474,110 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-8 pb-6 bg-gradient-to-br from-white to-gray-50">
-          <div style={{ height: '440px' }}>
-            <ResponsiveLine
-              data={[
-                {
-                  id: 'רווח תפעולי',
-                  color: '#32acc1',
-                  data: chartData.map(d => ({ x: d.name, y: d['רווח תפעולי'] }))
-                },
-                {
-                  id: 'הוצאות מימון',
-                  color: '#ef4444',
-                  data: chartData.map(d => ({ x: d.name, y: d['הוצאות מימון'] }))
-                },
-                {
-                  id: 'רווח לפני מס',
-                  color: '#a855f7',
-                  data: chartData.map(d => ({ x: d.name, y: d['רווח לפני מס'] }))
-                },
-                {
-                  id: 'רווח נקי',
-                  color: '#10B981',
-                  data: chartData.map(d => ({ x: d.name, y: d['רווח נקי'] }))
-                }
-              ]}
-              margin={{ top: 50, right: 130, bottom: 60, left: 80 }}
-              xScale={{ type: 'point' }}
-              yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
-              curve="monotoneX"
-              axisTop={null}
-              axisRight={null}
-              axisBottom={{
-                tickSize: 0,
-                tickPadding: 10,
-                tickRotation: -15
-              }}
-              axisLeft={{
-                tickSize: 0,
-                tickPadding: 10,
-                format: (value) => `₪${(value / 1000).toFixed(0)}K`
-              }}
-              enableGridX={false}
-              enableGridY={true}
-              colors={{ datum: 'color' }}
-              lineWidth={3}
-              pointSize={8}
-              pointColor={{ theme: 'background' }}
-              pointBorderWidth={2}
-              pointBorderColor={{ from: 'serieColor' }}
-              enableArea={true}
-              areaOpacity={0.1}
-              useMesh={true}
-              theme={nivoTheme}
-              legends={[
-                {
-                  anchor: 'bottom-right',
-                  direction: 'column',
-                  justify: false,
-                  translateX: 120,
-                  translateY: 0,
-                  itemsSpacing: 4,
-                  itemDirection: 'left-to-right',
-                  itemWidth: 100,
-                  itemHeight: 24,
-                  itemOpacity: 0.85,
-                  symbolSize: 14,
-                  symbolShape: 'circle',
-                  effects: [
-                    {
-                      on: 'hover',
-                      style: {
-                        itemOpacity: 1
-                      }
-                    }
-                  ]
-                }
-              ]}
-              animate={true}
-              motionConfig="wobbly"
-              tooltip={({ point }) => (
-                <div className="bg-white/98 backdrop-blur-xl border border-gray-200/60 p-4 rounded-xl shadow-2xl">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: point.serieColor }} />
-                      <span className="text-sm font-semibold text-gray-700">{point.serieId}</span>
-                    </div>
-                    <div className="text-xs text-gray-600">{point.data.xFormatted}</div>
-                    <div className="text-lg font-bold" style={{ color: point.serieColor }}>
-                      {formatCurrency(point.data.yFormatted, 0)}
-                    </div>
-                  </div>
-                </div>
-              )}
-            />
-          </div>
+          <ResponsiveContainer width="100%" height={480}>
+            <AreaChart 
+              data={chartData} 
+              margin={{ top: 30, right: 30, left: 30, bottom: 70 }}
+            >
+              <defs>
+                <linearGradient id="colorOperating" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#32acc1" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#32acc1" stopOpacity={0.05}/>
+                </linearGradient>
+                <linearGradient id="colorFinancing" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0.05}/>
+                </linearGradient>
+                <linearGradient id="colorBeforeTax" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#a855f7" stopOpacity={0.05}/>
+                </linearGradient>
+                <linearGradient id="colorNet" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#10B981" stopOpacity={0.05}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                stroke="#e5e7eb" 
+                vertical={false}
+                strokeOpacity={0.5}
+              />
+              <XAxis 
+                dataKey="name" 
+                tick={{ 
+                  fill: '#374151', 
+                  fontSize: 14, 
+                  fontWeight: 600,
+                  fontFamily: 'Heebo, sans-serif'
+                }}
+                tickLine={false}
+                axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
+                angle={0}
+                height={60}
+              />
+              <YAxis 
+                tick={{ 
+                  fill: '#374151', 
+                  fontSize: 13, 
+                  fontWeight: 600,
+                  fontFamily: 'Heebo, sans-serif'
+                }}
+                tickFormatter={(value) => `₪${(value / 1000).toFixed(0)}K`}
+                tickLine={false}
+                axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
+                width={90}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend 
+                wrapperStyle={{ 
+                  paddingTop: '20px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  fontFamily: 'Heebo, sans-serif'
+                }}
+                iconType="circle"
+                iconSize={12}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="רווח תפעולי" 
+                stroke="#32acc1" 
+                strokeWidth={3}
+                fill="url(#colorOperating)" 
+                dot={{ fill: '#32acc1', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                activeDot={{ r: 7, strokeWidth: 3 }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="הוצאות מימון" 
+                stroke="#ef4444" 
+                strokeWidth={2.5}
+                strokeDasharray="5 5"
+                fill="url(#colorFinancing)" 
+                dot={{ fill: '#ef4444', r: 4, strokeWidth: 2, stroke: '#fff' }}
+                activeDot={{ r: 6, strokeWidth: 2.5 }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="רווח לפני מס" 
+                stroke="#a855f7" 
+                strokeWidth={3}
+                fill="url(#colorBeforeTax)" 
+                dot={{ fill: '#a855f7', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                activeDot={{ r: 7, strokeWidth: 3 }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="רווח נקי" 
+                stroke="#10B981" 
+                strokeWidth={4}
+                fill="url(#colorNet)" 
+                dot={{ fill: '#10B981', r: 6, strokeWidth: 2.5, stroke: '#fff' }}
+                activeDot={{ r: 8, strokeWidth: 3.5 }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </CardContent>
       </Card>
     </div>
