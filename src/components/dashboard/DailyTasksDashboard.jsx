@@ -443,7 +443,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                   <div className="text-xs text-[#5a6c7d] mb-3 text-right">
                     {client.business_type || 'other'}
                   </div>
-                  <Link to={createPageUrl('CustomerManagement') + `?email=${client.email}`}>
+                  <Link to={createPageUrl('CustomerManagement') + `?clientId=${client.id}&source=onboarding`}>
                     <Button
                   size="sm"
                   className="w-full bg-[#32acc1] hover:bg-[#32acc1]/90 text-white rounded-lg h-9">
