@@ -66,6 +66,13 @@ const getHebrewDayName = () => {
   return days[new Date().getDay()];
 };
 
+// פונקציה לקבלת צבע תגית קבוצת לקוח
+const getCustomerGroupBadgeColor = (group) => {
+  if (group === 'A') return 'bg-[#32acc1] text-white';
+  if (group === 'B') return 'bg-[#fc9f67] text-white';
+  return 'bg-gray-500 text-white';
+};
+
 export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const [selectedTask, setSelectedTask] = useState(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
