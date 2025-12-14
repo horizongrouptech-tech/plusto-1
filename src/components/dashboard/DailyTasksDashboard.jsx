@@ -22,8 +22,8 @@ import {
   Filter,
   LayoutGrid,
   CheckSquare,
-  XCircle } from
-"lucide-react";
+  XCircle
+} from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
@@ -78,6 +78,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editedTaskData, setEditedTaskData] = useState({});
   const [groupFilter, setGroupFilter] = useState('all');
+  const [customerFilter, setCustomerFilter] = useState('all');
   const [showCompletedModal, setShowCompletedModal] = useState(false);
 
   const todayWorkGroup = getTodayWorkGroup();
@@ -169,15 +170,25 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     });
   }, [goals]);
 
-  // סינון לפי קבוצת לקוחות
+  // סינון לפי קבוצת לקוחות ולקוח ספציפי
   const filteredTasksByGroup = useMemo(() => {
-    if (groupFilter === 'all') return activeTasks;
+    let filtered = activeTasks;
 
-    return activeTasks.filter((task) => {
-      const customer = allCustomers.find((c) => c.email === task.customer_email);
-      return customer?.customer_group === groupFilter;
-    });
-  }, [activeTasks, groupFilter, allCustomers]);
+    // סינון לפי קבוצה
+    if (groupFilter !== 'all') {
+      filtered = filtered.filter((task) => {
+        const customer = allCustomers.find((c) => c.email === task.customer_email);
+        return customer?.customer_group === groupFilter;
+      });
+    }
+
+    // סינון לפי לקוח
+    if (customerFilter !== 'all') {
+      filtered = filtered.filter((task) => task.customer_email === customerFilter);
+    }
+
+    return filtered;
+  }, [activeTasks, groupFilter, customerFilter, allCustomers]);
 
   // חלוקת משימות לפי סטטוס
   const tasksByStatus = useMemo(() => {
@@ -493,6 +504,28 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                 קבוצה B
               </Button>
             </div>
+
+            {/* סינון לפי לקוח */}
+            <div className="flex items-center gap-2 mr-4">
+              <Users className="w-4 h-4 text-horizon-primary" />
+              <span className="text-sm font-medium text-horizon-text">סינון לפי לקוח:</span>
+            </div>
+            <Select value={customerFilter} onValueChange={setCustomerFilter}>
+              <SelectTrigger className="w-[200px] bg-horizon-card border-horizon text-horizon-text">
+                <SelectValue placeholder="כל הלקוחות" />
+              </SelectTrigger>
+              <SelectContent className="bg-horizon-dark border-horizon max-h-[300px]">
+                <SelectItem value="all">כל הלקוחות</SelectItem>
+                {allCustomers
+                  .sort((a, b) => (a.business_name || a.full_name || '').localeCompare(b.business_name || b.full_name || ''))
+                  .map((customer) => (
+                    <SelectItem key={customer.email} value={customer.email}>
+                      {customer.business_name || customer.full_name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+
             <div className="mr-auto text-sm text-horizon-accent">
               סה"כ משימות פעילות: <span className="font-bold text-horizon-primary">{stats.totalTasks}</span>
             </div>
