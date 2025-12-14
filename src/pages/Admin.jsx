@@ -129,6 +129,11 @@ const getCompanySizeDisplay = (size) => {
     default: return 'לא צוין';
   }
 };
+const getCustomerGroupBadgeColor = (group) => {
+  if (group === 'A') return 'bg-[#32acc1] text-white';
+  if (group === 'B') return 'bg-[#fc9f67] text-white';
+  return 'bg-gray-500 text-white';
+};
 const formatNumber = (value) => {
   if (value === null || value === undefined) return '0';
   if (value >= 1000000) {
