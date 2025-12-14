@@ -127,7 +127,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   }, [allCustomers, todayWorkGroup, currentUser, isAdmin]);
 
   // טעינת כל המשימות הפעילות
-  const { data: allGoals = [], isLoading: tasksLoading } = useQuery({
+  const { data: goals = [], isLoading: tasksLoading } = useQuery({
     queryKey: ['allRelevantTasks', currentUser.email, isAdmin],
     queryFn: async () => {
       if (isAdmin) {
@@ -154,13 +154,13 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return (allGoals || []).filter(task => {
+    return (goals || []).filter(task => {
       const startDate = task.start_date ? new Date(task.start_date) : null;
       if (!startDate) return true;
       startDate.setHours(0, 0, 0, 0);
       return startDate <= today;
     });
-  }, [allGoals]);
+  }, [goals]);
 
   // סינון לפי קבוצת לקוחות
   const filteredTasksByGroup = useMemo(() => {
@@ -185,8 +185,8 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
 
   // כל המשימות שהושלמו (לא משנה תאריך)
   const completedTasks = useMemo(() => {
-    return (allGoals || []).filter(t => t.status === 'done');
-  }, [allGoals]);
+    return (goals || []).filter(t => t.status === 'done');
+  }, [goals]);
 
   // טעינת המלצות לסטטיסטיקות
   const { data: allRecommendations = [] } = useQuery({
@@ -454,7 +454,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
             >
               {tasksByStatus.open.map((task, index) => {
                 const customer = allCustomers.find(c => c.email === task.customer_email);
-                const parentGoal = task.parent_id ? allGoals.find(g => g.id === task.parent_id) : null;
+                const parentGoal = task.parent_id ? goals.find(g => g.id === task.parent_id) : null;
                 
                 return (
                   <Draggable key={task.id} draggableId={task.id} index={index}>
@@ -489,7 +489,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
             >
               {tasksByStatus.in_progress.map((task, index) => {
                 const customer = allCustomers.find(c => c.email === task.customer_email);
-                const parentGoal = task.parent_id ? allGoals.find(g => g.id === task.parent_id) : null;
+                const parentGoal = task.parent_id ? goals.find(g => g.id === task.parent_id) : null;
                 
                 return (
                   <Draggable key={task.id} draggableId={task.id} index={index}>
@@ -524,7 +524,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
             >
               {tasksByStatus.delayed.map((task, index) => {
                 const customer = allCustomers.find(c => c.email === task.customer_email);
-                const parentGoal = task.parent_id ? allGoals.find(g => g.id === task.parent_id) : null;
+                const parentGoal = task.parent_id ? goals.find(g => g.id === task.parent_id) : null;
                 
                 return (
                   <Draggable key={task.id} draggableId={task.id} index={index}>
@@ -559,7 +559,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
             >
               {tasksByStatus.done.map((task, index) => {
                 const customer = allCustomers.find(c => c.email === task.customer_email);
-                const parentGoal = task.parent_id ? allGoals.find(g => g.id === task.parent_id) : null;
+                const parentGoal = task.parent_id ? goals.find(g => g.id === task.parent_id) : null;
                 
                 return (
                   <Draggable key={task.id} draggableId={task.id} index={index}>
@@ -594,7 +594,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
             >
               {tasksByStatus.cancelled.map((task, index) => {
                 const customer = allCustomers.find(c => c.email === task.customer_email);
-                const parentGoal = task.parent_id ? allGoals.find(g => g.id === task.parent_id) : null;
+                const parentGoal = task.parent_id ? goals.find(g => g.id === task.parent_id) : null;
                 
                 return (
                   <Draggable key={task.id} draggableId={task.id} index={index}>
@@ -627,7 +627,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         onClose={() => setShowCompletedModal(false)}
         completedTasks={completedTasks}
         allCustomers={allCustomers}
-        allGoals={allGoals}
+        allGoals={goals}
         onRestoreTask={handleRestoreTask}
       />
 
