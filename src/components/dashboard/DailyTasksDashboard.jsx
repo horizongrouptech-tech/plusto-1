@@ -401,6 +401,50 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         </div>
       </div>
 
+      {/* הודעת יום העבודה */}
+      {todayWorkGroup.groups.length > 0 && (
+        <Alert className="bg-gradient-to-l from-[#32acc1]/10 via-white to-[#fc9f67]/10 border-2 border-[#32acc1]/20">
+          <Calendar className="w-5 h-5 text-horizon-primary" />
+          <AlertDescription className="text-horizon-text font-medium">
+            {todayWorkGroup.message} - יום {getHebrewDayName()}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* טבלת לקוחות לעבודה היום */}
+      {todaysClients.length > 0 && (
+        <Card className="card-horizon">
+          <CardHeader>
+            <CardTitle className="text-horizon-text flex items-center gap-2">
+              <Users className="w-5 h-5 text-horizon-primary" />
+              לקוחות לעבודה היום ({todaysClients.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {todaysClients.map(client => (
+                <div
+                  key={client.id}
+                  className="p-3 bg-horizon-card/30 rounded-lg border border-horizon hover:border-horizon-primary/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-horizon-text text-sm">
+                        {client.business_name || client.full_name}
+                      </h4>
+                      <p className="text-xs text-horizon-accent mt-1">{client.email}</p>
+                    </div>
+                    <Badge className={getCustomerGroupBadgeColor(client.customer_group)}>
+                      קבוצה {client.customer_group}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* פילטרים */}
       <Card className="card-horizon">
         <CardContent className="p-4">
