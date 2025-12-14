@@ -403,12 +403,14 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
 
       {/* הודעת יום העבודה */}
       {todayWorkGroup.groups.length > 0 && (
-        <Alert className="bg-gradient-to-l from-[#32acc1]/10 via-white to-[#fc9f67]/10 border-2 border-[#32acc1]/20">
-          <Calendar className="w-5 h-5 text-horizon-primary" />
-          <AlertDescription className="text-horizon-text font-medium text-right">
-            היום יום עבודה על לקוחות מקבוצה: {todayWorkGroup.groups.join(' ו-')} - יום {getHebrewDayName()}
-          </AlertDescription>
-        </Alert>
+        <Card className="card-horizon bg-white">
+          <CardContent className="p-4 flex items-center gap-3">
+            <Calendar className="w-5 h-5 text-horizon-primary" />
+            <span className="text-horizon-text font-medium text-right">
+              היום יום עבודה על לקוחות מקבוצה: {todayWorkGroup.groups.join(' ו-')} - יום {getHebrewDayName()}
+            </span>
+          </CardContent>
+        </Card>
       )}
 
       {/* טבלת לקוחות לעבודה היום */}
