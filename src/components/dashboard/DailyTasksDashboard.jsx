@@ -1,27 +1,35 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
 import {
   Calendar,
   Users,
   CheckCircle2,
   AlertTriangle,
+  Plus,
   ArrowLeft,
   Lightbulb,
-  Clock, // New icon for tasks
-  Circle, // Icon for 'open' status
-  AlertCircle, // Icon for 'delayed' status
-  Loader2 // NEW: Import TrendingUp icon for overall stats
+  Clock,
+  Target,
+  ListTodo,
+  Circle,
+  AlertCircle,
+  Loader2,
+  TrendingUp,
+  Filter,
+  LayoutGrid,
+  CheckSquare,
+  XCircle
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-// TaskCreationModal removed - tasks are created only from customer card
+import { DragDropContext, Draggable } from '@hello-pangea/dnd';
 
-// New imports for task editing modal and table
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,8 +37,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 
-// New imports for tabs
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import KanbanColumn from './kanban/KanbanColumn';
+import TaskCard from './kanban/TaskCard';
+import CompletedTasksModal from './kanban/CompletedTasksModal';
 
 
 // פונקציה לקבלת קבוצת העבודה היומית
@@ -61,6 +70,8 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const [selectedTask, setSelectedTask] = useState(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editedTaskData, setEditedTaskData] = useState({});
+  const [groupFilter, setGroupFilter] = useState('all');
+  const [showCompletedModal, setShowCompletedModal] = useState(false);
 
   const todayWorkGroup = getTodayWorkGroup();
   const queryClient = useQueryClient();
@@ -115,29 +126,18 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     });
   }, [allCustomers, todayWorkGroup, currentUser, isAdmin]);
 
-  // טעינת משימות (כל המשימות הפעילות עבור המשתמש/אדמין)
-  // מנהל כספים רואה רק משימות שמשויכות אליו
-  const { data: goals = [], isLoading: tasksLoading } = useQuery({
+  // טעינת כל המשימות הפעילות
+  const { data: allGoals = [], isLoading: tasksLoading } = useQuery({
     queryKey: ['allRelevantTasks', currentUser.email, isAdmin],
     queryFn: async () => {
       if (isAdmin) {
-        // Admin sees all active tasks
         return await base44.entities.CustomerGoal.filter({ is_active: true }, 'order_index');
       } else {
-        // מנהל כספים רואה רק משימות שמשויכות אליו (assignee_email)
-        // או משימות על לקוחות שהוא מנהל שלהם
-        const myTasks = await base44.entities.CustomerGoal.filter({ 
-          is_active: true, 
-          assignee_email: currentUser.email 
-        }, 'order_index');
-        
-        // גם טוען משימות של לקוחות שהמנהל כספים אחראי עליהם
         const myCustomers = allCustomers.map(c => c.email);
         const customerTasks = await base44.entities.CustomerGoal.filter({ 
           is_active: true 
         }, 'order_index');
         
-        // מסנן רק משימות שמשויכות אליו או על לקוחות שלו
         const relevantTasks = customerTasks.filter(task => 
           task.assignee_email === currentUser.email || 
           myCustomers.includes(task.customer_email)
@@ -148,6 +148,45 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     },
     enabled: !!allCustomers.length || isAdmin
   });
+
+  // סינון משימות פעילות בלבד (start_date התחיל)
+  const activeTasks = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return (allGoals || []).filter(task => {
+      const startDate = task.start_date ? new Date(task.start_date) : null;
+      if (!startDate) return true;
+      startDate.setHours(0, 0, 0, 0);
+      return startDate <= today;
+    });
+  }, [allGoals]);
+
+  // סינון לפי קבוצת לקוחות
+  const filteredTasksByGroup = useMemo(() => {
+    if (groupFilter === 'all') return activeTasks;
+
+    return activeTasks.filter(task => {
+      const customer = allCustomers.find(c => c.email === task.customer_email);
+      return customer?.customer_group === groupFilter;
+    });
+  }, [activeTasks, groupFilter, allCustomers]);
+
+  // חלוקת משימות לפי סטטוס
+  const tasksByStatus = useMemo(() => {
+    return {
+      open: filteredTasksByGroup.filter(t => t.status === 'open'),
+      in_progress: filteredTasksByGroup.filter(t => t.status === 'in_progress'),
+      done: filteredTasksByGroup.filter(t => t.status === 'done'),
+      delayed: filteredTasksByGroup.filter(t => t.status === 'delayed'),
+      cancelled: filteredTasksByGroup.filter(t => t.status === 'cancelled')
+    };
+  }, [filteredTasksByGroup]);
+
+  // כל המשימות שהושלמו (לא משנה תאריך)
+  const completedTasks = useMemo(() => {
+    return (allGoals || []).filter(t => t.status === 'done');
+  }, [allGoals]);
 
   // טעינת המלצות לסטטיסטיקות
   const { data: allRecommendations = [] } = useQuery({
@@ -270,6 +309,37 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     }
   };
 
+  const handleRestoreTask = async (taskId) => {
+    if (confirm('האם לשחזר את המשימה למצב "פתוח"?')) {
+      try {
+        await base44.entities.CustomerGoal.update(taskId, { status: 'open' });
+        queryClient.invalidateQueries(['allRelevantTasks']);
+        alert('המשימה שוחזרה בהצלחה!');
+      } catch (error) {
+        console.error('Error restoring task:', error);
+        alert('שגיאה בשחזור המשימה');
+      }
+    }
+  };
+
+  const handleDragEnd = async (result) => {
+    const { destination, source, draggableId } = result;
+
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+
+    const newStatus = destination.droppableId;
+    
+    try {
+      await base44.entities.CustomerGoal.update(draggableId, { status: newStatus });
+      queryClient.invalidateQueries(['allRelevantTasks']);
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      alert('שגיאה בעדכון סטטוס המשימה');
+      queryClient.invalidateQueries(['allRelevantTasks']);
+    }
+  };
+
 
   const getStatusDisplay = (status) => {
     const statusConfig = {
@@ -281,16 +351,16 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     return statusConfig[status] || statusConfig.open;
   };
 
-  // סטטיסטיקות
+  // סטטיסטיקות מעודכנות
   const stats = useMemo(() => {
     return {
-      totalClients: todaysClients.length,
-      // Use allTodaysTasksForStats for accurate counts of done/pending/delayed for today
-      completedTasks: allTodaysTasksForStats.filter(t => t.status === 'done').length,
-      pendingTasks: allTodaysTasksForStats.filter(t => t.status !== 'done' && t.status !== 'cancelled').length,
-      delayedTasks: allTodaysTasksForStats.filter(t => t.status === 'delayed').length
+      totalTasks: filteredTasksByGroup.length,
+      open: tasksByStatus.open.length,
+      in_progress: tasksByStatus.in_progress.length,
+      done: completedTasks.length,
+      delayed: tasksByStatus.delayed.length
     };
-  }, [todaysClients, allTodaysTasksForStats]);
+  }, [filteredTasksByGroup, tasksByStatus, completedTasks]);
 
   if (customersLoading || tasksLoading) {
     return (
@@ -302,261 +372,264 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
 
   return (
     <div className="space-y-6" dir="rtl">
-      
-      {/* כותרת ותאריך */}
-      <div className="flex justify-between items-center">
+      {/* כותרת וכפתורים */}
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold text-horizon-text flex items-center gap-2">
-            <Calendar className="w-6 h-6 text-horizon-primary" />
-            משימות יומיות - {getHebrewDayName()}
+            <LayoutGrid className="w-6 h-6 text-horizon-primary" />
+            לוח משימות Kanban
           </h2>
           <p className="text-horizon-accent mt-1">
-            {new Date().toLocaleDateString('he-IL', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
+            ניהול משימות בסגנון Trello - גרור ושחרר לעדכון סטטוס
           </p>
         </div>
-{/* כפתור יצירת משימה הוסר - יש להקים משימות מתוך כרטיס הלקוח */}
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setShowCompletedModal(true)}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            <CheckSquare className="w-4 h-4 ml-2" />
+            משימות שהושלמו ({completedTasks.length})
+          </Button>
+        </div>
       </div>
 
-      {/* המלצת קבוצת עבודה */}
-      <Alert className="bg-horizon-primary/10 border-horizon-primary/30">
-        <Lightbulb className="w-5 h-5 text-horizon-primary" />
-        <AlertDescription className="text-horizon-text text-lg font-medium">
-          {todayWorkGroup.message}
-        </AlertDescription>
-      </Alert>
-
-      {/* סטטיסטיקות מהירות */}
-      <div className="grid md:grid-cols-4 gap-4">
-        <Card className="card-horizon">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center">
-              <div className="text-right">
-                <p className="text-sm text-horizon-accent">לקוחות להיום</p>
-                <p className="text-2xl font-bold text-horizon-primary">{stats.totalClients}</p>
-              </div>
-              <Users className="w-8 h-8 text-horizon-primary" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-horizon">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center">
-              <div className="text-right">
-                <p className="text-sm text-horizon-accent">משימות ממתינות</p>
-                <p className="text-2xl font-bold text-yellow-400">{stats.pendingTasks}</p>
-              </div>
-              <Clock className="w-8 h-8 text-yellow-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-horizon">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center">
-              <div className="text-right">
-                <p className="text-sm text-horizon-accent">משימות שהושלמו</p>
-                <p className="text-2xl font-bold text-green-400">{stats.completedTasks}</p>
-              </div>
-              <CheckCircle2 className="w-8 h-8 text-green-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-horizon">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center">
-              <div className="text-right">
-                <p className="text-sm text-horizon-accent">משימות באיחור</p>
-                <p className="text-2xl font-bold text-red-400">{stats.delayedTasks}</p>
-              </div>
-              <AlertTriangle className="w-8 h-8 text-red-400" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* לקוחות להיום */}
+      {/* פילטרים */}
       <Card className="card-horizon">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-horizon-text">
-            <Users className="w-5 h-5 text-horizon-primary" />
-            לקוחות לעבודה היום ({todaysClients.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {todaysClients.length > 0 ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {todaysClients.map(client => (
-                <Card key={client.id} className="bg-horizon-card/30 border-horizon hover:border-horizon-primary/50 transition-all">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="text-right">
-                        <h4 className="font-semibold text-horizon-text">
-                          {client.business_name || client.full_name}
-                        </h4>
-                        <p className="text-sm text-horizon-accent">{client.email}</p>
-                      </div>
-                      <Badge className="bg-horizon-primary text-white">
-                        קבוצה {client.customer_group}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center mt-3">
-                      <span className="text-xs text-horizon-accent">
-                        {client.business_type || 'לא צוין'}
-                      </span>
-                      {(() => {
-                        const inferred = isAdmin
-                          ? 'user'
-                          : (client?.id?.startsWith('onboarding_') ? 'onboarding' : 'user');
-                        return (
-                          <Link to={createPageUrl('CustomerManagement') + `?clientId=${client.id}&source=${inferred}`}>
-                            <Button size="sm" variant="outline" className="border-horizon-primary text-horizon-primary">
-                              <ArrowLeft className="w-4 h-4 ml-1" />
-                              מעבר ללקוח
-                            </Button>
-                          </Link>
-                        );
-                      })()}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+        <CardContent className="p-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-horizon-primary" />
+              <span className="text-sm font-medium text-horizon-text">סינון לפי קבוצה:</span>
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <Users className="w-12 h-12 mx-auto text-horizon-accent mb-3" />
-              <p className="text-horizon-accent">אין לקוחות מוגדרים לעבודה היום</p>
-              <p className="text-sm text-horizon-accent mt-1">
-                {todayWorkGroup.groups.length === 0
-                  ? 'היום סוף שבוע'
-                  : 'לא נמצאו לקוחות בקבוצת העבודה של היום'}
-              </p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant={groupFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => setGroupFilter('all')}
+                className={groupFilter === 'all' ? 'bg-horizon-primary text-white' : 'border-horizon text-horizon-accent'}
+              >
+                הכל
+              </Button>
+              <Button
+                size="sm"
+                variant={groupFilter === 'A' ? 'default' : 'outline'}
+                onClick={() => setGroupFilter('A')}
+                className={groupFilter === 'A' ? 'bg-[#32acc1] text-white' : 'border-[#32acc1] text-[#32acc1]'}
+              >
+                קבוצה A
+              </Button>
+              <Button
+                size="sm"
+                variant={groupFilter === 'B' ? 'default' : 'outline'}
+                onClick={() => setGroupFilter('B')}
+                className={groupFilter === 'B' ? 'bg-[#fc9f67] text-white' : 'border-[#fc9f67] text-[#fc9f67]'}
+              >
+                קבוצה B
+              </Button>
             </div>
-          )}
+            <div className="mr-auto text-sm text-horizon-accent">
+              סה"כ משימות פעילות: <span className="font-bold text-horizon-primary">{stats.totalTasks}</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* משימות - טאבים */}
-      <Card className="card-horizon">
-        <CardHeader>
-          <CardTitle className="text-xl text-horizon-text">משימות</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="today" className="w-full" dir="rtl">
-            <TabsList className="grid w-full grid-cols-2 bg-horizon-card/50">
-              <TabsTrigger 
-                value="today" 
-                className="data-[state=active]:bg-[#32acc1] data-[state=active]:text-white transition-all"
-              >
-                משימות היום ({todayTasksForTabs.length})
-              </TabsTrigger>
-              <TabsTrigger 
-                value="week" 
-                className="data-[state=active]:bg-[#32acc1] data-[state=active]:text-white transition-all"
-              >
-                משימות השבוע ({thisWeekTasksForTabs.length})
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="today" className="space-y-3 mt-4">
-              {tasksLoading ? (
-                <div className="text-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-horizon-primary" />
-                  <p className="text-horizon-accent mt-2">טוען משימות...</p>
-                </div>
-              ) : todayTasksForTabs.length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-green-400" />
-                  <p className="text-horizon-accent">אין משימות להיום - מצוין!</p>
-                </div>
-              ) : (
-                todayTasksForTabs.map(task => (
-                  <div key={task.id} className="bg-horizon-card/50 p-4 rounded-lg border border-horizon hover:border-horizon-primary/50 transition-colors">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 cursor-pointer" onClick={() => handleTaskClick(task)}>
-                        <h4 className="font-medium text-horizon-text mb-1">{task.name}</h4>
-                        {task.notes && (
-                          <p className="text-sm text-horizon-accent">{task.notes}</p>
-                        )}
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="outline" className="border-horizon-accent text-horizon-accent text-xs">
-                            {task.assignee_email || 'לא משויך'}
-                          </Badge>
-                          {task.due_time && (
-                            <Badge variant="outline" className="border-yellow-400 text-yellow-400 text-xs">
-                              {task.due_time}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={() => handleMarkAsDone(task.id)}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                        disabled={markTaskAsDoneMutation.isLoading}
+      {/* לוח Kanban */}
+      {tasksLoading ? (
+        <div className="text-center py-12">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto text-horizon-primary mb-4" />
+          <p className="text-horizon-accent">טוען לוח משימות...</p>
+        </div>
+      ) : (
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {/* עמודה: לביצוע */}
+            <KanbanColumn
+              columnId="open"
+              title="לביצוע"
+              tasks={tasksByStatus.open}
+              icon={Circle}
+              color="bg-blue-500 text-white"
+            >
+              {tasksByStatus.open.map((task, index) => {
+                const customer = allCustomers.find(c => c.email === task.customer_email);
+                const parentGoal = task.parent_id ? allGoals.find(g => g.id === task.parent_id) : null;
+                
+                return (
+                  <Draggable key={task.id} draggableId={task.id} index={index}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
                       >
-                        <CheckCircle2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </TabsContent>
-
-            <TabsContent value="week" className="space-y-3 mt-4">
-              {tasksLoading ? (
-                <div className="text-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-horizon-primary" />
-                  <p className="text-horizon-accent mt-2">טוען משימות...</p>
-                </div>
-              ) : thisWeekTasksForTabs.length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-green-400" />
-                  <p className="text-horizon-accent">אין משימות לשבוע הקרוב - מצוין!</p>
-                </div>
-              ) : (
-                thisWeekTasksForTabs.map(task => (
-                  <div key={task.id} className="bg-horizon-card/50 p-4 rounded-lg border border-horizon hover:border-horizon-primary/50 transition-colors">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 cursor-pointer" onClick={() => handleTaskClick(task)}>
-                        <h4 className="font-medium text-horizon-text mb-1">{task.name}</h4>
-                        {task.notes && (
-                          <p className="text-sm text-horizon-accent">{task.notes}</p>
-                        )}
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="outline" className="border-horizon-accent text-horizon-accent text-xs">
-                            יעד: {task.end_date ? format(new Date(task.end_date), 'dd/MM/yyyy', { locale: he }) : 'לא הוגדר'}
-                          </Badge>
-                          <Badge variant="outline" className="border-horizon-accent text-horizon-accent text-xs">
-                            {task.assignee_email || 'לא משויך'}
-                          </Badge>
-                        </div>
+                        <TaskCard
+                          task={task}
+                          customer={customer}
+                          parentGoal={parentGoal}
+                          onTaskClick={handleTaskClick}
+                          onMarkAsDone={handleMarkAsDone}
+                          isDragging={snapshot.isDragging}
+                        />
                       </div>
-                      <Button
-                        size="sm"
-                        onClick={() => handleMarkAsDone(task.id)}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                        disabled={markTaskAsDoneMutation.isLoading}
+                    )}
+                  </Draggable>
+                );
+              })}
+            </KanbanColumn>
+
+            {/* עמודה: בביצוע */}
+            <KanbanColumn
+              columnId="in_progress"
+              title="בביצוע"
+              tasks={tasksByStatus.in_progress}
+              icon={Clock}
+              color="bg-yellow-500 text-white"
+            >
+              {tasksByStatus.in_progress.map((task, index) => {
+                const customer = allCustomers.find(c => c.email === task.customer_email);
+                const parentGoal = task.parent_id ? allGoals.find(g => g.id === task.parent_id) : null;
+                
+                return (
+                  <Draggable key={task.id} draggableId={task.id} index={index}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
                       >
-                        <CheckCircle2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+                        <TaskCard
+                          task={task}
+                          customer={customer}
+                          parentGoal={parentGoal}
+                          onTaskClick={handleTaskClick}
+                          onMarkAsDone={handleMarkAsDone}
+                          isDragging={snapshot.isDragging}
+                        />
+                      </div>
+                    )}
+                  </Draggable>
+                );
+              })}
+            </KanbanColumn>
 
+            {/* עמודה: באיחור */}
+            <KanbanColumn
+              columnId="delayed"
+              title="באיחור"
+              tasks={tasksByStatus.delayed}
+              icon={AlertTriangle}
+              color="bg-red-500 text-white"
+            >
+              {tasksByStatus.delayed.map((task, index) => {
+                const customer = allCustomers.find(c => c.email === task.customer_email);
+                const parentGoal = task.parent_id ? allGoals.find(g => g.id === task.parent_id) : null;
+                
+                return (
+                  <Draggable key={task.id} draggableId={task.id} index={index}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                      >
+                        <TaskCard
+                          task={task}
+                          customer={customer}
+                          parentGoal={parentGoal}
+                          onTaskClick={handleTaskClick}
+                          onMarkAsDone={handleMarkAsDone}
+                          isDragging={snapshot.isDragging}
+                        />
+                      </div>
+                    )}
+                  </Draggable>
+                );
+              })}
+            </KanbanColumn>
 
-{/* מודל יצירת משימה הוסר - משימות מוקמות רק מתוך כרטיס לקוח */}
+            {/* עמודה: הושלם */}
+            <KanbanColumn
+              columnId="done"
+              title="הושלם"
+              tasks={tasksByStatus.done}
+              icon={CheckCircle2}
+              color="bg-green-500 text-white"
+            >
+              {tasksByStatus.done.map((task, index) => {
+                const customer = allCustomers.find(c => c.email === task.customer_email);
+                const parentGoal = task.parent_id ? allGoals.find(g => g.id === task.parent_id) : null;
+                
+                return (
+                  <Draggable key={task.id} draggableId={task.id} index={index}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                      >
+                        <TaskCard
+                          task={task}
+                          customer={customer}
+                          parentGoal={parentGoal}
+                          onTaskClick={handleTaskClick}
+                          onMarkAsDone={handleMarkAsDone}
+                          isDragging={snapshot.isDragging}
+                        />
+                      </div>
+                    )}
+                  </Draggable>
+                );
+              })}
+            </KanbanColumn>
+
+            {/* עמודה: בוטל */}
+            <KanbanColumn
+              columnId="cancelled"
+              title="בוטל"
+              tasks={tasksByStatus.cancelled}
+              icon={XCircle}
+              color="bg-gray-500 text-white"
+            >
+              {tasksByStatus.cancelled.map((task, index) => {
+                const customer = allCustomers.find(c => c.email === task.customer_email);
+                const parentGoal = task.parent_id ? allGoals.find(g => g.id === task.parent_id) : null;
+                
+                return (
+                  <Draggable key={task.id} draggableId={task.id} index={index}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                      >
+                        <TaskCard
+                          task={task}
+                          customer={customer}
+                          parentGoal={parentGoal}
+                          onTaskClick={handleTaskClick}
+                          onMarkAsDone={handleMarkAsDone}
+                          isDragging={snapshot.isDragging}
+                        />
+                      </div>
+                    )}
+                  </Draggable>
+                );
+              })}
+            </KanbanColumn>
+          </div>
+        </DragDropContext>
+      )}
+      {/* מודאל משימות שהושלמו */}
+      <CompletedTasksModal
+        isOpen={showCompletedModal}
+        onClose={() => setShowCompletedModal(false)}
+        completedTasks={completedTasks}
+        allCustomers={allCustomers}
+        allGoals={allGoals}
+        onRestoreTask={handleRestoreTask}
+      />
 
       {/* מודאל עריכת משימה */}
       {selectedTask && (
