@@ -415,46 +415,44 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
 
       {/* טבלת לקוחות לעבודה היום */}
       {todaysClients.length > 0 && (
-        <Card className="card-horizon">
-          <CardHeader>
+        <Card className="card-horizon bg-white border-2 border-[#e1e8ed]">
+          <CardHeader className="border-b border-[#e1e8ed] bg-gradient-to-l from-[#32acc1]/5 to-[#fc9f67]/5">
             <CardTitle className="text-horizon-text flex items-center gap-2 text-right">
               <Users className="w-5 h-5 text-horizon-primary" />
               לקוחות לעבודה היום ({todaysClients.length})
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {todaysClients.map(client => (
-                <Card
+                <div
                   key={client.id}
-                  className="card-horizon bg-horizon-card/50 hover:shadow-lg transition-all"
+                  className="bg-white rounded-xl border-2 border-[#e1e8ed] p-4 hover:shadow-md hover:border-[#32acc1]/30 transition-all"
                 >
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1 text-right">
-                        <h4 className="font-bold text-horizon-text text-base mb-1">
-                          {client.business_name || client.full_name}
-                        </h4>
-                        <p className="text-xs text-horizon-accent">{client.email}</p>
-                      </div>
-                      <Badge className={`${getCustomerGroupBadgeColor(client.customer_group)} font-semibold`}>
-                        קבוצה {client.customer_group}
-                      </Badge>
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1 text-right">
+                      <h4 className="font-bold text-[#121725] text-base">
+                        {client.business_name || client.full_name}
+                      </h4>
                     </div>
-                    <div className="text-xs text-horizon-accent mb-3 text-right">
-                      {client.business_type || 'לא צוין'}
-                    </div>
-                    <Link to={createPageUrl('CustomerManagement') + `?email=${client.email}`}>
-                      <Button 
-                        size="sm" 
-                        className="w-full bg-horizon-primary hover:bg-horizon-primary/90 text-white"
-                      >
-                        <ArrowLeft className="w-4 h-4 ml-2" />
-                        מעבר ללקוח
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
+                    <Badge className={`${getCustomerGroupBadgeColor(client.customer_group)} font-semibold text-sm px-3 py-1`}>
+                      קבוצה {client.customer_group}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-[#5a6c7d] mb-2 text-right">{client.email}</p>
+                  <div className="text-xs text-[#5a6c7d] mb-3 text-right">
+                    {client.business_type || 'other'}
+                  </div>
+                  <Link to={createPageUrl('CustomerManagement') + `?email=${client.email}`}>
+                    <Button 
+                      size="sm" 
+                      className="w-full bg-[#32acc1] hover:bg-[#32acc1]/90 text-white rounded-lg h-9"
+                    >
+                      <ArrowLeft className="w-4 h-4 ml-2" />
+                      מעבר ללקוח
+                    </Button>
+                  </Link>
+                </div>
               ))}
             </div>
           </CardContent>
