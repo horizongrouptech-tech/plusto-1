@@ -121,11 +121,15 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     if (!allCustomers.length || todayWorkGroup.groups.length === 0) return [];
 
     return allCustomers.filter(customer => {
-      // בדיקה אם הלקוח בקבוצת העבודה של היום (רק אם יש לו קבוצה מוגדרת)
-      // אם אין לו קבוצה - נציג אותו בכל מקרה
-      const isInTodaysGroup = !customer.customer_group || todayWorkGroup.groups.includes(customer.customer_group);
+      // אם זה מנהל כספים, להציג רק את הלקוחות המשויכים אליו
+      // עבור אדמין, השדה assigned_financial_manager_email לא רלוונטי לסינון הראשוני
+      // עבור מנהל כספים, ה-queryFn כבר סינן לפי מנהל הכספים, כך שכל הלקוחות ב-allCustomers כבר משויכים אליו.
+      const isAssignedToMe = isAdmin || customer.assigned_financial_manager_email === currentUser.email;
 
-      return isInTodaysGroup;
+      // בדיקה אם הלקוח בקבוצת העבודה של היום
+      const isInTodaysGroup = todayWorkGroup.groups.includes(customer.customer_group);
+
+      return isAssignedToMe && isInTodaysGroup;
     });
   }, [allCustomers, todayWorkGroup, currentUser, isAdmin]);
 
