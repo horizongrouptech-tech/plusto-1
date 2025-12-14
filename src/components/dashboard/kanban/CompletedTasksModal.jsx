@@ -8,6 +8,12 @@ import { CheckCircle2, Search, Calendar, User, Target, RotateCcw } from 'lucide-
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 
+const getCustomerGroupBadgeColor = (group) => {
+  if (group === 'A') return 'bg-[#32acc1] text-white';
+  if (group === 'B') return 'bg-[#fc9f67] text-white';
+  return 'bg-gray-500 text-white';
+};
+
 export default function CompletedTasksModal({ isOpen, onClose, completedTasks, allCustomers, allGoals, onRestoreTask }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
