@@ -405,8 +405,8 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       {todayWorkGroup.groups.length > 0 && (
         <Alert className="bg-gradient-to-l from-[#32acc1]/10 via-white to-[#fc9f67]/10 border-2 border-[#32acc1]/20">
           <Calendar className="w-5 h-5 text-horizon-primary" />
-          <AlertDescription className="text-horizon-text font-medium">
-            {todayWorkGroup.message} - יום {getHebrewDayName()}
+          <AlertDescription className="text-horizon-text font-medium text-right">
+            היום יום עבודה על לקוחות מקבוצה: {todayWorkGroup.groups.join(' ו-')} - יום {getHebrewDayName()}
           </AlertDescription>
         </Alert>
       )}
@@ -415,30 +415,44 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       {todaysClients.length > 0 && (
         <Card className="card-horizon">
           <CardHeader>
-            <CardTitle className="text-horizon-text flex items-center gap-2">
+            <CardTitle className="text-horizon-text flex items-center gap-2 text-right">
               <Users className="w-5 h-5 text-horizon-primary" />
               לקוחות לעבודה היום ({todaysClients.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {todaysClients.map(client => (
-                <div
+                <Card
                   key={client.id}
-                  className="p-3 bg-horizon-card/30 rounded-lg border border-horizon hover:border-horizon-primary/50 transition-colors"
+                  className="card-horizon bg-horizon-card/50 hover:shadow-lg transition-all"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-horizon-text text-sm">
-                        {client.business_name || client.full_name}
-                      </h4>
-                      <p className="text-xs text-horizon-accent mt-1">{client.email}</p>
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1 text-right">
+                        <h4 className="font-bold text-horizon-text text-base mb-1">
+                          {client.business_name || client.full_name}
+                        </h4>
+                        <p className="text-xs text-horizon-accent">{client.email}</p>
+                      </div>
+                      <Badge className={`${getCustomerGroupBadgeColor(client.customer_group)} font-semibold`}>
+                        קבוצה {client.customer_group}
+                      </Badge>
                     </div>
-                    <Badge className={getCustomerGroupBadgeColor(client.customer_group)}>
-                      קבוצה {client.customer_group}
-                    </Badge>
-                  </div>
-                </div>
+                    <div className="text-xs text-horizon-accent mb-3 text-right">
+                      {client.business_type || 'לא צוין'}
+                    </div>
+                    <Link to={createPageUrl('CustomerManagement') + `?email=${client.email}`}>
+                      <Button 
+                        size="sm" 
+                        className="w-full bg-horizon-primary hover:bg-horizon-primary/90 text-white"
+                      >
+                        <ArrowLeft className="w-4 h-4 ml-2" />
+                        מעבר ללקוח
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </CardContent>
