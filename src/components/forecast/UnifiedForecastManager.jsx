@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, TrendingUp, Bot, Edit3, Star, Calendar, Loader2, Filter, Trash2, Copy } from 'lucide-react';
+import { Plus, TrendingUp, Bot, Edit3, Star, Calendar, Loader2, Filter, Trash2, Copy, Edit2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { Input } from '@/components/ui/input';
 
 import ForecastTypeSelectionModal from './ForecastTypeSelectionModal';
 import BusinessForecastManager from './BusinessForecastManager';
@@ -22,6 +23,8 @@ export default function UnifiedForecastManager({ customer }) {
   const [initialForecastData, setInitialForecastData] = useState(null);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [forecastToDuplicate, setForecastToDuplicate] = useState(null);
+  const [editingForecastName, setEditingForecastName] = useState(null);
+  const [newForecastName, setNewForecastName] = useState('');
   
   // סינון
   const [filterType, setFilterType] = useState('all'); // 'all', 'automatic', 'manual'
@@ -111,6 +114,40 @@ export default function UnifiedForecastManager({ customer }) {
     } catch (error) {
       console.error('Error deleting forecast:', error);
       alert('שגיאה במחיקת התחזית');
+    }
+  };
+
+  // פונקציה לעריכת שם תחזית
+  const handleEditForecastName = (forecast) => {
+    setEditingForecastName(forecast.id);
+    setNewForecastName(forecast.forecast_name);
+  };
+
+  const handleSaveForecastName = async (forecast) => {
+    if (!newForecastName.trim()) {
+      alert('יש להזין שם תחזית');
+      return;
+    }
+
+    try {
+      if (forecast.type === 'automatic') {
+        await base44.entities.BusinessForecast.update(forecast.id, { forecast_name: newForecastName });
+      } else if (forecast.type === 'manual') {
+        await base44.entities.ManualForecast.update(forecast.id, { forecast_name: newForecastName });
+      } else if (forecast.type === 'project') {
+        await base44.entities.ProjectForecast.update(forecast.id, { forecast_name: newForecastName });
+      }
+
+      // רענון הנתונים
+      queryClient.invalidateQueries(['businessForecasts', customer.email]);
+      queryClient.invalidateQueries(['manualForecasts', customer.email]);
+      queryClient.invalidateQueries(['projectForecasts', customer.email]);
+
+      setEditingForecastName(null);
+      setNewForecastName('');
+    } catch (error) {
+      console.error('Error updating forecast name:', error);
+      alert('שגיאה בעדכון שם התחזית');
     }
   };
 
@@ -313,16 +350,69 @@ export default function UnifiedForecastManager({ customer }) {
                 {/* כותרת ותגיות */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-horizon-text mb-2 flex items-center gap-2">
-                      {forecast.forecast_name}
-                      {forecast.rating && (
-                        <div className="flex items-center gap-1">
-                          {[...Array(forecast.rating)].map((_, i) => (
-                            <Star key={i} className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                          ))}
-                        </div>
-                      )}
-                    </h3>
+                    {editingForecastName === forecast.id ? (
+                      <div className="flex items-center gap-2 mb-2" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          value={newForecastName}
+                          onChange={(e) => setNewForecastName(e.target.value)}
+                          className="flex-1 px-3 py-1 bg-horizon-card border border-horizon-primary rounded-md text-horizon-text text-right"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleSaveForecastName(forecast);
+                            } else if (e.key === 'Escape') {
+                              setEditingForecastName(null);
+                            }
+                          }}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSaveForecastName(forecast);
+                          }}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          שמור
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingForecastName(null);
+                          }}
+                          className="text-horizon-accent"
+                        >
+                          ביטול
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 mb-2 group">
+                        <h3 className="text-lg font-semibold text-horizon-text flex items-center gap-2">
+                          {forecast.forecast_name}
+                          {forecast.rating && (
+                            <div className="flex items-center gap-1">
+                              {[...Array(forecast.rating)].map((_, i) => (
+                                <Star key={i} className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                              ))}
+                            </div>
+                          )}
+                        </h3>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditForecastName(forecast);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-horizon-accent hover:text-horizon-primary"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    )}
                     <div className="flex flex-wrap gap-2 mb-3">
                       <Badge 
                         className={
