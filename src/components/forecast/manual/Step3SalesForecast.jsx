@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronRight, ChevronLeft, GripVertical, Eye, EyeOff, TrendingUp, Calendar, FileSpreadsheet, CheckCircle2, Package } from "lucide-react";
+import { ChevronRight, ChevronLeft, GripVertical, Eye, EyeOff, TrendingUp, Calendar, Upload, FileSpreadsheet, CheckCircle2, Package } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { formatCurrency } from './utils/numberFormatter';
+import { formatCurrency, formatNumber } from './utils/numberFormatter';
 import ZReportUploader from './ZReportUploader';
 import ZReportProductMapper from './ZReportProductMapper';
+import ZReportMonthSummary from './ZReportMonthSummary';
 import { base44 } from "@/api/base44Client";
 import ServiceCategoryGroup from './ServiceCategoryGroup';
 
@@ -207,6 +208,13 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
 
   return (
     <div className="space-y-6" dir="rtl">
+      {/* סיכום דוחות Z שהועלו */}
+      <ZReportMonthSummary
+        forecastData={forecastData}
+        salesForecast={salesForecast}
+        services={forecastData.services || []}
+      />
+
       <Card className="card-horizon">
         <CardHeader>
           <div className="flex items-center justify-between">
