@@ -41,7 +41,7 @@ import {
 import { base44 } from "@/api/base44Client";
 import ReactMarkdown from 'react-markdown';
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useUsers } from './UsersContext';
+import { useUsers } from '../shared/UsersContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
