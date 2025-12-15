@@ -1,13 +1,14 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertCircle, Download, FileSpreadsheet, TrendingUp, TrendingDown } from "lucide-react";
+import { CheckCircle2, AlertCircle, Download, FileSpreadsheet, TrendingUp, TrendingDown, ChevronDown, ChevronUp } from "lucide-react";
 import { formatCurrency } from './utils/numberFormatter';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 
 export default function ZReportMonthSummary({ forecastData, salesForecast, services }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 
   // חישוב סיכומים לכל 12 חודשים
@@ -96,12 +97,17 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
 
   return (
     <Card className="card-horizon mb-6">
-      <CardHeader>
+      <CardHeader className="cursor-pointer hover:bg-horizon-card/50 transition-colors" onClick={() => setIsExpanded(!isExpanded)}>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-horizon-text flex items-center gap-2">
               <FileSpreadsheet className="w-5 h-5 text-horizon-primary" />
               סיכום דוחות Z - מכירות בפועל לפי חודש
+              {isExpanded ? (
+                <ChevronUp className="w-5 h-5 text-horizon-accent" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-horizon-accent" />
+              )}
             </CardTitle>
             <p className="text-sm text-horizon-accent mt-1">
               סיכום כספי לכל חודש בו הועלה דוח Z מהקופה
@@ -135,8 +141,9 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
         </div>
       </CardHeader>
       
-      <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+      {isExpanded && (
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
           {monthlySummaries.map((summary, idx) => {
             const hasData = summary.productsWithData > 0;
             const isProfitable = summary.profit > 0;
@@ -268,7 +275,8 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
             </p>
           </div>
         )}
-      </CardContent>
+        </CardContent>
+      )}
     </Card>
   );
 }
