@@ -4,6 +4,7 @@ import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import {
   LayoutDashboard,
+  Upload,
   PlusCircle,
   Lightbulb,
   LogOut,
@@ -17,6 +18,7 @@ import {
   Mail,
   ScanSearch,
   DollarSign,
+  Loader2,
   ShieldAlert,
   Tag,
   User as UserIcon,
@@ -29,6 +31,21 @@ import {
   Briefcase,
   Zap,
   LifeBuoy,
+  Bell,
+  Home,
+  Settings,
+  ChevronDown,
+  RefreshCw,
+  Bot,
+  Target,
+  FileQuestion,
+  Building,
+  Plane,
+  Heart,
+  BrainCircuit,
+  FileCheck2,
+  ListChecks,
+  AreaChart,
   Moon,
   Sun
 } from "lucide-react";
@@ -37,9 +54,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { trackActivity } from "./components/logic/userEngagementTracker";
 import EmergencyChat from "./components/shared/EmergencyChat";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import OnboardingRequestsModal from "@/components/admin/OnboardingRequestsModal";
+import MissingDocumentsModal from "@/components/admin/MissingDocumentsModal";
 import TopBarActions from "@/components/shared/TopBarActions";
 import LoadingScreen from "./components/shared/LoadingScreen";
 import { ThemeProvider, useTheme } from "./components/shared/ThemeContext";
+import { UsersProvider } from "./components/shared/UsersContext";
 
 const navigationItems = [
   {
@@ -981,11 +1001,13 @@ function LayoutContent({ children, currentPageName }) {
   );
 }
 
-// Main Layout Export with ThemeProvider wrapper
+// Main Layout Export with ThemeProvider and UsersProvider wrapper
 function Layout({ children, currentPageName }) {
   return (
     <ThemeProvider>
-      <LayoutContent children={children} currentPageName={currentPageName} />
+      <UsersProvider>
+        <LayoutContent children={children} currentPageName={currentPageName} />
+      </UsersProvider>
     </ThemeProvider>
   );
 }

@@ -41,6 +41,7 @@ import {
 import { base44 } from "@/api/base44Client";
 import ReactMarkdown from 'react-markdown';
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useUsers } from './UsersContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -241,13 +242,11 @@ export default function FloatingAgentChat({
   const [unsubscribe, setUnsubscribe] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [assignedCustomers, setAssignedCustomers] = useState([]);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  // בדיקה האם המשתמש הוא אדמין
-  const isAdmin = currentUser?.role === 'admin';
-  const isFinancialManager = currentUser?.user_type === 'financial_manager';
+  // שימוש ב-Context
+  const { allUsers: assignedCustomers = [], isAdmin, isFinancialManager } = useUsers();
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -279,45 +278,7 @@ export default function FloatingAgentChat({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, chatSize]);
 
-  // טעינת לקוחות משויכים למנהל כספים
-  useEffect(() => {
-    const loadAssignedCustomers = async () => {
-      if (!currentUser) return;
-      
-      try {
-        if (isAdmin) {
-          // אדמין רואה את כולם
-          const allCustomers = await base44.entities.User.filter({ user_type: 'regular' });
-          setAssignedCustomers(allCustomers);
-        } else if (isFinancialManager) {
-          // מנהל כספים - טוען רק OnboardingRequest ולא User entity
-          const onboardings = await base44.entities.OnboardingRequest.filter({
-            $or: [
-              { assigned_financial_manager_email: currentUser.email },
-              { additional_assigned_financial_manager_emails: { $contains: currentUser.email } }
-            ]
-          });
-          
-          // ממיר OnboardingRequests למבנה של לקוחות
-          const customersFromOnboarding = onboardings.map(o => ({
-            id: o.id,
-            email: o.email,
-            business_name: o.business_name,
-            full_name: o.full_name,
-            business_type: o.business_type,
-            user_type: 'regular'
-          }));
-          
-          setAssignedCustomers(customersFromOnboarding);
-        }
-      } catch (error) {
-        console.error("Error loading assigned customers:", error);
-        setAssignedCustomers([]);
-      }
-    };
-    
-    loadAssignedCustomers();
-  }, [currentUser, isAdmin, isFinancialManager]);
+  // assignedCustomers מגיע מ-Context, אין צורך בטעינה מקומית
 
   useEffect(() => {
     if (isOpen && currentUser && !isInitialized) {

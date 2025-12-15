@@ -35,6 +35,7 @@ import CustomerGoalsGantt from './CustomerGoalsGantt';
 import { generateGoalsHTML } from '../shared/generateGoalsHTML';
 import { openPrintWindow } from '../shared/printUtils';
 import { syncTaskToFireberry } from '@/functions/syncTaskToFireberry';
+import { useUsers } from '../shared/UsersContext';
 
 export default function GoalsAndTasksDashboard({ customer }) {
   const [currentUser, setCurrentUser] = useState(null);
@@ -62,7 +63,8 @@ export default function GoalsAndTasksDashboard({ customer }) {
       is_active: true
     }, 'order_index'),
     enabled: !!customer?.email,
-    refetchInterval: 30000 // רענון אוטומטי כל 30 שניות לקבלת עדכונים מפיירברי
+    staleTime: 2 * 60 * 1000, // 2 דקות cache
+    refetchOnWindowFocus: false // ביטול refetch אוטומטי
   });
 
   // זיהוי יעדים - פריט הוא יעד אם:
@@ -174,15 +176,13 @@ export default function GoalsAndTasksDashboard({ customer }) {
     try {
       await base44.entities.CustomerGoal.update(taskId, { status: 'done' });
 
-      // סנכרון לפיירברי
-      try {
-        await syncTaskToFireberry({ taskId });
-      } catch (error) {
-        console.error('Failed to sync to Fireberry:', error);
-      }
-
-      // רענון הנתונים רק אחרי שהסנכרון הושלם
+      // רענון מיידי
       queryClient.invalidateQueries(['customerGoals', customer.email]);
+
+      // סנכרון לפיירברי ברקע - לא חוסם
+      syncTaskToFireberry({ taskId }).catch(error => {
+        console.error('Failed to sync to Fireberry:', error);
+      });
     } catch (error) {
       console.error('Error marking task as done:', error);
     }
@@ -588,34 +588,8 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
   const [status, setStatus] = useState('open');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: allUsers = [] } = useQuery({
-    queryKey: ['allUsersForTask', currentUser?.email],
-    queryFn: async () => {
-      const isFinancialManager = currentUser?.user_type === 'financial_manager';
-      
-      if (isFinancialManager) {
-        // מנהל כספים - טוען משתמשים דרך OnboardingRequest
-        const onboardings = await base44.entities.OnboardingRequest.list();
-        const myOnboardings = onboardings.filter(o => 
-          o.assigned_financial_manager_email === currentUser.email ||
-          o.additional_assigned_financial_manager_emails?.includes(currentUser.email)
-        );
-        
-        // ממיר ל-user objects
-        return myOnboardings.map(o => ({
-          id: o.id,
-          email: o.email,
-          full_name: o.full_name || o.business_name,
-          user_type: 'regular'
-        }));
-      } else {
-        // אדמין - טוען מ-User entity
-        const users = await base44.entities.User.list();
-        return users.filter((u) => u.email && u.full_name);
-      }
-    },
-    enabled: isOpen && !!currentUser
-  });
+  // שימוש ב-Context במקום query מקומי
+  const { allUsers = [] } = useUsers();
 
   // סינון משתמשים לפי הלוגיקה: משתמשים רגילים + מנהלי כספים המשויכים ללקוח
   const relevantUsers = useMemo(() => {
@@ -684,8 +658,8 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
         order_index: 0
       });
 
-      // שליחת נוטיפיקציות ומיילים למשתמשים מתויגים
-      for (const taggedEmail of taggedUsers) {
+      // שליחת נוטיפיקציות ומיילים ברקע - לא חוסם
+      Promise.all(taggedUsers.map(async (taggedEmail) => {
         try {
           await base44.entities.Notification.create({
             recipient_email: taggedEmail,
@@ -706,15 +680,12 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
         } catch (error) {
           console.error('Error sending notification/email to tagged user:', error);
         }
-      }
+      })).catch(console.error);
 
-      // סנכרון לפיירברי
-      try {
-        const { syncTaskToFireberry } = await import('@/functions/syncTaskToFireberry');
-        await syncTaskToFireberry({ taskId: newTask.id });
-      } catch (error) {
+      // סנכרון לפיירברי ברקע - לא חוסם
+      syncTaskToFireberry({ taskId: newTask.id }).catch(error => {
         console.error('Failed to sync new task to Fireberry:', error);
-      }
+      });
 
       // Reset form
       setName('');
@@ -944,34 +915,8 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
   const [taggedUsers, setTaggedUsers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: allUsers = [] } = useQuery({
-    queryKey: ['allUsersForEdit', currentUser?.email],
-    queryFn: async () => {
-      const isFinancialManager = currentUser?.user_type === 'financial_manager';
-      
-      if (isFinancialManager) {
-        // מנהל כספים - טוען משתמשים דרך OnboardingRequest
-        const onboardings = await base44.entities.OnboardingRequest.list();
-        const myOnboardings = onboardings.filter(o => 
-          o.assigned_financial_manager_email === currentUser.email ||
-          o.additional_assigned_financial_manager_emails?.includes(currentUser.email)
-        );
-        
-        // ממיר ל-user objects
-        return myOnboardings.map(o => ({
-          id: o.id,
-          email: o.email,
-          full_name: o.full_name || o.business_name,
-          user_type: 'regular'
-        }));
-      } else {
-        // אדמין - טוען מ-User entity
-        const users = await base44.entities.User.list();
-        return users.filter((u) => u.email && u.full_name);
-      }
-    },
-    enabled: isOpen && !!currentUser
-  });
+  // שימוש ב-Context במקום query מקומי
+  const { allUsers = [] } = useUsers();
 
   // קבלת נתוני הלקוח לצורך סינון
   const { data: customerData } = useQuery({
@@ -1083,8 +1028,11 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
 
       await base44.entities.CustomerGoal.update(id, dataToUpdate);
 
-      // שליחת נוטיפיקציות למשתמשים חדשים שתויגו
-      for (const taggedEmail of newlyTagged) {
+      // עדכון מיידי ב-UI
+      onSuccess();
+
+      // שליחת נוטיפיקציות ומיילים ברקע - לא חוסם
+      Promise.all(newlyTagged.map(async (taggedEmail) => {
         try {
           await base44.entities.Notification.create({
             recipient_email: taggedEmail,
@@ -1105,19 +1053,12 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
         } catch (error) {
           console.error('Error sending notification/email to tagged user:', error);
         }
-      }
+      })).catch(console.error);
 
-      // סנכרון לפיירברי
-      try {
-        await syncTaskToFireberry({ taskId: id });
-      } catch (error) {
+      // סנכרון לפיירברי ברקע - לא חוסם
+      syncTaskToFireberry({ taskId: id }).catch(error => {
         console.error('Failed to sync to Fireberry:', error);
-      }
-
-      // המתנה קצרה לוודא שהעדכון התקבל
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      onSuccess();
+      });
     } catch (error) {
       console.error('Error updating task:', error);
       alert('שגיאה בעדכון המשימה');
@@ -1343,34 +1284,8 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
   const [taggedUsers, setTaggedUsers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: allUsers = [] } = useQuery({
-    queryKey: ['allUsersForGoal', currentUser?.email],
-    queryFn: async () => {
-      const isFinancialManager = currentUser?.user_type === 'financial_manager';
-      
-      if (isFinancialManager) {
-        // מנהל כספים - טוען משתמשים דרך OnboardingRequest
-        const onboardings = await base44.entities.OnboardingRequest.list();
-        const myOnboardings = onboardings.filter(o => 
-          o.assigned_financial_manager_email === currentUser.email ||
-          o.additional_assigned_financial_manager_emails?.includes(currentUser.email)
-        );
-        
-        // ממיר ל-user objects
-        return myOnboardings.map(o => ({
-          id: o.id,
-          email: o.email,
-          full_name: o.full_name || o.business_name,
-          user_type: 'regular'
-        }));
-      } else {
-        // אדמין - טוען מ-User entity
-        const users = await base44.entities.User.list();
-        return users.filter((u) => u.email && u.full_name);
-      }
-    },
-    enabled: isOpen && !!currentUser
-  });
+  // שימוש ב-Context במקום query מקומי
+  const { allUsers = [] } = useUsers();
 
   // סינון משתמשים
   const relevantUsers = useMemo(() => {
@@ -1427,8 +1342,11 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
         task_type: 'goal'
       });
 
-      // שליחת נוטיפיקציות ומיילים למשתמשים מתויגים
-      for (const taggedEmail of taggedUsers) {
+      // עדכון מיידי
+      onSuccess();
+
+      // שליחת נוטיפיקציות ומיילים ברקע - לא חוסם
+      Promise.all(taggedUsers.map(async (taggedEmail) => {
         try {
           await base44.entities.Notification.create({
             recipient_email: taggedEmail,
@@ -1449,15 +1367,12 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
         } catch (error) {
           console.error('Error sending notification/email to tagged user:', error);
         }
-      }
+      })).catch(console.error);
 
-      // סנכרון לפיירברי
-      try {
-        const { syncTaskToFireberry } = await import('@/functions/syncTaskToFireberry');
-        await syncTaskToFireberry({ taskId: newGoal.id });
-      } catch (error) {
+      // סנכרון לפיירברי ברקע - לא חוסם
+      syncTaskToFireberry({ taskId: newGoal.id }).catch(error => {
         console.error('Failed to sync new goal to Fireberry:', error);
-      }
+      });
 
       setName('');
       setNotes('');

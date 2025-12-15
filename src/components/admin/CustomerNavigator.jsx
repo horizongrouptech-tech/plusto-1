@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Search, ChevronLeft, ChevronRight, Filter, X, Calendar, Building2 } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { useUsers } from '../shared/UsersContext';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
 export default function CustomerNavigator({ 
   allCustomers, 
@@ -17,27 +17,14 @@ export default function CustomerNavigator({
   isAdmin 
 }) {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const searchTerm = useDebouncedValue(searchInput, 300); // Debounced search
   const [managerFilter, setManagerFilter] = useState('all');
   const [businessTypeFilter, setBusinessTypeFilter] = useState('all');
   const [groupFilter, setGroupFilter] = useState('all');
 
-  // טעינת כל המנהלים כספים עם השמות שלהם
-  const { data: allFinancialManagers = [] } = useQuery({
-    queryKey: ['financialManagers'],
-    queryFn: async () => {
-      // רק אדמינים יכולים לטעון רשימת מנהלים
-      if (!isAdmin) return [];
-      
-      const managers = await base44.entities.User.filter({
-        role: 'user',
-        user_type: 'financial_manager'
-      });
-      return managers;
-    },
-    enabled: isAdmin, // טוען רק אם זה אדמין
-    staleTime: 10 * 60 * 1000, // 10 דקות
-  });
+  // שימוש ב-Context במקום query מקומי
+  const { financialManagers: allFinancialManagers = [] } = useUsers();
 
   // Get unique financial managers for filter - מעודכן להציג שם במקום email
   const financialManagers = useMemo(() => {
@@ -124,13 +111,14 @@ export default function CustomerNavigator({
   };
 
   const clearFilters = () => {
+    setSearchInput('');
     setSearchTerm('');
     setManagerFilter('all');
     setBusinessTypeFilter('all');
     setGroupFilter('all');
   };
 
-  const hasActiveFilters = searchTerm || managerFilter !== 'all' || businessTypeFilter !== 'all' || groupFilter !== 'all';
+  const hasActiveFilters = searchInput || managerFilter !== 'all' || businessTypeFilter !== 'all' || groupFilter !== 'all';
 
   // פונקציה לקבלת תצוגת קבוצה (no longer used in SelectItem, but kept if used elsewhere or for future)
   const getGroupBadge = (group) => {
@@ -218,8 +206,8 @@ export default function CustomerNavigator({
               <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-horizon-accent" />
               <Input
                 placeholder="חיפוש לקוח..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="pr-10 bg-horizon-card border-horizon text-horizon-text"
                 dir="rtl"
               />
