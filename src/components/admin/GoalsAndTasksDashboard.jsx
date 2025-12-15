@@ -63,8 +63,10 @@ export default function GoalsAndTasksDashboard({ customer }) {
       is_active: true
     }, 'order_index'),
     enabled: !!customer?.email,
-    staleTime: 2 * 60 * 1000, // 2 דקות cache
-    refetchOnWindowFocus: false // ביטול refetch אוטומטי
+    staleTime: 5 * 60 * 1000, // 5 דקות cache - הארכה
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1
   });
 
   // זיהוי יעדים - פריט הוא יעד אם:
@@ -177,9 +179,9 @@ export default function GoalsAndTasksDashboard({ customer }) {
       await base44.entities.CustomerGoal.update(taskId, { status: 'done' });
 
       // רענון מיידי
-      queryClient.invalidateQueries(['customerGoals', customer.email]);
+      await queryClient.invalidateQueries(['customerGoals', customer.email]);
 
-      // סנכרון לפיירברי ברקע - לא חוסם
+      // סנכרון לפיירברי ברקע - לא חוסם (לא ממתינים)
       syncTaskToFireberry({ taskId }).catch(error => {
         console.error('Failed to sync to Fireberry:', error);
       });

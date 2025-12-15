@@ -91,9 +91,9 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
             await base44.entities.CustomerGoal.update(goal.id, { status: newStatus });
             
             // רענון מיידי
-            await refreshData();
+            refreshData();
             
-            // סנכרון לפיירברי ברקע - לא חוסם
+            // סנכרון לפיירברי ברקע - לא ממתינים, לא חוסם
             syncTaskToFireberry({ taskId: goal.id }).catch(error => {
                 console.error('Failed to sync to Fireberry:', error);
             });
@@ -126,11 +126,11 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                 due_time: editedGoal.due_time
             });
             
-            // רענון מיידי
-            await refreshData();
+            // רענון מיידי - לא ממתינים
+            refreshData();
             setIsEditing(false);
             
-            // סנכרון לפיירברי ברקע - לא חוסם
+            // סנכרון לפיירברי ברקע - לא ממתינים, לא חוסם
             syncTaskToFireberry({ taskId: goal.id }).catch(error => {
                 console.error('Failed to sync to Fireberry:', error);
             });

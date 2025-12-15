@@ -42,8 +42,8 @@ export const UsersProvider = ({ children }) => {
           const users = await base44.entities.User.list();
           return users.filter((u) => u.email && u.full_name);
         } else if (isFinancialManager) {
-          // מנהל כספים - טוען דרך OnboardingRequest
-          const allOnboardings = await base44.entities.OnboardingRequest.list();
+          // מנהל כספים - טוען דרך OnboardingRequest בלבד
+          const allOnboardings = await base44.entities.OnboardingRequest.filter({ is_active: true });
           const myOnboardings = allOnboardings.filter(o => 
             o.assigned_financial_manager_email === currentUser.email ||
             o.additional_assigned_financial_manager_emails?.includes(currentUser.email)
@@ -57,7 +57,9 @@ export const UsersProvider = ({ children }) => {
             business_name: o.business_name,
             user_type: 'regular',
             customer_group: o.customer_group,
-            business_type: o.business_type
+            business_type: o.business_type,
+            assigned_financial_manager_email: o.assigned_financial_manager_email,
+            additional_assigned_financial_manager_emails: o.additional_assigned_financial_manager_emails
           }));
 
           return usersFromOnboarding;

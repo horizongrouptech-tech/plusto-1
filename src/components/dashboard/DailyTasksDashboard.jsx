@@ -98,10 +98,10 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         return users;
       } else {
         // ⭐ מנהל כספים - טוען כל OnboardingRequests ומסנן בצד הלקוח (כולל מנהלים משניים!)
-        const allOnboardingReqs = await base44.entities.OnboardingRequest.list();
+        const allOnboardingReqs = await base44.entities.OnboardingRequest.filter({ is_active: true });
         const onboardingReqs = allOnboardingReqs.filter((req) =>
-        req.assigned_financial_manager_email === currentUser.email ||
-        req.additional_assigned_financial_manager_emails && req.additional_assigned_financial_manager_emails.includes(currentUser.email)
+          req.assigned_financial_manager_email === currentUser.email ||
+          req.additional_assigned_financial_manager_emails?.includes(currentUser.email)
         );
 
         return onboardingReqs.map((req) => ({
@@ -114,7 +114,11 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
           business_type: req.business_type
         }));
       }
-    }
+    },
+    staleTime: 5 * 60 * 1000, // 5 דקות cache
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1
   });
 
   // סינון לקוחות לפי קבוצת העבודה של היום ומנהל הכספים הנוכחי
@@ -147,14 +151,18 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         }, 'order_index');
 
         const relevantTasks = customerTasks.filter((task) =>
-        task.assignee_email === currentUser.email ||
-        myCustomers.includes(task.customer_email)
+          task.assignee_email === currentUser.email ||
+          myCustomers.includes(task.customer_email)
         );
 
         return relevantTasks;
       }
     },
-    enabled: !!allCustomers.length || isAdmin
+    enabled: !!allCustomers.length || isAdmin,
+    staleTime: 5 * 60 * 1000, // 5 דקות cache
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1
   });
 
   // סינון משימות פעילות בלבד (start_date התחיל)
@@ -211,13 +219,17 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     queryKey: ['allRecommendationsForStats', currentUser.email, isAdmin],
     queryFn: async () => {
       const filter = isAdmin ?
-      { status: { $ne: 'archived' } } :
-      {
-        assignee_email: currentUser.email,
-        status: { $ne: 'archived' }
-      };
+        { status: { $ne: 'archived' } } :
+        {
+          assignee_email: currentUser.email,
+          status: { $ne: 'archived' }
+        };
       return await base44.entities.Recommendation.filter(filter);
-    }
+    },
+    staleTime: 5 * 60 * 1000, // 5 דקות cache
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1
   });
 
   const todayDate = useMemo(() => {

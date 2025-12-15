@@ -1,21 +1,25 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import LoadingScreen from "@/components/shared/LoadingScreen";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowRight, User as UserIcon, Target, AlertCircle, Edit } from "lucide-react";
+import { ArrowRight, User as UserIcon, FileText, Globe, Lightbulb, Package, TrendingUp, Target, Loader2, AlertCircle, ShoppingCart, Edit } from "lucide-react";
 import CustomerFileUploadManager from "@/components/admin/CustomerFileUploadManager";
 import StrategicRecommendations from "@/components/admin/StrategicRecommendations";
 import ProductCatalogManager from "@/components/catalog/ProductCatalogManager";
+import ManualForecastManager from "@/components/forecast/ManualForecastManager";
+import BusinessForecastManager from "@/components/forecast/BusinessForecastManager";
+import CustomerGoalsGantt from "@/components/admin/CustomerGoalsGantt";
 import GoalsAndTasksDashboard from "@/components/admin/GoalsAndTasksDashboard";
 import WebsiteScanner from "@/components/admin/WebsiteScanner";
 import { createPageUrl } from '@/utils';
 import RecommendationUpgradeModal from '@/components/admin/RecommendationUpgradeModal';
 import RecommendationEditModal from '@/components/admin/RecommendationEditModal';
 import RecommendationViewModal from '@/components/admin/RecommendationViewModal';
+import { sendWhatsAppMessage } from "@/functions/sendWhatsAppMessage";
 
 import CustomerNavigator from '@/components/admin/CustomerNavigator';
 import RecommendationFilters from '@/components/admin/RecommendationFilters';
@@ -236,10 +240,11 @@ export default function CustomerManagement() {
       let onboardingRequests = [];
 
       if (isFinancialManager) {
+        // מנהל כספים - טוען דרך OnboardingRequest בלבד ומסנן בצד לקוח
         const allOnboardingRequests = await base44.entities.OnboardingRequest.filter({ is_active: true });
         onboardingRequests = allOnboardingRequests.filter((req) =>
-        req.assigned_financial_manager_email === currentUser.email ||
-        req.additional_assigned_financial_manager_emails?.includes(currentUser.email)
+          req.assigned_financial_manager_email === currentUser.email ||
+          req.additional_assigned_financial_manager_emails?.includes(currentUser.email)
         );
 
         users = onboardingRequests.map((req) => ({
@@ -249,14 +254,16 @@ export default function CustomerManagement() {
           email: req.email,
           business_type: req.business_type,
           customer_group: req.customer_group,
-          assigned_financial_manager_email: currentUser.email,
+          assigned_financial_manager_email: req.assigned_financial_manager_email,
+          additional_assigned_financial_manager_emails: req.additional_assigned_financial_manager_emails,
           source: 'onboarding'
         }));
       } else {
+        // אדמין - טוען מ-User וגם OnboardingRequest
         [users, onboardingRequests] = await Promise.all([
-        base44.entities.User.filter({ role: { $ne: 'admin' }, user_type: { $ne: 'financial_manager' } }),
-        base44.entities.OnboardingRequest.filter({ is_active: true })]
-        );
+          base44.entities.User.filter({ role: { $ne: 'admin' }, user_type: { $ne: 'financial_manager' } }),
+          base44.entities.OnboardingRequest.filter({ is_active: true })
+        ]);
 
         users = users.map((u) => ({
           id: u.id,
@@ -294,10 +301,13 @@ export default function CustomerManagement() {
       });
 
       return Array.from(uniqueClientsMap.values()).sort((a, b) =>
-      (a.business_name || a.full_name || '').localeCompare(b.business_name || b.full_name || '')
+        (a.business_name || a.full_name || '').localeCompare(b.business_name || b.full_name || '')
       );
     },
-    staleTime: 5 * 60 * 1000
+    staleTime: 5 * 60 * 1000, // 5 דקות cache
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1
   });
 
   const { data: recommendations = [], isLoading: isLoadingRecommendations } = useQuery({
@@ -307,7 +317,10 @@ export default function CustomerManagement() {
       status: { $ne: 'archived' }
     }, '-created_date'),
     enabled: !!customer?.email && activeTab === 'recommendations',
-    staleTime: 30 * 1000
+    staleTime: 5 * 60 * 1000, // 5 דקות cache במקום 30 שניות
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1
   });
 
   const filteredRecommendations = useMemo(() => {
