@@ -8,7 +8,7 @@ import { Search, ChevronLeft, ChevronRight, Filter, X, Calendar, Building2 } fro
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useUsers } from '../shared/UsersContext';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useDebouncedValue } from '../utils/useDebouncedValue';
 
 export default function CustomerNavigator({ 
   allCustomers, 

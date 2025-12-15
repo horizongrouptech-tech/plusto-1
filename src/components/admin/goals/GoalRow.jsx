@@ -7,6 +7,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
 import { 
+    GripVertical, 
     Calendar as CalendarIcon, 
     User as UserIcon, 
     Save, 
@@ -16,7 +17,7 @@ import {
     Edit,
     Check
 } from 'lucide-react';
-import { format, isValid } from 'date-fns';
+import { format, parse, isValid } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { base44 } from '@/api/base44Client';
 import GoalCommentsModal from './GoalCommentsModal';
@@ -89,14 +90,13 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
         try {
             await base44.entities.CustomerGoal.update(goal.id, { status: newStatus });
             
-            // סנכרון לפיירברי
-            try {
-                await syncTaskToFireberry({ taskId: goal.id });
-            } catch (error) {
-                console.error('Failed to sync to Fireberry:', error);
-            }
-            
+            // רענון מיידי
             await refreshData();
+            
+            // סנכרון לפיירברי ברקע - לא חוסם
+            syncTaskToFireberry({ taskId: goal.id }).catch(error => {
+                console.error('Failed to sync to Fireberry:', error);
+            });
         } catch (error) {
             console.error("Error updating status:", error);
             alert('שגיאה בעדכון הסטטוס');
@@ -126,15 +126,14 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                 due_time: editedGoal.due_time
             });
             
-            // סנכרון לפיירברי
-            try {
-                await syncTaskToFireberry({ taskId: goal.id });
-            } catch (error) {
-                console.error('Failed to sync to Fireberry:', error);
-            }
-            
+            // רענון מיידי
             await refreshData();
             setIsEditing(false);
+            
+            // סנכרון לפיירברי ברקע - לא חוסם
+            syncTaskToFireberry({ taskId: goal.id }).catch(error => {
+                console.error('Failed to sync to Fireberry:', error);
+            });
         } catch (error) {
             console.error("Error updating goal:", error);
             alert('שגיאה בעדכון היעד');
