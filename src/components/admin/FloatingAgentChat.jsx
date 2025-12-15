@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { 
@@ -23,6 +24,9 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  Trash2,
+  Download,
+  Upload,
   Sparkles,
   Zap,
   Calendar,
@@ -286,7 +290,7 @@ export default function FloatingAgentChat({
           const allCustomers = await base44.entities.User.filter({ user_type: 'regular' });
           setAssignedCustomers(allCustomers);
         } else if (isFinancialManager) {
-          // מנהל כספים רואה רק לקוחות משויכים אליו
+          // מנהל כספים - טוען רק OnboardingRequest ולא User entity
           const onboardings = await base44.entities.OnboardingRequest.filter({
             $or: [
               { assigned_financial_manager_email: currentUser.email },
@@ -294,17 +298,21 @@ export default function FloatingAgentChat({
             ]
           });
           
-          const customerEmails = onboardings.map(o => o.email);
-          if (customerEmails.length > 0) {
-            const customers = await base44.entities.User.filter({
-              email: { $in: customerEmails },
-              user_type: 'regular'
-            });
-            setAssignedCustomers(customers);
-          }
+          // ממיר OnboardingRequests למבנה של לקוחות
+          const customersFromOnboarding = onboardings.map(o => ({
+            id: o.id,
+            email: o.email,
+            business_name: o.business_name,
+            full_name: o.full_name,
+            business_type: o.business_type,
+            user_type: 'regular'
+          }));
+          
+          setAssignedCustomers(customersFromOnboarding);
         }
       } catch (error) {
         console.error("Error loading assigned customers:", error);
+        setAssignedCustomers([]);
       }
     };
     

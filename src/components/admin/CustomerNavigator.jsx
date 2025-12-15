@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, ChevronLeft, ChevronRight, X, Building2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Filter, X, Calendar, Building2 } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useQuery } from '@tanstack/react-query';
@@ -26,12 +26,16 @@ export default function CustomerNavigator({
   const { data: allFinancialManagers = [] } = useQuery({
     queryKey: ['financialManagers'],
     queryFn: async () => {
+      // רק אדמינים יכולים לטעון רשימת מנהלים
+      if (!isAdmin) return [];
+      
       const managers = await base44.entities.User.filter({
         role: 'user',
         user_type: 'financial_manager'
       });
       return managers;
     },
+    enabled: isAdmin, // טוען רק אם זה אדמין
     staleTime: 10 * 60 * 1000, // 10 דקות
   });
 
