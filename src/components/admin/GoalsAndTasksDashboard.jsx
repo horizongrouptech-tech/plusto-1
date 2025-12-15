@@ -589,13 +589,32 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: allUsers = [] } = useQuery({
-    queryKey: ['allUsersForTask'],
+    queryKey: ['allUsersForTask', currentUser?.email],
     queryFn: async () => {
-      const users = await base44.entities.User.list();
-      // סינון רק משתמשים שקיימים בטבלת User
-      return users.filter((u) => u.email && u.full_name);
+      const isFinancialManager = currentUser?.user_type === 'financial_manager';
+      
+      if (isFinancialManager) {
+        // מנהל כספים - טוען משתמשים דרך OnboardingRequest
+        const onboardings = await base44.entities.OnboardingRequest.list();
+        const myOnboardings = onboardings.filter(o => 
+          o.assigned_financial_manager_email === currentUser.email ||
+          o.additional_assigned_financial_manager_emails?.includes(currentUser.email)
+        );
+        
+        // ממיר ל-user objects
+        return myOnboardings.map(o => ({
+          id: o.id,
+          email: o.email,
+          full_name: o.full_name || o.business_name,
+          user_type: 'regular'
+        }));
+      } else {
+        // אדמין - טוען מ-User entity
+        const users = await base44.entities.User.list();
+        return users.filter((u) => u.email && u.full_name);
+      }
     },
-    enabled: isOpen
+    enabled: isOpen && !!currentUser
   });
 
   // סינון משתמשים לפי הלוגיקה: משתמשים רגילים + מנהלי כספים המשויכים ללקוח
@@ -926,13 +945,32 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: allUsers = [] } = useQuery({
-    queryKey: ['allUsersForEdit'],
+    queryKey: ['allUsersForEdit', currentUser?.email],
     queryFn: async () => {
-      const users = await base44.entities.User.list();
-      // סינון רק משתמשים שקיימים בטבלת User
-      return users.filter((u) => u.email && u.full_name);
+      const isFinancialManager = currentUser?.user_type === 'financial_manager';
+      
+      if (isFinancialManager) {
+        // מנהל כספים - טוען משתמשים דרך OnboardingRequest
+        const onboardings = await base44.entities.OnboardingRequest.list();
+        const myOnboardings = onboardings.filter(o => 
+          o.assigned_financial_manager_email === currentUser.email ||
+          o.additional_assigned_financial_manager_emails?.includes(currentUser.email)
+        );
+        
+        // ממיר ל-user objects
+        return myOnboardings.map(o => ({
+          id: o.id,
+          email: o.email,
+          full_name: o.full_name || o.business_name,
+          user_type: 'regular'
+        }));
+      } else {
+        // אדמין - טוען מ-User entity
+        const users = await base44.entities.User.list();
+        return users.filter((u) => u.email && u.full_name);
+      }
     },
-    enabled: isOpen
+    enabled: isOpen && !!currentUser
   });
 
   // קבלת נתוני הלקוח לצורך סינון
@@ -1306,13 +1344,32 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: allUsers = [] } = useQuery({
-    queryKey: ['allUsersForGoal'],
+    queryKey: ['allUsersForGoal', currentUser?.email],
     queryFn: async () => {
-      const users = await base44.entities.User.list();
-      // סינון רק משתמשים שקיימים בטבלת User
-      return users.filter((u) => u.email && u.full_name);
+      const isFinancialManager = currentUser?.user_type === 'financial_manager';
+      
+      if (isFinancialManager) {
+        // מנהל כספים - טוען משתמשים דרך OnboardingRequest
+        const onboardings = await base44.entities.OnboardingRequest.list();
+        const myOnboardings = onboardings.filter(o => 
+          o.assigned_financial_manager_email === currentUser.email ||
+          o.additional_assigned_financial_manager_emails?.includes(currentUser.email)
+        );
+        
+        // ממיר ל-user objects
+        return myOnboardings.map(o => ({
+          id: o.id,
+          email: o.email,
+          full_name: o.full_name || o.business_name,
+          user_type: 'regular'
+        }));
+      } else {
+        // אדמין - טוען מ-User entity
+        const users = await base44.entities.User.list();
+        return users.filter((u) => u.email && u.full_name);
+      }
     },
-    enabled: isOpen
+    enabled: isOpen && !!currentUser
   });
 
   // סינון משתמשים
