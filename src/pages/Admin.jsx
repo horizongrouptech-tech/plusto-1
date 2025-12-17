@@ -2164,7 +2164,7 @@ export default function AdminPage() {
       ].join(','))
     ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;');
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
@@ -2764,6 +2764,7 @@ export default function AdminPage() {
   // Determine if the current user is a financial manager or an admin
   const isFinancialManager = currentUser?.role === 'user' && currentUser?.user_type === 'financial_manager';
   const isAdmin = currentUser?.role === 'admin';
+  const isDepartmentManager = currentUser?.user_type === 'department_manager';
 
   if (isLoading) {
     return <LoadingScreen message="  טוען את לוח הבקרה שלך... " />;
