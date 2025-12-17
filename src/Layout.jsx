@@ -704,8 +704,12 @@ function LayoutContent({ children, currentPageName }) {
     if (user.role === 'admin' && !isAllowed) {
       return <Navigate to="/Admin" replace />;
     }
-    
+
     if (user.user_type === 'financial_manager' && user.is_approved_by_admin && !isAllowed) {
+      return <Navigate to="/Admin" replace />;
+    }
+
+    if (user.user_type === 'department_manager' && user.is_approved_by_admin && !isAllowed) {
       return <Navigate to="/Admin" replace />;
     }
   }
@@ -774,7 +778,7 @@ function LayoutContent({ children, currentPageName }) {
     );
   }
 
-  if (user && user.role === 'admin' || user.user_type == 'financial_manager') {
+  if (user && (user.role === 'admin' || user.user_type === 'financial_manager' || user.user_type === 'department_manager')) {
     return (
       <div dir="rtl" className="min-h-screen bg-horizon-dark" data-theme={theme}>
         <GlobalThemeStyles />
