@@ -1,4 +1,4 @@
-import { Base44 } from 'npm:@base44/sdk@0.8.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
 
 Deno.serve(async (req) => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -10,11 +10,8 @@ Deno.serve(async (req) => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     try {
-        // יצירת Base44 client עם service role (לא מ-request כי זה webhook חיצוני)
-        const base44 = new Base44({
-            appId: Deno.env.get('BASE44_APP_ID'),
-            serviceRoleSecret: Deno.env.get('MY_SERVICE_TOKEN_SECRET')
-        });
+        // יצירת Base44 client עם service role (webhook חיצוני)
+        const base44 = createClientFromRequest(req);
 
         // קריאת ה-body
         let body;
@@ -64,7 +61,7 @@ Deno.serve(async (req) => {
         let assignedManagerEmail = null;
         if (customerManager) {
             console.log(`🔍 Searching for manager with fireberry_user_id: ${customerManager}`);
-            const allUsers = await base44.entities.User.list();
+            const allUsers = await base44.asServiceRole.entities.User.list();
             console.log(`📊 Total users in system: ${allUsers.length}`);
 
             const usersWithFireberryId = allUsers.filter(u => u.fireberry_user_id);
@@ -88,7 +85,7 @@ Deno.serve(async (req) => {
 
         // Check if account exists
         console.log('🔍 Checking for existing account...');
-        const existingRequests = await base44.entities.OnboardingRequest.list();
+        const existingRequests = await base44.asServiceRole.entities.OnboardingRequest.list();
         const exists = existingRequests.find(r => 
             r.fireberry_account_id === accountId || 
             (r.email && email && r.email.toLowerCase() === email.toLowerCase())
@@ -117,7 +114,7 @@ Deno.serve(async (req) => {
 
             if (Object.keys(updateData).length > 0) {
                 console.log('💾 Updating with:', updateData);
-                const updated = await base44.entities.OnboardingRequest.update(exists.id, updateData);
+                const updated = await base44.asServiceRole.entities.OnboardingRequest.update(exists.id, updateData);
                 console.log('✅ UPDATE SUCCESS:', {
                     id: updated.id,
                     assigned_manager: updated.assigned_financial_manager_email
@@ -148,7 +145,7 @@ Deno.serve(async (req) => {
             assigned_manager: assignedManagerEmail
         });
 
-        const newRequest = await base44.entities.OnboardingRequest.create({
+        const newRequest = await base44.asServiceRole.entities.OnboardingRequest.create({
             fireberry_account_id: accountId,
             business_name: accountName,
             full_name: accountName,
