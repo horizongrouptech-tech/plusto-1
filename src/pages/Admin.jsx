@@ -610,7 +610,7 @@ function EnhancedRecommendationCard({ recommendation, onUpdate, onEdit, onViewDe
   const { data: recommendationsData, isLoading: isLoadingRecs } = useQuery({
     queryKey: ['adminRecommendations'],
     queryFn: () => Recommendation.list('-created_date'),
-    enabled: activeTab === 'customers', // Changed from 'recommendations' to 'customers'
+    enabled: activeTab === 'recommendations', // רק כשהטאב recommendations פעיל
     staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
     refetchOnWindowFocus: false,
   });
@@ -627,7 +627,7 @@ function EnhancedRecommendationCard({ recommendation, onUpdate, onEdit, onViewDe
   const { data: supportTicketsData, isLoading: isLoadingTickets } = useQuery({
     queryKey: ['adminSupportTickets'],
     queryFn: () => SupportTicket.list('-created_date'),
-    enabled: activeTab === 'overview' || activeTab === 'customers', // Changed from 'overview'
+    enabled: activeTab === 'overview', // רק לטאב overview
     staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
     refetchOnWindowFocus: false,
   });
@@ -644,7 +644,7 @@ function EnhancedRecommendationCard({ recommendation, onUpdate, onEdit, onViewDe
   const { data: fileUploadsData, isLoading: isLoadingFileUploads } = useQuery({
     queryKey: ['adminFileUploads'],
     queryFn: () => FileUpload.list(),
-    enabled: activeTab === 'overview' || activeTab === 'customers', // Changed from 'overview'
+    enabled: activeTab === 'overview', // רק לטאב overview
     staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
     refetchOnWindowFocus: false,
   });
@@ -673,7 +673,7 @@ function EnhancedRecommendationCard({ recommendation, onUpdate, onEdit, onViewDe
   const { data: userActivitiesData, isLoading: isLoadingUserActivities } = useQuery({
     queryKey: ['adminUserActivities'],
     queryFn: () => UserActivity.list('-last_login'),
-    enabled: activeTab === 'overview' || activeTab === 'customers', // Changed from 'overview'
+    enabled: activeTab === 'overview', // רק לטאב overview
     staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
     refetchOnWindowFocus: false,
   });
@@ -701,7 +701,7 @@ function EnhancedRecommendationCard({ recommendation, onUpdate, onEdit, onViewDe
   const { data: communicationThreadsData, isLoading: isLoadingThreads } = useQuery({
     queryKey: ['adminCommunicationThreads'],
     queryFn: () => CommunicationThread.list('-last_message_timestamp'),
-    enabled: activeTab === 'overview' || activeTab === 'customers', // Changed from 'overview'
+    enabled: activeTab === 'overview', // רק לטאב overview
     staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
     refetchOnWindowFocus: false,
   });
@@ -1073,10 +1073,10 @@ export default function AdminPage() {
     let customersList = [];
     let managersList = [];
     
-    if (currentUser.role === 'admin' || currentUser.user_type === 'department_manager') {
-      // אדמין או מנהל מחלקה - טוען מ-User entity
+    if (currentUser.role === 'admin') {
+      // אדמין - טוען מ-User entity
       const allUsers = await User.list();
-      customersList = allUsers.filter(user => user.role === 'user' && user.user_type !== 'financial_manager' && user.user_type !== 'department_manager'); // Ensure not FM or DM themselves
+      customersList = allUsers.filter(user => user.role === 'user' && user.user_type !== 'financial_manager'); // Ensure not FM themselves
       managersList = allUsers.filter(user => user.role === 'user' && user.user_type === 'financial_manager');
     } else if (currentUser.user_type === 'financial_manager') {
             // מנהל כספים - טוען מ-OnboardingRequest ו-CustomerContact (כולל מנהלים משניים)
@@ -1379,8 +1379,8 @@ export default function AdminPage() {
       });
       console.log(`Financial manager ${currentUser.email} has ${currentFiltered.length} assigned customers out of ${customers.length} total`);
     }
-    // If current user is an admin or department manager, apply the admin's selected filter
-    else if (currentUser.role === 'admin' || currentUser.user_type === 'department_manager') {
+    // If current user is an admin, apply the admin's selected filter
+    else if (currentUser.role === 'admin') {
       if (selectedFinancialManager !== 'all') {
         if (selectedFinancialManager === 'unassigned') {
           currentFiltered = customers.filter(customer => !customer.assigned_financial_manager_email);
@@ -1501,9 +1501,9 @@ export default function AdminPage() {
         let usersFromUserEntity = []; // הגדרת usersFromUserEntity
         let allCustomersForProcessing = []; // משתנה חדש שירכז את כל הלקוחות לעיבוד
 
-        if (currentUser.role === 'admin' || currentUser.user_type === 'department_manager') {
-            // אדמין או מנהל מחלקה - טוען את כל המשתמשים הרגילים מישות User
-            usersFromUserEntity = await User.filter({ role: 'user', user_type: { $ne: 'financial_manager' }, user_type: { $ne: 'department_manager' } });
+        if (currentUser.role === 'admin') {
+            // אדמין - טוען את כל המשתמשים הרגילים מישות User
+            usersFromUserEntity = await User.filter({ role: 'user', user_type: 'regular' });
         } else if (currentUser.user_type === 'financial_manager') {
             // מנהל כספים - משתמש בנתונים שכבר נטענו ב-customers (שכולל את CustomerContact ו-OnboardingRequest)
             // נסנן לקוחות שהם לא admin או FM בעצמם
@@ -2164,7 +2164,7 @@ export default function AdminPage() {
       ].join(','))
     ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
@@ -2764,14 +2764,13 @@ export default function AdminPage() {
   // Determine if the current user is a financial manager or an admin
   const isFinancialManager = currentUser?.role === 'user' && currentUser?.user_type === 'financial_manager';
   const isAdmin = currentUser?.role === 'admin';
-  const isDepartmentManager = currentUser?.user_type === 'department_manager';
 
   if (isLoading) {
     return <LoadingScreen message="  טוען את לוח הבקרה שלך... " />;
   }
 
   // Access control check based on role and user_type
-  if (!currentUser || !(isAdmin || isFinancialManager || isDepartmentManager)) {
+  if (!currentUser || !(isAdmin || isFinancialManager)) {
     return (
       <div className="min-h-screen bg-horizon-dark p-6 flex flex-col items-center justify-center">
         <h1 className="text-2xl font-bold mb-4 text-horizon-text">אין לך הרשאת גישה לדף זה.</h1>
@@ -2815,7 +2814,7 @@ export default function AdminPage() {
         )}
 
         {/* Daily Statistics Cards - show only for admin */}
-        {(isAdmin || isDepartmentManager) && dailyStats && overallStats && (
+        {isAdmin && dailyStats && overallStats && (
           <div className="grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
             <Card className="card-horizon hover-lift stagger-item relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#32acc1]/10 to-transparent rounded-full -mr-16 -mt-16"></div>
@@ -2893,7 +2892,7 @@ export default function AdminPage() {
                   ניהול לקוחות
                 </TabsTrigger>
 
-                {(isAdmin || isDepartmentManager) && (
+                {isAdmin && (
                   <TabsTrigger 
                     value="engagement" 
                     className="py-3 px-6 text-horizon-accent data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#32acc1] data-[state=active]:to-[#83ddec] data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg font-bold hover-lift"
@@ -2954,7 +2953,7 @@ export default function AdminPage() {
               
               
               {/* New Engagement Dashboard tab */}
-              {(isAdmin || isDepartmentManager) && (
+              {isAdmin && (
                 <TabsContent value="engagement">
                   <Suspense fallback={<div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>}>
                     <EngagementDashboard />
