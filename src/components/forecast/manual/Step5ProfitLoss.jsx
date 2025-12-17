@@ -3,15 +3,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Save,
+  ChevronLeft,
   ChevronRight,
+  TrendingUp,
   DollarSign,
+  PieChart,
   AlertCircle,
+  CheckCircle2,
+  Star,
   Loader2
 } from "lucide-react";
 import ManualForecastCharts from './ManualForecastCharts';
-import { formatCurrency } from './utils/numberFormatter';
+import { formatCurrency, formatPercentage } from './utils/numberFormatter';
+import { Badge } from "@/components/ui/badge";
 import { calculateTax } from './utils/taxCalculator';
 import PeriodSelector from './PeriodSelector';
 import {
@@ -106,7 +113,7 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
       let monthVATOnCosts = 0;
       let monthVATOnExpenses = 0;
 
-      // חישוב הכנסות ועלות מכר - עם הפחתת מע"מ
+      // חישוב הכנסות ועלות מכר - ברוטו (כולל מע"מ)
       (forecastData.sales_forecast_onetime || []).forEach((item) => {
         const service = (forecastData.services || []).find((s) => s.service_name === item.service_name);
         if (service) {
@@ -125,8 +132,7 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
             revenueGross = quantity * priceGross;
           }
 
-          const revenue = removeVAT(revenueGross, service.has_vat); // הכנסה נטו!
-          monthRevenue += revenue;
+          monthRevenue += revenueGross; // ✅ הכנסה ברוטו - ללא הפחתת מע"מ!
 
           // חישוב מע"מ על מכירות
           if (service.has_vat) {
@@ -135,19 +141,18 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
 
           const costOfSale = (service.costs || []).reduce((sum, cost) => {
             if (cost.is_percentage) {
-              // אחוזים מחושבים על ההכנסה הנטו
-              return sum + revenue * (cost.percentage_of_price / 100);
+              // אחוזים מחושבים על ההכנסה ברוטו
+              return sum + revenueGross * (cost.percentage_of_price / 100);
             }
 
             const costGross = (cost.amount || 0) * quantity;
-            const costNet = removeVAT(costGross, cost.has_vat);
 
             // חישוב מע"מ על עלויות
             if (cost.has_vat) {
               monthVATOnCosts += calculateVATAmount(costGross, true);
             }
 
-            return sum + costNet; // עלות נטו!
+            return sum + costGross; // ✅ עלות ברוטו - ללא הפחתת מע"מ!
           }, 0);
           monthCogs += costOfSale;
         }
@@ -190,7 +195,7 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
         }
       });
 
-      // הוצאות שיווק - עם הפחתת מע"מ
+      // הוצאות שיווק - ברוטו (כולל מע"מ)
       let monthMarketingExpenses = 0;
       (forecastData.detailed_expenses?.marketing_sales || []).forEach((exp) => {
         let expenseGross = 0;
@@ -203,15 +208,14 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
           expenseGross = actual > 0 ? actual : planned;
         }
 
-        const expenseNet = removeVAT(expenseGross, exp.has_vat);
-        monthMarketingExpenses += expenseNet; // הוצאה נטו!
+        monthMarketingExpenses += expenseGross; // ✅ הוצאה ברוטו - ללא הפחתת מע"מ!
 
         if (exp.has_vat) {
           monthVATOnExpenses += calculateVATAmount(expenseGross, true);
         }
       });
 
-      // הוצאות הנהלה - עם הפחתת מע"מ
+      // הוצאות הנהלה - ברוטו (כולל מע"מ)
       let monthAdminExpenses = 0;
       (forecastData.detailed_expenses?.admin_general || []).forEach((exp) => {
         let expenseGross = 0;
@@ -224,8 +228,7 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
           expenseGross = actual > 0 ? actual : planned;
         }
 
-        const expenseNet = removeVAT(expenseGross, exp.has_vat);
-        monthAdminExpenses += expenseNet; // הוצאה נטו!
+        monthAdminExpenses += expenseGross; // ✅ הוצאה ברוטו - ללא הפחתת מע"מ!
 
         if (exp.has_vat) {
           monthVATOnExpenses += calculateVATAmount(expenseGross, true);
@@ -366,9 +369,9 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-horizon-accent">
-              <p className="font-semibold text-horizon-text mb-1">חישוב אוטומטי של מע"מ</p>
-              <p>כל הסכומים בדוח רווח והפסד מוצגים <strong className="text-horizon-text">ללא מע"מ (נטו)</strong>. המערכת מפחיתה מע"מ אוטומטית מכל הסכומים שסומנו כ"כולל מע"מ" בשלבים הקודמים.</p>
-              <p className="mt-1">סיכום המע"מ מוצג בנפרד מטה, כדי שתוכל לראות את יתרת המע"מ לתשלום או להחזר.</p>
+              <p className="font-semibold text-horizon-text mb-1">טיפול במע"מ</p>
+              <p>כל הסכומים בדוח רווח והפסד מוצגים <strong className="text-horizon-text">כולל מע"מ (ברוטו)</strong> - כפי שהם מופיעים בפועל במכירות ובחשבוניות.</p>
+              <p className="mt-1">סיכום המע"מ מוצג בנפרד מטה ומציג את יתרת המע"מ לתשלום או להחזר מול רשויות המס.</p>
             </div>
           </div>
         </CardContent>
@@ -384,7 +387,7 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
         <CardContent>
           <div className="space-y-3">
             <div className="flex justify-between items-center p-4 bg-horizon-card/30 rounded-lg border border-horizon">
-              <span className="font-semibold text-horizon-text">הכנסות (ללא מע״מ)</span>
+              <span className="font-semibold text-horizon-text">הכנסות</span>
               <span className="text-xl font-bold text-horizon-primary">
                 {formatCurrency(periodProfitLoss.totalRevenue, 0)}
               </span>
@@ -560,7 +563,7 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
       <Card className="card-horizon">
         <CardHeader>
           <CardTitle className="text-horizon-text">
-            דוח רווח והפסד חודשי - {getPeriodLabel(startMonth, endMonth, forecastData.forecast_year || new Date().getFullYear())} (נטו - ללא מע"מ)
+            דוח רווח והפסד חודשי - {getPeriodLabel(startMonth, endMonth, forecastData.forecast_year || new Date().getFullYear())}
           </CardTitle>
         </CardHeader>
         <CardContent>

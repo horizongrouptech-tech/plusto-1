@@ -168,14 +168,19 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
       {/* גרף תכנון מול ביצוע - מכירות */}
       <Card className="card-horizon overflow-hidden">
         <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b-2 border-blue-100">
-          <CardTitle className="text-horizon-text flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-[#32acc1] to-[#83ddec] rounded-xl shadow-lg">
-              <TrendingUp className="w-5 h-5 text-white" />
-            </div>
-            <span className="bg-gradient-to-r from-[#32acc1] to-[#83ddec] bg-clip-text text-transparent font-bold">
-              תכנון מול ביצוע - מכירות
-            </span>
-          </CardTitle>
+          <div className="space-y-2">
+            <CardTitle className="text-horizon-text flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-[#32acc1] to-[#83ddec] rounded-xl shadow-lg">
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
+              <span className="bg-gradient-to-r from-[#32acc1] to-[#83ddec] bg-clip-text text-transparent font-bold">
+                תכנון מול ביצוע - מכירות
+              </span>
+            </CardTitle>
+            <p className="text-sm text-horizon-accent mr-12">
+              השוואה חודשית בין המכירות המתוכננות לבין המכירות בפועל - עוזר לזהות פערים ולהתאים את התכנון
+            </p>
+          </div>
         </CardHeader>
         <CardContent className="pt-8 pb-6 bg-gradient-to-br from-white to-gray-50">
           <ResponsiveContainer width="100%" height={450}>
@@ -258,14 +263,19 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
       <Card className="card-horizon overflow-hidden">
         <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b-2 border-purple-100">
           <div className="flex justify-between items-center flex-wrap gap-4">
-            <CardTitle className="text-horizon-text flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl shadow-lg">
-                <Calendar className="w-5 h-5 text-white" />
-              </div>
-              <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-bold">
-                תכנון מול ביצוע - הוצאות
-              </span>
-            </CardTitle>
+            <div className="flex-1 space-y-2">
+              <CardTitle className="text-horizon-text flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl shadow-lg">
+                  <Calendar className="w-5 h-5 text-white" />
+                </div>
+                <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-bold">
+                  תכנון מול ביצוע - הוצאות
+                </span>
+              </CardTitle>
+              <p className="text-sm text-horizon-accent mr-12">
+                מעקב אחר הוצאות שיווק, הנהלה ושכר - ניתן לסנן לפי קטגוריה ולראות היכן חרגת מהתקציב
+              </p>
+            </div>
             
             <div className="flex items-center gap-2">
               <div className="p-2 bg-white rounded-lg shadow-sm">
@@ -365,14 +375,19 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
       {/* גרף הכנסות, עלות מכר ורווח גולמי */}
       <Card className="card-horizon overflow-hidden">
         <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b-2 border-green-100">
-          <CardTitle className="text-horizon-text flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg">
-              <TrendingUp className="w-5 h-5 text-white" />
-            </div>
-            <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent font-bold">
-              הכנסות והוצאות לפי חודש
-            </span>
-          </CardTitle>
+          <div className="space-y-2">
+            <CardTitle className="text-horizon-text flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg">
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
+              <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent font-bold">
+                הכנסות והוצאות לפי חודש
+              </span>
+            </CardTitle>
+            <p className="text-sm text-horizon-accent mr-12">
+              תמונה מקיפה של ההכנסות, עלות המכר והרווח הגולמי בכל חודש - מאפשר לזהות חודשים חזקים וחלשים
+            </p>
+          </div>
         </CardHeader>
         <CardContent className="pt-8 pb-6 bg-gradient-to-br from-white to-gray-50">
           <ResponsiveContainer width="100%" height={460}>
@@ -464,14 +479,19 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
       {/* גרף מגמת רווחיות - עם הוצאות מימון */}
       <Card className="card-horizon overflow-hidden">
         <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b-2 border-indigo-100">
-          <CardTitle className="text-horizon-text flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
-              <TrendingUp className="w-5 h-5 text-white" />
-            </div>
-            <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent font-bold">
-              מגמת רווחיות עם הוצאות מימון
-            </span>
-          </CardTitle>
+          <div className="space-y-2">
+            <CardTitle className="text-horizon-text flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
+              <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent font-bold">
+                מגמת רווחיות עם הוצאות מימון
+              </span>
+            </CardTitle>
+            <p className="text-sm text-horizon-accent mr-12">
+              מעקב אחר השתלשלות הרווחיות לאורך השנה - מרווח תפעולי דרך הוצאות מימון ועד לרווח הנקי הסופי
+            </p>
+          </div>
         </CardHeader>
         <CardContent className="pt-8 pb-6 bg-gradient-to-br from-white to-gray-50">
           <ResponsiveContainer width="100%" height={480}>
