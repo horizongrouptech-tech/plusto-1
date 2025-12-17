@@ -1,4 +1,4 @@
-import { Base44 } from 'npm:@base44/sdk@0.8.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
 
 Deno.serve(async (req) => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -9,11 +9,8 @@ Deno.serve(async (req) => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     try {
-        // יצירת Base44 client עם service role (לא מ-request כי זה webhook חיצוני)
-        const base44 = new Base44({
-            appId: Deno.env.get('BASE44_APP_ID'),
-            serviceRoleSecret: Deno.env.get('MY_SERVICE_TOKEN_SECRET')
-        });
+        // יצירת Base44 client עם service role (webhook חיצוני)
+        const base44 = createClientFromRequest(req);
 
         // קריאת ה-body
         let body;
@@ -54,7 +51,7 @@ Deno.serve(async (req) => {
 
         // מצא את הלקוח
         console.log('🔍 Searching for client...');
-        const existingRequests = await base44.entities.OnboardingRequest.list();
+        const existingRequests = await base44.asServiceRole.entities.OnboardingRequest.list();
         const client = existingRequests.find(r => 
             r.fireberry_account_id === accountId || 
             (r.email && email && r.email.toLowerCase() === email.toLowerCase())
@@ -76,7 +73,7 @@ Deno.serve(async (req) => {
 
         // העבר לארכיון
         console.log('🗄️ Archiving client...');
-        const updated = await base44.entities.OnboardingRequest.update(client.id, {
+        const updated = await base44.asServiceRole.entities.OnboardingRequest.update(client.id, {
             is_active: false
         });
 
