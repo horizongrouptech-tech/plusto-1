@@ -20,12 +20,18 @@ export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals
         
         try {
             const newOrderIndex = subtasks.length;
+            
+            // יצירת תאריך יעד ברירת מחדל - 30 ימים מהיום
+            const defaultEndDate = new Date();
+            defaultEndDate.setDate(defaultEndDate.getDate() + 30);
+            
             const newSubtask = await base44.entities.CustomerGoal.create({
                 customer_email: goal.customer_email,
                 parent_id: goal.id,
                 name: "משימה חדשה (לחץ לעריכה)",
                 status: 'open',
-                order_index: newOrderIndex
+                order_index: newOrderIndex,
+                end_date: defaultEndDate.toISOString().split('T')[0] // פורמט YYYY-MM-DD - שדה חובה!
             });
             
             if (newSubtask) {
