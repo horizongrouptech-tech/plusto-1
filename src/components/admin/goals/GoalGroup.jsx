@@ -14,19 +14,26 @@ export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals
         setIsExpanded(!isCollapsed);
     }, [isCollapsed]);
 
-    const handleAddSubtask = async () => {
+    const handleAddSubtask = async (e) => {
+        e?.preventDefault();
+        e?.stopPropagation();
+        
         try {
             const newOrderIndex = subtasks.length;
-            await base44.entities.CustomerGoal.create({
+            const newSubtask = await base44.entities.CustomerGoal.create({
                 customer_email: goal.customer_email,
                 parent_id: goal.id,
                 name: "משימה חדשה (לחץ לעריכה)",
                 status: 'open',
                 order_index: newOrderIndex
             });
-            await refreshData();
+            
+            if (newSubtask) {
+                await refreshData();
+            }
         } catch (error) {
             console.error("Error adding subtask:", error);
+            alert("שגיאה בהוספת המשימה. נסה שוב.");
         }
     };
 
