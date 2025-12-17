@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, UserCheck, UserX, Edit, Power, PowerOff, ArrowLeft, BarChart3, TrendingUp, Users, RefreshCw } from 'lucide-react';
+import { Loader2, Search, UserPlus, UserCheck, UserX, Edit, Power, PowerOff, ArrowLeft, BarChart3, Filter, TrendingUp, Users, DollarSign, RefreshCw } from 'lucide-react';
 import EditCustomerModal from './EditCustomerModal';
 import ClientDetailSidebar from './ClientDetailSidebar';
 import LoadingScreen from '../shared/LoadingScreen';
@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import CreateOnboardingRequestForm from './CreateOnboardingRequestForm';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ManagerAssignmentBoard from './ManagerAssignmentBoard';
 
@@ -30,7 +31,6 @@ export default function ClientManagementDashboard() {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
   const [showCreateOnboardingModal, setShowCreateOnboardingModal] = useState(false);
   const [isSubmittingNewOnboarding, setIsSubmittingNewOnboarding] = useState(false);
   const [showManagerAssignModal, setShowManagerAssignModal] = useState(false);
@@ -41,18 +41,6 @@ export default function ClientManagementDashboard() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [activeTab, setActiveTab] = useState('clients');
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const loadCurrentUser = async () => {
-      try {
-        const user = await base44.auth.me();
-        setCurrentUser(user);
-      } catch (error) {
-        console.error("Error loading current user:", error);
-      }
-    };
-    loadCurrentUser();
-  }, []);
 
   const { data, isLoading } = useQuery({
     queryKey: ['allAdminClientsAndOnboarding'],
@@ -138,7 +126,7 @@ export default function ClientManagementDashboard() {
       });
 
       const allClients = Array.from(uniqueClientsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-      return { clients: allClients, allUsers };
+      return { clients: allClients, allUsers, currentUser: currentUserInQuery };
     },
     staleTime: 30000,
     cacheTime: 60000
@@ -146,6 +134,7 @@ export default function ClientManagementDashboard() {
 
   const clients = data?.clients || [];
   const allUsers = data?.allUsers || [];
+  const currentUser = data?.currentUser || null;
 
   useEffect(() => {
     if (clients && clients.length > 0 && !selectedClient) {
