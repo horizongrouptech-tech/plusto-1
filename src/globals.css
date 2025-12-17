@@ -340,6 +340,21 @@ html {
   scrollbar-color: var(--horizon-border) var(--horizon-dark);
 }
 
+/* Fix date/time picker in dialogs - prevent white screen */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  z-index: 9999 !important;
+  position: relative;
+}
+
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  position: relative;
+  z-index: 9998;
+}
+
 /* ========================================
    THEME TOGGLE BUTTON
    ======================================== */
