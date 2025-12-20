@@ -83,8 +83,21 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
   };
 
   useEffect(() => {
-    calculateProfitLoss();
-  }, [forecastData]);
+    // ✅ רק חשב מחדש אם יש שינויים רלוונטיים
+    if (forecastData.services || forecastData.sales_forecast_onetime || forecastData.global_employees) {
+      console.log('🔄 Recalculating profit & loss due to data changes');
+      calculateProfitLoss();
+    }
+  }, [
+    forecastData.sales_forecast_onetime,
+    forecastData.services,
+    forecastData.global_employees,
+    forecastData.detailed_expenses,
+    forecastData.financing_expenses,
+    forecastData.company_type,
+    forecastData.tax_rate,
+    forecastData.planned_employee_hires
+  ]);
 
   const calculateProfitLoss = () => {
     // ✅ לוגים מפורטים לניפוי שגיאות
