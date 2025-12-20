@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, CheckCircle2, AlertCircle, Download } from "lucide-react";
+import { ArrowRight, ArrowLeft, Save, Loader2, CheckCircle2, AlertCircle, Package, Download } from "lucide-react";
 import { base44 } from '@/api/base44Client';
 
 import Step1ServicesAndCosts from './Step1ServicesAndCosts';
@@ -286,6 +288,12 @@ export default function ManualForecastWizard({
         ...prev,
         ...updates
       };
+      
+      // ✅ לוג לניפוי שגיאות
+      console.log('📝 Updating forecast with:', Object.keys(updates));
+      if (updates.sales_forecast_onetime) {
+        console.log('🔄 Updated sales_forecast_onetime:', updates.sales_forecast_onetime.length, 'items');
+      }
       
       autoSaveForecast(newData);
       

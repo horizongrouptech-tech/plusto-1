@@ -122,6 +122,9 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     const updated = [...salesForecast];
     let productsUpdated = 0;
 
+    console.log('🗺️ Z-Report Mapping:', mapping);
+    console.log('📦 Products from Z-Report:', pendingZData.products);
+
     pendingZData.products.forEach(zProduct => {
       const mappedServiceName = mapping[zProduct.product_name];
       if (!mappedServiceName) return;
@@ -138,6 +141,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       const price = service?.price || 0;
       updated[serviceIndex].actual_monthly_revenue[monthIndex] = newQuantity * price;
 
+      console.log(`✅ Updated "${mappedServiceName}": ${newQuantity} units, ₪${newQuantity * price}`);
       productsUpdated++;
     });
 
@@ -155,22 +159,23 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     const existingReports = forecastData.z_reports_uploaded || [];
     const updatedReports = [...existingReports, uploadRecord];
 
+    const completeUpdates = {
+      sales_forecast_onetime: updated,
+      z_reports_uploaded: updatedReports,
+      z_report_product_mapping: mapping
+    };
+
     if (onUpdateForecast) {
-      onUpdateForecast({
-        sales_forecast_onetime: updated,
-        z_reports_uploaded: updatedReports,
-        z_report_product_mapping: mapping
-      });
+      onUpdateForecast(completeUpdates);
     }
 
     if (forecastData.id) {
       try {
-        await base44.entities.ManualForecast.update(forecastData.id, {
-          z_reports_uploaded: updatedReports,
-          z_report_product_mapping: mapping
-        });
+        console.log('💾 Saving Z-report data to DB...');
+        await base44.entities.ManualForecast.update(forecastData.id, completeUpdates);
+        console.log('✅ Z-report data saved successfully');
       } catch (error) {
-        console.error('Error saving Z report upload history:', error);
+        console.error('❌ Error saving Z report upload history:', error);
       }
     }
 
@@ -179,13 +184,29 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     alert(`✓ דוח Z יובא בהצלחה!\n${productsUpdated} מוצרים עודכנו בחודש ${monthNames[monthIndex]}`);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+    console.log('💾 Step3 - Saving sales forecast before continue:', salesForecast.length, 'items');
+    
+    const updates = {
+      sales_forecast_onetime: salesForecast,
+      working_days_per_month: workingDays
+    };
+    
     if (onUpdateForecast) {
-      onUpdateForecast({
-        sales_forecast_onetime: salesForecast,
-        working_days_per_month: workingDays
-      });
+      onUpdateForecast(updates);
     }
+    
+    // ✅ המתן לשמירה לפני המעבר לשלב הבא
+    if (forecastData.id) {
+      try {
+        console.log('💾 Explicitly saving to DB before moving to next step...');
+        await base44.entities.ManualForecast.update(forecastData.id, updates);
+        console.log('✅ Save completed successfully');
+      } catch (error) {
+        console.error('❌ Error saving before continue:', error);
+      }
+    }
+    
     if (onNext) {
       onNext();
     }
