@@ -87,11 +87,17 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
   }, [forecastData]);
 
   const calculateProfitLoss = () => {
-    // ✅ לוגים לניפוי שגיאות
-    console.log('🔍 Starting Profit & Loss calculation');
+    // ✅ לוגים מפורטים לניפוי שגיאות
+    console.log('🔍 ========== Starting Profit & Loss calculation ==========');
     console.log('📊 Sales forecast items:', forecastData.sales_forecast_onetime?.length || 0);
     console.log('🏷️ Services available:', forecastData.services?.length || 0);
-    console.log('🗺️ Has Z-report mapping:', !!forecastData.z_report_product_mapping);
+    console.log('🗺️ Z-report mapping entries:', Object.keys(forecastData.z_report_product_mapping || {}).length);
+    console.log('📋 Z-reports uploaded:', forecastData.z_reports_uploaded?.length || 0);
+    
+    // ✅ אזהרה אם יש נתונים בפועל אבל אין שירותים מתאימים
+    if (forecastData.sales_forecast_onetime?.length > 0 && (!forecastData.services || forecastData.services.length === 0)) {
+      console.error('⚠️ WARNING: Has sales data but NO services defined!');
+    }
     
     const monthlyData = [];
     const totals = {

@@ -162,8 +162,17 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     const completeUpdates = {
       sales_forecast_onetime: updated,
       z_reports_uploaded: updatedReports,
-      z_report_product_mapping: mapping
+      z_report_product_mapping: {
+        ...(forecastData.z_report_product_mapping || {}),
+        ...mapping
+      }
     };
+
+    console.log('💾 Preparing to save complete Z-report updates:', {
+      sales_items: updated.length,
+      z_reports: updatedReports.length,
+      mapping_entries: Object.keys(completeUpdates.z_report_product_mapping).length
+    });
 
     if (onUpdateForecast) {
       onUpdateForecast(completeUpdates);
@@ -173,9 +182,22 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       try {
         console.log('💾 Saving Z-report data to DB...');
         await base44.entities.ManualForecast.update(forecastData.id, completeUpdates);
-        console.log('✅ Z-report data saved successfully');
+        console.log('✅ Z-report data saved successfully to DB');
+        
+        // ✅ וידוא שהנתונים נשמרו - קריאה חזרה
+        const verification = await base44.entities.ManualForecast.get(forecastData.id);
+        console.log('🔍 Verification - Data in DB:', {
+          z_reports_in_db: verification.z_reports_uploaded?.length || 0,
+          mapping_in_db: Object.keys(verification.z_report_product_mapping || {}).length
+        });
+        
+        if (!verification.z_reports_uploaded || verification.z_reports_uploaded.length === 0) {
+          console.error('❌ WARNING: Z-reports not saved to DB!');
+          alert('⚠️ אזהרה: דוח Z לא נשמר כראוי. אנא נסה שוב.');
+        }
       } catch (error) {
         console.error('❌ Error saving Z report upload history:', error);
+        alert('שגיאה בשמירת דוח Z: ' + error.message);
       }
     }
 

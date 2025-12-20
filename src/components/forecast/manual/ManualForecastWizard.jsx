@@ -210,6 +210,12 @@ export default function ManualForecastWizard({
         setIsLoading(true);
         try {
           const existingForecast = await base44.entities.ManualForecast.get(forecast.id);
+          console.log('📥 Loaded forecast from DB:', {
+            id: existingForecast.id,
+            z_reports_count: existingForecast.z_reports_uploaded?.length || 0,
+            has_mapping: !!existingForecast.z_report_product_mapping,
+            sales_forecast_count: existingForecast.sales_forecast_onetime?.length || 0
+          });
           setForecastData({
             ...existingForecast,
             company_type: existingForecast.company_type || 'company'
@@ -229,6 +235,31 @@ export default function ManualForecastWizard({
 
     loadForecast();
   }, [forecast, initialForecastData]);
+
+  // ✅ טעינה מחדש מה-DB כשעוברים לשלב 5 - מבטיח שכל הנתונים עדכניים
+  useEffect(() => {
+    const reloadForStep5 = async () => {
+      if (currentStep === 5 && forecastData.id) {
+        console.log('🔄 Reloading forecast from DB before Step 5...');
+        try {
+          const freshData = await base44.entities.ManualForecast.get(forecastData.id);
+          console.log('✅ Fresh data loaded:', {
+            z_reports_count: freshData.z_reports_uploaded?.length || 0,
+            has_mapping: !!freshData.z_report_product_mapping,
+            sales_forecast_count: freshData.sales_forecast_onetime?.length || 0
+          });
+          setForecastData(prev => ({
+            ...prev,
+            ...freshData
+          }));
+        } catch (error) {
+          console.error('❌ Error reloading forecast for Step 5:', error);
+        }
+      }
+    };
+
+    reloadForStep5();
+  }, [currentStep, forecastData.id]);
 
   useEffect(() => {
     return () => {
