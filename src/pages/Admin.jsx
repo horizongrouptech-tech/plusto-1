@@ -1074,10 +1074,42 @@ export default function AdminPage() {
     let managersList = [];
     
     if (currentUser.role === 'admin') {
-      // אדמין - טוען מ-User entity
-      const allUsers = await User.list();
-      customersList = allUsers.filter(user => user.role === 'user' && user.user_type !== 'financial_manager'); // Ensure not FM themselves
+      // אדמין - טוען מ-User entity וגם מ-OnboardingRequest
+      const [allUsers, allOnboardingRequests] = await Promise.all([
+        User.list(),
+        OnboardingRequest.filter({ is_active: true })
+      ]);
+      
+      customersList = allUsers.filter(user => user.role === 'user' && user.user_type !== 'financial_manager');
       managersList = allUsers.filter(user => user.role === 'user' && user.user_type === 'financial_manager');
+      
+      // הוסף לקוחות מ-OnboardingRequest שאין להם User entity
+      const existingUserEmails = new Set(customersList.map(u => u.email));
+      const onboardingCustomers = allOnboardingRequests
+        .filter(req => !existingUserEmails.has(req.email))
+        .map(req => ({
+          id: `onboarding_${req.id}`,
+          email: req.email,
+          full_name: req.full_name || '',
+          business_name: req.business_name || '',
+          phone: req.phone || '',
+          business_type: req.business_type || 'other',
+          company_size: req.company_size || '1-10',
+          monthly_revenue: parseFloat(req.monthly_revenue) || 0,
+          customer_group: req.customer_group,
+          address: { city: req.business_city || '', street: '' },
+          main_products: req.main_products_services || '',
+          target_customers: req.target_audience || '',
+          business_goals: req.business_goals || '',
+          website_url: req.website_url || '',
+          onboarding_completed: true,
+          is_active: true,
+          is_onboarding_record_only: true,
+          assigned_financial_manager_email: req.assigned_financial_manager_email || null,
+          created_date: req.created_date
+        }));
+      
+      customersList = [...customersList, ...onboardingCustomers];
     } else if (currentUser.user_type === 'financial_manager') {
             // מנהל כספים - טוען מ-OnboardingRequest ו-CustomerContact (כולל מנהלים משניים)
             const allOnboardingRequests = await OnboardingRequest.list();
@@ -1116,7 +1148,6 @@ export default function AdminPage() {
       }];
     }
       
-      // ADD START
       // NEW: Load approved OnboardingRequests
       // שימו לב:approvedOnboardingRequests כבר מוגדרת למעלה אם זה admin או financial_manager
       // נשתמש במשתנה זמני כדי לא לערבב עם הלוגיקה של ה-if/else הראשי
@@ -1158,7 +1189,6 @@ export default function AdminPage() {
 
       // Merge customersList (משתמשים רגילים) with onboardingCustomers (בקשות אונבורדינג מאושרות)
       const allCustomersForDisplay = [...customersList, ...onboardingCustomers];
-      // ADD END
 
       const allFileUploadsData = await FileUpload.list(); 
       setAllUploads(allFileUploadsData); 
@@ -2431,7 +2461,7 @@ export default function AdminPage() {
     // עדכן את הלקוח הנבחר אם הוא הלקוח שעודכן
     setSelectedCustomer(prevSelected => {
       if (prevSelected && prevSelected.id === updatedCustomer.id) {
-        return updatedCustomer;
+        return updatedSelectedCustomer;
       }
       return prevSelected;
     });
@@ -4068,6 +4098,7 @@ const EditCustomerModal = ({ customer, isOpen, onClose, onUpdate }) => {
         sales_channels: customer.sales_channels || '',
         bestselling_products: customer.bestselling_products || '',
         unwanted_products: customer.unwanted_products || '',
+        customer_group: customer.customer_group || '', // NEW: Add customer_group
       });
     }
   }, [customer, isOpen]); 
@@ -4113,6 +4144,9 @@ const EditCustomerModal = ({ customer, isOpen, onClose, onUpdate }) => {
           if (changes.business_goals !== undefined) mappedChanges.business_goals = changes.business_goals;
           // בתוך הפונקציה handleSave, אחרי השורה שמגדירה mappedChanges:
           if (changes.address !== undefined) mappedChanges.address = changes.address;
+          // NEW: customer_group
+          if (changes.customer_group !== undefined) mappedChanges.customer_group = changes.customer_group;
+
           // שדות שצריכים מיפוי
           if (changes.main_products !== undefined) mappedChanges.main_products_services = changes.main_products;
           if (changes.target_customers !== undefined) mappedChanges.target_audience = changes.target_customers;
@@ -4261,6 +4295,26 @@ const EditCustomerModal = ({ customer, isOpen, onClose, onUpdate }) => {
                       <SelectItem value="11-50">11-50 עובדים</SelectItem>
                       <SelectItem value="51-200">51-200 עובדים</SelectItem>
                       <SelectItem value="200+">200+ עובדים</SelectItem>
+                  </SelectContent>
+              </Select>
+          </div>
+          
+          {/* NEW: Customer Group */}
+          <div className="space-y-2 text-right">
+              <Label className="text-horizon-text">קבוצת לקוח</Label>
+              <Select
+                  value={updatedCustomerData.customer_group || ''}
+                  onValueChange={(value) => handleFieldChange('customer_group', value)}
+              >
+                  <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
+                      <SelectValue placeholder="בחר קבוצה..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                      <SelectItem value="A">קבוצה A</SelectItem>
+                      <SelectItem value="B">קבוצה B</SelectItem>
+                      <SelectItem value="C">קבוצה C</SelectItem>
+                      <SelectItem value="D">קבוצה D</SelectItem>
+                      <SelectItem value="E">קבוצה E</SelectItem>
                   </SelectContent>
               </Select>
           </div>
