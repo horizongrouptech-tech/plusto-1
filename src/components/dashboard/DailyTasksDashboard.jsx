@@ -128,20 +128,22 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
 
   // סינון לקוחות לפי קבוצת העבודה של היום ומנהל הכספים הנוכחי
   const todaysClients = useMemo(() => {
-    if (!allCustomers.length || todayWorkGroup.groups.length === 0) return [];
+    if (!allCustomers.length) return [];
+
+    // עבור אדמין - להציג את כל הלקוחות תמיד
+    if (isAdmin) {
+      return allCustomers;
+    }
+
+    // עבור מנהל כספים - לסנן לפי קבוצת העבודה של היום
+    if (todayWorkGroup.groups.length === 0) return [];
 
     return allCustomers.filter((customer) => {
-      // אם זה מנהל כספים, להציג רק את הלקוחות המשויכים אליו
-      // עבור אדמין, השדה assigned_financial_manager_email לא רלוונטי לסינון הראשוני
-      // עבור מנהל כספים, ה-queryFn כבר סינן לפי מנהל הכספים, כך שכל הלקוחות ב-allCustomers כבר משויכים אליו.
-      const isAssignedToMe = isAdmin || customer.assigned_financial_manager_email === currentUser.email;
-
       // בדיקה אם הלקוח בקבוצת העבודה של היום
       const isInTodaysGroup = todayWorkGroup.groups.includes(customer.customer_group);
-
-      return isAssignedToMe && isInTodaysGroup;
+      return isInTodaysGroup;
     });
-  }, [allCustomers, todayWorkGroup, currentUser, isAdmin]);
+  }, [allCustomers, todayWorkGroup, isAdmin]);
 
   // טעינת כל המשימות הפעילות
   const { data: goals = [], isLoading: tasksLoading } = useQuery({
@@ -456,7 +458,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       </div>
 
       {/* הודעת יום העבודה */}
-      {todayWorkGroup.groups.length > 0 &&
+      {!isAdmin && todayWorkGroup.groups.length > 0 &&
       <Card className="card-horizon bg-white">
           <CardContent className="p-4 flex items-center gap-3">
             <Calendar className="w-5 h-5 text-horizon-primary" />
@@ -473,7 +475,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
           <CardHeader className="border-b border-[#e1e8ed] bg-gradient-to-l from-[#32acc1]/5 to-[#fc9f67]/5">
             <CardTitle className="text-horizon-text flex items-center gap-2 text-right">
               <Users className="w-5 h-5 text-horizon-primary" />
-              לקוחות לעבודה היום ({todaysClients.length})
+              {isAdmin ? `כל הלקוחות (${todaysClients.length})` : `לקוחות לעבודה היום (${todaysClients.length})`}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
