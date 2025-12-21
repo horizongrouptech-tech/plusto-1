@@ -565,12 +565,6 @@ export default function CustomerManagement() {
                         <p className="text-sm text-horizon-accent">אתר אינטרנט</p>
                         <p className="font-medium text-horizon-text">{customer.website_url || 'לא צוין'}</p>
                       </div>
-                      <div>
-                        <p className="text-sm text-horizon-accent">סטטוס</p>
-                        <p className="font-medium text-horizon-text">
-                          {customer.source === 'onboarding' ? 'בתהליך אונבורדינג' : 'לקוח פעיל'}
-                        </p>
-                      </div>
                     </div>
 
                     {customer.main_products && (
