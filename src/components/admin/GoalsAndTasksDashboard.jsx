@@ -288,16 +288,16 @@ export default function GoalsAndTasksDashboard({ customer }) {
         </Card>
 
         <Card
-          className={`card-horizon cursor-pointer transition-all ${activeStatFilter === 'week' ? 'ring-2 ring-horizon-primary' : ''}`}
-          onClick={() => setActiveStatFilter(activeStatFilter === 'week' ? null : 'week')}>
+          className={`card-horizon cursor-pointer transition-all ${activeStatFilter === 'delayed' ? 'ring-2 ring-horizon-primary' : ''}`}
+          onClick={() => setActiveStatFilter(activeStatFilter === 'delayed' ? null : 'delayed')}>
 
           <CardContent className="p-4">
             <div className="flex justify-between items-center">
               <div className="text-right">
                 <p className="text-sm text-horizon-accent">משימות באיחור</p>
-                <p className="text-2xl font-bold text-blue-400">{stats.tasksThisWeek}</p>
+                <p className="text-2xl font-bold text-red-400">{stats.delayedTasks}</p>
               </div>
-              <Clock className="w-8 h-8 text-blue-400" />
+              <AlertTriangle className="w-8 h-8 text-red-400" />
             </div>
           </CardContent>
         </Card>
