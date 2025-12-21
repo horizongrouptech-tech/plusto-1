@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -5,8 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
 import { 
   Users, 
   TrendingUp, 
@@ -19,9 +18,8 @@ import {
   FileText,
   Package,
   BarChart3,
-  Database,
-  Shield,
-  LayoutGrid
+  Database, // New import
+  Shield // New import
 } from 'lucide-react';
 import FeedbackAnalytics from '../shared/FeedbackAnalytics';
 import LoadingScreen from '../shared/LoadingScreen';
@@ -259,12 +257,6 @@ export default function EngagementDashboard() {
       <div className="flex justify-between items-center flex-wrap gap-3">
         <h2 className="text-2xl font-bold text-horizon-text">מעורבות ופידבק לקוחות</h2>
         <div className="flex gap-2">
-          <Link to={createPageUrl('CRMDashboard')}>
-            <Button className="bg-gradient-to-r from-[#32acc1] to-[#fc9f67] hover:from-[#32acc1]/90 hover:to-[#fc9f67]/90 text-white shadow-lg">
-              <LayoutGrid className="w-4 h-4 ml-2" />
-              מעבר לממשק CRM
-            </Button>
-          </Link>
           <Button
             onClick={handleCalculateEngagement}
             disabled={isCalculating}
