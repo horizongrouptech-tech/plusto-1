@@ -49,12 +49,11 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Missing accountid' }, { status: 400 });
         }
 
-        // מצא את הלקוח
-        console.log('🔍 Searching for client...');
+        // מצא את הלקוח רק לפי fireberry_account_id
+        console.log('🔍 Searching for client by fireberry_account_id...');
         const existingRequests = await base44.asServiceRole.entities.OnboardingRequest.list();
         const client = existingRequests.find(r => 
-            r.fireberry_account_id === accountId || 
-            (r.email && email && r.email.toLowerCase() === email.toLowerCase())
+            r.fireberry_account_id === accountId
         );
 
         if (!client) {
