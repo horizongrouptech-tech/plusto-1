@@ -201,6 +201,11 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       }
     }
 
+    // ✅ עדכון forecastData המקומי כדי שהסיכום יראה את הנתונים מיד
+    if (onUpdateForecast) {
+      onUpdateForecast(completeUpdates);
+    }
+
     setShowProductMapper(false);
     setPendingZData(null);
     alert(`✓ דוח Z יובא בהצלחה!\n${productsUpdated} מוצרים עודכנו בחודש ${monthNames[monthIndex]}`);

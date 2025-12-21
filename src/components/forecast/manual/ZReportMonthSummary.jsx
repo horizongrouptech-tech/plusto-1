@@ -95,6 +95,15 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
     }
   };
 
+  // ✅ לוג לניפוי שגיאות
+  useEffect(() => {
+    console.log('📊 ZReportMonthSummary - Data received:', {
+      z_reports_count: forecastData.z_reports_uploaded?.length || 0,
+      sales_forecast_count: salesForecast?.length || 0,
+      services_count: services?.length || 0
+    });
+  }, [forecastData, salesForecast, services]);
+
   return (
     <Card className="card-horizon mb-6">
       <CardHeader className="cursor-pointer hover:bg-horizon-card/50 transition-colors" onClick={() => setIsExpanded(!isExpanded)}>
