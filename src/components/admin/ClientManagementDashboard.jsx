@@ -488,7 +488,7 @@ export default function ClientManagementDashboard() {
                             <UsersIcon className="w-4 h-4 ml-2" />
                             רשימת לקוחות
                         </TabsTrigger>
-                        {(currentUser?.role === 'admin' || currentUser?.email === 'omer@horizon.org.il') &&
+                        {(currentUser?.role === 'admin' || currentUser?.user_type === 'financial_manager') &&
             <TabsTrigger
               value="assignment" className="text-slate-50 px-6 py-3 text-sm font-bold rounded-lg inline-flex items-center justify-center whitespace-nowrap ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#32acc1] data-[state=active]:to-[#83ddec] data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 hover-lift">
 
@@ -734,7 +734,7 @@ export default function ClientManagementDashboard() {
                     </div>
                     </TabsContent>
 
-                    {(currentUser?.role === 'admin' || currentUser?.email === 'omer@horizon.org.il') &&
+                    {(currentUser?.role === 'admin' || currentUser?.user_type === 'financial_manager') &&
           <TabsContent value="assignment" className="mt-6">
                             <ManagerAssignmentBoard
               clients={clients}

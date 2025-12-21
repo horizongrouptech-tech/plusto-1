@@ -340,9 +340,9 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
 
     return (
         <div className={`flex items-center gap-3 p-3 bg-horizon-card/30 border border-horizon rounded-lg hover:border-horizon-primary/50 transition-all ${isDragging ? 'opacity-50' : ''} ${isParent ? 'font-semibold' : ''}`}>
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-3 items-center">
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
                 <div 
-                    className="md:col-span-2 flex items-center gap-2 cursor-pointer"
+                    className="md:col-span-1 flex items-center gap-2 cursor-pointer"
                     onClick={() => setIsEditing(true)}
                 >
                     <div className={`w-3 h-3 rounded-full ${getStatusColor(goal.status)}`}></div>
@@ -400,8 +400,23 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                         </div>
                     )}
                 </div>
+
+                {!isParent && (
+                    <div className="flex items-center gap-1 justify-end">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleDelete}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/20 h-7 w-7 p-0"
+                            title="מחק משימה"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </Button>
+                    </div>
+                )}
             </div>
 
+            {isParent && (
             <div className="flex items-center gap-1">
                 <Button
                     variant="ghost"
@@ -426,11 +441,12 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                     size="sm"
                     onClick={handleDelete}
                     className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                    title="מחק"
+                    title="מחק יעד"
                 >
                     <Trash2 className="w-4 h-4" />
                 </Button>
             </div>
+            )}
 
             {showComments && (
                 <GoalCommentsModal
