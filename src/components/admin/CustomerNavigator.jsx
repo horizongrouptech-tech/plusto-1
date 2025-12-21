@@ -72,7 +72,9 @@ export default function CustomerNavigator({
       const matchesBusinessType = businessTypeFilter === 'all' || 
         customer.business_type === businessTypeFilter;
       
+      // סינון לפי קבוצה או אונבורדינג
       const matchesGroup = groupFilter === 'all' || 
+        (groupFilter === 'onboarding' && customer.source === 'onboarding') ||
         customer.customer_group === groupFilter;
       
       return matchesSearch && matchesManager && matchesBusinessType && matchesGroup;
@@ -263,6 +265,12 @@ export default function CustomerNavigator({
                   <div className="flex items-center gap-2">
                     <Badge className="bg-purple-500 text-white text-xs">B</Badge>
                     <span>ב׳ + ה׳</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="onboarding">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-orange-500 text-white text-xs">אונבורדינג</Badge>
+                    <span>בתהליך קליטה</span>
                   </div>
                 </SelectItem>
               </SelectContent>
