@@ -610,7 +610,7 @@ function EnhancedRecommendationCard({ recommendation, onUpdate, onEdit, onViewDe
   const { data: recommendationsData, isLoading: isLoadingRecs } = useQuery({
     queryKey: ['adminRecommendations'],
     queryFn: () => Recommendation.list('-created_date'),
-    enabled: activeTab === 'customers', // רק כשהטאב recommendations פעיל
+    enabled: activeTab === 'recommendations', // רק כשהטאב recommendations פעיל
     staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
     refetchOnWindowFocus: false,
   });
@@ -689,7 +689,7 @@ function EnhancedRecommendationCard({ recommendation, onUpdate, onEdit, onViewDe
   // const { data: leadsData, isLoading: isLoadingLeads } = useQuery({ // Replaced by commenting out
   //   queryKey: ['adminLeads'],
   //   queryFn: () => Lead.list(),
-  //   enabled: activeTab === 'suppliers', // This query is currently disabled as leads are not actively used in the AdminPage or Supplier tab.
+  //   enabled: activeTab === 'suppliers', // רק לטאב suppliers
   //   staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
   //   refetchOnWindowFocus: false,
   // });
@@ -1074,53 +1074,17 @@ export default function AdminPage() {
     let managersList = [];
     
     if (currentUser.role === 'admin') {
-      // אדמין - טוען גם מ-User וגם מ-OnboardingRequest
-      const [allUsers, allOnboardingRequests] = await Promise.all([
-        User.list(),
-        OnboardingRequest.filter({ is_active: true })
-      ]);
-      
-      customersList = allUsers.filter(user => user.role === 'user' && user.user_type !== 'financial_manager');
+      // אדמין - טוען מ-User entity
+      const allUsers = await User.list();
+      customersList = allUsers.filter(user => user.role === 'user' && user.user_type !== 'financial_manager'); // Ensure not FM themselves
       managersList = allUsers.filter(user => user.role === 'user' && user.user_type === 'financial_manager');
-      
-      // הוספת לקוחות OnboardingRequest שאין להם User
-      const existingUserEmails = new Set(customersList.map(u => u.email));
-      const onboardingCustomers = allOnboardingRequests
-        .filter(req => !existingUserEmails.has(req.email))
-        .map(req => ({
-          id: `onboarding_${req.id}`,
-          email: req.email,
-          full_name: req.full_name || '',
-          business_name: req.business_name || '',
-          phone: req.phone || '',
-          business_type: req.business_type || 'other',
-          company_size: req.company_size || '1-10',
-          monthly_revenue: parseFloat(req.monthly_revenue) || 0,
-          address: {
-            city: req.business_city || '',
-            street: ''
-          },
-          main_products: req.main_products_services || '',
-          target_customers: req.target_audience || '',
-          business_goals: req.business_goals || '',
-          website_url: req.website_url || '',
-          onboarding_completed: true,
-          is_active: req.is_active !== false,
-          is_onboarding_record_only: true,
-          assigned_financial_manager_email: req.assigned_financial_manager_email || null,
-          customer_group: req.customer_group,
-          created_date: req.created_date
-        }));
-      
-      customersList = [...customersList, ...onboardingCustomers];
-      
     } else if (currentUser.user_type === 'financial_manager') {
-      // מנהל כספים - טוען מ-OnboardingRequest ו-CustomerContact (כולל מנהלים משניים)
-      const allOnboardingRequests = await OnboardingRequest.list();
-      const onboardingRequests = allOnboardingRequests.filter(req =>
-        req.assigned_financial_manager_email === currentUser.email ||
-        req.additional_assigned_financial_manager_emails?.includes(currentUser.email)
-      );
+            // מנהל כספים - טוען מ-OnboardingRequest ו-CustomerContact (כולל מנהלים משניים)
+            const allOnboardingRequests = await OnboardingRequest.list();
+            const onboardingRequests = allOnboardingRequests.filter(req =>
+              req.assigned_financial_manager_email === currentUser.email ||
+              req.additional_assigned_financial_manager_emails?.includes(currentUser.email)
+            );
       
       const onboardingEmails = onboardingRequests.map(req => req.email);
 
@@ -1151,12 +1115,57 @@ export default function AdminPage() {
         user_type: 'financial_manager'
       }];
     }
+      
+      // ADD START
+      // NEW: Load approved OnboardingRequests
+      // שימו לב:approvedOnboardingRequests כבר מוגדרת למעלה אם זה admin או financial_manager
+      // נשתמש במשתנה זמני כדי לא לערבב עם הלוגיקה של ה-if/else הראשי
+      const additionalApprovedOnboardingRequests = await OnboardingRequest.filter({ status: 'approved' });
+
+
+      // Create a map of existing users by email for quick lookup
+      const existingUserEmails = new Set(customersList.map(u => u.email));
+
+      // Map approved onboarding requests to a 'customer-like' structure
+      const onboardingCustomers = additionalApprovedOnboardingRequests
+          .filter(req => !existingUserEmails.has(req.email)) // Exclude requests that already have a User entity
+          .map(req => ({
+              id: `onboarding_${req.id}`, // Unique ID to prevent conflicts with User IDs
+              email: req.email,
+              full_name: req.full_name || '', // Can be empty if not provided in request
+              business_name: req.business_name || '',
+              phone: req.phone || '',
+              business_type: req.business_type || 'other', 
+              company_size: req.company_size || '1-10',
+
+              monthly_revenue: parseFloat(req.monthly_revenue) || 0,
+              // הוספת כתובת אם קיימת בבקשת אונבורדינג (חשוב לשימוש עתידי)
+              address: {
+                city: req.business_city || '',
+                street: ''
+              },
+              main_products: req.main_products_services || '',
+              target_customers: req.target_audience || '',
+              business_goals: req.business_goals || '',
+              website_url: req.website_url || '',
+              onboarding_completed: true, // זהו אינדיקטור שהבקשה אושרה
+              is_active: true, // מניחים שבקשה מאושרת היא אקטיבית לצורכי תצוגה
+              is_onboarding_record_only: true,
+              assigned_financial_manager_email: req.assigned_financial_manager_email || null,
+               // דגל שמזהה שזו רק רשומת אונבורדינג ולא ישות User מלאה
+              // filesData יאוכלס בשלב הבא
+          }));
+
+      // Merge customersList (משתמשים רגילים) with onboardingCustomers (בקשות אונבורדינג מאושרות)
+      const allCustomersForDisplay = [...customersList, ...onboardingCustomers];
+      // ADD END
 
       const allFileUploadsData = await FileUpload.list(); 
       setAllUploads(allFileUploadsData); 
       
       const customersWithFilesData = await Promise.all(
-        customersList.map(async (customer) => {
+        // MODIFY: Change `customersList` to `allCustomersForDisplay`
+        allCustomersForDisplay.map(async (customer) => {
           const customerFiles = allFileUploadsData.filter(f => f.customer_email === customer.email);
           return {
             ...customer,
@@ -1270,8 +1279,15 @@ export default function AdminPage() {
     setIsLoading(true);
     
     try {
-      // טען רק נתונים בסיסיים - לקוחות בלבד (כולל OnboardingRequest)
-      await loadCustomersOnly();
+      // טען רק נתונים בסיסיים - לקוחות בלבד
+      const allUsersRaw = await User.list();
+      
+      // עיבוד בסיסי של לקוחות
+      const customersListFiltered = allUsersRaw.filter(user => 
+        user.role === 'user' && user.user_type !== 'financial_manager'
+      );
+      
+      setCustomers(customersListFiltered);
       
     } catch (error) {
       console.error("Error loading initial data:", error);
@@ -1489,7 +1505,7 @@ export default function AdminPage() {
             // אדמין - טוען את כל המשתמשים הרגילים מישות User
             usersFromUserEntity = await User.filter({ role: 'user', user_type: 'regular' });
         } else if (currentUser.user_type === 'financial_manager') {
-            // מנהל כספים - משתמש בנתונים שכבר נטעמו ב-customers (שכולל את CustomerContact ו-OnboardingRequest)
+            // מנהל כספים - משתמש בנתונים שכבר נטענו ב-customers (שכולל את CustomerContact ו-OnboardingRequest)
             // נסנן לקוחות שהם לא admin או FM בעצמם
             usersFromUserEntity = customers.filter(c => c.user_type !== 'financial_manager' && c.role !== 'admin' && !c.is_onboarding_record_only);
             // אם המשתמש הוא מנהל כספים, ה-customers state כבר אמור להכיל את הלקוחות המשויכים אליו.
@@ -2038,7 +2054,7 @@ export default function AdminPage() {
                 r.id === rec.id ? { ...r, delivery_status: 'sent' } : r
             )
         );
-        alert('הודעה נשלחה בהצלחה!');
+        alert('ההודעה נשלחה בהצלחה!');
 
     } catch (error) {
         console.error("Error sending WhatsApp:", error);
@@ -2148,7 +2164,7 @@ export default function AdminPage() {
       ].join(','))
     ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
@@ -2415,7 +2431,7 @@ export default function AdminPage() {
     // עדכן את הלקוח הנבחר אם הוא הלקוח שעודכן
     setSelectedCustomer(prevSelected => {
       if (prevSelected && prevSelected.id === updatedCustomer.id) {
-        return updatedSelected;
+        return updatedCustomer;
       }
       return prevSelected;
     });
