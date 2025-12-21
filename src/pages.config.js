@@ -23,6 +23,7 @@ import InitialSetup from './pages/InitialSetup';
 import PendingApproval from './pages/PendingApproval';
 import MyLeads from './pages/MyLeads';
 import TaskManagement from './pages/TaskManagement';
+import CRMDashboard from './pages/CRMDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -52,6 +53,7 @@ export const PAGES = {
     "PendingApproval": PendingApproval,
     "MyLeads": MyLeads,
     "TaskManagement": TaskManagement,
+    "CRMDashboard": CRMDashboard,
 }
 
 export const pagesConfig = {
