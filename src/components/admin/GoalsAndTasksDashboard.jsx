@@ -26,6 +26,7 @@ import {
   Save,
   UserPlus,
   Mail,
+  Trash2,
   X } from
 "lucide-react";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -190,6 +191,21 @@ export default function GoalsAndTasksDashboard({ customer }) {
     }
   };
 
+  const handleDeleteTask = async (taskId, taskName) => {
+    if (!confirm(`האם אתה בטוח שברצונך למחוק את המשימה "${taskName}"?\nפעולה זו אינה ניתנת לביטול.`)) {
+      return;
+    }
+
+    try {
+      await base44.entities.CustomerGoal.delete(taskId);
+      await queryClient.invalidateQueries(['customerGoals', customer.email]);
+      alert('המשימה נמחקה בהצלחה');
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      alert('שגיאה במחיקת המשימה');
+    }
+  };
+
   const handleEditTask = (task) => {
     setEditingTask(task);
     setIsEditModalOpen(true);
@@ -288,16 +304,16 @@ export default function GoalsAndTasksDashboard({ customer }) {
         </Card>
 
         <Card
-          className={`card-horizon cursor-pointer transition-all ${activeStatFilter === 'week' ? 'ring-2 ring-horizon-primary' : ''}`}
-          onClick={() => setActiveStatFilter(activeStatFilter === 'week' ? null : 'week')}>
+          className={`card-horizon cursor-pointer transition-all ${activeStatFilter === 'delayed' ? 'ring-2 ring-horizon-primary' : ''}`}
+          onClick={() => setActiveStatFilter(activeStatFilter === 'delayed' ? null : 'delayed')}>
 
           <CardContent className="p-4">
             <div className="flex justify-between items-center">
               <div className="text-right">
                 <p className="text-sm text-horizon-accent">משימות באיחור</p>
-                <p className="text-2xl font-bold text-blue-400">{stats.tasksThisWeek}</p>
+                <p className="text-2xl font-bold text-red-400">{stats.delayedTasks}</p>
               </div>
-              <Clock className="w-8 h-8 text-blue-400" />
+              <AlertTriangle className="w-8 h-8 text-red-400" />
             </div>
           </CardContent>
         </Card>
@@ -433,18 +449,31 @@ export default function GoalsAndTasksDashboard({ customer }) {
                         }
                         </div>
                       </div>
-                      {task.status !== 'done' &&
-                    <Button
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMarkAsDone(task.id);
-                      }}
-                      className="bg-green-600 hover:bg-green-700 text-white">
+                      <div className="flex gap-2">
+                        {task.status !== 'done' &&
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMarkAsDone(task.id);
+                            }}
+                            className="bg-green-600 hover:bg-green-700 text-white">
 
-                          <CheckCircle2 className="w-4 h-4" />
+                            <CheckCircle2 className="w-4 h-4" />
+                          </Button>
+                        }
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTask(task.id, task.name);
+                          }}
+                          className="text-red-500 hover:bg-red-500/10">
+
+                          <Trash2 className="w-4 h-4" />
                         </Button>
-                    }
+                      </div>
                     </div>
                   </div>);
 
@@ -521,6 +550,17 @@ export default function GoalsAndTasksDashboard({ customer }) {
                         className="text-horizon-primary">
 
                           <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTask(goal.id, goal.name);
+                          }}
+                          className="text-red-500 hover:bg-red-500/10">
+
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>
