@@ -22,7 +22,9 @@ import {
   Filter,
   LayoutGrid,
   CheckSquare,
-  XCircle
+  XCircle,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -80,6 +82,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const [groupFilter, setGroupFilter] = useState('all');
   const [customerFilter, setCustomerFilter] = useState('all');
   const [showCompletedModal, setShowCompletedModal] = useState(false);
+  const [isClientsExpanded, setIsClientsExpanded] = useState(true);
 
   const todayWorkGroup = getTodayWorkGroup();
   const queryClient = useQueryClient();
@@ -473,11 +476,26 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       {todaysClients.length > 0 &&
       <Card className="card-horizon bg-white border-2 border-[#e1e8ed]">
           <CardHeader className="border-b border-[#e1e8ed] bg-gradient-to-l from-[#32acc1]/5 to-[#fc9f67]/5">
-            <CardTitle className="text-horizon-text flex items-center gap-2 text-right">
-              <Users className="w-5 h-5 text-horizon-primary" />
-              {isAdmin ? `כל הלקוחות (${todaysClients.length})` : `לקוחות לעבודה היום (${todaysClients.length})`}
+            <CardTitle className="text-horizon-text flex items-center justify-between text-right">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-horizon-primary" />
+                {isAdmin ? `כל הלקוחות (${todaysClients.length})` : `לקוחות לעבודה היום (${todaysClients.length})`}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsClientsExpanded(!isClientsExpanded)}
+                className="text-horizon-accent hover:text-horizon-primary"
+              >
+                {isClientsExpanded ? (
+                  <ChevronUp className="w-5 h-5" />
+                ) : (
+                  <ChevronDown className="w-5 h-5" />
+                )}
+              </Button>
             </CardTitle>
           </CardHeader>
+          {isClientsExpanded && (
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {todaysClients.map((client) =>
@@ -512,6 +530,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
             )}
             </div>
           </CardContent>
+          )}
         </Card>
       }
 
