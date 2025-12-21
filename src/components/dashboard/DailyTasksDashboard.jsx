@@ -89,13 +89,18 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     queryKey: ['allCustomers', currentUser.email, isAdmin],
     queryFn: async () => {
       if (isAdmin) {
-        // אדמין רואה את כל הלקוחות שהם לא אדמינים או מנהלי כספים פעילים
-        const users = await base44.entities.User.filter({
-          role: { $ne: 'admin' },
-          user_type: { $ne: 'financial_manager' },
-          is_active: true
-        });
-        return users;
+        // אדמין רואה את כל OnboardingRequests הפעילים (כמו בניהול לקוחות)
+        const onboardingReqs = await base44.entities.OnboardingRequest.filter({ is_active: true });
+        
+        return onboardingReqs.map((req) => ({
+          id: req.id,
+          email: req.email,
+          full_name: req.full_name,
+          business_name: req.business_name,
+          customer_group: req.customer_group,
+          assigned_financial_manager_email: req.assigned_financial_manager_email,
+          business_type: req.business_type
+        }));
       } else {
         // ⭐ מנהל כספים - טוען כל OnboardingRequests ומסנן בצד הלקוח (כולל מנהלים משניים!)
         const allOnboardingReqs = await base44.entities.OnboardingRequest.filter({ is_active: true });
