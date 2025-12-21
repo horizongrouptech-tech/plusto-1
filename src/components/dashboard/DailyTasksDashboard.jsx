@@ -302,7 +302,28 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   });
 
   const markTaskAsDoneMutation = useMutation({
-    mutationFn: (taskId) => base44.entities.CustomerGoal.update(taskId, { status: 'done' }),
+    mutationFn: async (taskId) => {
+      const task = goals.find(g => g.id === taskId);
+      
+      if (task?.task_type === 'recurring') {
+        // משימה חוזרת - עדכן עם תאריך השלמה
+        await base44.entities.CustomerGoal.update(taskId, {
+          status: 'done',
+          last_completed_at: new Date().toISOString(),
+          times_completed: (task.times_completed || 0) + 1
+        });
+        
+        // קרא לפונקציה ליצירת המשימה הבאה
+        try {
+          await base44.functions.invoke('generateRecurringTasks', {});
+        } catch (error) {
+          console.error('Error generating next occurrence:', error);
+        }
+      } else {
+        // משימה רגילה
+        await base44.entities.CustomerGoal.update(taskId, { status: 'done' });
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['allRelevantTasks']);
       alert('המשימה הושלמה בהצלחה!');
@@ -334,7 +355,12 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   };
 
   const handleMarkAsDone = (taskId) => {
-    if (confirm('האם אתה בטוח שברצונך לסמן משימה זו כהושלמה?')) {
+    const task = goals.find(g => g.id === taskId);
+    const confirmMsg = task?.task_type === 'recurring' 
+      ? 'המשימה תסומן כהושלמה ותיווצר מחדש למועד הבא. להמשיך?'
+      : 'האם אתה בטוח שברצונך לסמן משימה זו כהושלמה?';
+    
+    if (confirm(confirmMsg)) {
       markTaskAsDoneMutation.mutate(taskId);
     }
   };

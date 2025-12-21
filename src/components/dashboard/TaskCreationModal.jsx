@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Loader2, Calendar, Circle, Clock, CheckCircle2, AlertCircle, Bell } from "lucide-react";
+import { Loader2, Calendar, Circle, Clock, CheckCircle2, AlertCircle, Bell, RefreshCw, Repeat } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 
@@ -21,6 +21,14 @@ export default function TaskCreationModal({ isOpen, onClose, currentUser, isAdmi
   const [assigneeEmail, setAssigneeEmail] = useState(currentUser.email);
   const [customerEmail, setCustomerEmail] = useState('');
   const [status, setStatus] = useState('open');
+  
+  // שדות חדשים למשימות חוזרות
+  const [taskType, setTaskType] = useState('one_time');
+  const [recurrencePattern, setRecurrencePattern] = useState('weekly');
+  const [specificDaysOfWeek, setSpecificDaysOfWeek] = useState([]);
+  const [dayOfMonth, setDayOfMonth] = useState(1);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
+  const [recurrenceCount, setRecurrenceCount] = useState(0);
 
   // טעינת כל המשתמשים (עבור בחירת גורם מבצע)
   const { data: allUsers = [] } = useQuery({
@@ -40,6 +48,12 @@ export default function TaskCreationModal({ isOpen, onClose, currentUser, isAdmi
       setAssigneeEmail(taskToEdit.assignee_email || currentUser.email);
       setCustomerEmail(taskToEdit.customer_email || '');
       setStatus(taskToEdit.status || 'open');
+      setTaskType(taskToEdit.task_type || 'one_time');
+      setRecurrencePattern(taskToEdit.recurrence_pattern || 'weekly');
+      setSpecificDaysOfWeek(taskToEdit.specific_days_of_week || []);
+      setDayOfMonth(taskToEdit.day_of_month || 1);
+      setRecurrenceEndDate(taskToEdit.recurrence_end_date ? taskToEdit.recurrence_end_date.split('T')[0] : '');
+      setRecurrenceCount(taskToEdit.recurrence_count || 0);
     } else {
       setName('');
       setNotes('');
@@ -49,6 +63,12 @@ export default function TaskCreationModal({ isOpen, onClose, currentUser, isAdmi
       setAssigneeEmail(currentUser.email);
       setCustomerEmail('');
       setStatus('open');
+      setTaskType('one_time');
+      setRecurrencePattern('weekly');
+      setSpecificDaysOfWeek([]);
+      setDayOfMonth(1);
+      setRecurrenceEndDate('');
+      setRecurrenceCount(0);
     }
   }, [taskToEdit, currentUser, isOpen]);
 
@@ -117,8 +137,16 @@ export default function TaskCreationModal({ isOpen, onClose, currentUser, isAdmi
       reminder_date: reminderDate || null,
       assignee_email: assigneeEmail,
       customer_email: customerEmail || null,
-      task_type: 'one_time',
-      is_active: true
+      task_type: taskType,
+      is_active: true,
+      ...(taskType === 'recurring' && {
+        recurrence_pattern: recurrencePattern,
+        recurrence_end_date: recurrenceEndDate || null,
+        recurrence_count: recurrenceCount || null,
+        specific_days_of_week: recurrencePattern === 'specific_days' ? specificDaysOfWeek : null,
+        day_of_month: recurrencePattern === 'monthly' ? dayOfMonth : null,
+        is_recurring_active: true
+      })
     };
 
     if (taskToEdit) {
@@ -160,6 +188,134 @@ export default function TaskCreationModal({ isOpen, onClose, currentUser, isAdmi
               required
             />
           </div>
+
+          {/* סוג משימה */}
+          <div>
+            <Label className="text-right block mb-2 text-horizon-text">סוג המשימה</Label>
+            <Select value={taskType} onValueChange={setTaskType}>
+              <SelectTrigger className="w-full bg-horizon-card border-horizon text-horizon-text text-right">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-horizon-dark border-horizon">
+                <SelectItem value="one_time" className="text-right">
+                  <div className="flex items-center gap-2 justify-end">
+                    <span>משימה חד-פעמית</span>
+                    <Circle className="w-4 h-4" />
+                  </div>
+                </SelectItem>
+                <SelectItem value="recurring" className="text-right">
+                  <div className="flex items-center gap-2 justify-end">
+                    <span>משימה חוזרת</span>
+                    <RefreshCw className="w-4 h-4" />
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* הגדרות חזרה - רק אם בחרו recurring */}
+          {taskType === 'recurring' && (
+            <div className="space-y-4 p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+              <div className="flex items-center gap-2 text-purple-400 font-semibold">
+                <Repeat className="w-4 h-4" />
+                <span>הגדרות משימה חוזרת</span>
+              </div>
+
+              {/* תדירות */}
+              <div>
+                <Label className="text-right block mb-2 text-horizon-text">תדירות</Label>
+                <Select value={recurrencePattern} onValueChange={setRecurrencePattern}>
+                  <SelectTrigger className="w-full bg-horizon-card border-horizon text-horizon-text text-right">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-horizon-dark border-horizon">
+                    <SelectItem value="daily">יומי</SelectItem>
+                    <SelectItem value="weekly">שבועי</SelectItem>
+                    <SelectItem value="monthly">חודשי</SelectItem>
+                    <SelectItem value="specific_days">ימים ספציפיים בשבוע</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* בחירת ימים ספציפיים */}
+              {recurrencePattern === 'specific_days' && (
+                <div>
+                  <Label className="text-right block mb-2 text-horizon-text">בחר ימים בשבוע</Label>
+                  <div className="flex gap-2 justify-end flex-wrap">
+                    {[
+                      { label: 'א׳', value: 0 },
+                      { label: 'ב׳', value: 1 },
+                      { label: 'ג׳', value: 2 },
+                      { label: 'ד׳', value: 3 },
+                      { label: 'ה׳', value: 4 },
+                      { label: 'ו׳', value: 5 },
+                      { label: 'ש׳', value: 6 }
+                    ].map(day => (
+                      <Button
+                        key={day.value}
+                        type="button"
+                        size="sm"
+                        variant={specificDaysOfWeek.includes(day.value) ? 'default' : 'outline'}
+                        onClick={() => {
+                          if (specificDaysOfWeek.includes(day.value)) {
+                            setSpecificDaysOfWeek(specificDaysOfWeek.filter(d => d !== day.value));
+                          } else {
+                            setSpecificDaysOfWeek([...specificDaysOfWeek, day.value]);
+                          }
+                        }}
+                        className={specificDaysOfWeek.includes(day.value) ? 'bg-purple-500 hover:bg-purple-600' : ''}
+                      >
+                        {day.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* יום בחודש - למשימות חודשיות */}
+              {recurrencePattern === 'monthly' && (
+                <div>
+                  <Label className="text-right block mb-2 text-horizon-text">יום בחודש</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={dayOfMonth}
+                    onChange={(e) => setDayOfMonth(parseInt(e.target.value) || 1)}
+                    className="bg-horizon-card border-horizon text-horizon-text"
+                    placeholder="15"
+                  />
+                  <p className="text-xs text-horizon-accent mt-1">בחר יום בחודש (1-31)</p>
+                </div>
+              )}
+
+              {/* עד מתי להמשיך */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-right block mb-2 text-horizon-text text-xs">תאריך סיום החזרה</Label>
+                  <Input
+                    type="date"
+                    value={recurrenceEndDate}
+                    onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                    className="bg-horizon-card border-horizon text-horizon-text"
+                  />
+                  <p className="text-[10px] text-horizon-accent mt-1">אופציונלי</p>
+                </div>
+                <div>
+                  <Label className="text-right block mb-2 text-horizon-text text-xs">מספר חזרות</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={recurrenceCount}
+                    onChange={(e) => setRecurrenceCount(parseInt(e.target.value) || 0)}
+                    className="bg-horizon-card border-horizon text-horizon-text"
+                    placeholder="0 = ללא הגבלה"
+                  />
+                  <p className="text-[10px] text-horizon-accent mt-1">0 = ללא הגבלה</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* הערות */}
           <div>

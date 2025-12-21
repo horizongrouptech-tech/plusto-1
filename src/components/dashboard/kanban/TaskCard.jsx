@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, User, Target, Clock, CheckCircle2 } from 'lucide-react';
+import { Calendar, User, Target, Clock, CheckCircle2, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 
@@ -35,6 +35,15 @@ export default function TaskCard({ task, customer, parentGoal, onTaskClick, onMa
 
       {/* תגיות */}
       <div className="flex flex-wrap gap-1 mb-3">
+        {task.task_type === 'recurring' && (
+          <Badge className="bg-purple-500 text-white text-xs">
+            <RefreshCw className="w-3 h-3 ml-1" />
+            {task.recurrence_pattern === 'daily' && 'יומי'}
+            {task.recurrence_pattern === 'weekly' && 'שבועי'}
+            {task.recurrence_pattern === 'monthly' && 'חודשי'}
+            {task.recurrence_pattern === 'specific_days' && 'ימים נבחרים'}
+          </Badge>
+        )}
         {customer && (
           <Badge className={`${getCustomerGroupBadgeColor(customer.customer_group)} text-xs`}>
             קבוצה {customer.customer_group}
