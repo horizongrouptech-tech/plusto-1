@@ -829,13 +829,13 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                           {(service.calculated?.gross_margin_percentage || 0).toFixed(1)}%
                                         </p>
                                       </div>
-                                    </div>
-                                    )}
-                                    </div>
-                                    </div>
-                                    </CardContent>
-                                    </Card>
-                          </div>
+                                      </div>
+                                      )}
+                                      </div>
+                                      </div>
+                                      </CardContent>
+                                      </Card>
+                                      </div>
                         )}
                       </Draggable>
                     );
