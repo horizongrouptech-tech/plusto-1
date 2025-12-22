@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Upload, Loader2, CheckCircle2, AlertCircle, FileSpreadsheet, Calendar, TrendingUp } from "lucide-react";
 import { base44 } from '@/api/base44Client';
 import { parseFutureRevenueFile } from '@/functions/parseFutureRevenueFile';
+import { formatCurrency } from './utils/numberFormatter';
 
 export default function FutureRevenueUploader({ forecastData, onUpdateForecast, salesForecast, onSalesForecastUpdate }) {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -285,9 +286,6 @@ export default function FutureRevenueUploader({ forecastData, onUpdateForecast, 
         </DialogContent>
       </Dialog>
 
-      {/* סיכום דוחות Z */}
-      <ZReportMonthSummary
-        forecastData={forecastData}
-        salesForecast={salesForecast}
-        services={forecastData.services || []}
-      />
+    </>
+  );
+}
