@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronRight, ChevronLeft, GripVertical, Eye, EyeOff, TrendingUp, Calendar, Upload, FileSpreadsheet, CheckCircle2, Package } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ChevronRight, ChevronLeft, GripVertical, Eye, EyeOff, TrendingUp, Calendar, Upload, FileSpreadsheet, CheckCircle2, Package, BarChart3, Calculator } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { formatCurrency, formatNumber } from './utils/numberFormatter';
 import ZReportUploader from './ZReportUploader';
@@ -11,6 +12,8 @@ import ZReportProductMapper from './ZReportProductMapper';
 import ZReportMonthSummary from './ZReportMonthSummary';
 import { base44 } from "@/api/base44Client";
 import ServiceCategoryGroup from './ServiceCategoryGroup';
+import AggregatePlanning from './AggregatePlanning';
+import FutureRevenueUploader from './FutureRevenueUploader';
 
 export default function Step3SalesForecast({ forecastData, onUpdateForecast, onNext, onBack }) {
   // ✅ תיקון: טוען נתונים קיימים מיד בהתחלה, לא אפסים!
@@ -38,6 +41,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   const [showProductMapper, setShowProductMapper] = useState(false);
   const [pendingZData, setPendingZData] = useState(null);
   const [viewMode, setViewMode] = useState('category'); // 'category' או 'list'
+  const [planningMode, setPlanningMode] = useState(forecastData.use_aggregate_planning ? 'aggregate' : 'detailed');
 
   // ✅ useEffect נשאר רק כ-fallback למקרים מיוחדים
   useEffect(() => {
@@ -254,14 +258,75 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
 
   const categorizedServices = groupServicesByCategory();
 
+  const handlePlanningModeChange = (mode) => {
+    setPlanningMode(mode);
+    onUpdateForecast({
+      use_aggregate_planning: mode === 'aggregate'
+    });
+  };
+
   return (
     <div className="space-y-6" dir="rtl">
-      {/* סיכום דוחות Z שהועלו */}
-      <ZReportMonthSummary
-        forecastData={forecastData}
-        salesForecast={salesForecast}
-        services={forecastData.services || []}
-      />
+      {/* בחירת מצב תכנון */}
+      <Card className="card-horizon border-2 border-horizon-primary/30">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <Calculator className="w-5 h-5 text-horizon-primary" />
+              <span className="font-semibold text-horizon-text">בחר שיטת תכנון:</span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => handlePlanningModeChange('detailed')}
+                variant={planningMode === 'detailed' ? 'default' : 'outline'}
+                className={planningMode === 'detailed' ? 'btn-horizon-primary' : 'border-horizon text-horizon-text'}
+              >
+                <Package className="w-4 h-4 ml-2" />
+                תכנון פרטני (מוצר מוצר)
+              </Button>
+              <Button
+                onClick={() => handlePlanningModeChange('aggregate')}
+                variant={planningMode === 'aggregate' ? 'default' : 'outline'}
+                className={planningMode === 'aggregate' ? 'btn-horizon-primary' : 'border-horizon text-horizon-text'}
+              >
+                <BarChart3 className="w-4 h-4 ml-2" />
+                תכנון כללי (מחזור + אחוז עלות)
+              </Button>
+            </div>
+          </div>
+          
+          {planningMode === 'aggregate' && (
+            <Alert className="mt-4 bg-green-500/10 border-green-500/30">
+              <CheckCircle2 className="h-4 w-4 text-green-400" />
+              <AlertDescription className="text-horizon-text">
+                מצוין לעסקים עם קטלוג גדול! הזן מחזור מכירות חודשי ואחוז עלות גלם ממוצע - המערכת תחשב הכל אוטומטית.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {planningMode === 'aggregate' ? (
+        <AggregatePlanning
+          forecastData={forecastData}
+          onUpdateForecast={onUpdateForecast}
+        />
+      ) : (
+        <>
+          {/* סיכום דוחות Z שהועלו */}
+          <ZReportMonthSummary
+            forecastData={forecastData}
+            salesForecast={salesForecast}
+            services={forecastData.services || []}
+          />
+
+          {/* העלאת קובץ הכנסה עתידי */}
+          <FutureRevenueUploader
+            forecastData={forecastData}
+            onUpdateForecast={onUpdateForecast}
+            salesForecast={salesForecast}
+            onSalesForecastUpdate={setSalesForecast}
+          />
 
       <Card className="card-horizon">
         <CardHeader>
@@ -451,6 +516,8 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
           )}
         </CardContent>
       </Card>
+        </>
+      )}
 
       <div className="flex justify-between">
         <Button onClick={onBack} variant="outline" className="border-horizon text-horizon-text">
