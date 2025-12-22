@@ -36,6 +36,9 @@ export default function ManualForecastWizard({
     forecast_year: new Date().getFullYear(),
     start_month: 1,
     end_month: 12,
+    use_aggregate_planning: false,
+    average_cogs_percentage: 0,
+    planned_monthly_revenue_aggregate: Array(12).fill(0),
     services: [],
     global_employees: [],
     planned_employee_hires: [],
@@ -194,6 +197,12 @@ export default function ManualForecastWizard({
     if (sanitized.financing_expenses) {
       sanitized.financing_expenses = sanitizeFinancingExpenses(sanitized.financing_expenses);
     }
+    
+    // ✅ FIX: Sanitize תכנון כללי
+    if (sanitized.planned_monthly_revenue_aggregate) {
+      sanitized.planned_monthly_revenue_aggregate = sanitizeNumberArray(sanitized.planned_monthly_revenue_aggregate, 12);
+    }
+    sanitized.average_cogs_percentage = sanitizeNumber(sanitized.average_cogs_percentage, 0);
     
     sanitized.working_days_per_month = sanitizeNumber(sanitized.working_days_per_month, 22);
     sanitized.tax_rate = sanitizeNumber(sanitized.tax_rate, 23);

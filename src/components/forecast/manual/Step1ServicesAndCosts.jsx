@@ -40,7 +40,54 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
   const [isLoadingCatalogProducts, setIsLoadingCatalogProducts] = useState(false);
 
   useEffect(() => {
-    setServices(forecastData.services || []);
+    const servicesFromData = forecastData.services || [];
+    
+    // ✅ FIX: חישוב מחדש של כל המוצרים כשטוענים מה-DB
+    const recalculatedServices = servicesFromData.map((service, idx) => {
+      const updatedService = { ...service };
+      
+      // אם אין calculated או שהוא ריק - חשב מחדש
+      if (!updatedService.calculated || 
+          updatedService.calculated.cost_of_sale === undefined ||
+          updatedService.calculated.gross_profit === undefined) {
+        
+        const VAT_RATE = 0.17;
+        const rawPrice = parseFloat(updatedService.price) || 0;
+        const netPrice = updatedService.has_vat ? rawPrice / (1 + VAT_RATE) : rawPrice;
+        
+        let totalCost = 0;
+        (updatedService.costs || []).forEach(cost => {
+          if (cost.is_percentage) {
+            totalCost += (netPrice * (parseFloat(cost.percentage_of_price) || 0)) / 100;
+          } else {
+            const rawCostAmount = parseFloat(cost.amount) || 0;
+            const netCostAmount = cost.has_vat ? rawCostAmount / (1 + VAT_RATE) : rawCostAmount;
+            totalCost += netCostAmount;
+          }
+        });
+
+        const grossProfit = netPrice - totalCost;
+        const grossMarginPercentage = netPrice > 0 ? ((grossProfit / netPrice) * 100) : 0;
+
+        updatedService.calculated = {
+          cost_of_sale: totalCost,
+          gross_profit: grossProfit,
+          gross_margin_percentage: grossMarginPercentage
+        };
+      }
+      
+      return updatedService;
+    });
+    
+    setServices(recalculatedServices);
+    
+    // ✅ אם היו שינויים - עדכן ב-forecastData
+    if (JSON.stringify(recalculatedServices) !== JSON.stringify(servicesFromData)) {
+      console.log('🔄 Recalculated services on load - updating forecastData');
+      if (onUpdateForecast) {
+        onUpdateForecast({ services: recalculatedServices });
+      }
+    }
   }, [forecastData.services]);
 
   // ⭐ טעינת קטלוגים - בדיוק כמו ב-ProductCatalogManager

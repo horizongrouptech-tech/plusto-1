@@ -138,83 +138,129 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
       let monthVATOnCosts = 0;
       let monthVATOnExpenses = 0;
 
-      // חישוב הכנסות ועלות מכר - ברוטו (כולל מע"מ)
-      (forecastData.sales_forecast_onetime || []).forEach((item) => {
-        // ✅ חיפוש השירות - עם fallback חכם
-        let service = (forecastData.services || []).find((s) => s.service_name === item.service_name);
+      // ⭐ חישוב הכנסות ועלות מכר
+      
+      // אם משתמשים בתכנון כללי - חשב לפי אחוז עלות ממוצע
+      if (forecastData.use_aggregate_planning) {
+        const aggregateRevenue = forecastData.planned_monthly_revenue_aggregate?.[monthIndex] || 0;
+        const cogsPercentage = forecastData.average_cogs_percentage || 0;
         
-        // ✅ אם לא נמצא service אבל יש נתונים בפועל - צור service זמני
-        if (!service) {
-          const hasActualData = item.actual_monthly_revenue?.some(rev => rev > 0) || 
-                                item.actual_monthly_quantities?.some(qty => qty > 0);
+        monthRevenue += aggregateRevenue;
+        monthCogs += (aggregateRevenue * cogsPercentage / 100);
+        
+        // מע"מ על מכירות כלליות (מניחים שיש מע"מ)
+        monthVATOnSales += calculateVATAmount(aggregateRevenue, true);
+        monthVATOnCosts += calculateVATAmount(aggregateRevenue * cogsPercentage / 100, true);
+      } else {
+        // תכנון פרטני - חישוב לפי מוצרים
+        (forecastData.sales_forecast_onetime || []).forEach((item) => {
+          // ✅ חיפוש השירות - עם fallback חכם
+          let service = (forecastData.services || []).find((s) => s.service_name === item.service_name);
           
-          if (hasActualData) {
-            // חישוב מחיר ממוצע מהנתונים בפועל
-            let totalRevenue = 0;
-            let totalQuantity = 0;
+          // ✅ אם לא נמצא service אבל יש נתונים בפועל - צור service זמני
+          if (!service) {
+            const hasActualData = item.actual_monthly_revenue?.some(rev => rev > 0) || 
+                                  item.actual_monthly_quantities?.some(qty => qty > 0);
             
-            for (let i = 0; i < 12; i++) {
-              const rev = item.actual_monthly_revenue?.[i] || 0;
-              const qty = item.actual_monthly_quantities?.[i] || 0;
-              totalRevenue += rev;
-              totalQuantity += qty;
+            if (hasActualData) {
+              // חישוב מחיר ממוצע מהנתונים בפועל
+              let totalRevenue = 0;
+              let totalQuantity = 0;
+              
+              for (let i = 0; i < 12; i++) {
+                const rev = item.actual_monthly_revenue?.[i] || 0;
+                const qty = item.actual_monthly_quantities?.[i] || 0;
+                totalRevenue += rev;
+                totalQuantity += qty;
+              }
+              
+              const avgPrice = totalQuantity > 0 ? totalRevenue / totalQuantity : 0;
+              
+              service = {
+                service_name: item.service_name,
+                price: avgPrice,
+                costs: [],
+                has_vat: true,
+                calculated: {
+                  cost_of_sale: 0,
+                  gross_profit: avgPrice,
+                  gross_margin_percentage: 100
+                }
+              };
+              
+              console.log(`⚠️ Service not found for "${item.service_name}", using calculated price: ₪${avgPrice.toFixed(2)}`);
+            } else {
+              console.error(`❌ No service found and no actual data for: "${item.service_name}"`);
+              return; // דלג על פריט זה
             }
+          }
+          
+          // ✅ FIX: וודא ש-calculated קיים ותקין
+          if (!service.calculated || typeof service.calculated.cost_of_sale !== 'number') {
+            console.warn(`⚠️ Service "${service.service_name}" missing calculated fields - recalculating...`);
             
-            const avgPrice = totalQuantity > 0 ? totalRevenue / totalQuantity : 0;
+            const VAT_RATE = 0.17;
+            const rawPrice = parseFloat(service.price) || 0;
+            const netPrice = service.has_vat ? rawPrice / (1 + VAT_RATE) : rawPrice;
             
-            service = {
-              service_name: item.service_name,
-              price: avgPrice,
-              costs: [],
-              has_vat: true
+            let totalCost = 0;
+            (service.costs || []).forEach(cost => {
+              if (cost.is_percentage) {
+                totalCost += (netPrice * (parseFloat(cost.percentage_of_price) || 0)) / 100;
+              } else {
+                const rawCostAmount = parseFloat(cost.amount) || 0;
+                const netCostAmount = cost.has_vat ? rawCostAmount / (1 + VAT_RATE) : rawCostAmount;
+                totalCost += netCostAmount;
+              }
+            });
+
+            service.calculated = {
+              cost_of_sale: totalCost,
+              gross_profit: netPrice - totalCost,
+              gross_margin_percentage: netPrice > 0 ? ((netPrice - totalCost) / netPrice * 100) : 0
             };
-            
-            console.log(`⚠️ Service not found for "${item.service_name}", using calculated price: ₪${avgPrice.toFixed(2)}`);
+          }
+        
+          const isActual = item.actual_monthly_quantities?.[monthIndex] > 0;
+          const quantity = isActual ?
+            item.actual_monthly_quantities[monthIndex] :
+            item.planned_monthly_quantities?.[monthIndex] || 0;
+
+          const priceGross = service.price || 0;
+          
+          // שימוש בהכנסה בפועל שנשמרה אם קיימת (למקרה שדוח Z עדכן סכום שונה מהמכפלה), אחרת חישוב רגיל
+          let revenueGross = 0;
+          if (isActual && item.actual_monthly_revenue?.[monthIndex] > 0) {
+            revenueGross = item.actual_monthly_revenue[monthIndex];
           } else {
-            console.error(`❌ No service found and no actual data for: "${item.service_name}"`);
-            return; // דלג על פריט זה
-          }
-        }
-        
-        const isActual = item.actual_monthly_quantities?.[monthIndex] > 0;
-        const quantity = isActual ?
-          item.actual_monthly_quantities[monthIndex] :
-          item.planned_monthly_quantities?.[monthIndex] || 0;
-
-        const priceGross = service.price || 0;
-        
-        // שימוש בהכנסה בפועל שנשמרה אם קיימת (למקרה שדוח Z עדכן סכום שונה מהמכפלה), אחרת חישוב רגיל
-        let revenueGross = 0;
-        if (isActual && item.actual_monthly_revenue?.[monthIndex] > 0) {
-          revenueGross = item.actual_monthly_revenue[monthIndex];
-        } else {
-          revenueGross = quantity * priceGross;
-        }
-
-        monthRevenue += revenueGross; // ✅ הכנסה ברוטו - ללא הפחתת מע"מ!
-
-        // חישוב מע"מ על מכירות
-        if (service.has_vat) {
-          monthVATOnSales += calculateVATAmount(revenueGross, true);
-        }
-
-        const costOfSale = (service.costs || []).reduce((sum, cost) => {
-          if (cost.is_percentage) {
-            // אחוזים מחושבים על ההכנסה ברוטו
-            return sum + revenueGross * (cost.percentage_of_price / 100);
+            revenueGross = quantity * priceGross;
           }
 
-          const costGross = (cost.amount || 0) * quantity;
+          monthRevenue += revenueGross; // ✅ הכנסה ברוטו - ללא הפחתת מע"מ!
 
-          // חישוב מע"מ על עלויות
-          if (cost.has_vat) {
-            monthVATOnCosts += calculateVATAmount(costGross, true);
+          // חישוב מע"מ על מכירות
+          if (service.has_vat) {
+            monthVATOnSales += calculateVATAmount(revenueGross, true);
           }
 
-          return sum + costGross; // ✅ עלות ברוטו - ללא הפחתת מע"מ!
-        }, 0);
-        monthCogs += costOfSale;
-      });
+          const costOfSale = (service.costs || []).reduce((sum, cost) => {
+            if (cost.is_percentage) {
+              // אחוזים מחושבים על ההכנסה ברוטו
+              return sum + revenueGross * (cost.percentage_of_price / 100);
+            }
+
+            const costGross = (cost.amount || 0) * quantity;
+
+            // חישוב מע"מ על עלויות
+            if (cost.has_vat) {
+              monthVATOnCosts += calculateVATAmount(costGross, true);
+            }
+
+            return sum + costGross; // ✅ עלות ברוטו - ללא הפחתת מע"מ!
+          }, 0);
+          monthCogs += costOfSale;
+        });
+      }
 
       const monthGrossProfit = monthRevenue - monthCogs;
 
