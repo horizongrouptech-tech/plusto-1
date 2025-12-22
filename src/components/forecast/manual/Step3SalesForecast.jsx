@@ -215,6 +215,10 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     alert(`✓ דוח Z יובא בהצלחה!\n${productsUpdated} מוצרים עודכנו בחודש ${monthNames[monthIndex]}`);
   };
 
+  const handleSalesForecastUpdate = (updatedForecast) => {
+    setSalesForecast(updatedForecast);
+  };
+
   const handleContinue = async () => {
     console.log('💾 Step3 - Saving sales forecast before continue:', salesForecast.length, 'items');
     
@@ -359,39 +363,45 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                   רשימה
                 </Button>
               </div>
-              <Button
-                onClick={() => setShowZReportUploader(true)}
-                className="btn-horizon-secondary"
-                disabled={!forecastData.services || forecastData.services.length === 0}
-              >
-                <FileSpreadsheet className="w-4 h-4 ml-2" />
-                ייבא דוח Z
-              </Button>
+              {planningMode === 'detailed' && (
+                <Button
+                  onClick={() => setShowZReportUploader(true)}
+                  className="btn-horizon-secondary"
+                  disabled={!forecastData.services || forecastData.services.length === 0}
+                >
+                  <FileSpreadsheet className="w-4 h-4 ml-2" />
+                  ייבא דוח Z
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="mb-4">
-            <Label className="text-horizon-text">ימי עבודה בחודש (ממוצע)</Label>
-            <Input
-              type="number"
-              value={workingDays}
-              onChange={(e) => setWorkingDays(parseFloat(e.target.value) || 22)}
-              className="bg-horizon-card border-horizon text-horizon-text w-32"
-            />
-          </div>
+          {planningMode === 'detailed' && (
+            <div className="mb-4">
+              <Label className="text-horizon-text">ימי עבודה בחודש (ממוצע)</Label>
+              <Input
+                type="number"
+                value={workingDays}
+                onChange={(e) => setWorkingDays(parseFloat(e.target.value) || 22)}
+                className="bg-horizon-card border-horizon text-horizon-text w-32"
+              />
+            </div>
+          )}
 
-          {/* מקרא */}
-          <div className="flex gap-4 mb-4 p-3 bg-horizon-card/30 rounded-lg border border-horizon">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-blue-400" />
-              <span className="text-sm text-horizon-text">תכנון</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-green-400" />
-              <span className="text-sm text-horizon-text">ביצוע בפועל</span>
-            </div>
-          </div>
+          {planningMode === 'detailed' && (
+            <>
+              {/* מקרא */}
+              <div className="flex gap-4 mb-4 p-3 bg-horizon-card/30 rounded-lg border border-horizon">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-blue-400" />
+                  <span className="text-sm text-horizon-text">תכנון</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-green-400" />
+                  <span className="text-sm text-horizon-text">ביצוע בפועל</span>
+                </div>
+              </div>
 
           {viewMode === 'category' ? (
             // תצוגה לפי קטגוריות
@@ -513,6 +523,8 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
               )}
             </Droppable>
           </DragDropContext>
+          )}
+            </>
           )}
         </CardContent>
       </Card>
