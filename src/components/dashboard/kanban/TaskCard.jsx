@@ -77,6 +77,12 @@ export default function TaskCard({ task, customer, parentGoal, onTaskClick, onMa
             <Target className="w-3 h-3 flex-shrink-0" />
           </div>
         )}
+        {task.additional_assignees && task.additional_assignees.length > 0 && (
+          <div className="flex items-center gap-1 justify-end">
+            <span className="text-blue-400 font-medium">{task.additional_assignees.length + 1} אחראים</span>
+            <User className="w-3 h-3 flex-shrink-0 text-blue-400" />
+          </div>
+        )}
       </div>
 
       {/* כפתור סיום מהיר */}
