@@ -31,7 +31,6 @@ import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { DragDropContext, Draggable } from '@hello-pangea/dnd';
-import { useUsers } from '../shared/UsersContext';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -87,8 +86,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
 
   const todayWorkGroup = getTodayWorkGroup();
   const queryClient = useQueryClient();
-  
-  const { allUsers = [] } = useUsers();
 
   // טעינת לקוחות
   const { data: allCustomers = [], isLoading: customersLoading } = useQuery({
@@ -353,9 +350,8 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       name: task.name,
       status: task.status,
       notes: task.notes || '',
-      end_date: task.end_date ? format(new Date(task.end_date), 'yyyy-MM-dd') : '',
-      due_time: task.due_time || '',
-      assignee_email: task.assignee_email || currentUser.email
+      end_date: task.end_date ? format(new Date(task.end_date), 'yyyy-MM-dd') : '', // Format date for input type="date"
+      due_time: task.due_time || ''
     });
     setIsTaskModalOpen(true);
   };
@@ -874,28 +870,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                 onChange={(e) => setEditedTaskData({ ...editedTaskData, due_time: e.target.value })}
                 className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text text-right" />
 
-              </div>
-
-              <div>
-                <Label className="text-right block mb-2 text-horizon-text">גורם מבצע (אחראי ראשי)</Label>
-                <Select
-                  value={editedTaskData.assignee_email || ''}
-                  onValueChange={(value) => setEditedTaskData({ ...editedTaskData, assignee_email: value })}
-                >
-                  <SelectTrigger className="w-full bg-horizon-card border-horizon text-horizon-text text-right">
-                    <SelectValue placeholder="בחר אחראי" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-horizon-dark border-horizon max-h-[200px]">
-                    {allUsers.map((user) => (
-                      <SelectItem key={user.id || user.email} value={user.email} className="text-right">
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="font-medium">{user.full_name || 'משתמש ללא שם'}</span>
-                          <span className="text-xs text-horizon-accent">{user.email}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
 
               <div>

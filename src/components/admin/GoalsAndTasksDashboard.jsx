@@ -27,9 +27,7 @@ import {
   UserPlus,
   Mail,
   Trash2,
-  X,
-  ChevronDown,
-  ChevronUp } from
+  X } from
 "lucide-react";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -48,12 +46,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
   const [activeStatFilter, setActiveStatFilter] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [collapsedGoals, setCollapsedGoals] = useState({});
   const queryClient = useQueryClient();
-
-  const toggleGoalCollapse = (goalId) => {
-    setCollapsedGoals(prev => ({ ...prev, [goalId]: !prev[goalId] }));
-  };
 
   useEffect(() => {
     const loadUser = async () => {
@@ -547,92 +540,62 @@ export default function GoalsAndTasksDashboard({ customer }) {
               const progress = subtasks.length > 0 ? completedSubtasks / subtasks.length * 100 : goal.status === 'done' ? 100 : 0;
 
               return (
-                <div key={goal.id} className="bg-horizon-card/50 rounded-lg border border-horizon hover:border-horizon-primary/50 transition-colors">
-                    {/* כותרת יעד - תמיד נראית */}
-                    <div 
-                      className="p-4 cursor-pointer hover:bg-horizon-card/30 transition-colors flex items-center justify-between"
-                      onClick={(e) => {
-                        if (e.target.closest('button')) return;
-                        toggleGoalCollapse(goal.id);
-                      }}
-                    >
+                <div key={goal.id} className="bg-horizon-card/50 p-4 rounded-lg border border-horizon hover:border-horizon-primary/50 transition-colors cursor-pointer" onClick={() => handleEditTask(goal)}>
+                    <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <StatusIcon className={`w-5 h-5 ${statusDisplay.color}`} />
-                          <h4 className="font-semibold text-horizon-text text-lg">{goal.name}</h4>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-horizon-accent">
-                          <div className="flex items-center gap-1">
+                        <h4 className="font-semibold text-horizon-text mb-2">{goal.name}</h4>
+                        <div className="flex items-center gap-4 text-sm text-horizon-accent mb-3 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <StatusIcon className={`w-4 h-4 ${statusDisplay.color}`} />
+                            <span>{statusDisplay.label}</span>
+                          </div>
+                          {(goal.start_date || goal.end_date) &&
+                        <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4" />
+                              <span>
+                                {goal.start_date ? format(new Date(goal.start_date), 'dd/MM/yy', { locale: he }) : '?'} - {goal.end_date ? format(new Date(goal.end_date), 'dd/MM/yy', { locale: he }) : '?'}
+                              </span>
+                            </div>
+                        }
+                          <div className="flex items-center gap-2">
                             <ListTodo className="w-4 h-4" />
                             <span>{subtasks.length} משימות</span>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <CheckCircle2 className="w-4 h-4 text-green-400" />
-                            <span>{Math.round(progress)}% הושלם</span>
-                          </div>
-                          {goal.end_date && (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
-                              <span>{format(new Date(goal.end_date), 'dd/MM/yy', { locale: he })}</span>
-                            </div>
-                          )}
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="text-horizon-accent hover:text-horizon-primary"
-                        >
-                          {collapsedGoals[goal.id] ? (
-                            <ChevronDown className="w-5 h-5" />
-                          ) : (
-                            <ChevronUp className="w-5 h-5" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* פרטים מלאים - רק אם פתוח */}
-                    {!collapsedGoals[goal.id] && (
-                      <div className="px-4 pb-4 space-y-3 border-t border-horizon pt-3">
-                        {subtasks.length > 0 && (
-                          <div>
+                        {subtasks.length > 0 &&
+                      <div>
                             <div className="w-full bg-horizon-card rounded-full h-2.5">
                               <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${progress}%`, transition: 'width 0.5s ease-in-out' }}></div>
                             </div>
                             <p className="text-xs text-horizon-accent mt-1">{Math.round(progress)}% הושלם ({completedSubtasks}/{subtasks.length})</p>
                           </div>
-                        )}
-                        <div className="flex gap-2 justify-end">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditTask(goal);
-                            }}
-                            className="text-horizon-primary hover:bg-horizon-primary/10"
-                          >
-                            <Edit className="w-4 h-4 ml-1" />
-                            ערוך
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteTask(goal.id, goal.name);
-                            }}
-                            className="text-red-500 hover:bg-red-500/10"
-                          >
-                            <Trash2 className="w-4 h-4 ml-1" />
-                            מחק
-                          </Button>
-                        </div>
+                      }
                       </div>
-                    )}
+                      <div className="flex flex-col items-end gap-2">
+                        <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditTask(goal);
+                        }}
+                        className="text-horizon-primary">
+
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTask(goal.id, goal.name);
+                          }}
+                          className="text-red-500 hover:bg-red-500/10">
+
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>);
 
             })}
@@ -695,7 +658,6 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
   const [reminderTime, setReminderTime] = useState('09:00');
   const [parentGoalId, setParentGoalId] = useState('');
   const [assigneeEmail, setAssigneeEmail] = useState('');
-  const [additionalAssignees, setAdditionalAssignees] = useState([]);
   const [taggedUsers, setTaggedUsers] = useState([]);
   const [status, setStatus] = useState('open');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -764,7 +726,6 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
         parent_id: parentGoalId && parentGoalId !== 'no_goal' ? parentGoalId : null,
         status,
         assignee_email: assigneeEmail || currentUser?.email,
-        additional_assignees: additionalAssignees,
         tagged_users: taggedUsers,
         task_type: 'one_time',
         is_active: true,
@@ -811,7 +772,6 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
       setParentGoalId('');
       setStatus('open');
       setAssigneeEmail(currentUser?.email || '');
-      setAdditionalAssignees([]);
       setTaggedUsers([]);
 
       onSuccess();
@@ -1026,7 +986,6 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
   const [editedTask, setEditedTask] = useState(null);
   const [endTime, setEndTime] = useState('09:00');
   const [reminderTime, setReminderTime] = useState('09:00');
-  const [additionalAssignees, setAdditionalAssignees] = useState([]);
   const [taggedUsers, setTaggedUsers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -1098,7 +1057,6 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
       });
       setEndTime(time);
       setReminderTime(reminderTimeStr);
-      setAdditionalAssignees(task.additional_assignees || []);
       setTaggedUsers(task.tagged_users || []);
     }
   }, [task]);
@@ -1137,7 +1095,6 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
         dataToUpdate.reminder_date = null;
       }
 
-      dataToUpdate.additional_assignees = additionalAssignees;
       dataToUpdate.tagged_users = taggedUsers;
 
       const oldTaggedUsers = task.tagged_users || [];
@@ -1398,7 +1355,6 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
   const [assigneeEmail, setAssigneeEmail] = useState('');
   const [responsibleUsers, setResponsibleUsers] = useState([]);
   const [externalResponsible, setExternalResponsible] = useState('');
-  const [additionalAssignees, setAdditionalAssignees] = useState([]);
   const [taggedUsers, setTaggedUsers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -1452,7 +1408,6 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
         reminder_date: reminderDateTime,
         status: 'open',
         assignee_email: assigneeEmail || currentUser?.email,
-        additional_assignees: additionalAssignees,
         responsible_users: responsibleUsers,
         external_responsible: externalResponsible.trim() || null,
         tagged_users: taggedUsers,
@@ -1501,7 +1456,6 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
       setReminderDate('');
       setReminderTime('09:00');
       setAssigneeEmail(currentUser?.email || '');
-      setAdditionalAssignees([]);
       setResponsibleUsers([]);
       setExternalResponsible('');
       setTaggedUsers([]);
@@ -1677,56 +1631,6 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
           <div>
             <Label className="text-right block mb-2 text-horizon-text flex items-center gap-2">
               <UserPlus className="w-4 h-4 text-horizon-primary" />
-              אחראים נוספים על היעד
-            </Label>
-            <div className="space-y-2">
-              <Select
-                value=""
-                onValueChange={(email) => {
-                  if (email && !additionalAssignees.includes(email) && email !== assigneeEmail) {
-                    setAdditionalAssignees([...additionalAssignees, email]);
-                  }
-                }}
-              >
-                <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
-                  <SelectValue placeholder="הוסף אחראי נוסף..." />
-                </SelectTrigger>
-                <SelectContent className="bg-horizon-dark border-horizon">
-                  {relevantUsers
-                    .filter((u) => !additionalAssignees.includes(u.email) && u.email !== assigneeEmail)
-                    .map((u) => (
-                      <SelectItem key={u.id} value={u.email}>
-                        {u.full_name} ({u.email})
-                      </SelectItem>
-                    ))
-                  }
-                </SelectContent>
-              </Select>
-              {additionalAssignees.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {additionalAssignees.map((email) => {
-                    const user = relevantUsers.find((u) => u.email === email);
-                    return (
-                      <Badge key={email} className="bg-blue-500/20 text-blue-400 flex items-center gap-1">
-                        <UserPlus className="w-3 h-3" />
-                        {user?.full_name || email}
-                        <button
-                          onClick={() => setAdditionalAssignees(additionalAssignees.filter((e) => e !== email))}
-                          className="mr-1 hover:bg-red-500/20 rounded-full p-0.5"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </Badge>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <Label className="text-right block mb-2 text-horizon-text flex items-center gap-2">
-              <Mail className="w-4 h-4 text-horizon-primary" />
               תיוג משתמשים (יקבלו נוטיפיקציה ומייל)
             </Label>
             <div className="space-y-2">

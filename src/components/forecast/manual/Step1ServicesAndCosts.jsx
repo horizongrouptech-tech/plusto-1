@@ -30,13 +30,7 @@ import { base44 } from '@/api/base44Client';
 
 export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, onNext, onBack }) {
   const [services, setServices] = useState(forecastData.services || []);
-  const [collapsedServices, setCollapsedServices] = useState(() => {
-    const initialCollapsed = {};
-    (forecastData.services || []).forEach((_, idx) => {
-      initialCollapsed[idx] = true; // ברירת מחדל - סגור
-    });
-    return initialCollapsed;
-  });
+  const [collapsedServices, setCollapsedServices] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   
   // ⭐ State לבחירת קטלוג
@@ -529,45 +523,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                   </div>
 
                                   <div className="flex-1 space-y-5">
-                                    {/* כותרת מוצר עם כפתור פתח/סגור */}
-                                    <div 
-                                      className="flex items-center justify-between cursor-pointer hover:bg-horizon-card/30 p-3 rounded-lg -mx-3"
-                                      onClick={() => toggleServiceCollapse(actualIndex)}
-                                    >
-                                      <div className="flex items-center gap-3 flex-1">
-                                        <Package className="w-5 h-5 text-horizon-primary" />
-                                        <h4 className="font-semibold text-horizon-text text-lg">
-                                          {service.service_name || `מוצר ${actualIndex + 1}`}
-                                        </h4>
-                                        {service.loaded_from_catalog && (
-                                          <Badge variant="outline" className="border-blue-500/50 text-blue-400 text-xs bg-blue-500/10">
-                                            <Package className="w-3 h-3 ml-1" />
-                                            מקטלוג
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      <div className="flex items-center gap-3">
-                                        <div className="text-sm text-horizon-accent">
-                                          {formatCurrency(service.price || 0)} | רווח: {(service.calculated?.gross_margin_percentage || 0).toFixed(1)}%
-                                        </div>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="sm"
-                                          className="text-horizon-accent hover:text-horizon-primary"
-                                        >
-                                          {collapsedServices[actualIndex] ? (
-                                            <ChevronDown className="w-5 h-5" />
-                                          ) : (
-                                            <ChevronUp className="w-5 h-5" />
-                                          )}
-                                        </Button>
-                                      </div>
-                                    </div>
-
-                                    {!collapsedServices[actualIndex] && (
-                                      <div className="space-y-5">
-                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                                      {/* שם המוצר - 5 עמודות */}
                                      <div className="md:col-span-5">
                                        <Label className="text-horizon-text flex items-center gap-2 mb-2 font-semibold">
@@ -829,15 +785,14 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                           {(service.calculated?.gross_margin_percentage || 0).toFixed(1)}%
                                         </p>
                                       </div>
-                                      </div>
-                                      )}
-                                      </div>
-                                      </div>
-                                      </CardContent>
-                                      </Card>
-                                      </div>
-                                      )}
-                                      </Draggable>
+                                    </div>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        )}
+                      </Draggable>
                     );
                     })}
                     {provided.placeholder}
