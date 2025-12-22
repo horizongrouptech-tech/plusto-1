@@ -566,8 +566,8 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                     </div>
 
                                     {!collapsedServices[actualIndex] && (
-                                    <div className="space-y-5">
-                                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                                      <div className="space-y-5">
+                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                                      {/* שם המוצר - 5 עמודות */}
                                      <div className="md:col-span-5">
                                        <Label className="text-horizon-text flex items-center gap-2 mb-2 font-semibold">
