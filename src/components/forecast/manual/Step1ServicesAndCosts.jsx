@@ -836,8 +836,8 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                       </CardContent>
                                       </Card>
                                       </div>
-                        )}
-                      </Draggable>
+                                      )}
+                                      </Draggable>
                     );
                     })}
                     {provided.placeholder}
