@@ -27,6 +27,7 @@ import {
   getPeriodLabel,
   filterDataByPeriod
 } from './utils/periodCalculations';
+import TopProductsInsights from './TopProductsInsights';
 
 export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave, onBack, isSaving }) {
   const [profitLossData, setProfitLossData] = useState([]);
@@ -654,6 +655,13 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
           </div>
         </CardContent>
       </Card>
+
+      {/* ניתוח מוצרים מובילים */}
+      <TopProductsInsights
+        forecastData={forecastData}
+        startMonth={startMonth}
+        endMonth={endMonth}
+      />
 
       {/* גרפים */}
       <ManualForecastCharts
