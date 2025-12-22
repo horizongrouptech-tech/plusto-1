@@ -1398,6 +1398,7 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
   const [assigneeEmail, setAssigneeEmail] = useState('');
   const [responsibleUsers, setResponsibleUsers] = useState([]);
   const [externalResponsible, setExternalResponsible] = useState('');
+  const [additionalAssignees, setAdditionalAssignees] = useState([]);
   const [taggedUsers, setTaggedUsers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -1451,6 +1452,7 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
         reminder_date: reminderDateTime,
         status: 'open',
         assignee_email: assigneeEmail || currentUser?.email,
+        additional_assignees: additionalAssignees,
         responsible_users: responsibleUsers,
         external_responsible: externalResponsible.trim() || null,
         tagged_users: taggedUsers,
@@ -1499,6 +1501,7 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
       setReminderDate('');
       setReminderTime('09:00');
       setAssigneeEmail(currentUser?.email || '');
+      setAdditionalAssignees([]);
       setResponsibleUsers([]);
       setExternalResponsible('');
       setTaggedUsers([]);
@@ -1674,6 +1677,56 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
           <div>
             <Label className="text-right block mb-2 text-horizon-text flex items-center gap-2">
               <UserPlus className="w-4 h-4 text-horizon-primary" />
+              אחראים נוספים על היעד
+            </Label>
+            <div className="space-y-2">
+              <Select
+                value=""
+                onValueChange={(email) => {
+                  if (email && !additionalAssignees.includes(email) && email !== assigneeEmail) {
+                    setAdditionalAssignees([...additionalAssignees, email]);
+                  }
+                }}
+              >
+                <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
+                  <SelectValue placeholder="הוסף אחראי נוסף..." />
+                </SelectTrigger>
+                <SelectContent className="bg-horizon-dark border-horizon">
+                  {relevantUsers
+                    .filter((u) => !additionalAssignees.includes(u.email) && u.email !== assigneeEmail)
+                    .map((u) => (
+                      <SelectItem key={u.id} value={u.email}>
+                        {u.full_name} ({u.email})
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
+              {additionalAssignees.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {additionalAssignees.map((email) => {
+                    const user = relevantUsers.find((u) => u.email === email);
+                    return (
+                      <Badge key={email} className="bg-blue-500/20 text-blue-400 flex items-center gap-1">
+                        <UserPlus className="w-3 h-3" />
+                        {user?.full_name || email}
+                        <button
+                          onClick={() => setAdditionalAssignees(additionalAssignees.filter((e) => e !== email))}
+                          className="mr-1 hover:bg-red-500/20 rounded-full p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-right block mb-2 text-horizon-text flex items-center gap-2">
+              <Mail className="w-4 h-4 text-horizon-primary" />
               תיוג משתמשים (יקבלו נוטיפיקציה ומייל)
             </Label>
             <div className="space-y-2">
