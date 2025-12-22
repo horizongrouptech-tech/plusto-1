@@ -192,17 +192,49 @@ export default function GoalsAndTasksDashboard({ customer }) {
   };
 
   const handleDeleteTask = async (taskId, taskName) => {
-    if (!confirm(`האם אתה בטוח שברצונך למחוק את המשימה "${taskName}"?\nפעולה זו אינה ניתנת לביטול.`)) {
-      return;
-    }
+    // בדיקה אם יש תת-משימות ליעד הזה
+    const subtasks = allGoals.filter((t) => t.parent_id === taskId);
+    
+    if (subtasks.length > 0) {
+      const confirmMessage = `ליעד "${taskName}" יש ${subtasks.length} תת-משימות.\n\nמה תרצה לעשות?\n\nלחץ "אישור" למחוק את היעד וכל התת-משימות\nלחץ "ביטול" להסיר את השיוך של התת-משימות (הן יישארו כמשימות עצמאיות)`;
+      
+      const deleteSubtasks = confirm(confirmMessage);
+      
+      try {
+        if (deleteSubtasks) {
+          // מחק את כל התת-משימות ואז את היעד
+          for (const subtask of subtasks) {
+            await base44.entities.CustomerGoal.delete(subtask.id);
+          }
+          await base44.entities.CustomerGoal.delete(taskId);
+          alert('היעד וכל התת-משימות נמחקו בהצלחה');
+        } else {
+          // הסר את השיוך של התת-משימות ואז מחק את היעד
+          for (const subtask of subtasks) {
+            await base44.entities.CustomerGoal.update(subtask.id, { parent_id: null });
+          }
+          await base44.entities.CustomerGoal.delete(taskId);
+          alert('היעד נמחק והתת-משימות הפכו לעצמאיות');
+        }
+        await queryClient.invalidateQueries(['customerGoals', customer.email]);
+      } catch (error) {
+        console.error('Error deleting task:', error);
+        alert('שגיאה במחיקת היעד: ' + error.message);
+      }
+    } else {
+      // אין תת-משימות - מחיקה רגילה
+      if (!confirm(`האם אתה בטוח שברצונך למחוק את המשימה "${taskName}"?\nפעולה זו אינה ניתנת לביטול.`)) {
+        return;
+      }
 
-    try {
-      await base44.entities.CustomerGoal.delete(taskId);
-      await queryClient.invalidateQueries(['customerGoals', customer.email]);
-      alert('המשימה נמחקה בהצלחה');
-    } catch (error) {
-      console.error('Error deleting task:', error);
-      alert('שגיאה במחיקת המשימה');
+      try {
+        await base44.entities.CustomerGoal.delete(taskId);
+        await queryClient.invalidateQueries(['customerGoals', customer.email]);
+        alert('המשימה נמחקה בהצלחה');
+      } catch (error) {
+        console.error('Error deleting task:', error);
+        alert('שגיאה במחיקת המשימה: ' + error.message);
+      }
     }
   };
 
