@@ -27,7 +27,9 @@ import {
   UserPlus,
   Mail,
   Trash2,
-  X } from
+  X,
+  ChevronDown,
+  ChevronUp } from
 "lucide-react";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -46,6 +48,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
   const [activeStatFilter, setActiveStatFilter] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [expandedGoals, setExpandedGoals] = useState({});
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -540,10 +543,29 @@ export default function GoalsAndTasksDashboard({ customer }) {
               const progress = subtasks.length > 0 ? completedSubtasks / subtasks.length * 100 : goal.status === 'done' ? 100 : 0;
 
               return (
-                <div key={goal.id} className="bg-horizon-card/50 p-4 rounded-lg border border-horizon hover:border-horizon-primary/50 transition-colors cursor-pointer" onClick={() => handleEditTask(goal)}>
+                <div key={goal.id} className="bg-horizon-card/50 p-4 rounded-lg border border-horizon hover:border-horizon-primary/50 transition-colors">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-horizon-text mb-2">{goal.name}</h4>
+                      <div className="flex-1 cursor-pointer" onClick={() => handleEditTask(goal)}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <h4 className="font-semibold text-horizon-text">{goal.name}</h4>
+                          {subtasks.length > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedGoals(prev => ({ ...prev, [goal.id]: !prev[goal.id] }));
+                              }}
+                              className="h-6 text-horizon-accent hover:text-horizon-primary"
+                            >
+                              {expandedGoals[goal.id] ? (
+                                <ChevronUp className="w-4 h-4" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4" />
+                              )}
+                            </Button>
+                          )}
+                        </div>
                         <div className="flex items-center gap-4 text-sm text-horizon-accent mb-3 flex-wrap">
                           <div className="flex items-center gap-2">
                             <StatusIcon className={`w-4 h-4 ${statusDisplay.color}`} />
@@ -562,14 +584,46 @@ export default function GoalsAndTasksDashboard({ customer }) {
                             <span>{subtasks.length} משימות</span>
                           </div>
                         </div>
-                        {subtasks.length > 0 &&
-                      <div>
+                        {subtasks.length > 0 && (
+                          <div>
                             <div className="w-full bg-horizon-card rounded-full h-2.5">
                               <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${progress}%`, transition: 'width 0.5s ease-in-out' }}></div>
                             </div>
                             <p className="text-xs text-horizon-accent mt-1">{Math.round(progress)}% הושלם ({completedSubtasks}/{subtasks.length})</p>
                           </div>
-                      }
+                        )}
+                        
+                        {/* תת-משימות - סגורות בברירת מחדל */}
+                        {expandedGoals[goal.id] && subtasks.length > 0 && (
+                          <div className="mt-4 pr-6 space-y-2 border-r-2 border-horizon-primary/30">
+                            {subtasks.map((subtask) => {
+                              const subtaskStatusDisplay = getStatusDisplay(subtask.status);
+                              const SubtaskIcon = subtaskStatusDisplay.icon;
+                              return (
+                                <div
+                                  key={subtask.id}
+                                  className="bg-horizon-card/30 p-3 rounded-lg border border-horizon/50 hover:border-horizon-primary/30 transition-colors cursor-pointer"
+                                  onClick={(e) => {
+                                    if (e.target.closest('button')) return;
+                                    handleEditTask(subtask);
+                                  }}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <SubtaskIcon className={`w-4 h-4 ${subtaskStatusDisplay.color}`} />
+                                      <span className="text-sm text-horizon-text">{subtask.name}</span>
+                                    </div>
+                                    {subtask.end_date && (
+                                      <span className="text-xs text-horizon-accent">
+                                        {format(new Date(subtask.end_date), 'dd/MM', { locale: he })}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <Button

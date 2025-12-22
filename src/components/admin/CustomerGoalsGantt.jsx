@@ -13,7 +13,10 @@ export default function CustomerGoalsGantt({ customer }) {
     const [goals, setGoals] = useState([]);
     const [currentUser, setCurrentUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [collapsedGoals, setCollapsedGoals] = useState({});
+    const [collapsedGoals, setCollapsedGoals] = useState(() => {
+        const initial = {};
+        return initial;
+    });
 
     const fetchData = useCallback(async (showLoadingSpinner = true) => {
         if (!customer?.email) {
@@ -54,6 +57,14 @@ export default function CustomerGoalsGantt({ customer }) {
         });
         setCollapsedGoals(newState);
     };
+
+    useEffect(() => {
+        const initial = {};
+        topLevelGoals.forEach(goal => {
+            initial[goal.id] = true;
+        });
+        setCollapsedGoals(initial);
+    }, [topLevelGoals.length]);
 
     const handleAddGoal = async () => {
         try {
@@ -232,6 +243,14 @@ export default function CustomerGoalsGantt({ customer }) {
                     גאנט יעדים
                 </h2>
                 <div className="flex gap-2">
+                    <Button
+                        onClick={() => toggleAllGoals(!Object.values(collapsedGoals).every(v => v))}
+                        variant="outline"
+                        size="sm"
+                        className="border-horizon text-horizon-accent h-11"
+                    >
+                        {Object.values(collapsedGoals).every(v => v) ? 'פתח הכל' : 'סגור הכל'}
+                    </Button>
                     <Button 
                         onClick={handleExportPDF}
                         variant="outline"
@@ -289,6 +308,8 @@ export default function CustomerGoalsGantt({ customer }) {
                                                     refreshData={() => fetchData(false)}
                                                     allGoals={goals}
                                                     isDragging={snapshot.isDragging}
+                                                    isCollapsed={collapsedGoals[goal.id]}
+                                                    onToggleCollapse={() => setCollapsedGoals(prev => ({ ...prev, [goal.id]: !prev[goal.id] }))}
                                                 />
                                             </div>
                                         )}

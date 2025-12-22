@@ -15,7 +15,8 @@ import {
     Trash2,
     MessageSquare,
     Edit,
-    Check
+    Check,
+    UserPlus
 } from 'lucide-react';
 import { format, parse, isValid } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -28,6 +29,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     const [editedGoal, setEditedGoal] = useState(goal);
     const [isSaving, setIsSaving] = useState(false);
     const [showComments, setShowComments] = useState(false);
+    const [isUpdatingAssignees, setIsUpdatingAssignees] = useState(false);
 
     const statusOptions = [
         { value: 'open', label: 'פתוח', color: 'bg-gray-500' },
@@ -143,16 +145,79 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     };
 
     const handleDelete = async () => {
-        if (!confirm(`האם אתה בטוח שברצונך למחוק את ${isParent ? 'היעד' : 'המשימה'} "${goal.name}"?`)) {
+        // בדיקה אם יש תת-משימות ליעד הזה
+        const subtasks = allGoals.filter((t) => t.parent_id === goal.id);
+        
+        if (subtasks.length > 0) {
+          const confirmMessage = `ליעד "${goal.name}" יש ${subtasks.length} תת-משימות.\n\nמה תרצה לעשות?\n\nלחץ "אישור" למחוק את היעד וכל התת-משימות\nלחץ "ביטול" להסיר את השיוך של התת-משימות (הן יישארו כמשימות עצמאיות)`;
+          
+          const deleteSubtasks = confirm(confirmMessage);
+          
+          try {
+            if (deleteSubtasks) {
+              for (const subtask of subtasks) {
+                await base44.entities.CustomerGoal.update(subtask.id, { is_active: false });
+              }
+              await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
+              alert('היעד וכל התת-משימות נמחקו בהצלחה');
+            } else {
+              for (const subtask of subtasks) {
+                await base44.entities.CustomerGoal.update(subtask.id, { parent_id: null });
+              }
+              await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
+              alert('היעד נמחק והתת-משימות הפכו לעצמאיות');
+            }
+            await refreshData();
+          } catch (error) {
+            console.error('Error deleting goal:', error);
+            alert('שגיאה במחיקת היעד: ' + error.message);
+          }
+        } else {
+          if (!confirm(`האם אתה בטוח שברצונך למחוק את ${isParent ? 'היעד' : 'המשימה'} "${goal.name}"?`)) {
             return;
-        }
+          }
 
-        try {
+          try {
             await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
             await refreshData();
-        } catch (error) {
+          } catch (error) {
             console.error("Error deleting goal:", error);
-            alert('שגיאה במחיקת היעד');
+            alert('שגיאה במחיקת היעד: ' + error.message);
+          }
+        }
+    };
+
+    const handleAddAssignee = async (email) => {
+        if (isUpdatingAssignees) return;
+        setIsUpdatingAssignees(true);
+        try {
+            const currentAssignees = goal.assigned_users || [];
+            if (!currentAssignees.includes(email)) {
+                await base44.entities.CustomerGoal.update(goal.id, {
+                    assigned_users: [...currentAssignees, email]
+                });
+                await refreshData();
+            }
+        } catch (error) {
+            console.error('Error adding assignee:', error);
+        } finally {
+            setIsUpdatingAssignees(false);
+        }
+    };
+
+    const handleRemoveAssignee = async (email) => {
+        if (isUpdatingAssignees) return;
+        setIsUpdatingAssignees(true);
+        try {
+            const currentAssignees = goal.assigned_users || [];
+            await base44.entities.CustomerGoal.update(goal.id, {
+                assigned_users: currentAssignees.filter(e => e !== email)
+            });
+            await refreshData();
+        } catch (error) {
+            console.error('Error removing assignee:', error);
+        } finally {
+            setIsUpdatingAssignees(false);
         }
     };
 
@@ -383,12 +448,67 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-horizon-accent">
-                    {goal.assignee_email && (
-                        <div className="flex items-center gap-1">
-                            <UserIcon className="w-3 h-3" />
-                            <span>{users.find(u => u.email === goal.assignee_email)?.full_name || goal.assignee_email}</span>
-                        </div>
-                    )}
+                    <Popover>
+                        <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1 cursor-pointer hover:bg-horizon-primary/10 rounded px-2 py-1 transition-colors">
+                                {(goal.assigned_users || []).length > 0 ? (
+                                    <div className="flex items-center gap-1">
+                                        {goal.assigned_users.slice(0, 2).map(email => {
+                                            const user = users.find(u => u.email === email);
+                                            return <span key={email} className="text-xs">{user?.full_name || email}</span>;
+                                        })}
+                                        {goal.assigned_users.length > 2 && <span className="text-xs">+{goal.assigned_users.length - 2}</span>}
+                                    </div>
+                                ) : goal.assignee_email ? (
+                                    <span>{users.find(u => u.email === goal.assignee_email)?.full_name || goal.assignee_email}</span>
+                                ) : (
+                                    <span className="text-gray-400">ללא אחראי</span>
+                                )}
+                                <UserPlus className="w-3 h-3 text-horizon-primary" />
+                            </div>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 bg-horizon-dark border-horizon p-3" dir="rtl" onClick={(e) => e.stopPropagation()}>
+                            <div className="space-y-2">
+                                <p className="text-xs font-semibold text-horizon-text">אחראים:</p>
+                                {(goal.assigned_users || []).length > 0 && (
+                                    <div className="space-y-1">
+                                        {goal.assigned_users.map(email => {
+                                            const user = users.find(u => u.email === email);
+                                            return (
+                                                <div key={email} className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
+                                                    <span className="text-xs text-horizon-text">{user?.full_name || email}</span>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => handleRemoveAssignee(email)}
+                                                        className="h-5 w-5 p-0 text-red-400"
+                                                        disabled={isUpdatingAssignees}
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </Button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                
+                                {users.filter(u => !(goal.assigned_users || []).includes(u.email)).length > 0 && (
+                                    <Select onValueChange={handleAddAssignee} disabled={isUpdatingAssignees}>
+                                        <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text h-8 text-xs">
+                                            <SelectValue placeholder="הוסף אחראי..." />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-horizon-dark border-horizon">
+                                            {users.filter(u => !(goal.assigned_users || []).includes(u.email)).map(user => (
+                                                <SelectItem key={user.email} value={user.email} className="text-xs">
+                                                    {user.full_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-horizon-accent">

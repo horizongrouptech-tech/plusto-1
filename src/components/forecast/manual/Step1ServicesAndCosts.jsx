@@ -30,7 +30,13 @@ import { base44 } from '@/api/base44Client';
 
 export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, onNext, onBack }) {
   const [services, setServices] = useState(forecastData.services || []);
-  const [collapsedServices, setCollapsedServices] = useState({});
+  const [collapsedServices, setCollapsedServices] = useState(() => {
+    const initial = {};
+    (forecastData.services || []).forEach((_, idx) => {
+      initial[idx] = true;
+    });
+    return initial;
+  });
   const [searchTerm, setSearchTerm] = useState('');
   
   // ⭐ State לבחירת קטלוג
@@ -223,6 +229,15 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
 
   const toggleServiceCollapse = (index) => {
     setCollapsedServices(prev => ({ ...prev, [index]: !prev[index] }));
+  };
+
+  const toggleAllServices = () => {
+    const allCollapsed = Object.values(collapsedServices).every(val => val === true);
+    const newState = {};
+    services.forEach((_, idx) => {
+      newState[idx] = !allCollapsed;
+    });
+    setCollapsedServices(newState);
   };
 
   const addService = () => {
@@ -471,6 +486,26 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                 </Badge>
               )}
             </div>
+            {services.length > 1 && (
+              <Button
+                onClick={toggleAllServices}
+                variant="outline"
+                size="sm"
+                className="border-horizon text-horizon-accent"
+              >
+                {Object.values(collapsedServices).every(val => val === true) ? (
+                  <>
+                    <ChevronDown className="w-4 h-4 ml-1" />
+                    פתח הכל
+                  </>
+                ) : (
+                  <>
+                    <ChevronUp className="w-4 h-4 ml-1" />
+                    סגור הכל
+                  </>
+                )}
+              </Button>
+            )}
             {services.length > 3 && (
               <div className="w-full md:w-64">
                 <div className="relative">
@@ -524,6 +559,19 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
 
                                   <div className="flex-1 space-y-5">
                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                                     <Button
+                                       onClick={() => toggleServiceCollapse(actualIndex)}
+                                       variant="ghost"
+                                       size="sm"
+                                       className="md:col-span-12 h-8 text-horizon-accent hover:text-horizon-primary justify-start"
+                                     >
+                                       {collapsedServices[actualIndex] ? (
+                                         <ChevronDown className="w-4 h-4 ml-1" />
+                                       ) : (
+                                         <ChevronUp className="w-4 h-4 ml-1" />
+                                       )}
+                                       {collapsedServices[actualIndex] ? 'הצג פרטים' : 'הסתר פרטים'}
+                                     </Button>
                                      {/* שם המוצר - 5 עמודות */}
                                      <div className="md:col-span-5">
                                        <Label className="text-horizon-text flex items-center gap-2 mb-2 font-semibold">
@@ -602,9 +650,11 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                          מחק
                                        </Button>
                                      </div>
-                                   </div>
+                                     </div>
 
-                                    <div className="bg-gradient-to-l from-orange-500/5 to-transparent border-r-2 border-orange-500/30 pr-4 py-3 rounded-lg">
+                                     {!collapsedServices[actualIndex] && (
+                                     <>
+                                     <div className="bg-gradient-to-l from-orange-500/5 to-transparent border-r-2 border-orange-500/30 pr-4 py-3 rounded-lg">
                                       <div className="flex items-center justify-between mb-3">
                                         <Label className="text-horizon-text flex items-center gap-2 font-semibold">
                                           <DollarSign className="w-4 h-4 text-orange-400" />
@@ -784,12 +834,14 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                         <p className={`text-2xl font-bold ${(service.calculated?.gross_margin_percentage || 0) >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
                                           {(service.calculated?.gross_margin_percentage || 0).toFixed(1)}%
                                         </p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
+                                        </div>
+                                        </div>
+                                        </>
+                                        )}
+                                        </div>
+                                        </div>
+                                        </CardContent>
+                                        </Card>
                           </div>
                         )}
                       </Draggable>

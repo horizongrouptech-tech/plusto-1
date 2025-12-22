@@ -1,11 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, User, Target, Clock, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar, User, Target, Clock, CheckCircle2, RefreshCw, UserPlus, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { base44 } from '@/api/base44Client';
+import { useUsers } from '../../shared/UsersContext';
 
 export default function TaskCard({ task, customer, parentGoal, onTaskClick, onMarkAsDone, isDragging }) {
+  const [isUpdatingAssignees, setIsUpdatingAssignees] = useState(false);
+  const { allUsers = [] } = useUsers();
+  
   const getCustomerGroupBadgeColor = (group) => {
     if (group === 'A') return 'bg-[#32acc1] text-white';
     if (group === 'B') return 'bg-[#fc9f67] text-white';
@@ -20,6 +27,41 @@ export default function TaskCard({ task, customer, parentGoal, onTaskClick, onMa
       default: return 'border-r-4 border-blue-500';
     }
   };
+
+  const handleAddAssignee = async (email) => {
+    if (isUpdatingAssignees) return;
+    setIsUpdatingAssignees(true);
+    try {
+      const currentAssignees = task.assigned_users || [];
+      if (!currentAssignees.includes(email)) {
+        await base44.entities.CustomerGoal.update(task.id, {
+          assigned_users: [...currentAssignees, email]
+        });
+      }
+    } catch (error) {
+      console.error('Error adding assignee:', error);
+    } finally {
+      setIsUpdatingAssignees(false);
+    }
+  };
+
+  const handleRemoveAssignee = async (email) => {
+    if (isUpdatingAssignees) return;
+    setIsUpdatingAssignees(true);
+    try {
+      const currentAssignees = task.assigned_users || [];
+      await base44.entities.CustomerGoal.update(task.id, {
+        assigned_users: currentAssignees.filter(e => e !== email)
+      });
+    } catch (error) {
+      console.error('Error removing assignee:', error);
+    } finally {
+      setIsUpdatingAssignees(false);
+    }
+  };
+
+  const assignedUsers = task.assigned_users || [];
+  const availableUsers = allUsers.filter(u => !assignedUsers.includes(u.email));
 
   return (
     <div
@@ -77,6 +119,70 @@ export default function TaskCard({ task, customer, parentGoal, onTaskClick, onMa
             <Target className="w-3 h-3 flex-shrink-0" />
           </div>
         )}
+        
+        {/* אחראים - עם אפשרות עריכה */}
+        <Popover>
+          <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-1 justify-end cursor-pointer hover:bg-horizon-primary/10 rounded px-1 py-0.5 transition-colors">
+              {assignedUsers.length > 0 ? (
+                <div className="flex items-center gap-1 flex-wrap justify-end">
+                  {assignedUsers.slice(0, 2).map(email => {
+                    const user = allUsers.find(u => u.email === email);
+                    return (
+                      <span key={email} className="truncate">{user?.full_name || email}</span>
+                    );
+                  })}
+                  {assignedUsers.length > 2 && <span>+{assignedUsers.length - 2}</span>}
+                </div>
+              ) : (
+                <span className="text-gray-400">ללא אחראי</span>
+              )}
+              <UserPlus className="w-3 h-3 flex-shrink-0 text-horizon-primary" />
+            </div>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 bg-horizon-dark border-horizon p-3" dir="rtl" onClick={(e) => e.stopPropagation()}>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-horizon-text mb-2">אחראים על המשימה:</p>
+              
+              {assignedUsers.length > 0 && (
+                <div className="space-y-1 mb-2">
+                  {assignedUsers.map(email => {
+                    const user = allUsers.find(u => u.email === email);
+                    return (
+                      <div key={email} className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
+                        <span className="text-xs text-horizon-text">{user?.full_name || email}</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRemoveAssignee(email)}
+                          className="h-5 w-5 p-0 text-red-400 hover:text-red-300"
+                          disabled={isUpdatingAssignees}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              
+              {availableUsers.length > 0 && (
+                <Select onValueChange={handleAddAssignee} disabled={isUpdatingAssignees}>
+                  <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text h-8 text-xs">
+                    <SelectValue placeholder="הוסף אחראי..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-horizon-dark border-horizon">
+                    {availableUsers.map(user => (
+                      <SelectItem key={user.email} value={user.email} className="text-xs">
+                        {user.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* כפתור סיום מהיר */}
