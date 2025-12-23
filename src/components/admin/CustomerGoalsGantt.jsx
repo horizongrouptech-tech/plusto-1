@@ -50,35 +50,6 @@ export default function CustomerGoalsGantt({ customer }) {
         }
     }, [customer?.email]);
 
-    const handleAddGoal = async () => {
-        try {
-            const newOrderIndex = goals.filter(g => !g.parent_id).length;
-            const defaultEndDate = new Date();
-            defaultEndDate.setDate(defaultEndDate.getDate() + 30); // 30 ימים מהיום
-            
-            await base44.entities.CustomerGoal.create({
-                customer_email: customer.email,
-                name: "יעד חדש (לחץ לעריכה)",
-                status: 'open',
-                order_index: newOrderIndex,
-                end_date: defaultEndDate.toISOString().split('T')[0] // פורמט YYYY-MM-DD
-            });
-            await fetchData(false);
-        } catch (error) {
-            console.error("Error adding new goal:", error);
-        }
-    };
-
-    const handleExportPDF = () => {
-        try {
-            const htmlContent = generateGoalsHTML(goals, customer);
-            openPrintWindow(htmlContent, `יעדים_${customer.business_name || customer.email}`);
-        } catch (error) {
-            console.error('Error exporting goals PDF:', error);
-            alert('שגיאה בייצוא PDF');
-        }
-    };
-    
     const { topLevelGoals, subtasksByGoal } = useMemo(() => {
         const calculateParentGoalStatus = (subtasks) => {
             if (!subtasks || subtasks.length === 0) {
@@ -141,6 +112,35 @@ export default function CustomerGoalsGantt({ customer }) {
             setCollapsedGoals(initial);
         }
     }, [topLevelGoals.length]);
+
+    const handleAddGoal = async () => {
+        try {
+            const newOrderIndex = goals.filter(g => !g.parent_id).length;
+            const defaultEndDate = new Date();
+            defaultEndDate.setDate(defaultEndDate.getDate() + 30); // 30 ימים מהיום
+            
+            await base44.entities.CustomerGoal.create({
+                customer_email: customer.email,
+                name: "יעד חדש (לחץ לעריכה)",
+                status: 'open',
+                order_index: newOrderIndex,
+                end_date: defaultEndDate.toISOString().split('T')[0] // פורמט YYYY-MM-DD
+            });
+            await fetchData(false);
+        } catch (error) {
+            console.error("Error adding new goal:", error);
+        }
+    };
+
+    const handleExportPDF = () => {
+        try {
+            const htmlContent = generateGoalsHTML(goals, customer);
+            openPrintWindow(htmlContent, `יעדים_${customer.business_name || customer.email}`);
+        } catch (error) {
+            console.error('Error exporting goals PDF:', error);
+            alert('שגיאה בייצוא PDF');
+        }
+    };
 
     // טעינת פרטי מנהל הכספים המשויך ללקוח (אם קיים)
     const { data: financialManager } = useQuery({
