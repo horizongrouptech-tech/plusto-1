@@ -165,10 +165,10 @@ export default function FinanceManagerPerformanceTable() {
             className="border-yellow-500 text-yellow-400 hover:bg-yellow-500/10"
             asChild
           >
-            <a href={createPageUrl('TrialDashboard')}>
+            <Link to={createPageUrl('TrialDashboard')}>
               <FlaskConical className="w-4 h-4 ml-2" />
               דף ניסיון
-            </a>
+            </Link>
           </Button>
           <Button
             onClick={handleCalculatePerformance}
