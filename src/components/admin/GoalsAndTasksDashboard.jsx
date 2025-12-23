@@ -282,8 +282,11 @@ export default function GoalsAndTasksDashboard({ customer }) {
 
   }
 
-  const { parentGoals } = identifyGoals;
-  const openParentGoals = parentGoals.filter((g) => g.status !== 'done' && g.status !== 'cancelled');
+  const { parentGoals, parentGoalIds } = identifyGoals;
+  const openParentGoals = useMemo(() => 
+    parentGoals.filter((g) => g.status !== 'done' && g.status !== 'cancelled'),
+    [parentGoals]
+  );
 
   return (
     <div className="p-4 md:p-6 space-y-6" dir="rtl">
