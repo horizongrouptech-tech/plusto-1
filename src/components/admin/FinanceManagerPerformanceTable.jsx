@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useTransition } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,7 @@ import { createPageUrl } from '@/utils';
 export default function FinanceManagerPerformanceTable() {
   const [activeView, setActiveView] = useState('performance');
   const [isCalculating, setIsCalculating] = useState(false);
+  const [isPending, startTransition] = useTransition();
   
   const queryClient = useQueryClient();
 
