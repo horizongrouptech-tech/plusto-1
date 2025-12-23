@@ -16,7 +16,7 @@ import {
   FlaskConical
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { createPageUrl } from '@/utils';
+import { createPageUrl } from '../../utils';
 
 export default function FinanceManagerPerformanceTable() {
   const [activeView, setActiveView] = useState('performance');
