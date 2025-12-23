@@ -1,61 +1,57 @@
-import ActionBank from './pages/ActionBank';
-import AddProduct from './pages/AddProduct';
-import BusinessForecast from './pages/BusinessForecast';
-import CatalogPage from './pages/CatalogPage';
-import Contact from './pages/Contact';
-import CustomerManagement from './pages/CustomerManagement';
 import Dashboard from './pages/Dashboard';
-import FAQ from './pages/FAQ';
-import FileUpload from './pages/FileUpload';
-import FinancialFlow from './pages/FinancialFlow';
-import Home from './pages/Home';
-import InitialSetup from './pages/InitialSetup';
-import ManageProducts from './pages/ManageProducts';
-import MyLeads from './pages/MyLeads';
-import PendingApproval from './pages/PendingApproval';
-import ProductCatalog from './pages/ProductCatalog';
-import Promotions from './pages/Promotions';
+import AddProduct from './pages/AddProduct';
 import Recommendations from './pages/Recommendations';
-import StrategicMoves from './pages/StrategicMoves';
-import SupplierAnalysis from './pages/SupplierAnalysis';
-import SupportTicket from './pages/SupportTicket';
-import WebsiteScan from './pages/WebsiteScan';
-import Welcome from './pages/Welcome';
-import WhatsAppTest from './pages/WhatsAppTest';
-import TaskManagement from './pages/TaskManagement';
+import ActionBank from './pages/ActionBank';
 import Admin from './pages/Admin';
-import TestCRMDashboard from './pages/TestCRMDashboard';
+import SupplierAnalysis from './pages/SupplierAnalysis';
+import CustomerManagement from './pages/CustomerManagement';
+import ManageProducts from './pages/ManageProducts';
+import FAQ from './pages/FAQ';
+import Contact from './pages/Contact';
+import WebsiteScan from './pages/WebsiteScan';
+import SupportTicket from './pages/SupportTicket';
+import FinancialFlow from './pages/FinancialFlow';
+import FileUpload from './pages/FileUpload';
+import ProductCatalog from './pages/ProductCatalog';
+import BusinessForecast from './pages/BusinessForecast';
+import StrategicMoves from './pages/StrategicMoves';
+import CatalogPage from './pages/CatalogPage';
+import WhatsAppTest from './pages/WhatsAppTest';
+import Promotions from './pages/Promotions';
+import Welcome from './pages/Welcome';
+import InitialSetup from './pages/InitialSetup';
+import PendingApproval from './pages/PendingApproval';
+import MyLeads from './pages/MyLeads';
+import TaskManagement from './pages/TaskManagement';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "ActionBank": ActionBank,
-    "AddProduct": AddProduct,
-    "BusinessForecast": BusinessForecast,
-    "CatalogPage": CatalogPage,
-    "Contact": Contact,
-    "CustomerManagement": CustomerManagement,
     "Dashboard": Dashboard,
-    "FAQ": FAQ,
-    "FileUpload": FileUpload,
-    "FinancialFlow": FinancialFlow,
-    "Home": Home,
-    "InitialSetup": InitialSetup,
-    "ManageProducts": ManageProducts,
-    "MyLeads": MyLeads,
-    "PendingApproval": PendingApproval,
-    "ProductCatalog": ProductCatalog,
-    "Promotions": Promotions,
+    "AddProduct": AddProduct,
     "Recommendations": Recommendations,
-    "StrategicMoves": StrategicMoves,
-    "SupplierAnalysis": SupplierAnalysis,
-    "SupportTicket": SupportTicket,
-    "WebsiteScan": WebsiteScan,
-    "Welcome": Welcome,
-    "WhatsAppTest": WhatsAppTest,
-    "TaskManagement": TaskManagement,
+    "ActionBank": ActionBank,
     "Admin": Admin,
-    "TestCRMDashboard": TestCRMDashboard,
+    "SupplierAnalysis": SupplierAnalysis,
+    "CustomerManagement": CustomerManagement,
+    "ManageProducts": ManageProducts,
+    "FAQ": FAQ,
+    "Contact": Contact,
+    "WebsiteScan": WebsiteScan,
+    "SupportTicket": SupportTicket,
+    "FinancialFlow": FinancialFlow,
+    "FileUpload": FileUpload,
+    "ProductCatalog": ProductCatalog,
+    "BusinessForecast": BusinessForecast,
+    "StrategicMoves": StrategicMoves,
+    "CatalogPage": CatalogPage,
+    "WhatsAppTest": WhatsAppTest,
+    "Promotions": Promotions,
+    "Welcome": Welcome,
+    "InitialSetup": InitialSetup,
+    "PendingApproval": PendingApproval,
+    "MyLeads": MyLeads,
+    "TaskManagement": TaskManagement,
 }
 
 export const pagesConfig = {

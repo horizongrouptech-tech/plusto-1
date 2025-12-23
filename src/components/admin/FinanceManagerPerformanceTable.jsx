@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -12,12 +13,9 @@ import {
   Loader2,
   RefreshCw,
   BarChart3,
-  Trophy,
-  FlaskConical
+  Trophy
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
 
 export default function FinanceManagerPerformanceTable() {
   const [activeView, setActiveView] = useState('performance');
@@ -159,15 +157,6 @@ export default function FinanceManagerPerformanceTable() {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-horizon-text">ביצועי מנהלי כספים</h2>
         <div className="flex gap-3">
-          <Link to={createPageUrl('TestCRMDashboard')}>
-            <Button
-              variant="outline"
-              className="border-yellow-500 text-yellow-400 hover:bg-yellow-500/10"
-            >
-              <FlaskConical className="w-4 h-4 ml-2" />
-              דף ניסיון
-            </Button>
-          </Link>
           <Button
             onClick={handleCalculatePerformance}
             disabled={isCalculating}
