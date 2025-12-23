@@ -963,7 +963,7 @@ export default function AdminPage() {
   const [dailyStats, setDailyStats] = useState(null);
   const [overallStats, setOverallStats] = useState(null); 
   const [showManualRecommendationModal, setShowManualRecommendationModal] = useState(false); 
-  const [manualRecommendation] = useState({ 
+  const [manualRecommendation, setManualRecommendation] = useState({ 
     title: '',
     description: '',
     category: 'pricing',
@@ -977,7 +977,7 @@ export default function AdminPage() {
   // Removed: userUploadFile, userUploadStatus, userUploadResults from here
   
 
-  const [showFileUpload] = useState(false);
+  const [showFileUpload, setShowFileUpload] = useState(false);
   const [suppliers, setSuppliers] = useState([]);
   const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
   const [showAssignSupplierUserModal, setShowAssignSupplierUserModal] = useState(false);
@@ -990,11 +990,11 @@ export default function AdminPage() {
   const [customerTypeFilter, setCustomerTypeFilter] = useState('all');
   const [togglingCustomer, setTogglingCustomer] = useState(null);
 
-  const [accuracyGuideOpen] = useState(false);
+  const [accuracyGuideOpen, setAccuracyGuideOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState("overview");
 
-  const [customerDetailsTimeframe] = useState(30);
+  const [customerDetailsTimeframe, setCustomerDetailsTimeframe] = useState(30);
 
   const [showDataImprovementModal, setShowDataImprovementModal] = useState(false);
   const [products, setProducts] = useState([]);
@@ -1016,13 +1016,13 @@ export default function AdminPage() {
 
   const [irrelevantRecs, setIrrelevantRecs] = useState([]);
   const [isIrrelevantModalOpen, setIsIrrelevantModalOpen] = useState(false);
-  const [recommendationToManage] = useState(null); 
+  const [recommendationToManage, setRecommendationToManage] = useState(null); 
 
   const [showArchivedRecommendations, setShowArchivedRecommendations] = useState(false);
   const [archivedRecommendations, setArchivedRecommendations] = useState([]);
 
   const [pendingRequests, setPendingRequests] = useState([]);
-  const [businessMoves] = useState([]); // State for BusinessMoves
+  const [businessMoves, setBusinessMoves] = useState([]); // State for BusinessMoves
 
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [selectedRecommendationForUpgrade, setSelectedRecommendationForUpgrade] = useState(null); 
@@ -1040,7 +1040,7 @@ export default function AdminPage() {
   const [existingStrategicInputForForm, setExistingStrategicInputForForm] = useState(null); 
   const [isInitiatingChat, setIsInitiatingChat] = useState(false);
   const [showRecommendationOptionsModal, setShowRecommendationOptionsModal] = useState(false); // NEW STATE
-  const [performanceData] = useState([]);
+  const [performanceData, setPerformanceData] = useState([]);
   const [communicationThreads, setCommunicationThreads] = useState([]);
   const [showChatBox, setShowChatBox] = useState(false);
   const [selectedEntityForChat, setSelectedEntityForChat] = useState(null);
@@ -1250,7 +1250,7 @@ export default function AdminPage() {
   // ... existing code ...
   const handlePartnerToggle = async (supplierId, isPartner) => {
     try {
-        // עדכון אופטימסטי של ה-UI: משנה את ה-state לפני קבלת אישור מהשרת
+        // עדכון אופטימיסטי של ה-UI: משנה את ה-state לפני קבלת אישור מהשרת
         setSuppliers(prevSuppliers =>
             prevSuppliers.map(s => (s.id === supplierId ? { ...s, is_partner_supplier: isPartner } : s))
         );
@@ -1797,8 +1797,8 @@ export default function AdminPage() {
         }
         // --- סוף הקוד שצריך להוסיף ---
         const response = await generateBusinessPlanText({
-         forecast: forecastObj,         // שלח את אובייקט התחזית המ מלא
-         customerData: customerObject,     // שלח את אובייקט הלקוח המ מלא
+         forecast: forecastObj,         // שלח את אובייקט התחזית המלא
+         customerData: customerObject,     // שלח את אובייקט הלקוח המלא
          strategicInput: strategicInputObject // שלח את אובייקט התכנון האסטרטגי המלא
         });
         
@@ -2229,14 +2229,14 @@ export default function AdminPage() {
       setRecommendations(prev => [...prev, createdRec]); // Optimistic update
       
       setShowManualRecommendationModal(false); 
-      // setManualRecommendation({ // No need to reset state here as it's passed as prop
-      //   title: '',
-      //   description: '',
-      //   category: 'pricing',
-      //   expected_profit: 0,
-      //   priority: 'medium',
-      //   action_steps: ['', '', '', '']
-      // });
+      setManualRecommendation({ 
+        title: '',
+        description: '',
+        category: 'pricing',
+        expected_profit: 0,
+        priority: 'medium',
+        action_steps: ['', '', '', '']
+      });
 
       alert(`ההמלצה נוצרה בהצלחה עבור ${selectedCustomer.business_name || selectedCustomer.full_name}!`);
     } catch (error) {
@@ -2247,26 +2247,26 @@ export default function AdminPage() {
   };
 
   const handleActionStepChange = (index, value) => {
-    // setManualRecommendation(prev => ({ // This state is passed as prop, cannot be directly modified like this
-    //   ...prev,
-    //   action_steps: prev.action_steps.map((step, i) => i === index ? value : step)
-    // }));
+    setManualRecommendation(prev => ({
+      ...prev,
+      action_steps: prev.action_steps.map((step, i) => i === index ? value : step)
+    }));
   };
 
   const addNewRecActionStep = () => {
-    // setManualRecommendation(prev => ({ // This state is passed as prop, cannot be directly modified like this
-    //   ...prev,
-    //   action_steps: [...prev.action_steps, '']
-    // }));
+    setManualRecommendation(prev => ({
+      ...prev,
+      action_steps: [...prev.action_steps, '']
+    }));
   };
 
   const removeNewRecActionStep = (index) => {
-    // if (manualRecommendation.action_steps.length > 1) { // Ensure at least one action step remains
-    //   setManualRecommendation(prev => ({ // This state is passed as prop, cannot be directly modified like this
-    //     ...prev,
-    //     action_steps: prev.action_steps.filter((_, i) => i !== index)
-    //   }));
-    // }
+    if (manualRecommendation.action_steps.length > 1) { // Ensure at least one action step remains
+      setManualRecommendation(prev => ({
+        ...prev,
+        action_steps: prev.action_steps.filter((_, i) => i !== index)
+      }));
+    }
   };
 
   // ===== שינוי סטטוס לקוח עם עדכון אופטימסטי =====
@@ -2337,7 +2337,7 @@ export default function AdminPage() {
     setShowAddSupplierModal(true);
   };
 
-  const handleSupplierAdded = () => {
+  const handleSupplierAdded = (newSupplier) => {
     // רענן את נתוני הספקים לאחר הוספה
     loadInitialData(); // לטעון מחדש את כל הנתונים כולל הלידים והמשתמשים המשויכים
     setShowAddSupplierModal(false);
@@ -2431,7 +2431,7 @@ export default function AdminPage() {
     return filteredCustomers; // Return the already filtered list
   };
 
-  const handleShowIrrelevantRecs = async () => {
+  const handleShowIrrelevantRecs = async (customer) => {
     setIsIrrelevantModalOpen(true);
   };
   
@@ -2759,7 +2759,7 @@ export default function AdminPage() {
       <div className="min-h-screen bg-horizon-dark p-6 flex flex-col items-center justify-center">
         <h1 className="text-2xl font-bold mb-4 text-horizon-text">אין לך הרשאת גישה לדף זה.</h1>
         <Button asChild className="btn-horizon-primary">
-          <Link to={createPageUrl("TaskManagement")}>חזור לדשבורד</Link>
+          <Link to={createPageUrl("Dashboard")}>חזור לדשבורד</Link>
         </Button>
       </div>
     );
@@ -2897,30 +2897,6 @@ export default function AdminPage() {
               </TabsList>
 
               <TabsContent value="overview">
-                {isAdmin && (
-                  <div className="mb-6">
-                    <Card className="card-horizon bg-purple-500/10 border-purple-500/30">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="text-lg font-semibold text-purple-400 mb-1">דף ניסיון - CRM חדש</h3>
-                            <p className="text-sm text-horizon-accent">עיצוב חדש של מערכת ניהול הלקוחות - לחץ לצפייה</p>
-                          </div>
-                          <Button 
-                            asChild
-                            className="bg-purple-500 hover:bg-purple-600 text-white"
-                          >
-                            <Link to={createPageUrl("TaskManagement")}>
-                              <Target className="w-4 h-4 ml-2" />
-                              עבור לדף ניסיון
-                            </Link>
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
-                
                 <Suspense fallback={<div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>}>
                   <DailyTasksDashboard currentUser={currentUser} isAdmin={isAdmin} />
                 </Suspense>
@@ -3450,7 +3426,7 @@ export default function AdminPage() {
                     <Label className="block text-sm font-medium text-horizon-text mb-2">כותרת *</Label>
                     <Input
                       value={manualRecommendation.title}
-                      onChange={(e) => {}} // No longer updating here
+                      onChange={(e) => setManualRecommendation({...manualRecommendation, title: e.target.value})}
                       placeholder="הכנס כותרת להמלצה"
                       className="bg-horizon-card border-horizon text-horizon-text"
                       dir="rtl"
@@ -3461,7 +3437,7 @@ export default function AdminPage() {
                     <Label className="block text-sm font-medium text-horizon-text mb-2">תיאור מפורט *</Label>
                     <Textarea
                       value={manualRecommendation.description}
-                      onChange={(e) => {}} // No longer updating here
+                      onChange={(e) => setManualRecommendation({...manualRecommendation, description: e.target.value})}
                       placeholder="הכנס תיאור מפורט של ההמלצה"
                       className="bg-horizon-card border-horizon text-horizon-text h-24"
                       dir="rtl"
@@ -3473,7 +3449,7 @@ export default function AdminPage() {
                       <Label className="block text-sm font-medium text-horizon-text mb-2">עדיפות</Label>
                       <select
                         value={manualRecommendation.priority}
-                        onChange={(e) => {}} // No longer updating here
+                        onChange={(e) => setManualRecommendation({...manualRecommendation, priority: e.target.value})}
                         className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text"
                         dir="rtl"
                       >
@@ -3488,7 +3464,7 @@ export default function AdminPage() {
                       <Input
                         type="number"
                         value={manualRecommendation.expected_profit}
-                        onChange={(e) => {}} // No longer updating here
+                        onChange={(e) => setManualRecommendation({...manualRecommendation, expected_profit: parseFloat(e.target.value) || 0})}
                         placeholder="0"
                         className="bg-horizon-card border-horizon text-horizon-text"
                         dir="rtl"
@@ -3499,7 +3475,7 @@ export default function AdminPage() {
                       <Label className="block text-sm font-medium text-horizon-text mb-2">קטגוריה</Label>
                       <select
                         value={manualRecommendation.category}
-                        onChange={(e) => {}} // No longer updating here
+                        onChange={(e) => setManualRecommendation({...manualRecommendation, category: e.target.value})}
                         className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text"
                         dir="rtl"
                       >
