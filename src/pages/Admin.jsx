@@ -1250,7 +1250,7 @@ export default function AdminPage() {
   // ... existing code ...
   const handlePartnerToggle = async (supplierId, isPartner) => {
     try {
-        // עדכון אופטימיסטי של ה-UI: משנה את ה-state לפני קבלת אישור מהשרת
+        // עדכון אופטימסטי של ה-UI: משנה את ה-state לפני קבלת אישור מהשרת
         setSuppliers(prevSuppliers =>
             prevSuppliers.map(s => (s.id === supplierId ? { ...s, is_partner_supplier: isPartner } : s))
         );
@@ -2897,6 +2897,28 @@ export default function AdminPage() {
               </TabsList>
 
               <TabsContent value="overview">
+                <div className="mb-6">
+                  <Card className="card-horizon bg-purple-500/10 border-purple-500/30">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-lg font-semibold text-purple-400 mb-1">דף ניסיון - CRM חדש</h3>
+                          <p className="text-sm text-horizon-accent">עיצוב חדש של מערכת ניהול הלקוחות - לחץ לצפייה</p>
+                        </div>
+                        <Button 
+                          asChild
+                          className="bg-purple-500 hover:bg-purple-600 text-white"
+                        >
+                          <Link to={createPageUrl("ExperimentalCRM")}>
+                            <Target className="w-4 h-4 ml-2" />
+                            עבור לדף ניסיון
+                          </Link>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+                
                 <Suspense fallback={<div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>}>
                   <DailyTasksDashboard currentUser={currentUser} isAdmin={isAdmin} />
                 </Suspense>

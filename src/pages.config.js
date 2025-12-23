@@ -1,57 +1,61 @@
-import Dashboard from './pages/Dashboard';
-import AddProduct from './pages/AddProduct';
-import Recommendations from './pages/Recommendations';
 import ActionBank from './pages/ActionBank';
+import AddProduct from './pages/AddProduct';
 import Admin from './pages/Admin';
-import SupplierAnalysis from './pages/SupplierAnalysis';
-import CustomerManagement from './pages/CustomerManagement';
-import ManageProducts from './pages/ManageProducts';
-import FAQ from './pages/FAQ';
-import Contact from './pages/Contact';
-import WebsiteScan from './pages/WebsiteScan';
-import SupportTicket from './pages/SupportTicket';
-import FinancialFlow from './pages/FinancialFlow';
-import FileUpload from './pages/FileUpload';
-import ProductCatalog from './pages/ProductCatalog';
 import BusinessForecast from './pages/BusinessForecast';
-import StrategicMoves from './pages/StrategicMoves';
 import CatalogPage from './pages/CatalogPage';
-import WhatsAppTest from './pages/WhatsAppTest';
-import Promotions from './pages/Promotions';
-import Welcome from './pages/Welcome';
+import Contact from './pages/Contact';
+import CustomerManagement from './pages/CustomerManagement';
+import Dashboard from './pages/Dashboard';
+import FAQ from './pages/FAQ';
+import FileUpload from './pages/FileUpload';
+import FinancialFlow from './pages/FinancialFlow';
+import Home from './pages/Home';
 import InitialSetup from './pages/InitialSetup';
-import PendingApproval from './pages/PendingApproval';
+import ManageProducts from './pages/ManageProducts';
 import MyLeads from './pages/MyLeads';
+import PendingApproval from './pages/PendingApproval';
+import ProductCatalog from './pages/ProductCatalog';
+import Promotions from './pages/Promotions';
+import Recommendations from './pages/Recommendations';
+import StrategicMoves from './pages/StrategicMoves';
+import SupplierAnalysis from './pages/SupplierAnalysis';
+import SupportTicket from './pages/SupportTicket';
 import TaskManagement from './pages/TaskManagement';
+import WebsiteScan from './pages/WebsiteScan';
+import Welcome from './pages/Welcome';
+import WhatsAppTest from './pages/WhatsAppTest';
+import ExperimentalCRM from './pages/ExperimentalCRM';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Dashboard": Dashboard,
-    "AddProduct": AddProduct,
-    "Recommendations": Recommendations,
     "ActionBank": ActionBank,
+    "AddProduct": AddProduct,
     "Admin": Admin,
-    "SupplierAnalysis": SupplierAnalysis,
-    "CustomerManagement": CustomerManagement,
-    "ManageProducts": ManageProducts,
-    "FAQ": FAQ,
-    "Contact": Contact,
-    "WebsiteScan": WebsiteScan,
-    "SupportTicket": SupportTicket,
-    "FinancialFlow": FinancialFlow,
-    "FileUpload": FileUpload,
-    "ProductCatalog": ProductCatalog,
     "BusinessForecast": BusinessForecast,
-    "StrategicMoves": StrategicMoves,
     "CatalogPage": CatalogPage,
-    "WhatsAppTest": WhatsAppTest,
-    "Promotions": Promotions,
-    "Welcome": Welcome,
+    "Contact": Contact,
+    "CustomerManagement": CustomerManagement,
+    "Dashboard": Dashboard,
+    "FAQ": FAQ,
+    "FileUpload": FileUpload,
+    "FinancialFlow": FinancialFlow,
+    "Home": Home,
     "InitialSetup": InitialSetup,
-    "PendingApproval": PendingApproval,
+    "ManageProducts": ManageProducts,
     "MyLeads": MyLeads,
+    "PendingApproval": PendingApproval,
+    "ProductCatalog": ProductCatalog,
+    "Promotions": Promotions,
+    "Recommendations": Recommendations,
+    "StrategicMoves": StrategicMoves,
+    "SupplierAnalysis": SupplierAnalysis,
+    "SupportTicket": SupportTicket,
     "TaskManagement": TaskManagement,
+    "WebsiteScan": WebsiteScan,
+    "Welcome": Welcome,
+    "WhatsAppTest": WhatsAppTest,
+    "ExperimentalCRM": ExperimentalCRM,
 }
 
 export const pagesConfig = {
