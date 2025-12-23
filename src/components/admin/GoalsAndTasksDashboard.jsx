@@ -189,7 +189,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
       await base44.entities.CustomerGoal.update(taskId, { status: 'done' });
 
       // רענון מיידי
-      await queryClient.invalidateQueries(['customerGoals', customer.email]);
+      queryClient.invalidateQueries(['customerGoals', customer.email]);
 
       // סנכרון לפיירברי ברקע - לא חוסם (לא ממתינים)
       syncTaskToFireberry({ taskId }).catch(error => {
@@ -1477,6 +1477,58 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
 
       // עדכון מיידי
       onSuccess();
+
+      // שליחת נוטיפיקציות למנהל הכספים המשויך ללקוח - ברקע
+      if (customer.assigned_financial_manager_email && customer.assigned_financial_manager_email !== currentUser?.email) {
+        Promise.resolve().then(async () => {
+          try {
+            await base44.entities.Notification.create({
+              recipient_email: customer.assigned_financial_manager_email,
+              sender_email: currentUser?.email,
+              type: 'new_goal_created',
+              title: `יעד חדש נוצר: ${name.trim()}`,
+              message: `${currentUser?.full_name || currentUser?.email} יצר/יצרה יעד חדש "${name.trim()}" עבור הלקוח ${customer.business_name || customer.full_name}`,
+              related_entity_id: newGoal.id,
+              related_entity_type: 'CustomerGoal',
+              priority: 'high'
+            });
+
+            await base44.integrations.Core.SendEmail({
+              to: customer.assigned_financial_manager_email,
+              subject: `יעד חדש נוצר - ${name.trim()}`,
+              body: `שלום,\n\n${currentUser?.full_name || currentUser?.email} יצר/יצרה יעד חדש:\n\nשם היעד: ${name.trim()}\nלקוח: ${customer.business_name || customer.full_name}\nתאריך יעד: ${endDate || 'לא הוגדר'}\n\n${notes ? `פרטים: ${notes}\n\n` : ''}היכנס למערכת לצפייה ועדכון.`
+            });
+          } catch (error) {
+            console.error('Error sending notification to financial manager:', error);
+          }
+        }).catch(console.error);
+      }
+
+      // שליחת התראה לאחראי היעד (אם שונה מהמשתמש הנוכחי ומנהל הכספים)
+      if (assigneeEmail && assigneeEmail !== currentUser?.email && assigneeEmail !== customer.assigned_financial_manager_email) {
+        Promise.resolve().then(async () => {
+          try {
+            await base44.entities.Notification.create({
+              recipient_email: assigneeEmail,
+              sender_email: currentUser?.email,
+              type: 'assigned_to_goal',
+              title: `שויכת ליעד: ${name.trim()}`,
+              message: `${currentUser?.full_name || currentUser?.email} שייך/שייכה אותך כאחראי/ת על היעד "${name.trim()}"`,
+              related_entity_id: newGoal.id,
+              related_entity_type: 'CustomerGoal',
+              priority: 'high'
+            });
+
+            await base44.integrations.Core.SendEmail({
+              to: assigneeEmail,
+              subject: `שויכת ליעד חדש - ${name.trim()}`,
+              body: `שלום,\n\n${currentUser?.full_name || currentUser?.email} שייך/שייכה אותך כאחראי/ת על היעד:\n\nשם היעד: ${name.trim()}\nלקוח: ${customer.business_name || customer.full_name}\nתאריך יעד: ${endDate || 'לא הוגדר'}\n\n${notes ? `פרטים: ${notes}\n\n` : ''}היכנס למערכת לצפייה ועדכון.`
+            });
+          } catch (error) {
+            console.error('Error sending notification to assignee:', error);
+          }
+        }).catch(console.error);
+      }
 
       // שליחת נוטיפיקציות ומיילים ברקע - לא חוסם
       Promise.all(taggedUsers.map(async (taggedEmail) => {

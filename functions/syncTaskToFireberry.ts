@@ -105,6 +105,9 @@ Deno.serve(async (req) => {
     };
 
     // בניית הנתונים לשליחה לפיירברי
+    // הבחנה בין יעד למשימה
+    const isGoal = task.task_type === 'goal';
+    
     const fireberryPayload = {
       taskid: task.fireberry_task_id || null,
       pcfPlastoTaskId: task.id,
@@ -118,7 +121,10 @@ Deno.serve(async (req) => {
       business_name: businessName,
       ownerid: assigneeFireberryUserId,
       reminderdate: task.reminder_date || null,
-      isNewTask: isNewTask
+      isNewTask: isNewTask,
+      // הבחנה בין יעד למשימה
+      itemType: isGoal ? 'goal' : 'task',
+      taskType: task.task_type || 'one_time'
     };
 
     console.log(`📤 Sending to Fireberry:`, JSON.stringify(fireberryPayload, null, 2));

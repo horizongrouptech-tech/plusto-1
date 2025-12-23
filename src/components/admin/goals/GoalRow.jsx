@@ -93,7 +93,9 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
             await base44.entities.CustomerGoal.update(goal.id, { status: newStatus });
             
             // רענון מיידי
-            refreshData();
+            if (refreshData) {
+                refreshData();
+            }
             
             // סנכרון לפיירברי ברקע - לא ממתינים, לא חוסם
             syncTaskToFireberry({ taskId: goal.id }).catch(error => {
@@ -101,7 +103,8 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
             });
         } catch (error) {
             console.error("Error updating status:", error);
-            alert('שגיאה בעדכון הסטטוס');
+            // לא מציג alert כדי לא לחסום את הממשק
+            console.error('שגיאה בעדכון הסטטוס:', error.message);
         }
     };
 
