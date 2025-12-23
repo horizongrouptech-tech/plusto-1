@@ -48,12 +48,13 @@ export default function ClientManagementDashboard() {
       const currentUserInQuery = await base44.auth.me();
       const isFinancialManager = currentUserInQuery?.role === 'user' && currentUserInQuery?.user_type === 'financial_manager';
       const isAdmin = currentUserInQuery?.role === 'admin';
+      const isDepartmentManager = currentUserInQuery?.email === 'omer@horizon.org.il';
 
       let users = [];
       let onboardingRequests = [];
       let allUsers = [];
 
-      if (isAdmin) {
+      if (isAdmin || isDepartmentManager) {
         [users, onboardingRequests, allUsers] = await Promise.all([
         base44.entities.User.filter({
           role: { $ne: 'admin' },
