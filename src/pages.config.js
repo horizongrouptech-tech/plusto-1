@@ -24,7 +24,6 @@ import TaskManagement from './pages/TaskManagement';
 import WebsiteScan from './pages/WebsiteScan';
 import Welcome from './pages/Welcome';
 import WhatsAppTest from './pages/WhatsAppTest';
-import ExperimentalCRM from './pages/ExperimentalCRM';
 import __Layout from './Layout.jsx';
 
 
@@ -55,7 +54,6 @@ export const PAGES = {
     "WebsiteScan": WebsiteScan,
     "Welcome": Welcome,
     "WhatsAppTest": WhatsAppTest,
-    "ExperimentalCRM": ExperimentalCRM,
 }
 
 export const pagesConfig = {
