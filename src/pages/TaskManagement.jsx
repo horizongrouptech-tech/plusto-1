@@ -58,8 +58,8 @@ export default function TaskManagement() {
   }, []);
 
   // בדיקת הרשאות - רק אדמין
-  if (currentUser && currentUser.role !== 'admin' && currentUser.user_type !== 'financial_manager') {
-    return <Navigate to="/Dashboard" replace />;
+  if (currentUser && currentUser.role !== 'admin') {
+    return <Navigate to="/Admin" replace />;
   }
 
   // טעינת לקוחות
