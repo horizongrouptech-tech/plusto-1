@@ -16,7 +16,7 @@ import {
   FlaskConical
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { createPageUrl } from '../../utils';
+import { createPageUrl } from '@/utils';
 
 export default function FinanceManagerPerformanceTable() {
   const [activeView, setActiveView] = useState('performance');
@@ -27,8 +27,8 @@ export default function FinanceManagerPerformanceTable() {
   const { data: performanceData = [], isLoading, refetch } = useQuery({
     queryKey: ['financeManagerPerformance'],
     queryFn: () => base44.entities.FinancialManagerPerformance.filter({}, '-manager_score'),
-    staleTime: 0, // Changed from 5 * 60 * 1000
-    cacheTime: 0,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: allManagers = [], refetch: refetchManagers } = useQuery({
@@ -37,8 +37,8 @@ export default function FinanceManagerPerformanceTable() {
       user_type: 'financial_manager',
       is_active: true 
     }),
-    staleTime: 0, // Changed from 5 * 60 * 1000
-    cacheTime: 0,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: allOnboardingRequests = [], refetch: refetchOnboarding } = useQuery({
@@ -47,8 +47,8 @@ export default function FinanceManagerPerformanceTable() {
       status: 'approved',
       is_active: true 
     }),
-    staleTime: 0, // Changed from 5 * 60 * 1000
-    cacheTime: 0,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // חישוב לקוחות משויכים לכל מנהל
