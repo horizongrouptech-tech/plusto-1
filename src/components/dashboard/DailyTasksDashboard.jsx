@@ -450,12 +450,14 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link to={createPageUrl('TaskManagement')}>
-            <Button className="bg-purple-600 hover:bg-purple-700 text-white">
-              <Target className="w-4 h-4 ml-2" />
-              דף ניסיון - תצוגה חדשה
-            </Button>
-          </Link>
+          {isAdmin && (
+            <Link to={createPageUrl('TaskManagement')}>
+              <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+                <Target className="w-4 h-4 ml-2" />
+                דף ניסיון - תצוגה חדשה
+              </Button>
+            </Link>
+          )}
           <Button
             onClick={() => setShowCompletedModal(true)}
             className="bg-green-600 hover:bg-green-700 text-white">
