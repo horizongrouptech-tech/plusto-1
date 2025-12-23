@@ -162,10 +162,12 @@ export default function FinanceManagerPerformanceTable() {
           <Button
             variant="outline"
             className="border-yellow-500 text-yellow-400 hover:bg-yellow-500/10"
-            onClick={() => window.location.href = createPageUrl('TrialDashboard')}
+            asChild
           >
-            <FlaskConical className="w-4 h-4 ml-2" />
-            דף ניסיון
+            <a href={createPageUrl('TrialDashboard')}>
+              <FlaskConical className="w-4 h-4 ml-2" />
+              דף ניסיון
+            </a>
           </Button>
           <Button
             onClick={handleCalculatePerformance}
