@@ -50,22 +50,6 @@ export default function CustomerGoalsGantt({ customer }) {
         }
     }, [customer?.email]);
 
-    const toggleAllGoals = (shouldCollapse) => {
-        const newState = {};
-        topLevelGoals.forEach(goal => {
-            newState[goal.id] = shouldCollapse;
-        });
-        setCollapsedGoals(newState);
-    };
-
-    useEffect(() => {
-        const initial = {};
-        topLevelGoals.forEach(goal => {
-            initial[goal.id] = true;
-        });
-        setCollapsedGoals(initial);
-    }, [topLevelGoals.length]);
-
     const handleAddGoal = async () => {
         try {
             const newOrderIndex = goals.filter(g => !g.parent_id).length;
@@ -139,6 +123,25 @@ export default function CustomerGoalsGantt({ customer }) {
 
         return { topLevelGoals: updatedTopLevelGoals, subtasksByGoal };
     }, [goals]);
+
+    const toggleAllGoals = useCallback((shouldCollapse) => {
+        const newState = {};
+        topLevelGoals.forEach(goal => {
+            newState[goal.id] = shouldCollapse;
+        });
+        setCollapsedGoals(newState);
+    }, [topLevelGoals]);
+
+    useEffect(() => {
+        if (topLevelGoals.length > 0) {
+            const initial = {};
+            topLevelGoals.forEach(goal => {
+                initial[goal.id] = true;
+            });
+            setCollapsedGoals(initial);
+        }
+    }, [topLevelGoals.length]);
+
     // טעינת פרטי מנהל הכספים המשויך ללקוח (אם קיים)
     const { data: financialManager } = useQuery({
         queryKey: ['financialManager', customer?.assigned_financial_manager_email],
