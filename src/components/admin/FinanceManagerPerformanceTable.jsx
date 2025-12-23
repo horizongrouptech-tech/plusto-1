@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
+import { Link } from 'react-router-dom';
 
 export default function FinanceManagerPerformanceTable() {
   const [activeView, setActiveView] = useState('performance');
