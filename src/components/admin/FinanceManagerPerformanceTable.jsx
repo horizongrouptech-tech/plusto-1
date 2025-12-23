@@ -248,16 +248,18 @@ export default function FinanceManagerPerformanceTable() {
       <div className="flex gap-2 border-b border-horizon pb-2">
         <Button
           variant={activeView === 'performance' ? 'default' : 'ghost'}
-          onClick={() => setActiveView('performance')}
+          onClick={() => startTransition(() => setActiveView('performance'))}
           className={activeView === 'performance' ? 'btn-horizon-primary' : 'text-horizon-text hover:bg-horizon-card'}
+          disabled={isPending}
         >
           <BarChart3 className="w-4 h-4 ml-2" />
           טבלת ביצועים
         </Button>
         <Button
           variant={activeView === 'leaderboard' ? 'default' : 'ghost'}
-          onClick={() => setActiveView('leaderboard')}
+          onClick={() => startTransition(() => setActiveView('leaderboard'))}
           className={activeView === 'leaderboard' ? 'btn-horizon-primary' : 'text-horizon-text hover:bg-horizon-card'}
+          disabled={isPending}
         >
           <Trophy className="w-4 h-4 ml-2" />
           טבלת מובילים
