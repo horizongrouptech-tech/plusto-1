@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
-import { Link } from 'react-router-dom';
 
 export default function FinanceManagerPerformanceTable() {
   const [activeView, setActiveView] = useState('performance');
@@ -163,12 +162,10 @@ export default function FinanceManagerPerformanceTable() {
           <Button
             variant="outline"
             className="border-yellow-500 text-yellow-400 hover:bg-yellow-500/10"
-            asChild
+            onClick={() => window.location.href = createPageUrl('TrialDashboard')}
           >
-            <Link to={createPageUrl('TrialDashboard')}>
-              <FlaskConical className="w-4 h-4 ml-2" />
-              דף ניסיון
-            </Link>
+            <FlaskConical className="w-4 h-4 ml-2" />
+            דף ניסיון
           </Button>
           <Button
             onClick={handleCalculatePerformance}
