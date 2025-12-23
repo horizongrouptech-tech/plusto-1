@@ -50,6 +50,26 @@ export default function CustomerGoalsGantt({ customer }) {
         }
     }, [customer?.email]);
 
+    // טעינת פרטי מנהל הכספים המשויך ללקוח (אם קיים)
+    const { data: financialManager } = useQuery({
+        queryKey: ['financialManager', customer?.assigned_financial_manager_email],
+        queryFn: async () => {
+            if (!customer?.assigned_financial_manager_email) return null;
+            try {
+                const manager = await base44.entities.User.filter({
+                    email: customer.assigned_financial_manager_email,
+                    user_type: 'financial_manager'
+                });
+                return manager.length > 0 ? manager[0] : null;
+            } catch (error) {
+                console.error("Error fetching financial manager:", error);
+                return null;
+            }
+        },
+        enabled: !!customer?.assigned_financial_manager_email,
+        staleTime: 10 * 60 * 1000 // 10 דקות
+    });
+
     const { topLevelGoals, subtasksByGoal } = useMemo(() => {
         const calculateParentGoalStatus = (subtasks) => {
             if (!subtasks || subtasks.length === 0) {
@@ -142,25 +162,6 @@ export default function CustomerGoalsGantt({ customer }) {
         }
     };
 
-    // טעינת פרטי מנהל הכספים המשויך ללקוח (אם קיים)
-    const { data: financialManager } = useQuery({
-        queryKey: ['financialManager', customer?.assigned_financial_manager_email],
-        queryFn: async () => {
-            if (!customer?.assigned_financial_manager_email) return null;
-            try {
-                const manager = await base44.entities.User.filter({
-                    email: customer.assigned_financial_manager_email,
-                    user_type: 'financial_manager'
-                });
-                return manager.length > 0 ? manager[0] : null;
-            } catch (error) {
-                console.error("Error fetching financial manager:", error);
-                return null;
-            }
-        },
-        enabled: !!customer?.assigned_financial_manager_email,
-        staleTime: 10 * 60 * 1000 // 10 דקות
-    });
     const assignableUsers = useMemo(() => {
         if (!currentUser || !customer) return [];
         
