@@ -167,6 +167,12 @@ export default function GoalsAndTasksDashboard({ customer }) {
     }
   }, [allGoals, activeStatFilter, identifyGoals]);
 
+  // חישוב יעדים פתוחים - צריך להיות לפני כל return מותנה
+  const openParentGoals = useMemo(() => {
+    const { parentGoals } = identifyGoals;
+    return parentGoals.filter((g) => g.status !== 'done' && g.status !== 'cancelled');
+  }, [identifyGoals]);
+
   const getStatusDisplay = (status) => {
     const statusConfig = {
       open: { label: 'פתוח', icon: Circle, color: 'text-blue-500', bgColor: 'bg-blue-500/20' },
@@ -283,10 +289,6 @@ export default function GoalsAndTasksDashboard({ customer }) {
   }
 
   const { parentGoals, parentGoalIds } = identifyGoals;
-  const openParentGoals = useMemo(() => 
-    parentGoals.filter((g) => g.status !== 'done' && g.status !== 'cancelled'),
-    [parentGoals]
-  );
 
   return (
     <div className="p-4 md:p-6 space-y-6" dir="rtl">
