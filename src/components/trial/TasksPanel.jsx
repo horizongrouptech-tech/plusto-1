@@ -1,0 +1,268 @@
+import React, { useMemo, useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { base44 } from '@/api/base44Client';
+import {
+  ChevronLeft,
+  Plus,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  Target,
+  Loader2
+} from 'lucide-react';
+import { format, isToday, isPast, isFuture, parseISO } from 'date-fns';
+
+export default function TasksPanel({ customer, tasks, onRefresh, onCollapse }) {
+  const [newTaskName, setNewTaskName] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+
+  // סינון משימות לפי תאריך התחלה - רק משימות שהתאריך שלהן הגיע
+  const relevantTasks = useMemo(() => {
+    const now = new Date();
+    return tasks.filter(task => {
+      // אם אין תאריך התחלה - הצג
+      if (!task.start_date) return true;
+      // אם תאריך ההתחלה עבר או היום - הצג
+      const startDate = parseISO(task.start_date);
+      return startDate <= now;
+    });
+  }, [tasks]);
+
+  // קיבוץ משימות לפי סטטוס
+  const groupedTasks = useMemo(() => {
+    const today = new Date();
+    
+    const todayTasks = relevantTasks.filter(t => {
+      if (t.status === 'done' || t.status === 'cancelled') return false;
+      if (!t.end_date) return false;
+      return isToday(parseISO(t.end_date));
+    });
+
+    const overdueTasks = relevantTasks.filter(t => {
+      if (t.status === 'done' || t.status === 'cancelled') return false;
+      if (!t.end_date) return false;
+      const endDate = parseISO(t.end_date);
+      return isPast(endDate) && !isToday(endDate);
+    });
+
+    const inProgressTasks = relevantTasks.filter(t => 
+      t.status === 'in_progress'
+    );
+
+    const openTasks = relevantTasks.filter(t => {
+      if (t.status !== 'open') return false;
+      if (!t.end_date) return true;
+      const endDate = parseISO(t.end_date);
+      return !isPast(endDate) && !isToday(endDate);
+    });
+
+    const completedTasks = relevantTasks.filter(t => 
+      t.status === 'done'
+    ).slice(0, 5); // רק 5 אחרונות
+
+    return { todayTasks, overdueTasks, inProgressTasks, openTasks, completedTasks };
+  }, [relevantTasks]);
+
+  const handleAddTask = async (e) => {
+    e.preventDefault();
+    if (!newTaskName.trim() || !customer?.email) return;
+
+    setIsAdding(true);
+    try {
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 7); // ברירת מחדל - שבוע מהיום
+
+      await base44.entities.CustomerGoal.create({
+        customer_email: customer.email,
+        name: newTaskName.trim(),
+        status: 'open',
+        task_type: 'one_time',
+        end_date: endDate.toISOString().split('T')[0],
+        is_active: true
+      });
+
+      setNewTaskName('');
+      onRefresh();
+    } catch (error) {
+      console.error("Error adding task:", error);
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  const handleMarkDone = async (taskId) => {
+    try {
+      await base44.entities.CustomerGoal.update(taskId, { status: 'done' });
+      onRefresh();
+    } catch (error) {
+      console.error("Error marking task done:", error);
+    }
+  };
+
+  const TaskItem = ({ task }) => (
+    <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-horizon-dark/50 group">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => handleMarkDone(task.id)}
+        className="h-6 w-6 text-horizon-accent hover:text-green-400 opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <CheckCircle2 className="w-4 h-4" />
+      </Button>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-horizon-text truncate">{task.name}</p>
+        {task.end_date && (
+          <p className="text-xs text-horizon-accent">
+            {format(parseISO(task.end_date), 'dd/MM')}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+
+  const TaskSection = ({ title, icon: Icon, tasks, color }) => {
+    if (tasks.length === 0) return null;
+    
+    return (
+      <div className="mb-4">
+        <div className={`flex items-center gap-2 mb-2 ${color}`}>
+          <Icon className="w-4 h-4" />
+          <span className="text-sm font-semibold">{title}</span>
+          <Badge variant="outline" className={`text-xs ${color} border-current`}>
+            {tasks.length}
+          </Badge>
+        </div>
+        <div className="space-y-1">
+          {tasks.map(task => (
+            <TaskItem key={task.id} task={task} />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  if (!customer) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="p-4 border-b border-horizon flex items-center justify-between">
+          <h2 className="font-bold text-horizon-text flex items-center gap-2">
+            <Target className="w-5 h-5 text-horizon-primary" />
+            משימות
+          </h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onCollapse}
+            className="text-horizon-accent hover:text-horizon-text h-8 w-8"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+        </div>
+        <div className="flex-1 flex items-center justify-center text-horizon-accent">
+          <p className="text-sm">בחר לקוח לצפייה במשימות</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="p-4 border-b border-horizon">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-bold text-horizon-text flex items-center gap-2">
+            <Target className="w-5 h-5 text-horizon-primary" />
+            משימות
+          </h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onCollapse}
+            className="text-horizon-accent hover:text-horizon-text h-8 w-8"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* הוספת משימה מהירה */}
+        <form onSubmit={handleAddTask} className="flex gap-2">
+          <Input
+            placeholder="משימה חדשה..."
+            value={newTaskName}
+            onChange={(e) => setNewTaskName(e.target.value)}
+            className="flex-1 bg-horizon-dark border-horizon text-horizon-text placeholder:text-horizon-accent text-sm"
+          />
+          <Button
+            type="submit"
+            size="icon"
+            disabled={isAdding || !newTaskName.trim()}
+            className="bg-horizon-primary hover:bg-horizon-primary/90"
+          >
+            {isAdding ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Plus className="w-4 h-4" />
+            )}
+          </Button>
+        </form>
+      </div>
+
+      {/* רשימת משימות */}
+      <ScrollArea className="flex-1">
+        <div className="p-4">
+          <TaskSection
+            title="באיחור"
+            icon={AlertTriangle}
+            tasks={groupedTasks.overdueTasks}
+            color="text-red-400"
+          />
+          
+          <TaskSection
+            title="היום"
+            icon={Clock}
+            tasks={groupedTasks.todayTasks}
+            color="text-orange-400"
+          />
+          
+          <TaskSection
+            title="בביצוע"
+            icon={Target}
+            tasks={groupedTasks.inProgressTasks}
+            color="text-blue-400"
+          />
+          
+          <TaskSection
+            title="לביצוע"
+            icon={Clock}
+            tasks={groupedTasks.openTasks}
+            color="text-horizon-accent"
+          />
+          
+          <TaskSection
+            title="הושלמו לאחרונה"
+            icon={CheckCircle2}
+            tasks={groupedTasks.completedTasks}
+            color="text-green-400"
+          />
+
+          {relevantTasks.length === 0 && (
+            <div className="text-center py-8 text-horizon-accent">
+              <Target className="w-10 h-10 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">אין משימות</p>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+
+      {/* Footer */}
+      <div className="p-3 border-t border-horizon bg-horizon-dark/50">
+        <p className="text-xs text-horizon-accent text-center">
+          {relevantTasks.length} משימות פעילות
+        </p>
+      </div>
+    </div>
+  );
+}
