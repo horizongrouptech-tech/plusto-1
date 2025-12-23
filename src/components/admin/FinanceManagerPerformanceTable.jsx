@@ -25,6 +25,7 @@ export default function FinanceManagerPerformanceTable() {
   const [isPending, startTransition] = useTransition();
   
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: performanceData = [], isLoading, refetch } = useQuery({
     queryKey: ['financeManagerPerformance'],
