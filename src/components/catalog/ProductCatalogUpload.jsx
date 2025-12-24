@@ -37,12 +37,14 @@ const HEADER_MAPPING = {
   'עלות': 'cost_price',
   'cost_price': 'cost_price',
   'cost': 'cost_price',
+  'מחיר גלם': 'cost_price',
 
   // Selling Price
   'מחיר מכירה': 'selling_price',
   'מחיר': 'selling_price',
   'selling_price': 'selling_price',
   'price': 'selling_price',
+  'מחיר יחידה': 'selling_price',
 
   // Category
   'קטגוריה': 'category',
