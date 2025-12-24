@@ -27,16 +27,22 @@ function parseCSV(text) {
 }
 
 function findHeaderRow(rows) {
-  const possibleHeaders = ['פריטים', 'פריט', 'שם', 'מוצר', 'נמכר', 'מכירה', 'מכירות', 'הוכן', 'כולל', 'ברקוד', 'מק"ט', 'קוד', 'sku', 'barcode'];
+  // Hebrew and English headers
+  const possibleHeaders = [
+    // Hebrew
+    'פריטים', 'פריט', 'שם', 'מוצר', 'נמכר', 'מכירה', 'מכירות', 'הוכן', 'כולל', 'ברקוד', 'מק"ט', 'קוד',
+    // English
+    'product', 'title', 'name', 'item', 'sold', 'sales', 'quantity', 'ordered', 'total', 'sku', 'barcode', 'net'
+  ];
   
   for (let i = 0; i < Math.min(10, rows.length); i++) {
     const row = rows[i];
     if (!row || row.length === 0) continue;
     
-    const rowText = row.map(cell => (cell || '').toString()).join(' ');
+    const rowText = row.map(cell => (cell || '').toString().toLowerCase()).join(' ');
     
     const matches = possibleHeaders.filter(header => 
-      rowText.includes(header)
+      rowText.includes(header.toLowerCase())
     );
     
     if (matches.length >= 2) {
