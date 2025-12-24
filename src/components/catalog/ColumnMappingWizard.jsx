@@ -122,14 +122,33 @@ export default function ColumnMappingWizard({
     fileHeaders.forEach(header => {
       const normalizedHeader = header.toLowerCase().trim();
       
+      // חיפוש התאמה מדויקת קודם, אחר כך התאמה חלקית
       for (const [systemField, variants] of Object.entries(AUTO_MATCH_DICTIONARY)) {
-        const match = variants.some(variant => 
-          normalizedHeader === variant.toLowerCase() ||
+        // התאמה מדויקת
+        const exactMatch = variants.some(variant => 
+          normalizedHeader === variant.toLowerCase()
+        );
+        
+        if (exactMatch && !newMapping[systemField]) {
+          newMapping[systemField] = header;
+          break;
+        }
+      }
+    });
+    
+    // סיבוב שני - התאמה חלקית לשדות שטרם מופו
+    fileHeaders.forEach(header => {
+      const normalizedHeader = header.toLowerCase().trim();
+      
+      for (const [systemField, variants] of Object.entries(AUTO_MATCH_DICTIONARY)) {
+        if (newMapping[systemField]) continue; // כבר מופה
+        
+        const partialMatch = variants.some(variant => 
           normalizedHeader.includes(variant.toLowerCase()) ||
           variant.toLowerCase().includes(normalizedHeader)
         );
         
-        if (match && !newMapping[systemField]) {
+        if (partialMatch) {
           newMapping[systemField] = header;
           break;
         }
