@@ -38,8 +38,8 @@ const SYSTEM_FIELDS = [
 
 // מילון התאמות אוטומטיות
 const AUTO_MATCH_DICTIONARY = {
-  'product_name': ['שם מוצר', 'שם פריט', 'שם המוצר', 'תיאור', 'תאור', 'מוצר', 'description', 'product_name', 'name', 'item name', 'פריט'],
-  'barcode': ['ברקוד', 'מק"ט', 'קוד פריט', 'מקט', 'barcode', 'sku', 'item_code', 'code', 'קוד', 'מחיר יחידה', 'ברקוד / מק"ט'],
+  'product_name': ['שם מוצר', 'שם פריט', 'שם המוצר', 'תיאור', 'תאור', 'מוצר', 'description', 'product_name', 'name', 'item name', 'פריט', 'תחמור'],
+  'barcode': ['ברקוד', 'מק"ט', 'קוד פריט', 'מקט', 'barcode', 'sku', 'item_code', 'code', 'קוד', 'ברקוד / מק"ט'],
   'cost_price': ['מחיר עלות', 'מחיר קניה', 'עלות', 'מחיר קנייה', 'cost_price', 'cost', 'purchase price', 'מחיר עלות ללא מעמ', 'מחיר גלם'],
   'selling_price': ['מחיר מכירה', 'מחיר', 'מחיר לצרכן', 'מחיר בחנות', 'selling_price', 'price', 'retail price', 'sale price', 'מחיר יחידה'],
   'category': ['קטגוריה', 'קטגוריה ראשית', 'קבוצה', 'קבוצה ראשית', 'category', 'main category', 'סוג', 'תמחורים', 'מתחורים'],
