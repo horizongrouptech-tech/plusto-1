@@ -79,6 +79,7 @@ function extractZReportData(rows, headerRowIndex) {
   let soldQtyIndex = -1;
   let revenueIndex = -1;
   let barcodeIndex = -1;
+  let orderedQtyIndex = -1;
   
   headers.forEach((h, index) => {
     const normalized = h.toLowerCase();
@@ -88,21 +89,30 @@ function extractZReportData(rows, headerRowIndex) {
       barcodeIndex = index;
     }
 
-    // Product name column - פריטים, פריט, מוצר, שם
-    if (normalized.includes('פריט') || normalized.includes('מוצר') || normalized.includes('שם')) {
+    // Product name column - פריטים, פריט, מוצר, שם, product title
+    if (normalized.includes('פריט') || normalized.includes('מוצר') || normalized.includes('שם') || 
+        normalized.includes('product') || normalized.includes('title')) {
       if (productNameIndex === -1) productNameIndex = index;
     }
     
-    // Sold quantity - נמכר (but NOT מכירות which is revenue)
-    if (normalized === 'נמכר' || (normalized.includes('נמכר') && !normalized.includes('מכיר'))) {
+    // Sold quantity - נמכר, net items sold
+    if (normalized === 'נמכר' || (normalized.includes('נמכר') && !normalized.includes('מכיר')) ||
+        normalized.includes('net items sold') || normalized === 'sold') {
       soldQtyIndex = index;
     }
     
-    // Revenue column - מכירות פריטים כולל מע"מ, or just contains מכיר and מע or כולל
+    // Quantity ordered - for reports with "quantity ordered" column
+    if (normalized.includes('quantity ordered') || normalized.includes('כמות שהוזמנה')) {
+      orderedQtyIndex = index;
+    }
+    
+    // Revenue column - מכירות פריטים כולל מע"מ, total sales
     if (normalized.includes('מכירות') || 
         (normalized.includes('מכיר') && (normalized.includes('מע') || normalized.includes('כולל'))) ||
         normalized.includes("מע\"מ") || 
-        normalized.includes("מע'מ")) {
+        normalized.includes("מע'מ") ||
+        normalized.includes('total sales') || 
+        (normalized === 'total' && headers.some(h2 => h2.toLowerCase().includes('sales')))) {
       revenueIndex = index;
     }
   });
@@ -113,6 +123,9 @@ function extractZReportData(rows, headerRowIndex) {
   // For Z reports with structure: פריטים | הוכן | הוחזר | נמכר | מכירות פריטים כולל מע"מ
   // soldQty should be column D (index 3) - "נמכר"
   // revenue should be column E (index 4) - "מכירות פריטים כולל מע"מ"
+  
+  // For English reports like "Product title | Net items sold | Quantity ordered | Total sales"
+  // soldQty = Net items sold (index 1), revenue = Total sales (index 3)
   
   if (soldQtyIndex === -1) {
     // Look for column with just "נמכר" header
@@ -131,15 +144,15 @@ function extractZReportData(rows, headerRowIndex) {
   }
   
   if (revenueIndex === -1) {
-    // Try column index 4 (E) for typical Z report structure
-    if (headers.length >= 5) {
-      revenueIndex = 4;
+    // Try the last column for revenue
+    if (headers.length >= 4) {
+      revenueIndex = headers.length - 1;
     } else {
       revenueIndex = headers.length - 1;
     }
   }
   
-  console.log(`Column indices - Product: ${productNameIndex}, Sold: ${soldQtyIndex}, Revenue: ${revenueIndex}, Barcode: ${barcodeIndex}`);
+  console.log(`Column indices - Product: ${productNameIndex}, Sold: ${soldQtyIndex}, Revenue: ${revenueIndex}, Barcode: ${barcodeIndex}, Ordered: ${orderedQtyIndex}`);
   
   const products = [];
   
