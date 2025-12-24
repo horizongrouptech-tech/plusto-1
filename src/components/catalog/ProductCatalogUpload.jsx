@@ -19,6 +19,10 @@ const HEADER_MAPPING = {
   'name': 'product_name',
   'description': 'product_name',
   'תיאור': 'product_name',
+  'תאור': 'product_name',
+  'מוצר': 'product_name',
+  'פריט': 'product_name',
+  'תחמור': 'product_name',
 
   // Barcode & Item Code
   'ברקוד': 'barcode',
