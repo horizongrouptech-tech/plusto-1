@@ -100,7 +100,8 @@ Deno.serve(async (req) => {
     catalog_id, 
     mapping,
     identifier_column,
-    duplicate_action
+    duplicate_action,
+    import_with_errors = false // NEW: אפשרות לייבא שורות עם שגיאות
   } = await req.json();
 
   if (!customer_email || !file_url || !catalog_id || !mapping) {
@@ -199,6 +200,7 @@ Deno.serve(async (req) => {
       };
 
       const missingFields = [];
+      const validationErrors = []; // NEW: מעקב אחר שגיאות ספציפיות
 
       // מיפוי שדות
       for (const [systemField, sourceColumn] of Object.entries(mapping)) {
@@ -210,8 +212,11 @@ Deno.serve(async (req) => {
 
       // בדיקת שדות חובה
       if (!product.product_name || product.product_name.trim() === '') {
-        invalidRows.push({ row: i + 1, reason: 'שם מוצר חסר' });
-        continue;
+        validationErrors.push('שם מוצר חסר');
+        if (!import_with_errors) {
+          invalidRows.push({ row: i + 1, reason: 'שם מוצר חסר' });
+          continue;
+        }
       }
 
       // חישוב רווח
@@ -221,13 +226,23 @@ Deno.serve(async (req) => {
       product.profit_percentage = costPrice > 0 ? Math.round(((sellingPrice - costPrice) / costPrice) * 100) : 0;
 
       // קביעת איכות נתונים
-      if (!costPrice) missingFields.push('מחיר עלות');
-      if (!sellingPrice) missingFields.push('מחיר מכירה');
+      if (!costPrice) {
+        missingFields.push('מחיר עלות');
+        validationErrors.push('מחיר עלות חסר או 0');
+      }
+      if (!sellingPrice) {
+        missingFields.push('מחיר מכירה');
+        validationErrors.push('מחיר מכירה חסר או 0');
+      }
       
       product.missing_fields = missingFields;
       product.data_quality = missingFields.length === 0 ? 'complete' : 
                              missingFields.length <= 1 ? 'partial' : 'incomplete';
-      product.needs_review = missingFields.length > 0;
+      
+      // NEW: סימון מוצרים שיובאו עם שגיאות
+      const hasErrors = validationErrors.length > 0;
+      product.needs_review = missingFields.length > 0 || hasErrors;
+      product.import_errors = hasErrors ? validationErrors : null; // שמירת השגיאות למעקב
 
       // בדיקת כפילות
       const identifierValue = identifier_column === 'barcode' ? product.barcode :
@@ -313,7 +328,9 @@ Deno.serve(async (req) => {
       skipped_duplicates: skippedDuplicates.length,
       invalid_rows: invalidRows.length,
       total_processed: records.length,
-      catalog_id
+      catalog_id,
+      products_with_errors: productsToCreate.filter(p => p.import_errors).length + 
+                           productsToUpdate.filter(p => p.data.import_errors).length // NEW: ספירת מוצרים עם שגיאות
     };
 
     await updateProcessStatus(base44, process.id, 100, 'completed', 

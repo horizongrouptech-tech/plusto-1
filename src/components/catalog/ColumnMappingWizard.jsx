@@ -113,6 +113,7 @@ export default function ColumnMappingWizard({
   const [previewData, setPreviewData] = useState([]);
   const [validationResults, setValidationResults] = useState({ valid: [], invalid: [] });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [importWithErrors, setImportWithErrors] = useState(true); // NEW: אפשר ייבוא עם שגיאות
 
   // התאמה אוטומטית של עמודות
   const autoMatchColumns = () => {
@@ -228,7 +229,8 @@ export default function ColumnMappingWizard({
         identifierColumn,
         duplicateAction,
         validRows: validationResults.valid.length,
-        invalidRows: validationResults.invalid.length
+        invalidRows: validationResults.invalid.length,
+        importWithErrors // NEW: העברת הגדרת ייבוא עם שגיאות
       });
       
     } catch (error) {
@@ -449,13 +451,37 @@ export default function ColumnMappingWizard({
 
             {/* אפשרויות לטיפול בשגיאות */}
             {validationResults.invalid.length > 0 && (
-              <Alert className="bg-yellow-500/10 border-yellow-500/30">
-                <AlertTriangle className="w-4 h-4 text-yellow-400" />
-                <AlertDescription className="text-yellow-300">
-                  נמצאו {validationResults.invalid.length} שורות עם שגיאות. 
-                  המערכת תייבא רק את השורות התקינות ({validationResults.valid.length} שורות).
-                </AlertDescription>
-              </Alert>
+              <div className="space-y-3">
+                <Alert className="bg-yellow-500/10 border-yellow-500/30">
+                  <AlertTriangle className="w-4 h-4 text-yellow-400" />
+                  <AlertDescription className="text-yellow-300">
+                    נמצאו {validationResults.invalid.length} שורות עם שגיאות.
+                  </AlertDescription>
+                </Alert>
+                
+                {/* NEW: אפשרות לייבא גם שורות עם שגיאות */}
+                <Card className="bg-horizon-card/30 border-horizon">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        id="importWithErrors"
+                        checked={importWithErrors}
+                        onChange={(e) => setImportWithErrors(e.target.checked)}
+                        className="mt-1 accent-horizon-primary"
+                      />
+                      <div className="flex-1">
+                        <Label htmlFor="importWithErrors" className="text-horizon-text cursor-pointer font-medium">
+                          ייבא גם שורות עם שגיאות
+                        </Label>
+                        <p className="text-xs text-horizon-accent mt-1">
+                          השורות עם שגיאות יסומנו כ"דורשות בדיקה" ותוכל לערוך אותן מאוחר יותר בניהול הקטלוג
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             )}
           </div>
         )}
@@ -545,8 +571,13 @@ export default function ColumnMappingWizard({
               <CardContent className="p-4">
                 <h4 className="font-semibold text-horizon-text mb-2">סיכום לפני ייבוא</h4>
                 <ul className="text-sm text-horizon-accent space-y-1">
-                  <li>• {validationResults.valid.length} מוצרים יייובאו</li>
-                  <li>• {validationResults.invalid.length} שורות יידלגו (שגיאות)</li>
+                  <li>• {validationResults.valid.length} שורות תקינות יייובאו</li>
+                  {validationResults.invalid.length > 0 && importWithErrors && (
+                    <li className="text-yellow-400">• {validationResults.invalid.length} שורות עם שגיאות יייובאו (דורשות בדיקה)</li>
+                  )}
+                  {validationResults.invalid.length > 0 && !importWithErrors && (
+                    <li className="text-red-400">• {validationResults.invalid.length} שורות עם שגיאות יידלגו</li>
+                  )}
                   <li>• עמודה מזהה: {identifierColumn === 'barcode' ? 'ברקוד' : identifierColumn === 'product_name' ? 'שם מוצר' : 'מק"ט ספק'}</li>
                   <li>• טיפול בכפילויות: {duplicateAction === 'skip' ? 'דלג' : 'עדכן'}</li>
                 </ul>
@@ -573,7 +604,7 @@ export default function ColumnMappingWizard({
             ) : (
               <Button
                 onClick={handleComplete}
-                disabled={isProcessing || validationResults.valid.length === 0}
+                disabled={isProcessing || (validationResults.valid.length === 0 && !importWithErrors)}
                 className="btn-horizon-primary"
               >
                 {isProcessing ? (
