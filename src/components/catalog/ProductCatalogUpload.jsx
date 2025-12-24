@@ -69,7 +69,11 @@ const HEADER_MAPPING = {
 
   // Monthly Sales
   'מכירות חודשיות': 'monthly_sales',
-  'monthly_sales': 'monthly_sales'
+  'monthly_sales': 'monthly_sales',
+  'סה"כ מכירות': 'monthly_sales',
+  'סהכ מכירות': 'monthly_sales',
+  'מכירות': 'monthly_sales',
+  'כמה נמכר': 'inventory'
 };
 
 // ניקוי כותרות וערכים מתווים מיותרים
