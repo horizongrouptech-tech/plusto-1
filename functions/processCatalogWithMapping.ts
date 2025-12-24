@@ -213,7 +213,10 @@ Deno.serve(async (req) => {
       // בדיקת שדות חובה
       if (!product.product_name || product.product_name.trim() === '') {
         validationErrors.push('שם מוצר חסר');
-        if (!import_with_errors) {
+        // גם אם import_with_errors=true, שם מוצר הוא חובה - ניתן שם זמני
+        if (import_with_errors) {
+          product.product_name = `מוצר ללא שם - שורה ${i + 1}`;
+        } else {
           invalidRows.push({ row: i + 1, reason: 'שם מוצר חסר' });
           continue;
         }
