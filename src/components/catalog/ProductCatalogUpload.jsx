@@ -51,7 +51,11 @@ const HEADER_MAPPING = {
   'קטגוריה ראשית': 'category',
   'קבוצה ראשית': 'category',
   'category': 'category',
+  'תמחורים': 'category',
+  'מתחורים': 'category',
   'קטגוריה משנית': 'secondary_category',
+  'תפריט - מקטע': 'secondary_category',
+  'תפריטים - מקטעים': 'secondary_category',
 
   // Supplier
   'ספק': 'supplier',
