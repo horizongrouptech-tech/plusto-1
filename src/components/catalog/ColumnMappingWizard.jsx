@@ -38,16 +38,16 @@ const SYSTEM_FIELDS = [
 
 // מילון התאמות אוטומטיות
 const AUTO_MATCH_DICTIONARY = {
-  'product_name': ['שם מוצר', 'שם פריט', 'שם המוצר', 'תיאור', 'description', 'product_name', 'name', 'item name', 'פריט'],
-  'barcode': ['ברקוד', 'מק"ט', 'קוד פריט', 'מקט', 'barcode', 'sku', 'item_code', 'code', 'קוד'],
-  'cost_price': ['מחיר עלות', 'מחיר קניה', 'עלות', 'מחיר קנייה', 'cost_price', 'cost', 'purchase price', 'מחיר עלות ללא מעמ'],
-  'selling_price': ['מחיר מכירה', 'מחיר', 'מחיר לצרכן', 'מחיר בחנות', 'selling_price', 'price', 'retail price', 'sale price'],
-  'category': ['קטגוריה', 'קטגוריה ראשית', 'קבוצה', 'קבוצה ראשית', 'category', 'main category', 'סוג'],
+  'product_name': ['שם מוצר', 'שם פריט', 'שם המוצר', 'תיאור', 'תאור', 'מוצר', 'description', 'product_name', 'name', 'item name', 'פריט'],
+  'barcode': ['ברקוד', 'מק"ט', 'קוד פריט', 'מקט', 'barcode', 'sku', 'item_code', 'code', 'קוד', 'מחיר יחידה', 'ברקוד / מק"ט'],
+  'cost_price': ['מחיר עלות', 'מחיר קניה', 'עלות', 'מחיר קנייה', 'cost_price', 'cost', 'purchase price', 'מחיר עלות ללא מעמ', 'מחיר גלם'],
+  'selling_price': ['מחיר מכירה', 'מחיר', 'מחיר לצרכן', 'מחיר בחנות', 'selling_price', 'price', 'retail price', 'sale price', 'מחיר יחידה'],
+  'category': ['קטגוריה', 'קטגוריה ראשית', 'קבוצה', 'קבוצה ראשית', 'category', 'main category', 'סוג', 'תמחורים', 'מתחורים'],
   'supplier': ['ספק', 'שם ספק', 'supplier', 'vendor'],
   'supplier_item_code': ['מק"ט ספק', 'מק"ט-ספק', 'קוד פריט ספק', 'supplier_sku', 'קוד ספק'],
-  'inventory': ['מלאי', 'כמות במלאי', 'כמות', 'inventory', 'stock', 'quantity'],
-  'monthly_sales': ['מכירות חודשיות', 'מכירות', 'monthly_sales', 'sales'],
-  'secondary_category': ['קטגוריה משנית', 'תת קטגוריה', 'sub category', 'secondary_category'],
+  'inventory': ['מלאי', 'כמות במלאי', 'כמות', 'inventory', 'stock', 'quantity', 'כמה נמכר'],
+  'monthly_sales': ['מכירות חודשיות', 'מכירות', 'monthly_sales', 'sales', 'סה"כ מכירות', 'סהכ מכירות'],
+  'secondary_category': ['קטגוריה משנית', 'תת קטגוריה', 'sub category', 'secondary_category', 'תפריט - מקטע', 'תפריטים - מקטעים'],
 };
 
 // ניקוי ערכים
