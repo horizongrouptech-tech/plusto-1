@@ -26,32 +26,55 @@ export default function FinanceManagerPerformanceTable() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const { data: performanceData = [], isLoading, refetch } = useQuery({
+  const { data: performanceData = [], isLoading: isLoadingPerformance, refetch } = useQuery({
     queryKey: ['financeManagerPerformance'],
-    queryFn: () => base44.entities.FinancialManagerPerformance.filter({}, '-manager_score'),
+    queryFn: async () => {
+      try {
+        return await base44.entities.FinancialManagerPerformance.filter({}, '-manager_score');
+      } catch (e) {
+        console.error('Error loading performance data:', e);
+        return [];
+      }
+    },
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
-  const { data: allManagers = [], refetch: refetchManagers } = useQuery({
+  const { data: allManagers = [], isLoading: isLoadingManagers, refetch: refetchManagers } = useQuery({
     queryKey: ['allFinancialManagers'],
-    queryFn: () => base44.entities.User.filter({ 
-      user_type: 'financial_manager',
-      is_active: true 
-    }),
+    queryFn: async () => {
+      try {
+        return await base44.entities.User.filter({ 
+          user_type: 'financial_manager',
+          is_active: true 
+        });
+      } catch (e) {
+        console.error('Error loading managers:', e);
+        return [];
+      }
+    },
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
-  const { data: allOnboardingRequests = [], refetch: refetchOnboarding } = useQuery({
+  const { data: allOnboardingRequests = [], isLoading: isLoadingOnboarding, refetch: refetchOnboarding } = useQuery({
     queryKey: ['allOnboardingRequests'],
-    queryFn: () => base44.entities.OnboardingRequest.filter({ 
-      status: 'approved',
-      is_active: true 
-    }),
+    queryFn: async () => {
+      try {
+        return await base44.entities.OnboardingRequest.filter({ 
+          status: 'approved',
+          is_active: true 
+        });
+      } catch (e) {
+        console.error('Error loading onboarding requests:', e);
+        return [];
+      }
+    },
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+
+  const isLoading = isLoadingPerformance || isLoadingManagers || isLoadingOnboarding;
 
   // חישוב לקוחות משויכים לכל מנהל
   const managersWithClients = useMemo(() => {
