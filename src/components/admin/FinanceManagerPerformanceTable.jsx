@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useTransition } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,7 @@ import { useNavigate } from 'react-router-dom';
 export default function FinanceManagerPerformanceTable() {
   const [activeView, setActiveView] = useState('performance');
   const [isCalculating, setIsCalculating] = useState(false);
+  const [isPending, startTransition] = useTransition();
   
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -272,16 +273,18 @@ export default function FinanceManagerPerformanceTable() {
       <div className="flex gap-2 border-b border-horizon pb-2">
         <Button
           variant={activeView === 'performance' ? 'default' : 'ghost'}
-          onClick={() => setActiveView('performance')}
+          onClick={() => startTransition(() => setActiveView('performance'))}
           className={activeView === 'performance' ? 'btn-horizon-primary' : 'text-horizon-text hover:bg-horizon-card'}
+          disabled={isPending}
         >
           <BarChart3 className="w-4 h-4 ml-2" />
           טבלת ביצועים
         </Button>
         <Button
           variant={activeView === 'leaderboard' ? 'default' : 'ghost'}
-          onClick={() => setActiveView('leaderboard')}
+          onClick={() => startTransition(() => setActiveView('leaderboard'))}
           className={activeView === 'leaderboard' ? 'btn-horizon-primary' : 'text-horizon-text hover:bg-horizon-card'}
+          disabled={isPending}
         >
           <Trophy className="w-4 h-4 ml-2" />
           טבלת מובילים
