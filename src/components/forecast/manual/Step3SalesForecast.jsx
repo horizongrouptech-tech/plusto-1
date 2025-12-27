@@ -141,11 +141,12 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       
       updated[serviceIndex].actual_monthly_quantities[monthIndex] = newQuantity;
 
-      const service = forecastData.services[serviceIndex];
-      const price = service?.price || 0;
-      updated[serviceIndex].actual_monthly_revenue[monthIndex] = newQuantity * price;
+      // ✅ שימוש במחזור הממשי מהדוח Z במקום לחשב מחדש
+      const currentRevenue = updated[serviceIndex].actual_monthly_revenue[monthIndex] || 0;
+      const realRevenue = zProduct.revenue_with_vat || 0;
+      updated[serviceIndex].actual_monthly_revenue[monthIndex] = currentRevenue + realRevenue;
 
-      console.log(`✅ Updated "${mappedServiceName}": ${newQuantity} units, ₪${newQuantity * price}`);
+      console.log(`✅ Updated "${mappedServiceName}": ${newQuantity} units, ₪${currentRevenue + realRevenue} (real revenue from Z-report)`);
       productsUpdated++;
     });
 
