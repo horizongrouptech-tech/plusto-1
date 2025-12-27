@@ -136,17 +136,14 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       const serviceIndex = updated.findIndex(s => s.service_name === mappedServiceName);
       if (serviceIndex === -1) return;
 
-      const currentActual = updated[serviceIndex].actual_monthly_quantities[monthIndex] || 0;
-      const newQuantity = currentActual + zProduct.quantity_sold;
-      
-      updated[serviceIndex].actual_monthly_quantities[monthIndex] = newQuantity;
+      // ✅ דורס (מחליף) את הכמות במקום להוסיף
+      updated[serviceIndex].actual_monthly_quantities[monthIndex] = zProduct.quantity_sold;
 
-      // ✅ שימוש במחזור הממשי מהדוח Z במקום לחשב מחדש
-      const currentRevenue = updated[serviceIndex].actual_monthly_revenue[monthIndex] || 0;
+      // ✅ דורס (מחליף) את המחזור הממשי מהדוח Z
       const realRevenue = zProduct.revenue_with_vat || 0;
-      updated[serviceIndex].actual_monthly_revenue[monthIndex] = currentRevenue + realRevenue;
+      updated[serviceIndex].actual_monthly_revenue[monthIndex] = realRevenue;
 
-      console.log(`✅ Updated "${mappedServiceName}": ${newQuantity} units, ₪${currentRevenue + realRevenue} (real revenue from Z-report)`);
+      console.log(`✅ Updated "${mappedServiceName}": ${zProduct.quantity_sold} units, ₪${realRevenue} (replaced with real Z-report data)`);
       productsUpdated++;
     });
 
