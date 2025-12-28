@@ -63,6 +63,12 @@ export default function TrialDashboard() {
   const [editModalState, setEditModalState] = useState({ isOpen: false, recommendation: null });
   const [upgradeModalState, setUpgradeModalState] = useState({ isOpen: false, recommendation: null });
   const [viewModalState, setViewModalState] = useState({ isOpen: false, recommendation: null });
+  const [recommendationFilters, setRecommendationFilters] = useState({
+    category: 'all',
+    status: 'all',
+    priority: 'all',
+    source: 'all'
+  });
 
   useEffect(() => {
     const loadUser = async () => {
@@ -113,7 +119,7 @@ export default function TrialDashboard() {
   });
 
   // טעינת המלצות של הלקוח הנבחר
-  const { data: recommendations = [], isLoading: isLoadingRecommendations, refetch: refetchRecommendations } = useQuery({
+  const { data: allRecommendations = [], isLoading: isLoadingRecommendations, refetch: refetchRecommendations } = useQuery({
     queryKey: ['customerRecommendations', selectedCustomer?.email],
     queryFn: () => {
       if (!selectedCustomer?.email) return [];
@@ -124,6 +130,17 @@ export default function TrialDashboard() {
     },
     enabled: !!selectedCustomer?.email,
   });
+
+  // סינון המלצות לפי הפילטרים
+  const recommendations = React.useMemo(() => {
+    return allRecommendations.filter(rec => {
+      if (recommendationFilters.category !== 'all' && rec.category !== recommendationFilters.category) return false;
+      if (recommendationFilters.status !== 'all' && rec.status !== recommendationFilters.status) return false;
+      if (recommendationFilters.priority !== 'all' && rec.priority !== recommendationFilters.priority) return false;
+      if (recommendationFilters.source !== 'all' && rec.source !== recommendationFilters.source) return false;
+      return true;
+    });
+  }, [allRecommendations, recommendationFilters]);
 
   // טעינת משתמשים לאחראים במשימות
   const { data: allUsers = [] } = useQuery({
@@ -303,6 +320,8 @@ export default function TrialDashboard() {
             onArchiveRecommendation={handleArchiveRecommendation}
             onSendRecommendation={handleSendRecommendationWhatsApp}
             isAdmin={currentUser?.role === 'admin'}
+            recommendationFilters={recommendationFilters}
+            onFilterChange={setRecommendationFilters}
           />
         </div>
 

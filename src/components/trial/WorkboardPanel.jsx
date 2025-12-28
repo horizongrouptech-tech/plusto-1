@@ -21,6 +21,7 @@ import UnifiedForecastManager from '@/components/forecast/UnifiedForecastManager
 import CustomerGoalsGantt from '@/components/admin/CustomerGoalsGantt';
 import CustomerSuppliersTab from '@/components/admin/CustomerSuppliersTab';
 import WebsiteScanner from '@/components/admin/WebsiteScanner';
+import RecommendationFilters from '@/components/admin/RecommendationFilters';
 
 const tabs = [
   { id: 'files', label: 'קבצים', icon: FolderOpen },
@@ -44,7 +45,9 @@ export default function WorkboardPanel({
   onDeleteRecommendation,
   onArchiveRecommendation,
   onSendRecommendation,
-  isAdmin = false
+  isAdmin = false,
+  recommendationFilters = {},
+  onFilterChange
 }) {
   if (!customer) {
     return (
@@ -105,17 +108,25 @@ export default function WorkboardPanel({
         )}
         
         {activeTab === 'recommendations' && (
-          <StrategicRecommendations 
-            recommendations={recommendations}
-            isLoading={isLoadingRecommendations}
-            onView={onViewRecommendation}
-            onEdit={onEditRecommendation}
-            onUpgrade={onUpgradeRecommendation}
-            onDelete={onDeleteRecommendation}
-            onArchive={onArchiveRecommendation}
-            onSendToCustomer={onSendRecommendation}
-            isAdmin={isAdmin}
-          />
+          <div className="space-y-4">
+            {recommendationFilters && onFilterChange && (
+              <RecommendationFilters
+                filters={recommendationFilters}
+                onFilterChange={onFilterChange}
+              />
+            )}
+            <StrategicRecommendations 
+              recommendations={recommendations}
+              isLoading={isLoadingRecommendations}
+              onView={onViewRecommendation}
+              onEdit={onEditRecommendation}
+              onUpgrade={onUpgradeRecommendation}
+              onDelete={onDeleteRecommendation}
+              onArchive={onArchiveRecommendation}
+              onSendToCustomer={onSendRecommendation}
+              isAdmin={isAdmin}
+            />
+          </div>
         )}
         
         {activeTab === 'catalog' && (

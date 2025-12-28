@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,10 +20,13 @@ import {
   Building2,
   User,
   Phone,
-  Mail
+  Mail,
+  MessageSquare,
+  AlertCircle
 } from 'lucide-react';
 import { formatCurrency } from '@/components/forecast/manual/utils/numberFormatter';
 import CreateRecommendationButtons from '@/components/admin/CreateRecommendationButtons';
+import Ofek360Modal from '@/components/admin/Ofek360Modal';
 
 export default function CustomerOverviewModal({ 
   customer, 
@@ -37,6 +40,7 @@ export default function CustomerOverviewModal({
   onCreateManual,
   isGenerating
 }) {
+  const [ofek360Open, setOfek360Open] = useState(false);
   // טעינת המלצות
   const { data: recommendations = [] } = useQuery({
     queryKey: ['customerRecommendations', customer?.email],
@@ -76,17 +80,71 @@ export default function CustomerOverviewModal({
 
   if (!customer) return null;
 
+  const whatsappUrl = customer.phone 
+    ? `https://wa.me/${customer.phone.replace(/[^0-9]/g, '')}`
+    : null;
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-horizon-dark text-horizon-text border-horizon" dir="rtl">
-        <DialogHeader>
-          <DialogTitle className="text-2xl text-horizon-text flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-horizon-primary" />
-            סקירה כללית - {customer.business_name}
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-horizon-dark text-horizon-text border-horizon" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl text-horizon-text flex items-center gap-2 justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-6 h-6 text-horizon-primary" />
+                סקירה כללית - {customer.business_name}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onClose();
+                  onOpenSettings();
+                }}
+                className="border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10"
+              >
+                <Edit className="w-4 h-4 ml-2" />
+                ערוך פרטים
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
 
         <div className="space-y-6">
+          {/* כפתורים עליונים */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Button
+              onClick={() => setOfek360Open(true)}
+              className="bg-gradient-to-r from-horizon-primary to-horizon-secondary hover:from-horizon-primary/90 hover:to-horizon-secondary/90 text-white h-12"
+            >
+              <Target className="w-5 h-5 ml-2" />
+              הצ'ק ליסט - אופק 360
+            </Button>
+
+            {whatsappUrl && (
+              <Button
+                onClick={() => window.open(whatsappUrl, '_blank')}
+                className="bg-green-600 hover:bg-green-700 text-white h-12"
+              >
+                <MessageSquare className="w-5 h-5 ml-2" />
+                שלח וואטסאפ ללקוח
+              </Button>
+            )}
+
+            {customer.fireberry_account_id && (
+              <Button
+                onClick={() => window.open(
+                  `https://app.fireberry.com/admin/accounts/${customer.fireberry_account_id}`,
+                  '_blank'
+                )}
+                variant="outline"
+                className="border-orange-500 text-orange-400 hover:bg-orange-500/10 h-12"
+              >
+                <AlertCircle className="w-5 h-5 ml-2" />
+                פתח בפיירברי
+              </Button>
+            )}
+          </div>
+
           {/* סטטיסטיקות מפתח */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="card-horizon">
@@ -131,21 +189,7 @@ export default function CustomerOverviewModal({
           {/* פרטי לקוח */}
           <Card className="card-horizon">
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-horizon-text text-right">פרטי לקוח</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    onClose();
-                    onOpenSettings();
-                  }}
-                  className="border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10"
-                >
-                  <Edit className="w-4 h-4 ml-2" />
-                  ערוך פרטים
-                </Button>
-              </div>
+              <CardTitle className="text-horizon-text text-right">פרטי לקוח</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4 text-right" dir="rtl">
