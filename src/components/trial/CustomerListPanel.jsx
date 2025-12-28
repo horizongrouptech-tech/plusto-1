@@ -125,41 +125,42 @@ export default function CustomerListPanel({
             filteredCustomers.map((customer) => (
               <div
                 key={customer.id}
-                className={`p-3 rounded-lg border transition-all ${
+                className={`p-3 rounded-lg border transition-all cursor-pointer ${
                   selectedCustomer?.id === customer.id
                     ? 'bg-horizon-primary/20 border-horizon-primary shadow-md'
                     : 'hover:bg-horizon-dark border-transparent hover:border-horizon'
                 }`}
+                onClick={() => onSelectCustomer(customer)}
               >
-                <div className="flex items-start justify-between gap-2" dir="rtl">
-                  <div 
-                    className="flex-1 min-w-0 cursor-pointer"
-                    onClick={() => onSelectCustomer(customer)}
-                  >
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="font-bold text-horizon-text truncate text-base flex-1">
-                        {customer.business_name || 'ללא שם עסק'}
-                      </p>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onOpenOverview) onOpenOverview(customer);
-                        }}
-                        className="h-7 w-7 text-white bg-blue-500 hover:bg-blue-600 rounded-full shadow-lg transition-all hover:scale-110 flex-shrink-0"
-                        title="לחץ לסקירה מהירה"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <p className="text-sm text-horizon-accent truncate">
+                <div className="space-y-2" dir="rtl">
+                  {/* שורה ראשונה: שם העסק + Badge */}
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-bold text-horizon-text text-base flex-1">
+                      {customer.business_name || 'ללא שם עסק'}
+                    </p>
+                    <Badge className={`text-xs flex-shrink-0 ${groupColors[customer.customer_group] || 'bg-gray-500/20 text-gray-400'}`}>
+                      {customer.customer_group || '-'}
+                    </Badge>
+                  </div>
+                  
+                  {/* שורה שנייה: שם המנהל + כפתור עין */}
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm text-horizon-accent truncate flex-1">
                       {customer.full_name}
                     </p>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onOpenOverview) onOpenOverview(customer);
+                      }}
+                      className="h-7 w-7 text-white bg-blue-500 hover:bg-blue-600 rounded-full shadow-lg transition-all hover:scale-110 flex-shrink-0"
+                      title="לחץ לסקירה מהירה"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <Badge className={`text-xs flex-shrink-0 ${groupColors[customer.customer_group] || 'bg-gray-500/20 text-gray-400'}`}>
-                    {customer.customer_group || '-'}
-                  </Badge>
                 </div>
               </div>
             ))
