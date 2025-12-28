@@ -1,9 +1,11 @@
 import ActionBank from './pages/ActionBank';
 import AddProduct from './pages/AddProduct';
+import Admin from './pages/Admin';
 import BusinessForecast from './pages/BusinessForecast';
 import CatalogPage from './pages/CatalogPage';
 import Contact from './pages/Contact';
 import CustomerManagement from './pages/CustomerManagement';
+import CustomerManagementNew from './pages/CustomerManagementNew';
 import Dashboard from './pages/Dashboard';
 import FAQ from './pages/FAQ';
 import FileUpload from './pages/FileUpload';
@@ -23,18 +25,18 @@ import TaskManagement from './pages/TaskManagement';
 import WebsiteScan from './pages/WebsiteScan';
 import Welcome from './pages/Welcome';
 import WhatsAppTest from './pages/WhatsAppTest';
-import Admin from './pages/Admin';
-import CustomerManagementNew from './pages/CustomerManagementNew';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "ActionBank": ActionBank,
     "AddProduct": AddProduct,
+    "Admin": Admin,
     "BusinessForecast": BusinessForecast,
     "CatalogPage": CatalogPage,
     "Contact": Contact,
     "CustomerManagement": CustomerManagement,
+    "CustomerManagementNew": CustomerManagementNew,
     "Dashboard": Dashboard,
     "FAQ": FAQ,
     "FileUpload": FileUpload,
@@ -54,8 +56,6 @@ export const PAGES = {
     "WebsiteScan": WebsiteScan,
     "Welcome": Welcome,
     "WhatsAppTest": WhatsAppTest,
-    "Admin": Admin,
-    "CustomerManagementNew": CustomerManagementNew,
 }
 
 export const pagesConfig = {

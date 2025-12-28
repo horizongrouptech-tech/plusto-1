@@ -189,6 +189,7 @@ export default function CustomerManagementNew() {
             onOpenOverview={() => setOverviewModalOpen(true)}
             onCollapse={() => setCustomerListCollapsed(true)}
             isLoading={isLoadingCustomers}
+            currentUser={user}
           />
         </div>
       )}
