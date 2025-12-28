@@ -6,7 +6,9 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   addEdge,
-  MarkerType
+  MarkerType,
+  Handle,
+  Position
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,9 +71,24 @@ const GoalNode = ({ data }) => {
         transition-all duration-300 cursor-pointer 
         hover:scale-105 hover:border-horizon-primary
         backdrop-blur-sm
+        relative
       `}
       onClick={data.onClick}
     >
+      {/* Connection Handles */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="w-4 h-4 !bg-horizon-primary border-2 border-white shadow-lg hover:scale-125 transition-transform"
+        style={{ top: -8 }}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="w-4 h-4 !bg-horizon-secondary border-2 border-white shadow-lg hover:scale-125 transition-transform"
+        style={{ bottom: -8 }}
+      />
+      
       <div className="space-y-3">
         {/* Header with status icon */}
         <div className="flex items-start justify-between gap-2">
@@ -279,6 +296,7 @@ export default function GoalsTimeline({ customer }) {
               fitView
               attributionPosition="bottom-left"
               style={{ direction: 'ltr' }}
+              connectionMode="loose"
               connectionLineStyle={{ 
                 stroke: '#32acc1', 
                 strokeWidth: 3,

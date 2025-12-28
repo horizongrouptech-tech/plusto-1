@@ -5,7 +5,9 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   addEdge,
-  MarkerType
+  MarkerType,
+  Handle,
+  Position
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,13 +19,27 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, Plus, Save, Trash2, Edit3, Loader2, User } from 'lucide-react';
 
-// Custom Organization Node
+// Custom Organization Node with Handles
 const OrgNode = ({ data }) => {
   return (
     <div 
-      className="bg-gradient-to-br from-horizon-card to-horizon-dark border-2 border-horizon-primary rounded-xl p-4 w-52 shadow-xl hover:shadow-2xl hover:scale-105 transition-all cursor-pointer"
+      className="bg-gradient-to-br from-horizon-card to-horizon-dark border-2 border-horizon-primary rounded-xl p-4 w-52 shadow-xl hover:shadow-2xl hover:scale-105 transition-all cursor-pointer relative"
       onClick={data.onEdit}
     >
+      {/* Connection Handles */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="w-4 h-4 !bg-horizon-primary border-2 border-white shadow-lg hover:scale-125 transition-transform"
+        style={{ top: -8 }}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="w-4 h-4 !bg-horizon-secondary border-2 border-white shadow-lg hover:scale-125 transition-transform"
+        style={{ bottom: -8 }}
+      />
+      
       <div className="text-center space-y-2">
         <div className="w-14 h-14 bg-gradient-to-br from-horizon-primary to-horizon-secondary rounded-full mx-auto flex items-center justify-center text-white font-bold text-xl shadow-md">
           {data.name?.charAt(0)?.toUpperCase() || '?'}
@@ -327,7 +343,12 @@ export default function OrganizationChartBuilder({ customer }) {
               nodeTypes={nodeTypes}
               fitView
               style={{ direction: 'ltr' }}
-              connectionLineStyle={{ stroke: '#32acc1', strokeWidth: 2 }}
+              connectionMode="loose"
+              connectionLineStyle={{ 
+                stroke: '#32acc1', 
+                strokeWidth: 3,
+                strokeDasharray: '5,5'
+              }}
               connectionLineType="smoothstep"
             >
               <Background color="#32acc1" gap={20} size={1} />
