@@ -774,7 +774,7 @@ function LayoutContent({ children, currentPageName }) {
     );
   }
 
-  if (user && user.role === 'admin' || user.user_type == 'financial_manager') {
+  if (user && (user.role === 'admin' || user.user_type === 'financial_manager' || user.user_type === 'department_manager')) {
     return (
       <div dir="rtl" className="min-h-screen bg-horizon-dark" data-theme={theme}>
         <GlobalThemeStyles />

@@ -25,7 +25,8 @@ import {
   AlertTriangle,
   ArrowLeft,
   Search,
-  Filter
+  Filter,
+  UserCog
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -44,11 +45,13 @@ import ManualRecommendationModal from '@/components/admin/ManualRecommendationMo
 import RecommendationEditModal from '@/components/admin/RecommendationEditModal';
 import RecommendationUpgradeModal from '@/components/admin/RecommendationUpgradeModal';
 import RecommendationViewModal from '@/components/admin/RecommendationViewModal';
+import ManagerAssignmentBoard from '@/components/admin/ManagerAssignmentBoard';
 
-export default function TrialDashboard() {
+export default function CustomerManagementNew() {
   const [currentUser, setCurrentUser] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [activeTab, setActiveTab] = useState('files');
+  const [activeTab, setActiveTab] = useState('workboard');
+  const [workboardTab, setWorkboardTab] = useState('files');
   const [customerFilter, setCustomerFilter] = useState('all');
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
@@ -82,13 +85,16 @@ export default function TrialDashboard() {
     loadUser();
   }, []);
 
-  // טעינת לקוחות - גישה זהה ל-CustomerManagement
+  // בדיקת הרשאות - מי יכול לגשת לטאב שיוך מנהלים
+  const canAccessManagerAssignment = currentUser?.role === 'admin' || 
+                                     currentUser?.user_type === 'department_manager';
+
+  // טעינת לקוחות - כולל סינון למנהלי מחלקות
   const { data: customers = [], isLoading: loadingCustomers } = useQuery({
     queryKey: ['trialCustomers', currentUser?.email],
     queryFn: async () => {
       if (!currentUser) return [];
       
-      // טעינה של כל הלקוחות הפעילים
       let filter = { is_active: true };
       
       // אם מנהל כספים - רק הלקוחות שלו
@@ -100,9 +106,27 @@ export default function TrialDashboard() {
         );
       }
       
+      // אם מנהל מחלקה - רק הלקוחות שמשויכים אליו
+      if (currentUser.user_type === 'department_manager' && currentUser.role !== 'admin') {
+        const allRequests = await base44.entities.OnboardingRequest.filter({ is_active: true }, 'business_name');
+        return allRequests.filter((req) => req.assigned_department_manager_email === currentUser.email);
+      }
+      
       return base44.entities.OnboardingRequest.filter(filter, 'business_name');
     },
     enabled: !!currentUser,
+  });
+
+  // טעינת מנהלי כספים (לטאב השיוך)
+  const { data: financialManagers = [] } = useQuery({
+    queryKey: ['financialManagers'],
+    queryFn: async () => {
+      const users = await base44.entities.User.filter({
+        user_type: 'financial_manager'
+      });
+      return users;
+    },
+    enabled: canAccessManagerAssignment,
   });
 
   // טעינת משימות של הלקוח הנבחר
@@ -252,6 +276,24 @@ export default function TrialDashboard() {
     }
   };
 
+  // פונקציה לעדכון שיוך מנהל
+  const handleManagerAssignment = async (customerId, managerEmail) => {
+    try {
+      await base44.entities.OnboardingRequest.update(customerId, {
+        assigned_financial_manager_email: managerEmail || null
+      });
+      
+      // רענון הלקוחות
+      queryClient.invalidateQueries(['trialCustomers']);
+      alert('השיוך עודכן בהצלחה!');
+    } catch (error) {
+      console.error('Error updating manager assignment:', error);
+      alert('שגיאה בעדכון השיוך');
+    }
+  };
+
+  const queryClient = useQueryClient();
+
   return (
     <div className="h-screen flex flex-col bg-horizon-dark" dir="rtl">
       {/* Header */}
@@ -263,104 +305,233 @@ export default function TrialDashboard() {
               חזרה לניהול
             </Button>
           </Link>
-          <h1 className="text-xl font-bold text-horizon-text">דשבורד CRM - גרסת ניסיון</h1>
+          <h1 className="text-xl font-bold text-horizon-text">ניהול לקוחות מתקדם</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-            גרסת ניסיון
-          </Badge>
+          {canAccessManagerAssignment && (
+            <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
+              גישה מלאה
+            </Badge>
+          )}
         </div>
       </header>
 
-      {/* Main Content - 3 Panels */}
+      {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         
-        {/* פאנל ימין - רשימת לקוחות */}
-        <div className={`bg-horizon-card border-l border-horizon transition-all duration-300 flex flex-col ${
-          rightPanelCollapsed ? 'w-12' : 'w-80'
-        }`}>
-          {rightPanelCollapsed ? (
-            <div className="p-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setRightPanelCollapsed(false)}
-                className="text-horizon-accent hover:text-horizon-text"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </Button>
-            </div>
-          ) : (
-            <CustomerListPanel
-              customers={filteredCustomers}
-              selectedCustomer={selectedCustomer}
-              onSelectCustomer={handleCustomerSelect}
-              customerFilter={customerFilter}
-              onFilterChange={setCustomerFilter}
-              onOpenSettings={handleOpenSettings}
-              onOpenOverview={handleOpenOverview}
-              onCollapse={() => setRightPanelCollapsed(true)}
-              isLoading={loadingCustomers}
-            />
-          )}
-        </div>
+        {/* טאבים ראשיים - לוח עבודה vs שיוך מנהלים */}
+        {canAccessManagerAssignment ? (
+          <div className="flex-1 flex flex-col">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+              <TabsList className="bg-horizon-card border-b border-horizon px-4 py-2">
+                <TabsTrigger 
+                  value="workboard"
+                  className="flex items-center gap-2 data-[state=active]:bg-horizon-primary data-[state=active]:text-white"
+                >
+                  <Package className="w-4 h-4" />
+                  לוח עבודה
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="manager_assignment"
+                  className="flex items-center gap-2 data-[state=active]:bg-horizon-primary data-[state=active]:text-white"
+                >
+                  <UserCog className="w-4 h-4" />
+                  שיוך מנהלי כספים
+                </TabsTrigger>
+              </TabsList>
 
-        {/* פאנל מרכזי - לוח עבודה */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <WorkboardPanel
-            customer={selectedCustomer}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            recommendations={filteredRecommendations}
-            isLoadingRecommendations={isLoadingRecommendations}
-            onViewRecommendation={handleViewRecommendation}
-            onEditRecommendation={handleEditRecommendation}
-            onUpgradeRecommendation={handleUpgradeRecommendation}
-            onDeleteRecommendation={handleDeleteRecommendation}
-            onArchiveRecommendation={handleArchiveRecommendation}
-            onSendRecommendation={handleSendRecommendationWhatsApp}
-            isAdmin={currentUser?.role === 'admin'}
-            categoryFilter={categoryFilter}
-            setCategoryFilter={setCategoryFilter}
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-            priorityFilter={priorityFilter}
-            setPriorityFilter={setPriorityFilter}
-            sourceFilter={sourceFilter}
-            setSourceFilter={setSourceFilter}
-            onCreateSystemRec={() => setShowSystemRecommendationModal(true)}
-            onCreateTargeted={() => setShowTargetedRecommendationModal(true)}
-            onCreateGoalOriented={() => setShowGoalOrientedModal(true)}
-            onCreateManual={() => setShowManualRecommendationModal(true)}
-            isGenerating={isGeneratingRecommendations}
-          />
-        </div>
+              <TabsContent value="workboard" className="flex-1 flex overflow-hidden mt-0">
+                <div className="flex-1 flex overflow-hidden">
+                  {/* פאנל ימין - רשימת לקוחות */}
+                  <div className={`bg-horizon-card border-l border-horizon transition-all duration-300 flex flex-col ${
+                    rightPanelCollapsed ? 'w-12' : 'w-80'
+                  }`}>
+                    {rightPanelCollapsed ? (
+                      <div className="p-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setRightPanelCollapsed(false)}
+                          className="text-horizon-accent hover:text-horizon-text"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <CustomerListPanel
+                        customers={filteredCustomers}
+                        selectedCustomer={selectedCustomer}
+                        onSelectCustomer={handleCustomerSelect}
+                        customerFilter={customerFilter}
+                        onFilterChange={setCustomerFilter}
+                        onOpenSettings={handleOpenSettings}
+                        onOpenOverview={handleOpenOverview}
+                        onCollapse={() => setRightPanelCollapsed(true)}
+                        isLoading={loadingCustomers}
+                      />
+                    )}
+                  </div>
 
-        {/* פאנל שמאל - משימות */}
-        <div className={`bg-horizon-card border-r border-horizon transition-all duration-300 flex flex-col ${
-          leftPanelCollapsed ? 'w-12' : 'w-80'
-        }`}>
-          {leftPanelCollapsed ? (
-            <div className="p-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setLeftPanelCollapsed(false)}
-                className="text-horizon-accent hover:text-horizon-text"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </Button>
+                  {/* פאנל מרכזי - לוח עבודה */}
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <WorkboardPanel
+                      customer={selectedCustomer}
+                      activeTab={workboardTab}
+                      onTabChange={setWorkboardTab}
+                      recommendations={filteredRecommendations}
+                      isLoadingRecommendations={isLoadingRecommendations}
+                      onViewRecommendation={handleViewRecommendation}
+                      onEditRecommendation={handleEditRecommendation}
+                      onUpgradeRecommendation={handleUpgradeRecommendation}
+                      onDeleteRecommendation={handleDeleteRecommendation}
+                      onArchiveRecommendation={handleArchiveRecommendation}
+                      onSendRecommendation={handleSendRecommendationWhatsApp}
+                      isAdmin={currentUser?.role === 'admin'}
+                      categoryFilter={categoryFilter}
+                      setCategoryFilter={setCategoryFilter}
+                      statusFilter={statusFilter}
+                      setStatusFilter={setStatusFilter}
+                      priorityFilter={priorityFilter}
+                      setPriorityFilter={setPriorityFilter}
+                      sourceFilter={sourceFilter}
+                      setSourceFilter={setSourceFilter}
+                      onCreateSystemRec={() => setShowSystemRecommendationModal(true)}
+                      onCreateTargeted={() => setShowTargetedRecommendationModal(true)}
+                      onCreateGoalOriented={() => setShowGoalOrientedModal(true)}
+                      onCreateManual={() => setShowManualRecommendationModal(true)}
+                      isGenerating={isGeneratingRecommendations}
+                    />
+                  </div>
+
+                  {/* פאנל שמאל - משימות */}
+                  <div className={`bg-horizon-card border-r border-horizon transition-all duration-300 flex flex-col ${
+                    leftPanelCollapsed ? 'w-12' : 'w-80'
+                  }`}>
+                    {leftPanelCollapsed ? (
+                      <div className="p-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setLeftPanelCollapsed(false)}
+                          className="text-horizon-accent hover:text-horizon-text"
+                        >
+                          <ChevronRight className="w-5 h-5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <TasksPanel
+                        customer={selectedCustomer}
+                        tasks={customerTasks}
+                        onRefresh={refetchTasks}
+                        onCollapse={() => setLeftPanelCollapsed(true)}
+                        onTaskClick={handleTaskClick}
+                      />
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="manager_assignment" className="flex-1 overflow-hidden mt-0">
+                <ManagerAssignmentBoard
+                  customers={customers}
+                  financialManagers={financialManagers}
+                  onAssignmentChange={handleManagerAssignment}
+                  currentUser={currentUser}
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+        ) : (
+          // אם אין הרשאה לשיוך - הצג רק את לוח העבודה
+          <div className="flex-1 flex overflow-hidden">
+            {/* פאנל ימין - רשימת לקוחות */}
+            <div className={`bg-horizon-card border-l border-horizon transition-all duration-300 flex flex-col ${
+              rightPanelCollapsed ? 'w-12' : 'w-80'
+            }`}>
+              {rightPanelCollapsed ? (
+                <div className="p-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setRightPanelCollapsed(false)}
+                    className="text-horizon-accent hover:text-horizon-text"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </Button>
+                </div>
+              ) : (
+                <CustomerListPanel
+                  customers={filteredCustomers}
+                  selectedCustomer={selectedCustomer}
+                  onSelectCustomer={handleCustomerSelect}
+                  customerFilter={customerFilter}
+                  onFilterChange={setCustomerFilter}
+                  onOpenSettings={handleOpenSettings}
+                  onOpenOverview={handleOpenOverview}
+                  onCollapse={() => setRightPanelCollapsed(true)}
+                  isLoading={loadingCustomers}
+                />
+              )}
             </div>
-          ) : (
-            <TasksPanel
-              customer={selectedCustomer}
-              tasks={customerTasks}
-              onRefresh={refetchTasks}
-              onCollapse={() => setLeftPanelCollapsed(true)}
-              onTaskClick={handleTaskClick}
-            />
-          )}
-        </div>
+
+            {/* פאנל מרכזי - לוח עבודה */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <WorkboardPanel
+                customer={selectedCustomer}
+                activeTab={workboardTab}
+                onTabChange={setWorkboardTab}
+                recommendations={filteredRecommendations}
+                isLoadingRecommendations={isLoadingRecommendations}
+                onViewRecommendation={handleViewRecommendation}
+                onEditRecommendation={handleEditRecommendation}
+                onUpgradeRecommendation={handleUpgradeRecommendation}
+                onDeleteRecommendation={handleDeleteRecommendation}
+                onArchiveRecommendation={handleArchiveRecommendation}
+                onSendRecommendation={handleSendRecommendationWhatsApp}
+                isAdmin={currentUser?.role === 'admin'}
+                categoryFilter={categoryFilter}
+                setCategoryFilter={setCategoryFilter}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+                priorityFilter={priorityFilter}
+                setPriorityFilter={setPriorityFilter}
+                sourceFilter={sourceFilter}
+                setSourceFilter={setSourceFilter}
+                onCreateSystemRec={() => setShowSystemRecommendationModal(true)}
+                onCreateTargeted={() => setShowTargetedRecommendationModal(true)}
+                onCreateGoalOriented={() => setShowGoalOrientedModal(true)}
+                onCreateManual={() => setShowManualRecommendationModal(true)}
+                isGenerating={isGeneratingRecommendations}
+              />
+            </div>
+
+            {/* פאנל שמאל - משימות */}
+            <div className={`bg-horizon-card border-r border-horizon transition-all duration-300 flex flex-col ${
+              leftPanelCollapsed ? 'w-12' : 'w-80'
+            }`}>
+              {leftPanelCollapsed ? (
+                <div className="p-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setLeftPanelCollapsed(false)}
+                    className="text-horizon-accent hover:text-horizon-text"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </Button>
+                </div>
+              ) : (
+                <TasksPanel
+                  customer={selectedCustomer}
+                  tasks={customerTasks}
+                  onRefresh={refetchTasks}
+                  onCollapse={() => setLeftPanelCollapsed(true)}
+                  onTaskClick={handleTaskClick}
+                />
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* גלגלת הגדרות לקוח */}
@@ -381,7 +552,7 @@ export default function TrialDashboard() {
             setSettingsOpen(true);
           }}
           onNavigateToTab={(tab) => {
-            setActiveTab(tab);
+            setWorkboardTab(tab);
             setOverviewOpen(false);
           }}
         />
