@@ -97,14 +97,22 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
     }
   };
 
-  const handleEditReport = (monthIndex) => {
+  const handleEditReport = (monthIdx) => {
     const zReport = (forecastData.z_reports_uploaded || []).find(
-      r => r.month_assigned === monthIndex + 1
+      r => r.month_assigned === monthIdx + 1
     );
     
-    if (zReport) {
-      setEditingMonth({ ...zReport, monthIndex });
+    if (!zReport) {
+      alert('⚠️ דוח לא נמצא');
+      return;
     }
+
+    if (!zReport.detailed_products || zReport.detailed_products.length === 0) {
+      alert('⚠️ דוח זה לא מכיל פרטי מוצרים לעריכה.\nהעלה דוח Z מחדש כדי לאפשר עריכה.');
+      return;
+    }
+    
+    setEditingMonth({ ...zReport, monthIndex: monthIdx });
   };
 
   const handleSaveEditedReport = async (updatedReport) => {
@@ -277,7 +285,7 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleEditReport(monthIndex)}
+                          onClick={() => handleEditReport(idx)}
                           className="flex-1 border-horizon-primary/30 text-horizon-primary hover:bg-horizon-primary/10 h-7 text-xs"
                         >
                           <Edit className="w-3 h-3 ml-1" />

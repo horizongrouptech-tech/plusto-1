@@ -16,8 +16,19 @@ export default function ZReportEditor({
   onSave 
 }) {
   const [editedProducts, setEditedProducts] = useState(() => {
-    return (zReport?.detailed_products || []).map((p, idx) => ({
-      ...p,
+    const products = zReport?.detailed_products || [];
+    
+    if (products.length === 0) {
+      console.warn('⚠️ No detailed products in Z report - cannot edit');
+    }
+    
+    return products.map((p, idx) => ({
+      product_name: p.product_name || '',
+      barcode: p.barcode || '',
+      quantity_sold: p.quantity_sold || 0,
+      unit_price: p.unit_price || 0,
+      revenue_with_vat: p.revenue_with_vat || 0,
+      mapped_service: p.mapped_service || '',
       tempId: `product-${idx}-${Date.now()}`
     }));
   });
