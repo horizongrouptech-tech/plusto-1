@@ -21,10 +21,10 @@ import StrategicMoves from './pages/StrategicMoves';
 import SupplierAnalysis from './pages/SupplierAnalysis';
 import SupportTicket from './pages/SupportTicket';
 import TaskManagement from './pages/TaskManagement';
+import TrialDashboard from './pages/TrialDashboard';
 import WebsiteScan from './pages/WebsiteScan';
 import Welcome from './pages/Welcome';
 import WhatsAppTest from './pages/WhatsAppTest';
-import CustomerManagementNew from './pages/CustomerManagementNew';
 import __Layout from './Layout.jsx';
 
 
@@ -52,10 +52,10 @@ export const PAGES = {
     "SupplierAnalysis": SupplierAnalysis,
     "SupportTicket": SupportTicket,
     "TaskManagement": TaskManagement,
+    "TrialDashboard": TrialDashboard,
     "WebsiteScan": WebsiteScan,
     "Welcome": Welcome,
     "WhatsAppTest": WhatsAppTest,
-    "CustomerManagementNew": CustomerManagementNew,
 }
 
 export const pagesConfig = {
