@@ -25,7 +25,6 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { formatCurrency } from '@/components/forecast/manual/utils/numberFormatter';
-import CreateRecommendationButtons from '@/components/admin/CreateRecommendationButtons';
 import Ofek360Modal from '@/components/admin/Ofek360Modal';
 
 export default function CustomerOverviewModal({ 
@@ -33,12 +32,7 @@ export default function CustomerOverviewModal({
   isOpen, 
   onClose,
   onOpenSettings,
-  onNavigateToTab,
-  onCreateSystemRec,
-  onCreateTargeted,
-  onCreateGoalOriented,
-  onCreateManual,
-  isGenerating
+  onNavigateToTab
 }) {
   const [ofek360Open, setOfek360Open] = useState(false);
   // טעינת המלצות
@@ -270,14 +264,6 @@ export default function CustomerOverviewModal({
           <div className="space-y-3" dir="rtl">
             <h3 className="font-semibold text-horizon-text text-right">פעולות מהירות</h3>
             
-            <CreateRecommendationButtons
-              onCreateSystemRecommendations={onCreateSystemRec}
-              onCreateTargeted={onCreateTargeted}
-              onCreateGoalOriented={onCreateGoalOriented}
-              onCreateManual={onCreateManual}
-              isGenerating={isGenerating}
-            />
-
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <Button
                 variant="outline"

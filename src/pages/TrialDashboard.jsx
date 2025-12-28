@@ -63,6 +63,12 @@ export default function TrialDashboard() {
   const [editModalState, setEditModalState] = useState({ isOpen: false, recommendation: null });
   const [upgradeModalState, setUpgradeModalState] = useState({ isOpen: false, recommendation: null });
   const [viewModalState, setViewModalState] = useState({ isOpen: false, recommendation: null });
+  
+  // סינוני המלצות
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
 
   useEffect(() => {
     const loadUser = async () => {
@@ -124,6 +130,17 @@ export default function TrialDashboard() {
     },
     enabled: !!selectedCustomer?.email,
   });
+
+  // סינון המלצות
+  const filteredRecommendations = useMemo(() => {
+    return recommendations.filter((rec) => {
+      const matchesCategory = categoryFilter === 'all' || rec.category === categoryFilter;
+      const matchesStatus = statusFilter === 'all' || rec.status === statusFilter;
+      const matchesPriority = priorityFilter === 'all' || rec.priority === priorityFilter;
+      const matchesSource = sourceFilter === 'all' || rec.source === sourceFilter;
+      return matchesCategory && matchesStatus && matchesPriority && matchesSource;
+    });
+  }, [recommendations, categoryFilter, statusFilter, priorityFilter, sourceFilter]);
 
   // טעינת משתמשים לאחראים במשימות
   const { data: allUsers = [] } = useQuery({
@@ -294,7 +311,7 @@ export default function TrialDashboard() {
             customer={selectedCustomer}
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            recommendations={recommendations}
+            recommendations={filteredRecommendations}
             isLoadingRecommendations={isLoadingRecommendations}
             onViewRecommendation={handleViewRecommendation}
             onEditRecommendation={handleEditRecommendation}
@@ -303,6 +320,19 @@ export default function TrialDashboard() {
             onArchiveRecommendation={handleArchiveRecommendation}
             onSendRecommendation={handleSendRecommendationWhatsApp}
             isAdmin={currentUser?.role === 'admin'}
+            categoryFilter={categoryFilter}
+            setCategoryFilter={setCategoryFilter}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            priorityFilter={priorityFilter}
+            setPriorityFilter={setPriorityFilter}
+            sourceFilter={sourceFilter}
+            setSourceFilter={setSourceFilter}
+            onCreateSystemRec={() => setShowSystemRecommendationModal(true)}
+            onCreateTargeted={() => setShowTargetedRecommendationModal(true)}
+            onCreateGoalOriented={() => setShowGoalOrientedModal(true)}
+            onCreateManual={() => setShowManualRecommendationModal(true)}
+            isGenerating={isGeneratingRecommendations}
           />
         </div>
 
@@ -354,23 +384,6 @@ export default function TrialDashboard() {
             setActiveTab(tab);
             setOverviewOpen(false);
           }}
-          onCreateSystemRec={() => {
-            setOverviewOpen(false);
-            setShowSystemRecommendationModal(true);
-          }}
-          onCreateTargeted={() => {
-            setOverviewOpen(false);
-            setShowTargetedRecommendationModal(true);
-          }}
-          onCreateGoalOriented={() => {
-            setOverviewOpen(false);
-            setShowGoalOrientedModal(true);
-          }}
-          onCreateManual={() => {
-            setOverviewOpen(false);
-            setShowManualRecommendationModal(true);
-          }}
-          isGenerating={isGeneratingRecommendations}
         />
       )}
 

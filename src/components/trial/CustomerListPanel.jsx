@@ -131,13 +131,13 @@ export default function CustomerListPanel({
                     : 'hover:bg-horizon-dark border-transparent hover:border-horizon'
                 }`}
               >
-                <div className="flex items-center justify-between gap-2" dir="rtl">
+                <div className="flex items-start justify-between gap-2" dir="rtl">
                   <div 
                     className="flex-1 min-w-0 cursor-pointer"
                     onClick={() => onSelectCustomer(customer)}
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="font-bold text-horizon-text truncate text-base">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="font-bold text-horizon-text truncate text-base flex-1">
                         {customer.business_name || 'ללא שם עסק'}
                       </p>
                       <Button
@@ -147,7 +147,7 @@ export default function CustomerListPanel({
                           e.stopPropagation();
                           if (onOpenOverview) onOpenOverview(customer);
                         }}
-                        className="h-7 w-7 text-white bg-gradient-to-r from-horizon-primary to-horizon-secondary hover:from-horizon-primary/90 hover:to-horizon-secondary/90 rounded-full shadow-lg transition-all hover:scale-110 flex-shrink-0"
+                        className="h-7 w-7 text-white bg-blue-500 hover:bg-blue-600 rounded-full shadow-lg transition-all hover:scale-110 flex-shrink-0"
                         title="לחץ לסקירה מהירה"
                       >
                         <Eye className="w-4 h-4" />

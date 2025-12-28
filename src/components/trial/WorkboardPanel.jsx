@@ -21,6 +21,8 @@ import UnifiedForecastManager from '@/components/forecast/UnifiedForecastManager
 import CustomerGoalsGantt from '@/components/admin/CustomerGoalsGantt';
 import CustomerSuppliersTab from '@/components/admin/CustomerSuppliersTab';
 import WebsiteScanner from '@/components/admin/WebsiteScanner';
+import CreateRecommendationButtons from '@/components/admin/CreateRecommendationButtons';
+import RecommendationFilters from '@/components/admin/RecommendationFilters';
 
 const tabs = [
   { id: 'files', label: 'קבצים', icon: FolderOpen },
@@ -44,7 +46,20 @@ export default function WorkboardPanel({
   onDeleteRecommendation,
   onArchiveRecommendation,
   onSendRecommendation,
-  isAdmin = false
+  isAdmin = false,
+  categoryFilter,
+  setCategoryFilter,
+  statusFilter,
+  setStatusFilter,
+  priorityFilter,
+  setPriorityFilter,
+  sourceFilter,
+  setSourceFilter,
+  onCreateSystemRec,
+  onCreateTargeted,
+  onCreateGoalOriented,
+  onCreateManual,
+  isGenerating
 }) {
   if (!customer) {
     return (
@@ -105,17 +120,38 @@ export default function WorkboardPanel({
         )}
         
         {activeTab === 'recommendations' && (
-          <StrategicRecommendations 
-            recommendations={recommendations}
-            isLoading={isLoadingRecommendations}
-            onView={onViewRecommendation}
-            onEdit={onEditRecommendation}
-            onUpgrade={onUpgradeRecommendation}
-            onDelete={onDeleteRecommendation}
-            onArchive={onArchiveRecommendation}
-            onSendToCustomer={onSendRecommendation}
-            isAdmin={isAdmin}
-          />
+          <div className="space-y-4">
+            <CreateRecommendationButtons
+              onCreateSystemRecommendations={onCreateSystemRec}
+              onCreateTargeted={onCreateTargeted}
+              onCreateGoalOriented={onCreateGoalOriented}
+              onCreateManual={onCreateManual}
+              isGenerating={isGenerating}
+            />
+
+            <RecommendationFilters
+              categoryFilter={categoryFilter}
+              setCategoryFilter={setCategoryFilter}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              priorityFilter={priorityFilter}
+              setPriorityFilter={setPriorityFilter}
+              sourceFilter={sourceFilter}
+              setSourceFilter={setSourceFilter}
+            />
+
+            <StrategicRecommendations 
+              recommendations={recommendations}
+              isLoading={isLoadingRecommendations}
+              onView={onViewRecommendation}
+              onEdit={onEditRecommendation}
+              onUpgrade={onUpgradeRecommendation}
+              onDelete={onDeleteRecommendation}
+              onArchive={onArchiveRecommendation}
+              onSendToCustomer={onSendRecommendation}
+              isAdmin={isAdmin}
+            />
+          </div>
         )}
         
         {activeTab === 'catalog' && (
