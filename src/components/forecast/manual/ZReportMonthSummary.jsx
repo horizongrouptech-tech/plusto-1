@@ -120,16 +120,17 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
       setIsReconstructing(true);
       try {
         console.log('🔄 Reconstructing Z-report from original file:', zReport.file_url);
-        
+
         const response = await base44.functions.invoke('parseZReport', {
-          file_url: zReport.file_url
+          fileUrl: zReport.file_url,
+          fileName: zReport.file_name
         });
 
-        if (response.data.status === 'error') {
+        if (!response.data.success) {
           throw new Error(response.data.error || 'שגיאה בפענוח הקובץ');
         }
 
-        const reconstructedProducts = response.data.products.map(p => ({
+        const reconstructedProducts = response.data.data.products.map(p => ({
           product_name: p.product_name,
           barcode: p.barcode || '',
           quantity_sold: p.quantity_sold,
