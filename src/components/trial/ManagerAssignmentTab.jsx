@@ -128,17 +128,22 @@ export default function ManagerAssignmentTab({ customer, currentUser }) {
   return (
     <div className="space-y-4" dir="rtl">
       <Card className="card-horizon">
-        <CardHeader>
+        <CardHeader className="bg-gradient-to-l from-horizon-primary/10 to-transparent">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-horizon-text flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-horizon-primary" />
-              שיוך מנהלי כספים ללקוחות
-            </CardTitle>
+            <div>
+              <CardTitle className="text-horizon-text flex items-center gap-2 mb-2">
+                <UserPlus className="w-6 h-6 text-horizon-primary" />
+                שיוך מנהלי כספים ללקוחות
+              </CardTitle>
+              <p className="text-sm text-horizon-accent">
+                נהל את השיוכים בין מנהלי הכספים ללקוחות במערכת
+              </p>
+            </div>
             {hasChanges && (
               <Button
                 onClick={handleSaveAll}
                 disabled={isSaving}
-                className="btn-horizon-primary"
+                className="btn-horizon-primary shadow-lg"
               >
                 {isSaving ? (
                   <>
@@ -148,14 +153,14 @@ export default function ManagerAssignmentTab({ customer, currentUser }) {
                 ) : (
                   <>
                     <Save className="w-4 h-4 ml-2" />
-                    שמור שינויים
+                    שמור {Object.keys(assignments).length} שינויים
                   </>
                 )}
               </Button>
             )}
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6 pt-6">
           {/* חיפוש */}
           <div className="relative">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-horizon-accent" />
@@ -167,81 +172,105 @@ export default function ManagerAssignmentTab({ customer, currentUser }) {
             />
           </div>
 
-          {/* סטטיסטיקות */}
+          {/* סטטיסטיקות משופרות */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="bg-horizon-dark/50 rounded-lg p-3 text-center">
-              <p className="text-sm text-horizon-accent">סה"כ לקוחות</p>
-              <p className="text-2xl font-bold text-horizon-text">{filteredRequests.length}</p>
+            <div className="bg-gradient-to-br from-horizon-primary/10 to-transparent border border-horizon rounded-xl p-4 text-center hover:shadow-md transition-all">
+              <p className="text-xs text-horizon-accent mb-1 font-medium">סה"כ לקוחות</p>
+              <p className="text-3xl font-bold text-horizon-text">{filteredRequests.length}</p>
             </div>
-            <div className="bg-horizon-dark/50 rounded-lg p-3 text-center">
-              <p className="text-sm text-horizon-accent">עם שיוך</p>
-              <p className="text-2xl font-bold text-green-400">
+            <div className="bg-gradient-to-br from-green-500/10 to-transparent border border-green-500/30 rounded-xl p-4 text-center hover:shadow-md transition-all">
+              <p className="text-xs text-green-300 mb-1 font-medium">משויכים</p>
+              <p className="text-3xl font-bold text-green-400">
                 {filteredRequests.filter(r => r.assigned_financial_manager_email).length}
               </p>
             </div>
-            <div className="bg-horizon-dark/50 rounded-lg p-3 text-center">
-              <p className="text-sm text-horizon-accent">ללא שיוך</p>
-              <p className="text-2xl font-bold text-orange-400">
+            <div className="bg-gradient-to-br from-orange-500/10 to-transparent border border-orange-500/30 rounded-xl p-4 text-center hover:shadow-md transition-all">
+              <p className="text-xs text-orange-300 mb-1 font-medium">ממתינים לשיוך</p>
+              <p className="text-3xl font-bold text-orange-400">
                 {filteredRequests.filter(r => !r.assigned_financial_manager_email).length}
               </p>
             </div>
           </div>
 
-          {/* טבלת שיוכים */}
-          <div className="border border-horizon rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-horizon-dark">
-                  <TableHead className="text-right text-horizon-text">שם עסק</TableHead>
-                  <TableHead className="text-right text-horizon-text">שם מנהל</TableHead>
-                  <TableHead className="text-right text-horizon-text">אימייל</TableHead>
-                  <TableHead className="text-right text-horizon-text">טלפון</TableHead>
-                  <TableHead className="text-right text-horizon-text">מנהל כספים</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRequests.map((request) => (
-                  <TableRow key={request.id} className="hover:bg-horizon-dark/30">
-                    <TableCell className="text-right text-horizon-text font-medium">
-                      {request.business_name || 'ללא שם'}
-                    </TableCell>
-                    <TableCell className="text-right text-horizon-accent">
-                      {request.full_name}
-                    </TableCell>
-                    <TableCell className="text-right text-horizon-accent text-sm">
-                      {request.email}
-                    </TableCell>
-                    <TableCell className="text-right text-horizon-accent text-sm">
-                      {request.phone || '-'}
-                    </TableCell>
-                    <TableCell className="text-right">
+          {/* רשימת שיוכים מעוצבת */}
+          <div className="space-y-3">
+            {filteredRequests.map((request) => {
+              const assignedManager = financialManagers.find(m => m.email === assignments[request.id]);
+              const hasAssignment = !!assignments[request.id];
+              
+              return (
+                <div 
+                  key={request.id} 
+                  className="bg-horizon-card border border-horizon rounded-xl p-4 hover:shadow-lg transition-all hover:border-horizon-primary"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    {/* פרטי לקוח */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 bg-gradient-to-br from-horizon-primary to-horizon-secondary rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">
+                          {request.business_name?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-horizon-text truncate">
+                            {request.business_name || 'ללא שם'}
+                          </p>
+                          <p className="text-sm text-horizon-accent truncate">
+                            {request.full_name}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-4 text-xs text-horizon-accent mr-13">
+                        <span className="truncate">📧 {request.email}</span>
+                        {request.phone && <span>📱 {request.phone}</span>}
+                      </div>
+                    </div>
+
+                    {/* בחירת מנהל */}
+                    <div className="w-64 flex-shrink-0">
                       <Select
                         value={assignments[request.id] || 'null'}
                         onValueChange={(value) => handleAssignmentChange(request.id, value)}
                       >
-                        <SelectTrigger className="bg-horizon-dark border-horizon text-horizon-text w-full">
-                          <SelectValue placeholder="בחר מנהל..." />
+                        <SelectTrigger className={`bg-horizon-dark border-2 text-horizon-text ${hasAssignment ? 'border-green-500/50' : 'border-orange-500/50'}`}>
+                          <SelectValue placeholder="בחר מנהל כספים..." />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="null">ללא שיוך</SelectItem>
+                        <SelectContent className="bg-horizon-dark border-horizon">
+                          <SelectItem value="null" className="text-horizon-accent">
+                            ללא שיוך
+                          </SelectItem>
                           {financialManagers.map(manager => (
-                            <SelectItem key={manager.email} value={manager.email}>
-                              {manager.full_name || manager.email}
+                            <SelectItem key={manager.email} value={manager.email} className="text-horizon-text">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 bg-horizon-primary rounded-full flex items-center justify-center text-white text-xs">
+                                  {manager.full_name?.charAt(0)?.toUpperCase() || '?'}
+                                </div>
+                                {manager.full_name || manager.email}
+                              </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    </div>
+
+                    {/* אינדיקטור סטטוס */}
+                    <div className="flex-shrink-0">
+                      {hasAssignment ? (
+                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                      ) : (
+                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {filteredRequests.length === 0 && (
-            <div className="text-center py-8">
-              <Users className="w-16 h-16 mx-auto mb-4 text-horizon-accent opacity-50" />
-              <p className="text-horizon-accent">אין לקוחות להצגה</p>
+            <div className="text-center py-12 bg-horizon-dark/30 rounded-xl">
+              <Users className="w-20 h-20 mx-auto mb-4 text-horizon-accent opacity-30" />
+              <p className="text-horizon-text font-medium mb-1">אין לקוחות להצגה</p>
+              <p className="text-sm text-horizon-accent">נסה לשנות את תנאי החיפוש</p>
             </div>
           )}
         </CardContent>

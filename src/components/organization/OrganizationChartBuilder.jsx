@@ -14,33 +14,35 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Building2, Plus, Save, Trash2, Edit3, Loader2 } from 'lucide-react';
+import { Building2, Plus, Save, Trash2, Edit3, Loader2, User } from 'lucide-react';
 
 // Custom Organization Node
 const OrgNode = ({ data }) => {
   return (
     <div 
-      className="bg-horizon-card border-2 border-horizon-primary rounded-lg p-4 w-48 shadow-lg hover:shadow-xl transition-all cursor-pointer"
+      className="bg-gradient-to-br from-horizon-card to-horizon-dark border-2 border-horizon-primary rounded-xl p-4 w-52 shadow-xl hover:shadow-2xl hover:scale-105 transition-all cursor-pointer"
       onClick={data.onEdit}
     >
-      <div className="text-center">
-        <div className="w-12 h-12 bg-horizon-primary rounded-full mx-auto mb-2 flex items-center justify-center text-white font-bold text-lg">
-          {data.name?.charAt(0) || '?'}
+      <div className="text-center space-y-2">
+        <div className="w-14 h-14 bg-gradient-to-br from-horizon-primary to-horizon-secondary rounded-full mx-auto flex items-center justify-center text-white font-bold text-xl shadow-md">
+          {data.name?.charAt(0)?.toUpperCase() || '?'}
         </div>
-        <p className="font-bold text-horizon-text text-sm mb-1">
-          {data.name}
-        </p>
-        <p className="text-xs text-horizon-accent mb-2">
-          {data.role}
-        </p>
+        <div>
+          <p className="font-bold text-horizon-text text-sm leading-tight">
+            {data.name}
+          </p>
+          <p className="text-xs text-horizon-primary font-medium mt-0.5">
+            {data.role}
+          </p>
+        </div>
         {data.department && (
-          <Badge className="text-[10px] bg-horizon-secondary/20 text-horizon-secondary border-horizon-secondary">
+          <div className="bg-horizon-secondary/20 text-horizon-secondary border border-horizon-secondary/30 rounded-full px-2 py-0.5 text-[10px] font-medium inline-block">
             {data.department}
-          </Badge>
+          </div>
         )}
         {data.salary && (
-          <p className="text-[10px] text-horizon-accent mt-1">
-            ₪{data.salary.toLocaleString()}
+          <p className="text-xs text-horizon-accent font-semibold mt-1 bg-horizon-dark/50 rounded-md py-1">
+            ₪{data.salary.toLocaleString()}/חודש
           </p>
         )}
       </div>
@@ -281,7 +283,7 @@ export default function OrganizationChartBuilder({ customer }) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="h-[700px] bg-horizon-dark rounded-lg border border-horizon">
+          <div className="h-[700px] bg-gradient-to-br from-horizon-dark to-horizon-card rounded-xl border-2 border-horizon shadow-inner overflow-hidden">
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -293,9 +295,12 @@ export default function OrganizationChartBuilder({ customer }) {
               fitView
               style={{ direction: 'ltr' }}
             >
-              <Background color="#32acc1" gap={16} />
-              <Controls className="bg-horizon-card border-horizon" />
+              <Background color="#32acc1" gap={20} size={1} />
+              <Controls className="bg-horizon-card border-horizon rounded-lg shadow-lg" />
             </ReactFlow>
+          </div>
+          <div className="mt-4 bg-horizon-card/50 rounded-lg p-3 text-sm text-horizon-accent text-center">
+            💡 <strong>טיפ:</strong> גרור תפקידים להזזה, חבר בין תפקידים (גרירה מנקודה לנקודה) ליצירת היררכיה
           </div>
         </CardContent>
       </Card>
