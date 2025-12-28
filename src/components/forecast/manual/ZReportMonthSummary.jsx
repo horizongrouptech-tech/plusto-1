@@ -2,12 +2,14 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertCircle, Download, FileSpreadsheet, TrendingUp, TrendingDown, ChevronDown, ChevronUp } from "lucide-react";
+import { CheckCircle2, AlertCircle, Download, FileSpreadsheet, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Edit } from "lucide-react";
 import { formatCurrency } from './utils/numberFormatter';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
+import ZReportEditor from './ZReportEditor';
 
-export default function ZReportMonthSummary({ forecastData, salesForecast, services }) {
+export default function ZReportMonthSummary({ forecastData, salesForecast, services, onUpdateZReport }) {
+  const [editingMonth, setEditingMonth] = useState(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 
@@ -92,6 +94,32 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
   const handleDownloadReport = (fileUrl) => {
     if (fileUrl) {
       window.open(fileUrl, '_blank');
+    }
+  };
+
+  const handleEditReport = (monthIndex) => {
+    const zReport = (forecastData.z_reports_uploaded || []).find(
+      r => r.month_assigned === monthIndex + 1
+    );
+    
+    if (zReport) {
+      setEditingMonth({ ...zReport, monthIndex });
+    }
+  };
+
+  const handleSaveEditedReport = async (updatedReport) => {
+    if (!onUpdateZReport) {
+      alert('⚠️ לא ניתן לשמור - אין callback זמין');
+      return;
+    }
+
+    try {
+      await onUpdateZReport(updatedReport);
+      setEditingMonth(null);
+      alert('✅ דוח Z עודכן בהצלחה!');
+    } catch (error) {
+      console.error('Error saving edited report:', error);
+      alert('❌ שגיאה בשמירת השינויים: ' + error.message);
     }
   };
 
@@ -244,18 +272,29 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
                         </div>
                       )}
 
-                      {/* כפתור הורדה */}
-                      {summary.zReport.file_url && (
+                      {/* כפתורי פעולה */}
+                      <div className="flex gap-2">
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleDownloadReport(summary.zReport.file_url)}
-                          className="w-full border-horizon-primary/30 text-horizon-primary hover:bg-horizon-primary/10 h-7 text-xs"
+                          onClick={() => handleEditReport(monthIndex)}
+                          className="flex-1 border-horizon-primary/30 text-horizon-primary hover:bg-horizon-primary/10 h-7 text-xs"
                         >
-                          <Download className="w-3 h-3 ml-1" />
-                          הורד דוח
+                          <Edit className="w-3 h-3 ml-1" />
+                          ערוך
                         </Button>
-                      )}
+                        {summary.zReport.file_url && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDownloadReport(summary.zReport.file_url)}
+                            className="flex-1 border-horizon-primary/30 text-horizon-primary hover:bg-horizon-primary/10 h-7 text-xs"
+                          >
+                            <Download className="w-3 h-3 ml-1" />
+                            הורד
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="text-center py-4">
@@ -285,6 +324,18 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
           </div>
         )}
         </CardContent>
+      )}
+
+      {/* Editor Modal */}
+      {editingMonth && (
+        <ZReportEditor
+          isOpen={!!editingMonth}
+          onClose={() => setEditingMonth(null)}
+          zReport={editingMonth}
+          monthName={monthNames[editingMonth.monthIndex]}
+          services={services}
+          onSave={handleSaveEditedReport}
+        />
       )}
     </Card>
   );

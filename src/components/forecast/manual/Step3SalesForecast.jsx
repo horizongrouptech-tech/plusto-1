@@ -129,6 +129,9 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     console.log('🗺️ Z-Report Mapping:', mapping);
     console.log('📦 Products from Z-Report:', pendingZData.products);
 
+    // ✅ שמירת פרטי המוצרים המלאים לעריכה עתידית
+    const detailedProducts = [];
+
     pendingZData.products.forEach(zProduct => {
       const mappedServiceName = mapping[zProduct.product_name];
       if (!mappedServiceName) return;
@@ -143,6 +146,16 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       const realRevenue = zProduct.revenue_with_vat || 0;
       updated[serviceIndex].actual_monthly_revenue[monthIndex] = realRevenue;
 
+      // ✅ שמירת פרטי המוצר המלאים
+      detailedProducts.push({
+        product_name: zProduct.product_name,
+        barcode: zProduct.barcode || '',
+        quantity_sold: zProduct.quantity_sold,
+        unit_price: zProduct.quantity_sold > 0 ? realRevenue / zProduct.quantity_sold : 0,
+        revenue_with_vat: realRevenue,
+        mapped_service: mappedServiceName
+      });
+
       console.log(`✅ Updated "${mappedServiceName}": ${zProduct.quantity_sold} units, ₪${realRevenue} (replaced with real Z-report data)`);
       productsUpdated++;
     });
@@ -155,7 +168,9 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       month_assigned: pendingZData.month,
       products_updated: productsUpdated,
       total_revenue: pendingZData.summary.total_revenue_with_vat,
-      file_url: pendingZData.file_url
+      file_url: pendingZData.file_url,
+      detailed_products: detailedProducts,
+      products_count: detailedProducts.length
     };
 
     const existingReports = forecastData.z_reports_uploaded || [];
@@ -215,6 +230,62 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
 
   const handleSalesForecastUpdate = (updatedForecast) => {
     setSalesForecast(updatedForecast);
+  };
+
+  const handleUpdateZReport = async (updatedReport) => {
+    try {
+      // 1. עדכון רשימת דוחות Z
+      const existingReports = forecastData.z_reports_uploaded || [];
+      const reportIndex = existingReports.findIndex(
+        r => r.month_assigned === updatedReport.month_assigned
+      );
+
+      if (reportIndex === -1) {
+        throw new Error('דוח לא נמצא');
+      }
+
+      const updatedReports = [...existingReports];
+      updatedReports[reportIndex] = updatedReport;
+
+      // 2. עדכון salesForecast בהתאם לנתונים החדשים
+      const monthIndex = updatedReport.month_assigned - 1;
+      const updated = [...salesForecast];
+
+      // איפוס הנתונים של החודש הזה
+      updated.forEach(item => {
+        item.actual_monthly_quantities[monthIndex] = 0;
+        item.actual_monthly_revenue[monthIndex] = 0;
+      });
+
+      // עדכון מחדש לפי המוצרים החדשים
+      (updatedReport.detailed_products || []).forEach(product => {
+        const serviceIndex = updated.findIndex(s => s.service_name === product.mapped_service);
+        if (serviceIndex !== -1) {
+          updated[serviceIndex].actual_monthly_quantities[monthIndex] = product.quantity_sold;
+          updated[serviceIndex].actual_monthly_revenue[monthIndex] = product.revenue_with_vat;
+        }
+      });
+
+      setSalesForecast(updated);
+
+      // 3. שמירה ל-DB
+      const completeUpdates = {
+        sales_forecast_onetime: updated,
+        z_reports_uploaded: updatedReports
+      };
+
+      if (onUpdateForecast) {
+        onUpdateForecast(completeUpdates);
+      }
+
+      if (forecastData.id) {
+        await base44.entities.ManualForecast.update(forecastData.id, completeUpdates);
+        console.log('✅ Z-report updated successfully');
+      }
+    } catch (error) {
+      console.error('❌ Error updating Z report:', error);
+      throw error;
+    }
   };
 
   const handleContinue = async () => {
@@ -320,6 +391,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
             forecastData={forecastData}
             salesForecast={salesForecast}
             services={forecastData.services || []}
+            onUpdateZReport={handleUpdateZReport}
           />
 
           {/* העלאת קובץ הכנסה עתידי */}
