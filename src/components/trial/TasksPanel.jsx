@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { format, isToday, isPast, isFuture, parseISO } from 'date-fns';
 
-export default function TasksPanel({ customer, tasks, onRefresh, onCollapse }) {
+export default function TasksPanel({ customer, tasks, onRefresh, onCollapse, onTaskClick }) {
   const [newTaskName, setNewTaskName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
@@ -102,12 +102,18 @@ export default function TasksPanel({ customer, tasks, onRefresh, onCollapse }) {
     }
   };
 
-  const TaskItem = ({ task }) => (
-    <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-horizon-dark/50 group">
+  const TaskItem = ({ task, onClick }) => (
+    <div 
+      className="flex items-center gap-2 p-2 rounded-lg hover:bg-horizon-dark/50 group cursor-pointer"
+      onClick={() => onClick(task)}
+    >
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => handleMarkDone(task.id)}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleMarkDone(task.id);
+        }}
         className="h-6 w-6 text-horizon-accent hover:text-green-400 opacity-0 group-hover:opacity-100 transition-opacity"
       >
         <CheckCircle2 className="w-4 h-4" />
@@ -137,7 +143,7 @@ export default function TasksPanel({ customer, tasks, onRefresh, onCollapse }) {
         </div>
         <div className="space-y-1">
           {tasks.map(task => (
-            <TaskItem key={task.id} task={task} />
+            <TaskItem key={task.id} task={task} onClick={onTaskClick} />
           ))}
         </div>
       </div>

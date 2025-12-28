@@ -8,7 +8,8 @@ import {
   Settings,
   Search,
   Users,
-  Loader2
+  Loader2,
+  Edit
 } from 'lucide-react';
 
 export default function CustomerListPanel({
@@ -18,6 +19,7 @@ export default function CustomerListPanel({
   customerFilter,
   onFilterChange,
   onOpenSettings,
+  onOpenOverview,
   onCollapse,
   isLoading
 }) {
@@ -149,11 +151,12 @@ export default function CustomerListPanel({
                       onClick={(e) => {
                         e.stopPropagation();
                         onSelectCustomer(customer);
-                        onOpenSettings();
+                        if (onOpenOverview) onOpenOverview(customer);
                       }}
-                      className="h-7 w-7 text-horizon-accent hover:text-horizon-text"
+                      className="h-7 w-7 text-horizon-primary hover:text-horizon-primary hover:bg-horizon-primary/10"
+                      title="סקירה כללית"
                     >
-                      <Settings className="w-4 h-4" />
+                      <Edit className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>

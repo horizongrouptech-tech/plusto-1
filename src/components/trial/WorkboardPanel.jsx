@@ -9,7 +9,8 @@ import {
   Target,
   Truck,
   DollarSign,
-  Building2
+  Building2,
+  Globe
 } from 'lucide-react';
 
 // ייבוא קומפוננטות קיימות
@@ -19,6 +20,7 @@ import AdvancedCatalogManager from '@/components/admin/AdvancedCatalogManager';
 import UnifiedForecastManager from '@/components/forecast/UnifiedForecastManager';
 import CustomerGoalsGantt from '@/components/admin/CustomerGoalsGantt';
 import CustomerSuppliersTab from '@/components/admin/CustomerSuppliersTab';
+import WebsiteScanner from '@/components/admin/WebsiteScanner';
 
 const tabs = [
   { id: 'files', label: 'קבצים', icon: FolderOpen },
@@ -27,6 +29,7 @@ const tabs = [
   { id: 'forecast', label: 'תוכנית עסקית', icon: FileText },
   { id: 'goals', label: 'יעדים', icon: Target },
   { id: 'suppliers', label: 'ספקים', icon: Truck },
+  { id: 'website', label: 'סריקת אתר', icon: Globe },
 ];
 
 export default function WorkboardPanel({ customer, activeTab, onTabChange }) {
@@ -106,6 +109,10 @@ export default function WorkboardPanel({ customer, activeTab, onTabChange }) {
         
         {activeTab === 'suppliers' && (
           <CustomerSuppliersTab customer={customer} />
+        )}
+        
+        {activeTab === 'website' && (
+          <WebsiteScanner customer={customer} />
         )}
       </div>
     </div>

@@ -35,6 +35,12 @@ import CustomerListPanel from '@/components/trial/CustomerListPanel';
 import WorkboardPanel from '@/components/trial/WorkboardPanel';
 import TasksPanel from '@/components/trial/TasksPanel';
 import CustomerSettingsDrawer from '@/components/trial/CustomerSettingsDrawer';
+import CustomerOverviewModal from '@/components/trial/CustomerOverviewModal';
+import TaskDetailsModal from '@/components/trial/TaskDetailsModal';
+import SystemRecommendationsModal from '@/components/admin/SystemRecommendationsModal';
+import TargetedRecommendationModal from '@/components/admin/TargetedRecommendationModal';
+import GoalOrientedRecommendationModal from '@/components/admin/GoalOrientedRecommendationModal';
+import ManualRecommendationModal from '@/components/admin/ManualRecommendationModal';
 
 export default function TrialDashboard() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -44,6 +50,13 @@ export default function TrialDashboard() {
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [overviewOpen, setOverviewOpen] = useState(false);
+  const [selectedTaskForDetails, setSelectedTaskForDetails] = useState(null);
+  const [isGeneratingRecommendations, setIsGeneratingRecommendations] = useState(false);
+  const [showSystemRecommendationModal, setShowSystemRecommendationModal] = useState(false);
+  const [showTargetedRecommendationModal, setShowTargetedRecommendationModal] = useState(false);
+  const [showGoalOrientedModal, setShowGoalOrientedModal] = useState(false);
+  const [showManualRecommendationModal, setShowManualRecommendationModal] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -88,6 +101,15 @@ export default function TrialDashboard() {
     enabled: !!selectedCustomer?.email,
   });
 
+  // טעינת משתמשים לאחראים במשימות
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['allUsers'],
+    queryFn: async () => {
+      const users = await base44.entities.User.filter({});
+      return users;
+    },
+  });
+
   // סינון לקוחות לפי קבוצה
   const filteredCustomers = useMemo(() => {
     if (customerFilter === 'all') return customers;
@@ -107,6 +129,33 @@ export default function TrialDashboard() {
 
   const handleOpenSettings = () => {
     setSettingsOpen(true);
+  };
+
+  const handleOpenOverview = (customer) => {
+    setSelectedCustomer(customer);
+    setOverviewOpen(true);
+  };
+
+  const handleTaskClick = (task) => {
+    setSelectedTaskForDetails(task);
+  };
+
+  const handleGenerateRecommendations = async (selectedCategories) => {
+    setIsGeneratingRecommendations(true);
+    try {
+      await base44.functions.invoke('generateStrategicRecommendations', {
+        customer_email: selectedCustomer.email,
+        focus_categories: selectedCategories
+      });
+      refetchTasks();
+      alert('המלצות נוצרו בהצלחה!');
+    } catch (error) {
+      console.error('Error generating recommendations:', error);
+      alert('שגיאה ביצירת המלצות');
+    } finally {
+      setIsGeneratingRecommendations(false);
+      setShowSystemRecommendationModal(false);
+    }
   };
 
   return (
@@ -155,6 +204,7 @@ export default function TrialDashboard() {
               customerFilter={customerFilter}
               onFilterChange={setCustomerFilter}
               onOpenSettings={handleOpenSettings}
+              onOpenOverview={handleOpenOverview}
               onCollapse={() => setRightPanelCollapsed(true)}
               isLoading={loadingCustomers}
             />
@@ -191,6 +241,7 @@ export default function TrialDashboard() {
               tasks={customerTasks}
               onRefresh={refetchTasks}
               onCollapse={() => setLeftPanelCollapsed(true)}
+              onTaskClick={handleTaskClick}
             />
           )}
         </div>
@@ -202,6 +253,98 @@ export default function TrialDashboard() {
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />
+
+      {/* פופ-אפ סקירה כללית */}
+      {selectedCustomer && (
+        <CustomerOverviewModal
+          customer={selectedCustomer}
+          isOpen={overviewOpen}
+          onClose={() => setOverviewOpen(false)}
+          onOpenSettings={() => {
+            setOverviewOpen(false);
+            setSettingsOpen(true);
+          }}
+          onNavigateToTab={(tab) => {
+            setActiveTab(tab);
+            setOverviewOpen(false);
+          }}
+          onCreateSystemRec={() => {
+            setOverviewOpen(false);
+            setShowSystemRecommendationModal(true);
+          }}
+          onCreateTargeted={() => {
+            setOverviewOpen(false);
+            setShowTargetedRecommendationModal(true);
+          }}
+          onCreateGoalOriented={() => {
+            setOverviewOpen(false);
+            setShowGoalOrientedModal(true);
+          }}
+          onCreateManual={() => {
+            setOverviewOpen(false);
+            setShowManualRecommendationModal(true);
+          }}
+          isGenerating={isGeneratingRecommendations}
+        />
+      )}
+
+      {/* פופ-אפ פרטי משימה */}
+      {selectedTaskForDetails && (
+        <TaskDetailsModal
+          task={selectedTaskForDetails}
+          isOpen={!!selectedTaskForDetails}
+          onClose={() => setSelectedTaskForDetails(null)}
+          onSave={refetchTasks}
+          onDelete={refetchTasks}
+          users={allUsers}
+        />
+      )}
+
+      {/* מודלים ליצירת המלצות */}
+      {showSystemRecommendationModal && selectedCustomer && (
+        <SystemRecommendationsModal
+          isOpen={showSystemRecommendationModal}
+          onClose={() => setShowSystemRecommendationModal(false)}
+          onGenerate={handleGenerateRecommendations}
+          isLoading={isGeneratingRecommendations}
+        />
+      )}
+
+      {showTargetedRecommendationModal && selectedCustomer && (
+        <TargetedRecommendationModal
+          customer={selectedCustomer}
+          isOpen={showTargetedRecommendationModal}
+          onClose={() => setShowTargetedRecommendationModal(false)}
+          onSuccess={() => {
+            setShowTargetedRecommendationModal(false);
+            refetchTasks();
+          }}
+        />
+      )}
+
+      {showGoalOrientedModal && selectedCustomer && (
+        <GoalOrientedRecommendationModal
+          customer={selectedCustomer}
+          isOpen={showGoalOrientedModal}
+          onClose={() => setShowGoalOrientedModal(false)}
+          onSuccess={() => {
+            setShowGoalOrientedModal(false);
+            refetchTasks();
+          }}
+        />
+      )}
+
+      {showManualRecommendationModal && selectedCustomer && (
+        <ManualRecommendationModal
+          customer={selectedCustomer}
+          isOpen={showManualRecommendationModal}
+          onClose={() => setShowManualRecommendationModal(false)}
+          onSuccess={() => {
+            setShowManualRecommendationModal(false);
+            refetchTasks();
+          }}
+        />
+      )}
     </div>
   );
 }
