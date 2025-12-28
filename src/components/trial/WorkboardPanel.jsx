@@ -16,7 +16,7 @@ import {
 // ייבוא קומפוננטות קיימות
 import CustomerFileUploadManager from '@/components/admin/CustomerFileUploadManager';
 import StrategicRecommendations from '@/components/admin/StrategicRecommendations';
-import AdvancedCatalogManager from '@/components/admin/AdvancedCatalogManager';
+import ProductCatalogManager from '@/components/catalog/ProductCatalogManager';
 import UnifiedForecastManager from '@/components/forecast/UnifiedForecastManager';
 import CustomerGoalsGantt from '@/components/admin/CustomerGoalsGantt';
 import CustomerSuppliersTab from '@/components/admin/CustomerSuppliersTab';
@@ -32,7 +32,20 @@ const tabs = [
   { id: 'website', label: 'סריקת אתר', icon: Globe },
 ];
 
-export default function WorkboardPanel({ customer, activeTab, onTabChange }) {
+export default function WorkboardPanel({ 
+  customer, 
+  activeTab, 
+  onTabChange,
+  recommendations = [],
+  isLoadingRecommendations = false,
+  onViewRecommendation,
+  onEditRecommendation,
+  onUpgradeRecommendation,
+  onDeleteRecommendation,
+  onArchiveRecommendation,
+  onSendRecommendation,
+  isAdmin = false
+}) {
   if (!customer) {
     return (
       <div className="flex-1 flex items-center justify-center bg-horizon-dark">
@@ -92,11 +105,21 @@ export default function WorkboardPanel({ customer, activeTab, onTabChange }) {
         )}
         
         {activeTab === 'recommendations' && (
-          <StrategicRecommendations customer={customer} />
+          <StrategicRecommendations 
+            recommendations={recommendations}
+            isLoading={isLoadingRecommendations}
+            onView={onViewRecommendation}
+            onEdit={onEditRecommendation}
+            onUpgrade={onUpgradeRecommendation}
+            onDelete={onDeleteRecommendation}
+            onArchive={onArchiveRecommendation}
+            onSendToCustomer={onSendRecommendation}
+            isAdmin={isAdmin}
+          />
         )}
         
         {activeTab === 'catalog' && (
-          <AdvancedCatalogManager customer={customer} />
+          <ProductCatalogManager customer={customer} isAdmin={true} />
         )}
         
         {activeTab === 'forecast' && (

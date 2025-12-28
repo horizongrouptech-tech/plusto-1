@@ -42,11 +42,11 @@ export default function CustomerListPanel({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" dir="rtl">
       {/* Header */}
       <div className="p-4 border-b border-horizon">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-horizon-text flex items-center gap-2">
+          <h2 className="font-bold text-horizon-text flex items-center gap-2 text-right">
             <Users className="w-5 h-5 text-horizon-primary" />
             לקוחות
           </h2>
@@ -125,40 +125,41 @@ export default function CustomerListPanel({
             filteredCustomers.map((customer) => (
               <div
                 key={customer.id}
-                onClick={() => onSelectCustomer(customer)}
-                className={`p-3 rounded-lg cursor-pointer transition-all ${
+                className={`p-3 rounded-lg border transition-all ${
                   selectedCustomer?.id === customer.id
-                    ? 'bg-horizon-primary/20 border border-horizon-primary'
-                    : 'hover:bg-horizon-dark border border-transparent'
+                    ? 'bg-horizon-primary/20 border-horizon-primary shadow-md'
+                    : 'hover:bg-horizon-dark border-transparent hover:border-horizon'
                 }`}
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-horizon-text truncate">
-                      {customer.business_name || 'ללא שם עסק'}
-                    </p>
+                <div className="flex items-center justify-between gap-2" dir="rtl">
+                  <div 
+                    className="flex-1 min-w-0 cursor-pointer"
+                    onClick={() => onSelectCustomer(customer)}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-bold text-horizon-text truncate text-base">
+                        {customer.business_name || 'ללא שם עסק'}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onOpenOverview) onOpenOverview(customer);
+                        }}
+                        className="h-7 w-7 text-white bg-gradient-to-r from-horizon-primary to-horizon-secondary hover:from-horizon-primary/90 hover:to-horizon-secondary/90 rounded-full shadow-lg transition-all hover:scale-110 flex-shrink-0"
+                        title="לחץ לסקירה מהירה"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </div>
                     <p className="text-sm text-horizon-accent truncate">
                       {customer.full_name}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 mr-2">
-                    <Badge className={`text-xs ${groupColors[customer.customer_group] || 'bg-gray-500/20 text-gray-400'}`}>
-                      {customer.customer_group || '-'}
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectCustomer(customer);
-                        if (onOpenOverview) onOpenOverview(customer);
-                      }}
-                      className="h-8 w-8 text-white bg-horizon-primary hover:bg-horizon-primary/80 rounded-full shadow-md transition-all hover:scale-110"
-                      title="סקירה כללית"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </div>
+                  <Badge className={`text-xs flex-shrink-0 ${groupColors[customer.customer_group] || 'bg-gray-500/20 text-gray-400'}`}>
+                    {customer.customer_group || '-'}
+                  </Badge>
                 </div>
               </div>
             ))

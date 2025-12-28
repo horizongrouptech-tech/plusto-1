@@ -41,6 +41,9 @@ import SystemRecommendationsModal from '@/components/admin/SystemRecommendations
 import TargetedRecommendationModal from '@/components/admin/TargetedRecommendationModal';
 import GoalOrientedRecommendationModal from '@/components/admin/GoalOrientedRecommendationModal';
 import ManualRecommendationModal from '@/components/admin/ManualRecommendationModal';
+import RecommendationEditModal from '@/components/admin/RecommendationEditModal';
+import RecommendationUpgradeModal from '@/components/admin/RecommendationUpgradeModal';
+import RecommendationViewModal from '@/components/admin/RecommendationViewModal';
 
 export default function TrialDashboard() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -57,6 +60,9 @@ export default function TrialDashboard() {
   const [showTargetedRecommendationModal, setShowTargetedRecommendationModal] = useState(false);
   const [showGoalOrientedModal, setShowGoalOrientedModal] = useState(false);
   const [showManualRecommendationModal, setShowManualRecommendationModal] = useState(false);
+  const [editModalState, setEditModalState] = useState({ isOpen: false, recommendation: null });
+  const [upgradeModalState, setUpgradeModalState] = useState({ isOpen: false, recommendation: null });
+  const [viewModalState, setViewModalState] = useState({ isOpen: false, recommendation: null });
 
   useEffect(() => {
     const loadUser = async () => {
@@ -102,6 +108,19 @@ export default function TrialDashboard() {
         customer_email: selectedCustomer.email,
         is_active: true
       }, 'order_index');
+    },
+    enabled: !!selectedCustomer?.email,
+  });
+
+  // טעינת המלצות של הלקוח הנבחר
+  const { data: recommendations = [], isLoading: isLoadingRecommendations, refetch: refetchRecommendations } = useQuery({
+    queryKey: ['customerRecommendations', selectedCustomer?.email],
+    queryFn: () => {
+      if (!selectedCustomer?.email) return [];
+      return base44.entities.Recommendation.filter({
+        customer_email: selectedCustomer.email,
+        status: { $ne: 'archived' }
+      }, '-created_date');
     },
     enabled: !!selectedCustomer?.email,
   });
@@ -152,7 +171,7 @@ export default function TrialDashboard() {
         customer_email: selectedCustomer.email,
         focus_categories: selectedCategories
       });
-      refetchTasks();
+      refetchRecommendations();
       alert('המלצות נוצרו בהצלחה!');
     } catch (error) {
       console.error('Error generating recommendations:', error);
@@ -160,6 +179,59 @@ export default function TrialDashboard() {
     } finally {
       setIsGeneratingRecommendations(false);
       setShowSystemRecommendationModal(false);
+    }
+  };
+
+  const handleEditRecommendation = (recommendation) => {
+    setEditModalState({ isOpen: true, recommendation });
+  };
+
+  const handleUpgradeRecommendation = (recommendation) => {
+    setUpgradeModalState({ isOpen: true, recommendation });
+  };
+
+  const handleViewRecommendation = (recommendation) => {
+    setViewModalState({ isOpen: true, recommendation });
+  };
+
+  const handleDeleteRecommendation = async (recommendationId) => {
+    if (!confirm('האם אתה בטוח שברצונך למחוק את ההמלצה?')) return;
+
+    try {
+      await base44.entities.Recommendation.delete(recommendationId);
+      refetchRecommendations();
+    } catch (error) {
+      console.error('Error deleting recommendation:', error);
+      alert('שגיאה במחיקת ההמלצה');
+    }
+  };
+
+  const handleArchiveRecommendation = async (recommendationId) => {
+    try {
+      await base44.entities.Recommendation.update(recommendationId, { status: 'archived' });
+      refetchRecommendations();
+    } catch (error) {
+      console.error('Error archiving recommendation:', error);
+    }
+  };
+
+  const handleSendRecommendationWhatsApp = async (recommendation) => {
+    if (!selectedCustomer.phone) {
+      alert('אין מספר טלפון זמין עבור לקוח זה');
+      return;
+    }
+
+    try {
+      await base44.functions.invoke('sendWhatsAppMessage', {
+        phoneNumber: selectedCustomer.phone,
+        customerEmail: selectedCustomer.email,
+        recommendation: recommendation,
+        templateType: 'auto'
+      });
+      alert('ההמלצה נשלחה בהצלחה לווטסאפ');
+    } catch (error) {
+      console.error('Error sending WhatsApp:', error);
+      alert('שגיאה בשליחת ההמלצה');
     }
   };
 
@@ -222,6 +294,15 @@ export default function TrialDashboard() {
             customer={selectedCustomer}
             activeTab={activeTab}
             onTabChange={setActiveTab}
+            recommendations={recommendations}
+            isLoadingRecommendations={isLoadingRecommendations}
+            onViewRecommendation={handleViewRecommendation}
+            onEditRecommendation={handleEditRecommendation}
+            onUpgradeRecommendation={handleUpgradeRecommendation}
+            onDeleteRecommendation={handleDeleteRecommendation}
+            onArchiveRecommendation={handleArchiveRecommendation}
+            onSendRecommendation={handleSendRecommendationWhatsApp}
+            isAdmin={currentUser?.role === 'admin'}
           />
         </div>
 
@@ -322,7 +403,7 @@ export default function TrialDashboard() {
           onClose={() => setShowTargetedRecommendationModal(false)}
           onSuccess={() => {
             setShowTargetedRecommendationModal(false);
-            refetchTasks();
+            refetchRecommendations();
           }}
         />
       )}
@@ -334,7 +415,7 @@ export default function TrialDashboard() {
           onClose={() => setShowGoalOrientedModal(false)}
           onSuccess={() => {
             setShowGoalOrientedModal(false);
-            refetchTasks();
+            refetchRecommendations();
           }}
         />
       )}
@@ -346,8 +427,45 @@ export default function TrialDashboard() {
           onClose={() => setShowManualRecommendationModal(false)}
           onSuccess={() => {
             setShowManualRecommendationModal(false);
-            refetchTasks();
+            refetchRecommendations();
           }}
+        />
+      )}
+
+      {/* מודלים לעריכה/צפייה/שדרוג המלצות */}
+      {editModalState.isOpen && (
+        <RecommendationEditModal
+          isOpen={editModalState.isOpen}
+          onClose={() => setEditModalState({ isOpen: false, recommendation: null })}
+          recommendation={editModalState.recommendation}
+          customer={selectedCustomer}
+          onSave={() => {
+            refetchRecommendations();
+            setEditModalState({ isOpen: false, recommendation: null });
+          }}
+        />
+      )}
+
+      {upgradeModalState.isOpen && (
+        <RecommendationUpgradeModal
+          isOpen={upgradeModalState.isOpen}
+          onClose={() => setUpgradeModalState({ isOpen: false, recommendation: null })}
+          recommendation={upgradeModalState.recommendation}
+          customer={selectedCustomer}
+          onUpgradeComplete={() => {
+            refetchRecommendations();
+            setUpgradeModalState({ isOpen: false, recommendation: null });
+          }}
+        />
+      )}
+
+      {viewModalState.isOpen && (
+        <RecommendationViewModal
+          isOpen={viewModalState.isOpen}
+          onClose={() => setViewModalState({ isOpen: false, recommendation: null })}
+          recommendation={viewModalState.recommendation}
+          onEdit={handleEditRecommendation}
+          onSendWhatsApp={handleSendRecommendationWhatsApp}
         />
       )}
     </div>

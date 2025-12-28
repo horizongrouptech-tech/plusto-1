@@ -106,19 +106,9 @@ export default function TasksPanel({ customer, tasks, onRefresh, onCollapse, onT
     <div 
       className="flex items-center gap-2 p-2 rounded-lg hover:bg-horizon-dark/50 group cursor-pointer"
       onClick={() => onClick(task)}
+      dir="rtl"
     >
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={(e) => {
-          e.stopPropagation();
-          handleMarkDone(task.id);
-        }}
-        className="h-6 w-6 text-horizon-accent hover:text-green-400 opacity-0 group-hover:opacity-100 transition-opacity"
-      >
-        <CheckCircle2 className="w-4 h-4" />
-      </Button>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 text-right">
         <p className="text-sm text-horizon-text truncate">{task.name}</p>
         {task.end_date && (
           <p className="text-xs text-horizon-accent">
@@ -126,6 +116,17 @@ export default function TasksPanel({ customer, tasks, onRefresh, onCollapse, onT
           </p>
         )}
       </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleMarkDone(task.id);
+        }}
+        className="h-6 w-6 text-horizon-accent hover:text-green-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+      >
+        <CheckCircle2 className="w-4 h-4" />
+      </Button>
     </div>
   );
 
@@ -133,8 +134,8 @@ export default function TasksPanel({ customer, tasks, onRefresh, onCollapse, onT
     if (tasks.length === 0) return null;
     
     return (
-      <div className="mb-4">
-        <div className={`flex items-center gap-2 mb-2 ${color}`}>
+      <div className="mb-4" dir="rtl">
+        <div className={`flex items-center gap-2 mb-2 ${color} text-right`}>
           <Icon className="w-4 h-4" />
           <span className="text-sm font-semibold">{title}</span>
           <Badge variant="outline" className={`text-xs ${color} border-current`}>
@@ -152,9 +153,9 @@ export default function TasksPanel({ customer, tasks, onRefresh, onCollapse, onT
 
   if (!customer) {
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full" dir="rtl">
         <div className="p-4 border-b border-horizon flex items-center justify-between">
-          <h2 className="font-bold text-horizon-text flex items-center gap-2">
+          <h2 className="font-bold text-horizon-text flex items-center gap-2 text-right">
             <Target className="w-5 h-5 text-horizon-primary" />
             משימות
           </h2>
@@ -175,11 +176,11 @@ export default function TasksPanel({ customer, tasks, onRefresh, onCollapse, onT
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" dir="rtl">
       {/* Header */}
       <div className="p-4 border-b border-horizon">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-horizon-text flex items-center gap-2">
+          <h2 className="font-bold text-horizon-text flex items-center gap-2 text-right">
             <Target className="w-5 h-5 text-horizon-primary" />
             משימות
           </h2>
