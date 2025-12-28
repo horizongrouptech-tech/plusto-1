@@ -145,14 +145,14 @@ export default function TasksPanel({ customer, tasks, onRefresh, onCollapse, onT
     
     return (
       <div className="mb-4" dir="rtl">
-        <div className={`flex items-center gap-2 mb-2 ${color} text-right`}>
+        <div className={`flex items-center gap-2 mb-3 ${color} text-right`}>
           <Icon className="w-4 h-4" />
           <span className="text-sm font-semibold">{title}</span>
           <Badge variant="outline" className={`text-xs ${color} border-current`}>
             {tasks.length}
           </Badge>
         </div>
-        <div className="space-y-1">
+        <div className="space-y-2">
           {tasks.map(task => (
             <TaskItem key={task.id} task={task} onClick={onTaskClick} />
           ))}
