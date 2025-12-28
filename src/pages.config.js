@@ -24,6 +24,7 @@ import WebsiteScan from './pages/WebsiteScan';
 import Welcome from './pages/Welcome';
 import WhatsAppTest from './pages/WhatsAppTest';
 import Admin from './pages/Admin';
+import CustomerManagementNew from './pages/CustomerManagementNew';
 import __Layout from './Layout.jsx';
 
 
@@ -54,6 +55,7 @@ export const PAGES = {
     "Welcome": Welcome,
     "WhatsAppTest": WhatsAppTest,
     "Admin": Admin,
+    "CustomerManagementNew": CustomerManagementNew,
 }
 
 export const pagesConfig = {
