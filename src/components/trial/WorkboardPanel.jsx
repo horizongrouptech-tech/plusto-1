@@ -180,7 +180,30 @@ export default function WorkboardPanel({
         )}
         
         {activeTab === 'goals' && (
-          <CustomerGoalsGantt customer={customer} />
+          <>
+            <div className="flex gap-2 mb-4">
+              <Button
+                variant={goalsView === 'table' ? 'default' : 'outline'}
+                onClick={() => setGoalsView('table')}
+                className={goalsView === 'table' ? 'bg-horizon-primary text-white' : ''}
+              >
+                תצוגת טבלה
+              </Button>
+              <Button
+                variant={goalsView === 'timeline' ? 'default' : 'outline'}
+                onClick={() => setGoalsView('timeline')}
+                className={goalsView === 'timeline' ? 'bg-horizon-primary text-white' : ''}
+              >
+                ציר זמן
+              </Button>
+            </div>
+            
+            {goalsView === 'table' ? (
+              <CustomerGoalsGantt customer={customer} />
+            ) : (
+              <GoalsTimeline customer={customer} />
+            )}
+          </>
         )}
         
         {activeTab === 'suppliers' && (
