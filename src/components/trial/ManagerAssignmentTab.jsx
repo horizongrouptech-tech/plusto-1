@@ -7,11 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Search, Save, UserPlus, Users } from 'lucide-react';
+import { Loader2, Search, Save, UserPlus, Users, X, Plus } from 'lucide-react';
 
 export default function ManagerAssignmentTab({ customer, currentUser }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [assignments, setAssignments] = useState({});
+  const [additionalAssignments, setAdditionalAssignments] = useState({});
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -54,10 +55,13 @@ export default function ManagerAssignmentTab({ customer, currentUser }) {
   useEffect(() => {
     if (onboardingRequests.length > 0) {
       const initialAssignments = {};
+      const initialAdditional = {};
       onboardingRequests.forEach(req => {
         initialAssignments[req.id] = req.assigned_financial_manager_email || null;
+        initialAdditional[req.id] = req.additional_assigned_financial_manager_emails || [];
       });
       setAssignments(initialAssignments);
+      setAdditionalAssignments(initialAdditional);
     }
   }, [onboardingRequests]);
 
@@ -80,14 +84,39 @@ export default function ManagerAssignmentTab({ customer, currentUser }) {
     setHasChanges(true);
   };
 
+  const handleAddAdditionalManager = (requestId, managerEmail) => {
+    if (!managerEmail || managerEmail === 'null') return;
+    
+    setAdditionalAssignments(prev => ({
+      ...prev,
+      [requestId]: [...(prev[requestId] || []), managerEmail]
+    }));
+    setHasChanges(true);
+  };
+
+  const handleRemoveAdditionalManager = (requestId, managerEmail) => {
+    setAdditionalAssignments(prev => ({
+      ...prev,
+      [requestId]: (prev[requestId] || []).filter(email => email !== managerEmail)
+    }));
+    setHasChanges(true);
+  };
+
   const handleSaveAll = async () => {
     setIsSaving(true);
     try {
       const updates = Object.entries(assignments).map(([requestId, managerEmail]) => {
         const originalRequest = onboardingRequests.find(r => r.id === requestId);
-        if (originalRequest?.assigned_financial_manager_email !== managerEmail) {
+        const additionalEmails = additionalAssignments[requestId] || [];
+        
+        const needsUpdate = 
+          originalRequest?.assigned_financial_manager_email !== managerEmail ||
+          JSON.stringify(originalRequest?.additional_assigned_financial_manager_emails || []) !== JSON.stringify(additionalEmails);
+        
+        if (needsUpdate) {
           return base44.entities.OnboardingRequest.update(requestId, {
-            assigned_financial_manager_email: managerEmail
+            assigned_financial_manager_email: managerEmail,
+            additional_assigned_financial_manager_emails: additionalEmails
           });
         }
         return null;
@@ -195,44 +224,63 @@ export default function ManagerAssignmentTab({ customer, currentUser }) {
           {/* רשימת שיוכים מעוצבת */}
           <div className="space-y-3">
             {filteredRequests.map((request) => {
-              const assignedManager = financialManagers.find(m => m.email === assignments[request.id]);
+              const primaryManager = financialManagers.find(m => m.email === assignments[request.id]);
+              const additionalManagers = (additionalAssignments[request.id] || [])
+                .map(email => financialManagers.find(m => m.email === email))
+                .filter(Boolean);
               const hasAssignment = !!assignments[request.id];
+              const availableManagers = financialManagers.filter(m => 
+                m.email !== assignments[request.id] && 
+                !(additionalAssignments[request.id] || []).includes(m.email)
+              );
               
               return (
                 <div 
                   key={request.id} 
                   className="bg-horizon-card border border-horizon rounded-xl p-4 hover:shadow-lg transition-all hover:border-horizon-primary"
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    {/* פרטי לקוח */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 bg-gradient-to-br from-horizon-primary to-horizon-secondary rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">
-                          {request.business_name?.charAt(0)?.toUpperCase() || '?'}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-4">
+                      {/* פרטי לקוח */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-10 h-10 bg-gradient-to-br from-horizon-primary to-horizon-secondary rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">
+                            {request.business_name?.charAt(0)?.toUpperCase() || '?'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-horizon-text truncate">
+                              {request.business_name || 'ללא שם'}
+                            </p>
+                            <p className="text-sm text-horizon-accent truncate">
+                              {request.full_name}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-horizon-text truncate">
-                            {request.business_name || 'ללא שם'}
-                          </p>
-                          <p className="text-sm text-horizon-accent truncate">
-                            {request.full_name}
-                          </p>
+                        <div className="flex gap-4 text-xs text-horizon-accent mr-13">
+                          <span className="truncate">📧 {request.email}</span>
+                          {request.phone && <span>📱 {request.phone}</span>}
                         </div>
                       </div>
-                      <div className="flex gap-4 text-xs text-horizon-accent mr-13">
-                        <span className="truncate">📧 {request.email}</span>
-                        {request.phone && <span>📱 {request.phone}</span>}
+
+                      {/* אינדיקטור סטטוס */}
+                      <div className="flex-shrink-0">
+                        {hasAssignment ? (
+                          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                        ) : (
+                          <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                        )}
                       </div>
                     </div>
 
-                    {/* בחירת מנהל */}
-                    <div className="w-64 flex-shrink-0">
+                    {/* מנהל ראשי */}
+                    <div>
+                      <p className="text-xs text-horizon-accent mb-2 font-medium">מנהל כספים ראשי:</p>
                       <Select
                         value={assignments[request.id] || 'null'}
                         onValueChange={(value) => handleAssignmentChange(request.id, value)}
                       >
                         <SelectTrigger className={`bg-horizon-dark border-2 text-horizon-text ${hasAssignment ? 'border-green-500/50' : 'border-orange-500/50'}`}>
-                          <SelectValue placeholder="בחר מנהל כספים..." />
+                          <SelectValue placeholder="בחר מנהל כספים ראשי..." />
                         </SelectTrigger>
                         <SelectContent className="bg-horizon-dark border-horizon">
                           <SelectItem value="null" className="text-horizon-accent">
@@ -252,12 +300,68 @@ export default function ManagerAssignmentTab({ customer, currentUser }) {
                       </Select>
                     </div>
 
-                    {/* אינדיקטור סטטוס */}
-                    <div className="flex-shrink-0">
-                      {hasAssignment ? (
-                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                    {/* מנהלים נוספים */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs text-horizon-accent font-medium">מנהלי כספים נוספים:</p>
+                        {availableManagers.length > 0 && (
+                          <Select
+                            value="null"
+                            onValueChange={(value) => {
+                              if (value !== 'null') {
+                                handleAddAdditionalManager(request.id, value);
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="w-40 h-8 bg-horizon-primary/20 border-horizon-primary text-horizon-primary text-xs">
+                              <SelectValue>
+                                <div className="flex items-center gap-1">
+                                  <Plus className="w-3 h-3" />
+                                  <span>הוסף מנהל</span>
+                                </div>
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent className="bg-horizon-dark border-horizon">
+                              <SelectItem value="null" disabled className="text-horizon-accent">
+                                בחר מנהל...
+                              </SelectItem>
+                              {availableManagers.map(manager => (
+                                <SelectItem key={manager.email} value={manager.email} className="text-horizon-text">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-5 h-5 bg-horizon-secondary rounded-full flex items-center justify-center text-white text-xs">
+                                      {manager.full_name?.charAt(0)?.toUpperCase() || '?'}
+                                    </div>
+                                    {manager.full_name || manager.email}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                      
+                      {additionalManagers.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {additionalManagers.map((manager) => (
+                            <Badge 
+                              key={manager.email}
+                              className="bg-horizon-secondary/20 text-horizon-secondary border-horizon-secondary flex items-center gap-1"
+                            >
+                              <div className="w-4 h-4 bg-horizon-secondary rounded-full flex items-center justify-center text-white text-[9px]">
+                                {manager.full_name?.charAt(0)?.toUpperCase() || '?'}
+                              </div>
+                              {manager.full_name || manager.email}
+                              <button
+                                onClick={() => handleRemoveAdditionalManager(request.id, manager.email)}
+                                className="hover:bg-red-500/20 rounded-full p-0.5 transition-colors"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
                       ) : (
-                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                        <p className="text-xs text-horizon-accent/50 italic">אין מנהלים נוספים</p>
                       )}
                     </div>
                   </div>
