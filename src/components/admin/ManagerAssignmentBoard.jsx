@@ -423,9 +423,4 @@ export default function ManagerAssignmentBoard({
       </div>
     </div>
   );
-
-  function getManagerName(email) {
-    const manager = financialManagers.find(m => m.email === email);
-    return manager?.full_name || email;
-  }
 }
