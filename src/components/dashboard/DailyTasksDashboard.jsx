@@ -517,15 +517,33 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                   <div className="text-xs text-[#5a6c7d] mb-3 text-right">
                     {client.business_type || 'other'}
                   </div>
-                  <Link to={createPageUrl('CustomerManagement') + `?clientId=${client.id}&source=onboarding`}>
-                    <Button
-                  size="sm"
-                  className="w-full bg-[#32acc1] hover:bg-[#32acc1]/90 text-white rounded-lg h-9">
-
-                      <ArrowLeft className="w-4 h-4 ml-2" />
-                      מעבר ללקוח
-                    </Button>
-                  </Link>
+                  <div className="space-y-2">
+                    <Link to={createPageUrl('CustomerManagement') + `?clientId=${client.id}&source=onboarding`}>
+                      <Button
+                        size="sm"
+                        className="w-full bg-[#32acc1] hover:bg-[#32acc1]/90 text-white rounded-lg h-9"
+                      >
+                        <ArrowLeft className="w-4 h-4 ml-2" />
+                        מעבר ללקוח
+                      </Button>
+                    </Link>
+                    {client.fireberry_account_id && (
+                      <a
+                        href={`https://plusto.fireberry.com/Account/Account/frm_account_information.aspx?id=${client.fireberry_account_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: 'block', width: '100%' }}
+                      >
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full border-[#32acc1] text-[#32acc1] hover:bg-[#32acc1]/10 rounded-lg h-9"
+                        >
+                          פתח בפיירברי
+                        </Button>
+                      </a>
+                    )}
+                  </div>
                 </div>
             )}
             </div>
