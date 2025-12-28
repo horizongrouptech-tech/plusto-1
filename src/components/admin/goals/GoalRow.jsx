@@ -450,20 +450,20 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                     </Popover>
                 </div>
 
-                <div className="flex items-center gap-2 text-sm text-horizon-accent">
+                <div className="flex items-center gap-2 text-sm text-horizon-text">
                     <Popover>
                         <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-1 cursor-pointer hover:bg-horizon-primary/10 rounded px-2 py-1 transition-colors">
+                            <div className="flex items-center gap-1 cursor-pointer hover:bg-horizon-primary/10 rounded px-2 py-1 transition-colors" title={goal.assignee_email || 'ללא אחראי'}>
                                 {(goal.assigned_users || []).length > 0 ? (
                                     <div className="flex items-center gap-1">
                                         {goal.assigned_users.slice(0, 2).map(email => {
                                             const user = users.find(u => u.email === email);
-                                            return <span key={email} className="text-xs">{user?.full_name || email}</span>;
+                                            return <span key={email} className="text-xs text-horizon-text">{user?.full_name || 'משתמש'}</span>;
                                         })}
                                         {goal.assigned_users.length > 2 && <span className="text-xs">+{goal.assigned_users.length - 2}</span>}
                                     </div>
                                 ) : goal.assignee_email ? (
-                                    <span>{users.find(u => u.email === goal.assignee_email)?.full_name || goal.assignee_email}</span>
+                                    <span className="text-horizon-text">{users.find(u => u.email === goal.assignee_email)?.full_name || 'משתמש'}</span>
                                 ) : (
                                     <span className="text-gray-400">ללא אחראי</span>
                                 )}
