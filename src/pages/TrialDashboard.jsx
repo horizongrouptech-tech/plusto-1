@@ -266,9 +266,6 @@ export default function TrialDashboard() {
           <h1 className="text-xl font-bold text-horizon-text">דשבורד CRM - גרסת ניסיון</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-            גרסת ניסיון
-          </Badge>
         </div>
       </header>
 
