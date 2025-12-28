@@ -355,5 +355,15 @@ export default function CustomerOverviewModal({
         </div>
       </DialogContent>
     </Dialog>
+
+      {/* מודל אופק 360 */}
+      {ofek360Open && (
+        <Ofek360Modal
+          customer={customer}
+          isOpen={ofek360Open}
+          onClose={() => setOfek360Open(false)}
+        />
+      )}
+    </>
   );
 }
