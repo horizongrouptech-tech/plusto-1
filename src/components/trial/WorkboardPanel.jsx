@@ -23,6 +23,8 @@ import CustomerSuppliersTab from '@/components/admin/CustomerSuppliersTab';
 import WebsiteScanner from '@/components/admin/WebsiteScanner';
 import CreateRecommendationButtons from '@/components/admin/CreateRecommendationButtons';
 import RecommendationFilters from '@/components/admin/RecommendationFilters';
+import ManagerAssignmentTab from './ManagerAssignmentTab';
+import CashFlowManager from '@/components/cashflow/CashFlowManager';
 
 const tabs = [
   { id: 'files', label: 'קבצים', icon: FolderOpen },
@@ -32,6 +34,8 @@ const tabs = [
   { id: 'goals', label: 'יעדים', icon: Target },
   { id: 'suppliers', label: 'ספקים', icon: Truck },
   { id: 'website', label: 'סריקת אתר', icon: Globe },
+  { id: 'cashflow', label: 'תזרים כספים', icon: DollarSign },
+  { id: 'manager_assignment', label: 'שיוך מנהלים', icon: Building2 },
 ];
 
 export default function WorkboardPanel({ 
@@ -59,7 +63,8 @@ export default function WorkboardPanel({
   onCreateTargeted,
   onCreateGoalOriented,
   onCreateManual,
-  isGenerating
+  isGenerating,
+  currentUser
 }) {
   if (!customer) {
     return (
@@ -71,6 +76,14 @@ export default function WorkboardPanel({
       </div>
     );
   }
+
+  // סינון טאבים לפי הרשאות
+  const visibleTabs = tabs.filter(tab => {
+    if (tab.id === 'manager_assignment') {
+      return currentUser?.role === 'admin' || currentUser?.department_manager_role === 'department_manager';
+    }
+    return true;
+  });
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-horizon-dark">
@@ -91,7 +104,7 @@ export default function WorkboardPanel({
       {/* Tabs Navigation */}
       <div className="bg-horizon-card border-b border-horizon px-4 py-2" dir="rtl">
         <div className="flex gap-1 overflow-x-auto">
-          {tabs.map((tab) => {
+          {visibleTabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <Button
@@ -172,6 +185,17 @@ export default function WorkboardPanel({
         
         {activeTab === 'website' && (
           <WebsiteScanner customer={customer} />
+        )}
+        
+        {activeTab === 'cashflow' && (
+          <CashFlowManager customer={customer} />
+        )}
+        
+        {activeTab === 'manager_assignment' && (
+          <ManagerAssignmentTab 
+            customer={customer}
+            currentUser={currentUser}
+          />
         )}
       </div>
     </div>
