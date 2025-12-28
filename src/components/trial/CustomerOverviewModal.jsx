@@ -105,7 +105,7 @@ export default function CustomerOverviewModal({
 
         <div className="space-y-6">
           {/* כפתורים עליונים */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <Button
               onClick={() => setOfek360Open(true)}
               className="bg-gradient-to-r from-horizon-primary to-horizon-secondary hover:from-horizon-primary/90 hover:to-horizon-secondary/90 text-white h-12"
@@ -121,6 +121,20 @@ export default function CustomerOverviewModal({
               >
                 <MessageSquare className="w-5 h-5 ml-2" />
                 שלח וואטסאפ ללקוח
+              </Button>
+            )}
+
+            {customer.fireberry_account_id && (
+              <Button
+                onClick={() => window.open(
+                  `https://app.fireberry.com/admin/accounts/${customer.fireberry_account_id}`,
+                  '_blank'
+                )}
+                variant="outline"
+                className="border-orange-500 text-orange-400 hover:bg-orange-500/10 h-12"
+              >
+                <AlertCircle className="w-5 h-5 ml-2" />
+                פתח בפיירברי
               </Button>
             )}
           </div>
