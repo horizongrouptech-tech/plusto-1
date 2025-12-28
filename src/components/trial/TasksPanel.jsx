@@ -104,29 +104,39 @@ export default function TasksPanel({ customer, tasks, onRefresh, onCollapse, onT
 
   const TaskItem = ({ task, onClick }) => (
     <div 
-      className="flex items-center gap-2 p-2 rounded-lg hover:bg-horizon-dark/50 group cursor-pointer"
+      className="bg-horizon-card/50 border border-horizon rounded-lg p-3 hover:border-horizon-primary/50 group cursor-pointer transition-all"
       onClick={() => onClick(task)}
       dir="rtl"
     >
-      <div className="flex-1 min-w-0 text-right">
-        <p className="text-sm text-horizon-text truncate">{task.name}</p>
-        {task.end_date && (
-          <p className="text-xs text-horizon-accent">
-            {format(parseISO(task.end_date), 'dd/MM')}
-          </p>
-        )}
+      <div className="flex items-start gap-2">
+        <div className="flex-1 min-w-0 text-right">
+          <p className="text-sm text-horizon-text font-medium mb-1 break-words">{task.name}</p>
+          <div className="flex flex-wrap gap-1 items-center justify-end">
+            {task.end_date && (
+              <div className="flex items-center gap-1 text-xs text-horizon-accent">
+                <Clock className="w-3 h-3" />
+                <span>{format(parseISO(task.end_date), 'dd/MM')}</span>
+              </div>
+            )}
+            {task.due_time && (
+              <Badge variant="outline" className="text-xs border-yellow-400 text-yellow-400">
+                {task.due_time}
+              </Badge>
+            )}
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleMarkDone(task.id);
+          }}
+          className="h-7 w-7 text-horizon-accent hover:text-green-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+        >
+          <CheckCircle2 className="w-4 h-4" />
+        </Button>
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={(e) => {
-          e.stopPropagation();
-          handleMarkDone(task.id);
-        }}
-        className="h-6 w-6 text-horizon-accent hover:text-green-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-      >
-        <CheckCircle2 className="w-4 h-4" />
-      </Button>
     </div>
   );
 
