@@ -69,8 +69,7 @@ export default function GoalsTimeline({ customer }) {
     queryKey: ['customerGoals', customer?.email],
     queryFn: () => base44.entities.CustomerGoal.filter({
       customer_email: customer.email,
-      is_active: true,
-      parent_id: { $exists: false } // רק יעדים ברמה העליונה
+      is_active: true
     }, 'start_date'),
     enabled: !!customer?.email
   });

@@ -193,6 +193,14 @@ export default function CustomerListPanel({
           {filteredCustomers.length} לקוחות
         </p>
       </div>
-    </div>
+      </div>
+
+      {/* Manager Assignment Modal */}
+      <ManagerAssignmentModal
+        isOpen={showManagerModal}
+        onClose={() => setShowManagerModal(false)}
+        currentUser={currentUser}
+      />
+    </>
   );
 }
