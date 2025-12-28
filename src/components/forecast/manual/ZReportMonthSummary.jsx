@@ -7,6 +7,7 @@ import { formatCurrency } from './utils/numberFormatter';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import ZReportEditor from './ZReportEditor';
+import { base44 } from "@/api/base44Client";
 
 export default function ZReportMonthSummary({ forecastData, salesForecast, services, onUpdateZReport }) {
   const [editingMonth, setEditingMonth] = useState(null);
