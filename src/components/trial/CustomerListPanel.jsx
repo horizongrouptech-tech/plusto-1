@@ -9,7 +9,7 @@ import {
   Search,
   Users,
   Loader2,
-  Edit
+  Eye
 } from 'lucide-react';
 
 export default function CustomerListPanel({
@@ -153,10 +153,10 @@ export default function CustomerListPanel({
                         onSelectCustomer(customer);
                         if (onOpenOverview) onOpenOverview(customer);
                       }}
-                      className="h-7 w-7 text-horizon-primary hover:text-horizon-primary hover:bg-horizon-primary/10"
+                      className="h-8 w-8 text-white bg-horizon-primary hover:bg-horizon-primary/80 rounded-full shadow-md transition-all hover:scale-110"
                       title="סקירה כללית"
                     >
-                      <Edit className="w-4 h-4" />
+                      <Eye className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>

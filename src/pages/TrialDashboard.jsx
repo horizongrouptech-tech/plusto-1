@@ -70,17 +70,22 @@ export default function TrialDashboard() {
     loadUser();
   }, []);
 
-  // טעינת לקוחות
+  // טעינת לקוחות - גישה זהה ל-CustomerManagement
   const { data: customers = [], isLoading: loadingCustomers } = useQuery({
     queryKey: ['trialCustomers', currentUser?.email],
     queryFn: async () => {
       if (!currentUser) return [];
       
-      let filter = { status: 'approved', is_active: true };
+      // טעינה של כל הלקוחות הפעילים
+      let filter = { is_active: true };
       
       // אם מנהל כספים - רק הלקוחות שלו
       if (currentUser.user_type === 'financial_manager' && currentUser.role !== 'admin') {
-        filter.assigned_financial_manager_email = currentUser.email;
+        const allRequests = await base44.entities.OnboardingRequest.filter({ is_active: true }, 'business_name');
+        return allRequests.filter((req) =>
+          req.assigned_financial_manager_email === currentUser.email ||
+          req.additional_assigned_financial_manager_emails?.includes(currentUser.email)
+        );
       }
       
       return base44.entities.OnboardingRequest.filter(filter, 'business_name');

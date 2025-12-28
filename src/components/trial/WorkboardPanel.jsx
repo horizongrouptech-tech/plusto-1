@@ -47,9 +47,9 @@ export default function WorkboardPanel({ customer, activeTab, onTabChange }) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-horizon-dark">
       {/* Customer Header */}
-      <div className="bg-horizon-card border-b border-horizon px-6 py-4">
+      <div className="bg-horizon-card border-b border-horizon px-6 py-4" dir="rtl">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="text-right">
             <h2 className="text-xl font-bold text-horizon-text">
               {customer.business_name || 'ללא שם עסק'}
             </h2>
@@ -61,7 +61,7 @@ export default function WorkboardPanel({ customer, activeTab, onTabChange }) {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="bg-horizon-card border-b border-horizon px-4 py-2">
+      <div className="bg-horizon-card border-b border-horizon px-4 py-2" dir="rtl">
         <div className="flex gap-1 overflow-x-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -86,7 +86,7 @@ export default function WorkboardPanel({ customer, activeTab, onTabChange }) {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-4" dir="rtl">
         {activeTab === 'files' && (
           <CustomerFileUploadManager customer={customer} />
         )}

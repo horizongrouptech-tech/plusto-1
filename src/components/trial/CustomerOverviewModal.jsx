@@ -132,7 +132,7 @@ export default function CustomerOverviewModal({
           <Card className="card-horizon">
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle className="text-horizon-text">פרטי לקוח</CardTitle>
+                <CardTitle className="text-horizon-text text-right">פרטי לקוח</CardTitle>
                 <Button
                   variant="outline"
                   size="sm"
@@ -148,7 +148,7 @@ export default function CustomerOverviewModal({
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 text-right" dir="rtl">
                 <div>
                   <p className="text-sm text-horizon-accent">שם העסק</p>
                   <p className="font-medium text-horizon-text">{customer.business_name || 'לא צוין'}</p>
@@ -159,15 +159,33 @@ export default function CustomerOverviewModal({
                 </div>
                 <div>
                   <p className="text-sm text-horizon-accent">אימייל</p>
-                  <p className="font-medium text-horizon-text" dir="ltr">{customer.email}</p>
+                  <p className="font-medium text-horizon-text">{customer.email}</p>
                 </div>
                 <div>
                   <p className="text-sm text-horizon-accent">טלפון</p>
-                  <p className="font-medium text-horizon-text" dir="ltr">{customer.phone || 'לא צוין'}</p>
+                  <p className="font-medium text-horizon-text">{customer.phone || 'לא צוין'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-horizon-accent">סוג עסק</p>
                   <p className="font-medium text-horizon-text">{customer.business_type || 'לא צוין'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-horizon-accent">גודל חברה</p>
+                  <p className="font-medium text-horizon-text">{customer.company_size || 'לא צוין'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-horizon-accent">מחזור חודשי</p>
+                  <p className="font-medium text-horizon-text">
+                    {customer.monthly_revenue ? `₪${customer.monthly_revenue.toLocaleString()}` : 'לא צוין'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-horizon-accent">עיר</p>
+                  <p className="font-medium text-horizon-text">{customer.business_city || 'לא צוין'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-horizon-accent">אתר אינטרנט</p>
+                  <p className="font-medium text-horizon-text">{customer.website_url || 'לא צוין'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-horizon-accent">קבוצה</p>
@@ -180,12 +198,33 @@ export default function CustomerOverviewModal({
                   </Badge>
                 </div>
               </div>
+
+              {customer.main_products_services && (
+                <div className="pt-4 mt-4 border-t border-horizon text-right">
+                  <p className="text-sm text-horizon-accent mb-1">מוצרים ושירותים עיקריים</p>
+                  <p className="text-horizon-text whitespace-pre-line">{customer.main_products_services}</p>
+                </div>
+              )}
+
+              {customer.business_goals && (
+                <div className="pt-4 mt-4 border-t border-horizon text-right">
+                  <p className="text-sm text-horizon-accent mb-1">יעדים עסקיים</p>
+                  <p className="text-horizon-text">{customer.business_goals}</p>
+                </div>
+              )}
+
+              {customer.target_audience && (
+                <div className="pt-4 mt-4 border-t border-horizon text-right">
+                  <p className="text-sm text-horizon-accent mb-1">קהל יעד</p>
+                  <p className="text-horizon-text">{customer.target_audience}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
           {/* כפתורי פעולה מהירה */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-horizon-text">פעולות מהירות</h3>
+          <div className="space-y-3" dir="rtl">
+            <h3 className="font-semibold text-horizon-text text-right">פעולות מהירות</h3>
             
             <CreateRecommendationButtons
               onCreateSystemRecommendations={onCreateSystemRec}
@@ -241,7 +280,7 @@ export default function CustomerOverviewModal({
                 className="border-horizon text-horizon-text hover:bg-horizon-card h-12"
               >
                 <Target className="w-5 h-5 ml-2" />
-                יעדים
+                יעדים ומשימות
               </Button>
 
               <Button
