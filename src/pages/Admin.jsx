@@ -40,7 +40,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { format, formatDistanceToNow } from "date-fns";
 import { he } from "date-fns/locale";
@@ -2903,17 +2903,7 @@ export default function AdminPage() {
               </TabsContent>
 
               <TabsContent value="customers">
-                <Suspense fallback={
-                  <div className="flex justify-center items-center h-64 bg-horizon-dark">
-                    <div className="flex flex-col items-center gap-3">
-                      <Loader2 className="w-8 h-8 animate-spin text-horizon-primary" />
-                      <p className="text-horizon-accent">טוען ניהול לקוחות...</p>
-                    </div>
-                  </div>
-                }>
-                  <ClientManagementDashboard />
-                </Suspense>
-              
+                <Navigate to={createPageUrl("CustomerManagementNew")} replace />
               </TabsContent>
               <TabsContent value="tasks">
                 <TaskManagement />
