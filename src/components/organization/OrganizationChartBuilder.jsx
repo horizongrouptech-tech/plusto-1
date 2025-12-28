@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, Plus, Save, Trash2, Edit3, Loader2, User } from 'lucide-react';
@@ -315,7 +316,7 @@ export default function OrganizationChartBuilder({ customer }) {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-horizon-accent">שם *</label>
+              <Label className="text-sm text-horizon-accent mb-2 block">שם *</Label>
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -324,7 +325,7 @@ export default function OrganizationChartBuilder({ customer }) {
               />
             </div>
             <div>
-              <label className="text-sm text-horizon-accent">תפקיד *</label>
+              <Label className="text-sm text-horizon-accent mb-2 block">תפקיד *</Label>
               <Input
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
@@ -333,7 +334,7 @@ export default function OrganizationChartBuilder({ customer }) {
               />
             </div>
             <div>
-              <label className="text-sm text-horizon-accent">מחלקה</label>
+              <Label className="text-sm text-horizon-accent mb-2 block">מחלקה</Label>
               <Input
                 value={formData.department}
                 onChange={(e) => setFormData({ ...formData, department: e.target.value })}
@@ -342,7 +343,7 @@ export default function OrganizationChartBuilder({ customer }) {
               />
             </div>
             <div>
-              <label className="text-sm text-horizon-accent">שכר</label>
+              <Label className="text-sm text-horizon-accent mb-2 block">שכר חודשי</Label>
               <Input
                 type="number"
                 value={formData.salary}
@@ -353,7 +354,7 @@ export default function OrganizationChartBuilder({ customer }) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-horizon-accent">אימייל</label>
+                <Label className="text-sm text-horizon-accent mb-2 block">אימייל</Label>
                 <Input
                   type="email"
                   value={formData.email}
@@ -363,7 +364,7 @@ export default function OrganizationChartBuilder({ customer }) {
                 />
               </div>
               <div>
-                <label className="text-sm text-horizon-accent">טלפון</label>
+                <Label className="text-sm text-horizon-accent mb-2 block">טלפון</Label>
                 <Input
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
