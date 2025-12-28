@@ -18,39 +18,85 @@ import { Calendar, Target, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 
-// Custom Node Component
+// Custom Node Component - עיצוב משופר וברור
 const GoalNode = ({ data }) => {
-  const statusColors = {
-    open: 'border-gray-400 bg-gray-500/10',
-    in_progress: 'border-blue-400 bg-blue-500/10',
-    done: 'border-green-400 bg-green-500/10',
-    delayed: 'border-red-400 bg-red-500/10',
-    cancelled: 'border-gray-300 bg-gray-400/10'
+  const statusConfig = {
+    open: {
+      border: 'border-gray-400',
+      bg: 'bg-gradient-to-br from-gray-500/20 to-gray-600/10',
+      icon: '○',
+      iconBg: 'bg-gray-500',
+      label: 'פתוח'
+    },
+    in_progress: {
+      border: 'border-blue-400',
+      bg: 'bg-gradient-to-br from-blue-500/20 to-blue-600/10',
+      icon: '⟳',
+      iconBg: 'bg-blue-500',
+      label: 'בביצוע'
+    },
+    done: {
+      border: 'border-green-400',
+      bg: 'bg-gradient-to-br from-green-500/20 to-green-600/10',
+      icon: '✓',
+      iconBg: 'bg-green-500',
+      label: 'הושלם'
+    },
+    delayed: {
+      border: 'border-red-400',
+      bg: 'bg-gradient-to-br from-red-500/20 to-red-600/10',
+      icon: '!',
+      iconBg: 'bg-red-500',
+      label: 'באיחור'
+    },
+    cancelled: {
+      border: 'border-gray-300',
+      bg: 'bg-gradient-to-br from-gray-400/20 to-gray-500/10',
+      icon: '✕',
+      iconBg: 'bg-gray-400',
+      label: 'בוטל'
+    }
   };
 
-  const shapeClasses = {
-    circle: 'rounded-full w-32 h-32',
-    rectangle: 'rounded-lg w-40 h-24',
-    rounded: 'rounded-2xl w-36 h-28'
-  };
+  const config = statusConfig[data.status] || statusConfig.open;
 
   return (
     <div 
-      className={`${shapeClasses[data.shape || 'circle']} ${statusColors[data.status]} border-2 p-3 flex flex-col items-center justify-center cursor-pointer hover:shadow-lg transition-all`}
+      className={`
+        w-48 min-h-[120px] rounded-2xl p-4 
+        ${config.bg} ${config.border} border-3 
+        shadow-xl hover:shadow-2xl 
+        transition-all duration-300 cursor-pointer 
+        hover:scale-105 hover:border-horizon-primary
+        backdrop-blur-sm
+      `}
       onClick={data.onClick}
     >
-      <div className="text-center">
-        <p className="text-xs font-bold text-horizon-text truncate max-w-full px-2">
-          {data.label}
-        </p>
-        {data.endDate && (
-          <p className="text-[10px] text-horizon-accent mt-1">
-            {format(new Date(data.endDate), 'dd/MM/yy', { locale: he })}
+      <div className="space-y-3">
+        {/* Header with status icon */}
+        <div className="flex items-start justify-between gap-2">
+          <div className={`${config.iconBg} w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-md flex-shrink-0`}>
+            {config.icon}
+          </div>
+          <Badge className={`text-[10px] ${config.bg} ${config.border} border`}>
+            {config.label}
+          </Badge>
+        </div>
+
+        {/* Goal name */}
+        <div className="min-h-[40px]">
+          <p className="text-sm font-bold text-horizon-text leading-tight break-words">
+            {data.label}
           </p>
+        </div>
+
+        {/* Date */}
+        {data.endDate && (
+          <div className="flex items-center gap-2 text-xs text-horizon-accent pt-2 border-t border-horizon/30">
+            <Calendar className="w-3 h-3 flex-shrink-0" />
+            <span>{format(new Date(data.endDate), 'dd/MM/yy', { locale: he })}</span>
+          </div>
         )}
-        <Badge className={`mt-1 text-[9px] ${statusColors[data.status]}`}>
-          {data.status === 'done' ? '✓' : data.status === 'delayed' ? '!' : '○'}
-        </Badge>
       </div>
     </div>
   );
@@ -113,7 +159,20 @@ export default function GoalsTimeline({ customer }) {
           type: MarkerType.ArrowClosed,
           color: '#32acc1'
         },
-        style: { stroke: '#32acc1', strokeWidth: 2 }
+        style: { 
+          stroke: '#32acc1', 
+          strokeWidth: 3 
+        },
+        label: 'תלוי ב-',
+        labelStyle: {
+          fill: '#32acc1',
+          fontSize: 11,
+          fontWeight: 600
+        },
+        labelBgStyle: {
+          fill: '#0A192F',
+          fillOpacity: 0.8
+        }
       }));
 
     return { nodes, edges };
@@ -129,8 +188,36 @@ export default function GoalsTimeline({ customer }) {
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
   const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
+    async (params) => {
+      // הוספת קו חדש
+      const newEdge = {
+        ...params,
+        type: 'smoothstep',
+        animated: true,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: '#32acc1'
+        },
+        style: { 
+          stroke: '#32acc1', 
+          strokeWidth: 3 
+        },
+        label: 'תלוי ב-'
+      };
+      
+      setEdges((eds) => addEdge(newEdge, eds));
+      
+      // שמירה בדאטאבייס
+      try {
+        await base44.entities.CustomerGoal.update(params.target, {
+          depends_on_goal_id: params.source
+        });
+        queryClient.invalidateQueries(['customerGoals', customer.email]);
+      } catch (error) {
+        console.error('Error saving connection:', error);
+      }
+    },
+    [setEdges, customer, queryClient]
   );
 
   // שמירת מיקום node
@@ -180,7 +267,7 @@ export default function GoalsTimeline({ customer }) {
           </p>
         </CardHeader>
         <CardContent>
-          <div className="h-[600px] bg-horizon-dark rounded-lg border border-horizon">
+          <div className="h-[700px] bg-gradient-to-br from-[#0A192F] via-[#112240] to-[#0A192F] rounded-xl border-2 border-horizon shadow-2xl">
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -192,9 +279,28 @@ export default function GoalsTimeline({ customer }) {
               fitView
               attributionPosition="bottom-left"
               style={{ direction: 'ltr' }}
+              connectionLineStyle={{ 
+                stroke: '#32acc1', 
+                strokeWidth: 3,
+                strokeDasharray: '5,5'
+              }}
+              connectionLineType="smoothstep"
+              defaultEdgeOptions={{
+                type: 'smoothstep',
+                animated: true,
+                style: { strokeWidth: 3 }
+              }}
             >
-              <Background color="#32acc1" gap={16} />
-              <Controls className="bg-horizon-card border-horizon" />
+              <Background 
+                color="#32acc1" 
+                gap={20} 
+                size={2}
+                style={{ opacity: 0.15 }}
+              />
+              <Controls 
+                className="bg-horizon-card/90 backdrop-blur-sm border border-horizon rounded-lg shadow-xl" 
+                showInteractive={false}
+              />
               <MiniMap 
                 nodeColor={(node) => {
                   const colors = {
@@ -206,32 +312,44 @@ export default function GoalsTimeline({ customer }) {
                   };
                   return colors[node.data.status] || '#cbd5e0';
                 }}
-                className="bg-horizon-card border border-horizon"
+                className="bg-horizon-card/90 backdrop-blur-sm border border-horizon rounded-lg shadow-lg"
+                maskColor="rgba(10, 25, 47, 0.8)"
               />
             </ReactFlow>
+          </div>
+          
+          <div className="mt-4 bg-horizon-primary/10 border border-horizon-primary/30 rounded-lg p-4 text-center">
+            <p className="text-sm text-horizon-text font-medium">
+              💡 <strong>איך להשתמש:</strong> גרור יעדים להזזה • גרור מנקודה אחת לאחרת ליצירת תלות • לחץ על יעד לעריכה
+            </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* מקרא */}
-      <Card className="card-horizon">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4 justify-center">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full border-2 border-gray-400 bg-gray-500/10"></div>
-              <span className="text-sm text-horizon-accent">פתוח</span>
+      {/* מקרא משופר */}
+      <Card className="card-horizon bg-gradient-to-r from-horizon-card to-horizon-dark/50">
+        <CardContent className="p-6">
+          <p className="text-xs text-horizon-accent font-bold mb-4 text-center">מקרא סטטוסים</p>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="flex flex-col items-center gap-2 p-3 bg-horizon-dark/50 rounded-lg border border-horizon">
+              <div className="w-10 h-10 rounded-lg bg-gray-500 flex items-center justify-center text-white font-bold shadow-md">○</div>
+              <span className="text-sm text-horizon-text font-medium">פתוח</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full border-2 border-blue-400 bg-blue-500/10"></div>
-              <span className="text-sm text-horizon-accent">בביצוע</span>
+            <div className="flex flex-col items-center gap-2 p-3 bg-horizon-dark/50 rounded-lg border border-horizon">
+              <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center text-white font-bold shadow-md">⟳</div>
+              <span className="text-sm text-horizon-text font-medium">בביצוע</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full border-2 border-green-400 bg-green-500/10"></div>
-              <span className="text-sm text-horizon-accent">הושלם</span>
+            <div className="flex flex-col items-center gap-2 p-3 bg-horizon-dark/50 rounded-lg border border-horizon">
+              <div className="w-10 h-10 rounded-lg bg-green-500 flex items-center justify-center text-white font-bold shadow-md">✓</div>
+              <span className="text-sm text-horizon-text font-medium">הושלם</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full border-2 border-red-400 bg-red-500/10"></div>
-              <span className="text-sm text-horizon-accent">באיחור</span>
+            <div className="flex flex-col items-center gap-2 p-3 bg-horizon-dark/50 rounded-lg border border-horizon">
+              <div className="w-10 h-10 rounded-lg bg-red-500 flex items-center justify-center text-white font-bold shadow-md">!</div>
+              <span className="text-sm text-horizon-text font-medium">באיחור</span>
+            </div>
+            <div className="flex flex-col items-center gap-2 p-3 bg-horizon-dark/50 rounded-lg border border-horizon">
+              <div className="w-10 h-10 rounded-lg bg-gray-400 flex items-center justify-center text-white font-bold shadow-md">✕</div>
+              <span className="text-sm text-horizon-text font-medium">בוטל</span>
             </div>
           </div>
         </CardContent>
