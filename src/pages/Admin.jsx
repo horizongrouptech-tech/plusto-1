@@ -2903,17 +2903,18 @@ export default function AdminPage() {
               </TabsContent>
 
               <TabsContent value="customers">
-                <Suspense fallback={
-                  <div className="flex justify-center items-center h-64 bg-horizon-dark">
-                    <div className="flex flex-col items-center gap-3">
-                      <Loader2 className="w-8 h-8 animate-spin text-horizon-primary" />
-                      <p className="text-horizon-accent">טוען ניהול לקוחות...</p>
-                    </div>
-                  </div>
-                }>
-                  <ClientManagementDashboard />
-                </Suspense>
-              
+                <div className="text-center py-12">
+                  <Button 
+                    onClick={() => window.location.href = createPageUrl("CustomerManagementNew")}
+                    className="btn-horizon-primary h-20 px-12 text-lg"
+                  >
+                    <Users className="w-6 h-6 ml-3" />
+                    עבור לניהול לקוחות המתקדם
+                  </Button>
+                  <p className="text-horizon-accent text-sm mt-4">
+                    הממשק החדש כולל לוח עבודה משופר, ניהול משימות ושיוך מנהלי כספים
+                  </p>
+                </div>
               </TabsContent>
               <TabsContent value="tasks">
                 <TaskManagement />
