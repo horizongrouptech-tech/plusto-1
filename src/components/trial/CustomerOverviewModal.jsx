@@ -104,80 +104,15 @@ export default function CustomerOverviewModal({
           </DialogHeader>
 
         <div className="space-y-6">
-          {/* כפתורים עליונים */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* כפתור עליון */}
+          <div className="flex justify-center">
             <Button
               onClick={() => setOfek360Open(true)}
-              className="bg-gradient-to-r from-horizon-primary to-horizon-secondary hover:from-horizon-primary/90 hover:to-horizon-secondary/90 text-white h-12"
+              className="bg-gradient-to-r from-horizon-primary to-horizon-secondary hover:from-horizon-primary/90 hover:to-horizon-secondary/90 text-white h-12 w-full max-w-md"
             >
               <Target className="w-5 h-5 ml-2" />
               הצ'ק ליסט - אופק 360
             </Button>
-
-            {whatsappUrl && (
-              <Button
-                onClick={() => window.open(whatsappUrl, '_blank')}
-                className="bg-green-600 hover:bg-green-700 text-white h-12"
-              >
-                <MessageSquare className="w-5 h-5 ml-2" />
-                שלח וואטסאפ ללקוח
-              </Button>
-            )}
-
-            {customer.fireberry_account_id && (
-              <Button
-                onClick={() => window.open(
-                  `https://app.fireberry.com/admin/accounts/${customer.fireberry_account_id}`,
-                  '_blank'
-                )}
-                variant="outline"
-                className="border-orange-500 text-orange-400 hover:bg-orange-500/10 h-12"
-              >
-                <AlertCircle className="w-5 h-5 ml-2" />
-                פתח בפיירברי
-              </Button>
-            )}
-          </div>
-
-          {/* סטטיסטיקות מפתח */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="card-horizon">
-              <CardContent className="p-4 text-center">
-                <Lightbulb className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-                <p className="text-sm text-horizon-accent mb-1">המלצות פעילות</p>
-                <p className="text-2xl font-bold text-horizon-text">
-                  {stats.activeRecommendations}/{stats.totalRecommendations}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="card-horizon">
-              <CardContent className="p-4 text-center">
-                <FileText className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-                <p className="text-sm text-horizon-accent mb-1">קבצים</p>
-                <p className="text-2xl font-bold text-horizon-text">{stats.totalFiles}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="card-horizon">
-              <CardContent className="p-4 text-center">
-                <DollarSign className="w-8 h-8 text-green-400 mx-auto mb-2" />
-                <p className="text-sm text-horizon-accent mb-1">רווח פוטנציאלי</p>
-                <p className="text-xl font-bold text-green-400">
-                  {formatCurrency(stats.potentialProfit, 0)}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="card-horizon">
-              <CardContent className="p-4 text-center">
-                <TrendingUp className="w-8 h-8 text-horizon-primary mx-auto mb-2" />
-                <p className="text-sm text-horizon-accent mb-1">סטטוס</p>
-                <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                  פעיל
-                </Badge>
-              </CardContent>
-            </Card>
           </div>
 
           {/* פרטי לקוח */}
