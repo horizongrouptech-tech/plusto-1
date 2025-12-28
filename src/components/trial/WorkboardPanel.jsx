@@ -37,8 +37,7 @@ const tabs = [
   { id: 'suppliers', label: 'ספקים', icon: Truck },
   { id: 'website', label: 'סריקת אתר', icon: Globe },
   { id: 'cashflow', label: 'תזרים כספים', icon: DollarSign },
-  { id: 'org_chart', label: 'עץ ארגוני', icon: Building2 },
-  { id: 'manager_assignment', label: 'שיוך מנהלים', icon: Building2 },
+  { id: 'org_chart', label: 'עץ ארגוני', icon: Building2 }
 ];
 
 export default function WorkboardPanel({ 
@@ -81,13 +80,8 @@ export default function WorkboardPanel({
     );
   }
 
-  // סינון טאבים לפי הרשאות
-  const visibleTabs = tabs.filter(tab => {
-    if (tab.id === 'manager_assignment') {
-      return currentUser?.role === 'admin' || currentUser?.department_manager_role === 'department_manager';
-    }
-    return true;
-  });
+  // כל הטאבים זמינים לכולם
+  const visibleTabs = tabs;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-horizon-dark">
@@ -220,13 +214,6 @@ export default function WorkboardPanel({
         
         {activeTab === 'org_chart' && (
           <OrganizationChartBuilder customer={customer} />
-        )}
-        
-        {activeTab === 'manager_assignment' && (
-          <ManagerAssignmentTab 
-            customer={customer}
-            currentUser={currentUser}
-          />
         )}
       </div>
     </div>

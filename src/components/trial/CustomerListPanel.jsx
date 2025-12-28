@@ -9,8 +9,10 @@ import {
   Search,
   Users,
   Loader2,
-  Eye
+  Eye,
+  UserCog
 } from 'lucide-react';
+import ManagerAssignmentModal from '@/components/admin/ManagerAssignmentModal';
 
 export default function CustomerListPanel({
   customers,
@@ -21,9 +23,11 @@ export default function CustomerListPanel({
   onOpenSettings,
   onOpenOverview,
   onCollapse,
-  isLoading
+  isLoading,
+  currentUser
 }) {
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [showManagerModal, setShowManagerModal] = React.useState(false);
 
   const filteredCustomers = React.useMemo(() => {
     if (!searchTerm) return customers;
@@ -42,23 +46,37 @@ export default function CustomerListPanel({
   };
 
   return (
-    <div className="flex flex-col h-full" dir="rtl">
-      {/* Header */}
-      <div className="p-4 border-b border-horizon">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-horizon-text flex items-center gap-2 text-right">
-            <Users className="w-5 h-5 text-horizon-primary" />
-            לקוחות
-          </h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onCollapse}
-            className="text-horizon-accent hover:text-horizon-text h-8 w-8"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
+    <>
+      <div className="flex flex-col h-full" dir="rtl">
+        {/* Header */}
+        <div className="p-4 border-b border-horizon">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold text-horizon-text flex items-center gap-2 text-right">
+              <Users className="w-5 h-5 text-horizon-primary" />
+              לקוחות
+            </h2>
+            <div className="flex items-center gap-1">
+              {(currentUser?.role === 'admin' || currentUser?.department_manager_role === 'department_manager') && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowManagerModal(true)}
+                  className="text-horizon-primary hover:bg-horizon-primary/10 h-8 w-8"
+                  title="שיוך מנהלי כספים"
+                >
+                  <UserCog className="w-4 h-4" />
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onCollapse}
+                className="text-horizon-accent hover:text-horizon-text h-8 w-8"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
 
         {/* חיפוש */}
         <div className="relative mb-3">
@@ -187,15 +205,14 @@ export default function CustomerListPanel({
         </div>
       </ScrollArea>
 
-      {/* Footer - סה"כ לקוחות */}
-      <div className="p-3 border-t border-horizon bg-horizon-dark/50">
-        <p className="text-sm text-horizon-accent text-center">
-          {filteredCustomers.length} לקוחות
-        </p>
-      </div>
+        {/* Footer - סה"כ לקוחות */}
+        <div className="p-3 border-t border-horizon bg-horizon-dark/50">
+          <p className="text-sm text-horizon-accent text-center">
+            {filteredCustomers.length} לקוחות
+          </p>
+        </div>
       </div>
 
-      {/* Manager Assignment Modal */}
       <ManagerAssignmentModal
         isOpen={showManagerModal}
         onClose={() => setShowManagerModal(false)}
