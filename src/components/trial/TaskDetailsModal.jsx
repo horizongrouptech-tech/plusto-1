@@ -22,6 +22,7 @@ import {
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import GoalCommentsModal from '@/components/admin/goals/GoalCommentsModal';
+import MentionInput from '@/components/shared/MentionInput';
 
 export default function TaskDetailsModal({ 
   task, 
@@ -237,11 +238,12 @@ export default function TaskDetailsModal({
             {/* הערות */}
             <div>
               <label className="text-sm text-horizon-accent mb-2 block">הערות</label>
-              <Textarea
+              <MentionInput
                 value={editedTask.notes || ''}
-                onChange={(e) => setEditedTask({ ...editedTask, notes: e.target.value })}
-                className="bg-horizon-card border-horizon text-horizon-text min-h-[100px]"
-                placeholder="הוסף הערות..."
+                onChange={(val) => setEditedTask({ ...editedTask, notes: val })}
+                customerEmail={task.customer_email}
+                placeholder="הוסף הערות ותייג משתמשים..."
+                className="min-h-[100px]"
               />
             </div>
 

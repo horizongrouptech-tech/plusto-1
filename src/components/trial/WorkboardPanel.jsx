@@ -25,6 +25,8 @@ import CreateRecommendationButtons from '@/components/admin/CreateRecommendation
 import RecommendationFilters from '@/components/admin/RecommendationFilters';
 import ManagerAssignmentTab from './ManagerAssignmentTab';
 import CashFlowManager from '@/components/cashflow/CashFlowManager';
+import GoalsTimeline from '@/components/goals/GoalsTimeline';
+import OrganizationChartBuilder from '@/components/organization/OrganizationChartBuilder';
 
 const tabs = [
   { id: 'files', label: 'קבצים', icon: FolderOpen },
@@ -35,6 +37,7 @@ const tabs = [
   { id: 'suppliers', label: 'ספקים', icon: Truck },
   { id: 'website', label: 'סריקת אתר', icon: Globe },
   { id: 'cashflow', label: 'תזרים כספים', icon: DollarSign },
+  { id: 'org_chart', label: 'עץ ארגוני', icon: Building2 },
   { id: 'manager_assignment', label: 'שיוך מנהלים', icon: Building2 },
 ];
 
@@ -66,6 +69,7 @@ export default function WorkboardPanel({
   isGenerating,
   currentUser
 }) {
+  const [goalsView, setGoalsView] = React.useState('table');
   if (!customer) {
     return (
       <div className="flex-1 flex items-center justify-center bg-horizon-dark">
@@ -189,6 +193,10 @@ export default function WorkboardPanel({
         
         {activeTab === 'cashflow' && (
           <CashFlowManager customer={customer} />
+        )}
+        
+        {activeTab === 'org_chart' && (
+          <OrganizationChartBuilder customer={customer} />
         )}
         
         {activeTab === 'manager_assignment' && (

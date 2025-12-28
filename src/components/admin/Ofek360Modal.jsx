@@ -17,6 +17,7 @@ import {
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Target, CheckCircle, Circle, AlertCircle, MessageSquare, Send } from 'lucide-react';
+import MentionInput from '@/components/shared/MentionInput';
 
 // נתוני השלבים מתוך ה-PDF - עדכון מדויק למלל המקורי
 const OFEK_360_STEPS = [
@@ -212,12 +213,13 @@ function MonthlyStatusCell({ step, stepIndex, month, year, currentUser, onUpdate
           {/* הוספת הערה חדשה */}
           <div className="space-y-2">
             <Label className="text-horizon-text">הוסף הערה</Label>
-            <Textarea
+            <MentionInput
               value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="כתוב הערה..."
-              className="bg-horizon-card border-horizon text-horizon-text min-h-[80px]" />
-
+              onChange={setNewComment}
+              customerEmail={step.customer_email}
+              placeholder="כתוב הערה ותייג משתמשים עם @..."
+              className="min-h-[80px]"
+            />
             <Button
               onClick={handleAddComment}
               disabled={isSaving || !newComment.trim()}
