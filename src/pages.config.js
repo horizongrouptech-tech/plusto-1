@@ -1,5 +1,6 @@
 import ActionBank from './pages/ActionBank';
 import AddProduct from './pages/AddProduct';
+import Admin from './pages/Admin';
 import BusinessForecast from './pages/BusinessForecast';
 import CatalogPage from './pages/CatalogPage';
 import Contact from './pages/Contact';
@@ -20,17 +21,17 @@ import StrategicMoves from './pages/StrategicMoves';
 import SupplierAnalysis from './pages/SupplierAnalysis';
 import SupportTicket from './pages/SupportTicket';
 import TaskManagement from './pages/TaskManagement';
+import TrialDashboard from './pages/TrialDashboard';
 import WebsiteScan from './pages/WebsiteScan';
 import Welcome from './pages/Welcome';
 import WhatsAppTest from './pages/WhatsAppTest';
-import Admin from './pages/Admin';
-import CustomerManagementNew from './pages/CustomerManagementNew';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "ActionBank": ActionBank,
     "AddProduct": AddProduct,
+    "Admin": Admin,
     "BusinessForecast": BusinessForecast,
     "CatalogPage": CatalogPage,
     "Contact": Contact,
@@ -51,11 +52,10 @@ export const PAGES = {
     "SupplierAnalysis": SupplierAnalysis,
     "SupportTicket": SupportTicket,
     "TaskManagement": TaskManagement,
+    "TrialDashboard": TrialDashboard,
     "WebsiteScan": WebsiteScan,
     "Welcome": Welcome,
     "WhatsAppTest": WhatsAppTest,
-    "Admin": Admin,
-    "CustomerManagementNew": CustomerManagementNew,
 }
 
 export const pagesConfig = {
