@@ -97,7 +97,7 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
     }
   };
 
-  const handleEditReport = (monthIdx) => {
+  const handleEditReport = async (monthIdx) => {
     const zReport = (forecastData.z_reports_uploaded || []).find(
       r => r.month_assigned === monthIdx + 1
     );
@@ -107,8 +107,62 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
       return;
     }
 
+    // ✅ אם אין detailed_products - שחזר אותם מהקובץ המקורי
     if (!zReport.detailed_products || zReport.detailed_products.length === 0) {
-      alert('⚠️ דוח זה לא מכיל פרטי מוצרים לעריכה.\nהעלה דוח Z מחדש כדי לאפשר עריכה.');
+      if (!zReport.file_url) {
+        alert('⚠️ דוח זה לא מכיל פרטי מוצרים ולא נמצא קובץ מקור.\nהעלה דוח Z מחדש כדי לאפשר עריכה.');
+        return;
+      }
+
+      // שחזור אוטומטי
+      setIsReconstructing(true);
+      try {
+        console.log('🔄 Reconstructing Z-report from original file:', zReport.file_url);
+        
+        const response = await base44.functions.invoke('parseZReport', {
+          file_url: zReport.file_url
+        });
+
+        if (response.data.status === 'error') {
+          throw new Error(response.data.error || 'שגיאה בפענוח הקובץ');
+        }
+
+        const reconstructedProducts = response.data.products.map(p => ({
+          product_name: p.product_name,
+          barcode: p.barcode || '',
+          quantity_sold: p.quantity_sold,
+          unit_price: p.quantity_sold > 0 ? p.revenue_with_vat / p.quantity_sold : 0,
+          revenue_with_vat: p.revenue_with_vat,
+          mapped_service: '' // ייקבע בעורך
+        }));
+
+        // עדכון הדוח עם המוצרים המשוחזרים
+        const updatedReport = {
+          ...zReport,
+          detailed_products: reconstructedProducts,
+          products_count: reconstructedProducts.length
+        };
+
+        // שמירה ב-DB
+        const updatedReports = (forecastData.z_reports_uploaded || []).map(r =>
+          r.month_assigned === zReport.month_assigned ? updatedReport : r
+        );
+
+        if (forecastData.id) {
+          await base44.entities.ManualForecast.update(forecastData.id, {
+            z_reports_uploaded: updatedReports
+          });
+        }
+
+        console.log('✅ Z-report reconstructed successfully:', reconstructedProducts.length, 'products');
+        setEditingMonth({ ...updatedReport, monthIndex: monthIdx });
+        
+      } catch (error) {
+        console.error('❌ Error reconstructing Z-report:', error);
+        alert('❌ שגיאה בשחזור הדוח:\n' + error.message + '\n\nנסה להעלות את הדוח מחדש.');
+      } finally {
+        setIsReconstructing(false);
+      }
       return;
     }
     
@@ -286,10 +340,20 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
                           size="sm"
                           variant="outline"
                           onClick={() => handleEditReport(idx)}
-                          className="flex-1 border-horizon-primary/30 text-horizon-primary hover:bg-horizon-primary/10 h-7 text-xs"
+                          disabled={isReconstructing}
+                          className="flex-1 border-horizon-primary/30 text-horizon-primary hover:bg-horizon-primary/10 h-7 text-xs disabled:opacity-50"
                         >
-                          <Edit className="w-3 h-3 ml-1" />
-                          ערוך
+                          {isReconstructing ? (
+                            <>
+                              <Loader2 className="w-3 h-3 ml-1 animate-spin" />
+                              משחזר...
+                            </>
+                          ) : (
+                            <>
+                              <Edit className="w-3 h-3 ml-1" />
+                              ערוך
+                            </>
+                          )}
                         </Button>
                         {summary.zReport.file_url && (
                           <Button
