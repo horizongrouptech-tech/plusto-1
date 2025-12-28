@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertCircle, Download, FileSpreadsheet, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Edit } from "lucide-react";
+import { CheckCircle2, AlertCircle, Download, FileSpreadsheet, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Edit, Loader2 } from "lucide-react";
 import { formatCurrency } from './utils/numberFormatter';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -11,6 +11,7 @@ import ZReportEditor from './ZReportEditor';
 export default function ZReportMonthSummary({ forecastData, salesForecast, services, onUpdateZReport }) {
   const [editingMonth, setEditingMonth] = useState(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isReconstructing, setIsReconstructing] = useState(false);
   const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 
   // חישוב סיכומים לכל 12 חודשים
