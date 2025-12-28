@@ -155,45 +155,47 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
       } else {
         // תכנון פרטני - חישוב לפי מוצרים
         (forecastData.sales_forecast_onetime || []).forEach((item) => {
+          // ✅ בדיקה אם יש נתוני ביצוע בפועל לחודש הזה
+          const hasActualRevenue = (item.actual_monthly_revenue?.[monthIndex] || 0) > 0;
+          const hasActualQuantity = (item.actual_monthly_quantities?.[monthIndex] || 0) > 0;
+          const isActual = hasActualRevenue || hasActualQuantity;
+          
+          // ⭐ FIX: אם אין נתוני ביצוע - דלג על המוצר הזה לגמרי (לא להשתמש בתכנון)
+          if (!isActual) {
+            return; // דלג על מוצר זה בחודש זה
+          }
+          
           // ✅ חיפוש השירות - עם fallback חכם
           let service = (forecastData.services || []).find((s) => s.service_name === item.service_name);
           
           // ✅ אם לא נמצא service אבל יש נתונים בפועל - צור service זמני
           if (!service) {
-            const hasActualData = item.actual_monthly_revenue?.some(rev => rev > 0) || 
-                                  item.actual_monthly_quantities?.some(qty => qty > 0);
+            // חישוב מחיר ממוצע מהנתונים בפועל
+            let totalRevenue = 0;
+            let totalQuantity = 0;
             
-            if (hasActualData) {
-              // חישוב מחיר ממוצע מהנתונים בפועל
-              let totalRevenue = 0;
-              let totalQuantity = 0;
-              
-              for (let i = 0; i < 12; i++) {
-                const rev = item.actual_monthly_revenue?.[i] || 0;
-                const qty = item.actual_monthly_quantities?.[i] || 0;
-                totalRevenue += rev;
-                totalQuantity += qty;
-              }
-              
-              const avgPrice = totalQuantity > 0 ? totalRevenue / totalQuantity : 0;
-              
-              service = {
-                service_name: item.service_name,
-                price: avgPrice,
-                costs: [],
-                has_vat: true,
-                calculated: {
-                  cost_of_sale: 0,
-                  gross_profit: avgPrice,
-                  gross_margin_percentage: 100
-                }
-              };
-              
-              console.log(`⚠️ Service not found for "${item.service_name}", using calculated price: ₪${avgPrice.toFixed(2)}`);
-            } else {
-              console.error(`❌ No service found and no actual data for: "${item.service_name}"`);
-              return; // דלג על פריט זה
+            for (let i = 0; i < 12; i++) {
+              const rev = item.actual_monthly_revenue?.[i] || 0;
+              const qty = item.actual_monthly_quantities?.[i] || 0;
+              totalRevenue += rev;
+              totalQuantity += qty;
             }
+            
+            const avgPrice = totalQuantity > 0 ? totalRevenue / totalQuantity : 0;
+            
+            service = {
+              service_name: item.service_name,
+              price: avgPrice,
+              costs: [],
+              has_vat: true,
+              calculated: {
+                cost_of_sale: 0,
+                gross_profit: avgPrice,
+                gross_margin_percentage: 100
+              }
+            };
+            
+            console.log(`⚠️ Service not found for "${item.service_name}", using calculated price: ₪${avgPrice.toFixed(2)}`);
           }
           
           // ✅ FIX: וודא ש-calculated קיים ותקין
@@ -222,16 +224,13 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
             };
           }
         
-          const isActual = item.actual_monthly_quantities?.[monthIndex] > 0;
-          const quantity = isActual ?
-            item.actual_monthly_quantities[monthIndex] :
-            item.planned_monthly_quantities?.[monthIndex] || 0;
-
+          // ⭐ FIX: משתמש רק בנתוני ביצוע בפועל
+          const quantity = item.actual_monthly_quantities[monthIndex] || 0;
           const priceGross = service.price || 0;
           
-          // שימוש בהכנסה בפועל שנשמרה אם קיימת (למקרה שדוח Z עדכן סכום שונה מהמכפלה), אחרת חישוב רגיל
+          // שימוש בהכנסה בפועל שנשמרה אם קיימת (מדוח Z), אחרת חישוב לפי כמות * מחיר
           let revenueGross = 0;
-          if (isActual && item.actual_monthly_revenue?.[monthIndex] > 0) {
+          if (hasActualRevenue) {
             revenueGross = item.actual_monthly_revenue[monthIndex];
           } else {
             revenueGross = quantity * priceGross;
