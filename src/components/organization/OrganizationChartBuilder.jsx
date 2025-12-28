@@ -128,11 +128,13 @@ export default function OrganizationChartBuilder({ customer }) {
         source: node.parent_id,
         target: node.id,
         type: 'smoothstep',
+        animated: true,
         markerEnd: {
           type: MarkerType.ArrowClosed,
           color: '#32acc1'
         },
-        style: { stroke: '#32acc1', strokeWidth: 2 }
+        style: { stroke: '#32acc1', strokeWidth: 2 },
+        label: 'מדווח ל-'
       }));
 
     return { nodes, edges };
@@ -147,8 +149,38 @@ export default function OrganizationChartBuilder({ customer }) {
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
   const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
+    async (params) => {
+      const newEdge = {
+        ...params,
+        type: 'smoothstep',
+        animated: true,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: '#32acc1'
+        },
+        style: { stroke: '#32acc1', strokeWidth: 2 }
+      };
+      
+      setEdges((eds) => addEdge(newEdge, eds));
+      
+      // עדכון parent_id בנתונים
+      try {
+        const updatedNodes = orgChart.nodes.map(n => 
+          n.id === params.target 
+            ? { ...n, parent_id: params.source }
+            : n
+        );
+        
+        await base44.entities.OrganizationChart.update(orgChart.id, {
+          nodes: updatedNodes
+        });
+        
+        queryClient.invalidateQueries(['orgChart', customer.email]);
+      } catch (error) {
+        console.error('Error saving connection:', error);
+      }
+    },
+    [setEdges, orgChart, queryClient, customer]
   );
 
   const handleEditNode = (node) => {
@@ -295,6 +327,8 @@ export default function OrganizationChartBuilder({ customer }) {
               nodeTypes={nodeTypes}
               fitView
               style={{ direction: 'ltr' }}
+              connectionLineStyle={{ stroke: '#32acc1', strokeWidth: 2 }}
+              connectionLineType="smoothstep"
             >
               <Background color="#32acc1" gap={20} size={1} />
               <Controls className="bg-horizon-card border-horizon rounded-lg shadow-lg" />
