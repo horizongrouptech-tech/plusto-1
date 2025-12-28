@@ -350,11 +350,11 @@ export default function CustomerOverviewModal({
                 <Globe className="w-5 h-5 ml-2" />
                 סריקת אתר
               </Button>
+              </div>
             </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
 
       {/* מודל אופק 360 */}
       {ofek360Open && (
