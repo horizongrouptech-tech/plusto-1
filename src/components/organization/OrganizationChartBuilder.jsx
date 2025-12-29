@@ -23,43 +23,43 @@ import { Building2, Plus, Save, Trash2, Edit3, Loader2, User } from 'lucide-reac
 const OrgNode = ({ data }) => {
   return (
     <div 
-      className="bg-gradient-to-br from-horizon-card to-horizon-dark border-2 border-horizon-primary rounded-xl p-4 w-52 shadow-xl hover:shadow-2xl hover:scale-105 transition-all cursor-pointer relative"
+      className="bg-gradient-to-br from-horizon-card to-horizon-dark border-2 border-horizon-primary rounded-xl p-3 w-40 shadow-xl hover:shadow-2xl hover:scale-105 transition-all cursor-pointer relative"
       onClick={data.onEdit}
     >
       {/* Connection Handles */}
       <Handle
         type="target"
         position={Position.Top}
-        className="w-4 h-4 !bg-horizon-primary border-2 border-white shadow-lg hover:scale-125 transition-transform"
-        style={{ top: -8 }}
+        className="w-3 h-3 !bg-horizon-primary border-2 border-white shadow-lg hover:scale-150 transition-transform"
+        style={{ top: -6 }}
       />
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-4 h-4 !bg-horizon-secondary border-2 border-white shadow-lg hover:scale-125 transition-transform"
-        style={{ bottom: -8 }}
+        className="w-3 h-3 !bg-horizon-secondary border-2 border-white shadow-lg hover:scale-150 transition-transform"
+        style={{ bottom: -6 }}
       />
       
-      <div className="text-center space-y-2">
-        <div className="w-14 h-14 bg-gradient-to-br from-horizon-primary to-horizon-secondary rounded-full mx-auto flex items-center justify-center text-white font-bold text-xl shadow-md">
+      <div className="text-center space-y-1.5">
+        <div className="w-10 h-10 bg-gradient-to-br from-horizon-primary to-horizon-secondary rounded-full mx-auto flex items-center justify-center text-white font-bold text-sm shadow-md">
           {data.name?.charAt(0)?.toUpperCase() || '?'}
         </div>
         <div>
-          <p className="font-bold text-horizon-text text-sm leading-tight">
+          <p className="font-bold text-horizon-text text-xs leading-tight">
             {data.name}
           </p>
-          <p className="text-xs text-horizon-primary font-medium mt-0.5">
+          <p className="text-[10px] text-horizon-primary font-medium mt-0.5">
             {data.role}
           </p>
         </div>
         {data.department && (
-          <div className="bg-horizon-secondary/20 text-horizon-secondary border border-horizon-secondary/30 rounded-full px-2 py-0.5 text-[10px] font-medium inline-block">
+          <div className="bg-horizon-secondary/20 text-horizon-secondary border border-horizon-secondary/30 rounded-full px-1.5 py-0.5 text-[9px] font-medium inline-block">
             {data.department}
           </div>
         )}
         {data.salary && (
-          <p className="text-xs text-horizon-accent font-semibold mt-1 bg-horizon-dark/50 rounded-md py-1">
-            ₪{data.salary.toLocaleString()}/חודש
+          <p className="text-[10px] text-horizon-accent font-semibold mt-1 bg-horizon-dark/50 rounded-md py-0.5">
+            ₪{data.salary.toLocaleString()}
           </p>
         )}
       </div>
@@ -149,8 +149,7 @@ export default function OrganizationChartBuilder({ customer }) {
           type: MarkerType.ArrowClosed,
           color: '#32acc1'
         },
-        style: { stroke: '#32acc1', strokeWidth: 2 },
-        label: 'מדווח ל-'
+        style: { stroke: '#32acc1', strokeWidth: 1.5 }
       }));
 
     return { nodes, edges };
@@ -174,7 +173,7 @@ export default function OrganizationChartBuilder({ customer }) {
           type: MarkerType.ArrowClosed,
           color: '#32acc1'
         },
-        style: { stroke: '#32acc1', strokeWidth: 2 }
+        style: { stroke: '#32acc1', strokeWidth: 1.5 }
       };
       
       setEdges((eds) => addEdge(newEdge, eds));
@@ -332,7 +331,7 @@ export default function OrganizationChartBuilder({ customer }) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="h-[700px] bg-gradient-to-br from-horizon-dark to-horizon-card rounded-xl border-2 border-horizon shadow-inner overflow-hidden">
+          <div className="h-[500px] bg-gradient-to-br from-horizon-dark to-horizon-card rounded-xl border-2 border-horizon shadow-inner overflow-hidden">
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -346,7 +345,7 @@ export default function OrganizationChartBuilder({ customer }) {
               connectionMode="loose"
               connectionLineStyle={{ 
                 stroke: '#32acc1', 
-                strokeWidth: 3,
+                strokeWidth: 1.5,
                 strokeDasharray: '5,5'
               }}
               connectionLineType="smoothstep"
