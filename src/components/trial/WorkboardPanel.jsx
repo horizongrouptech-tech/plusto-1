@@ -195,7 +195,9 @@ export default function WorkboardPanel({
             {goalsView === 'table' ? (
               <CustomerGoalsGantt customer={customer} />
             ) : (
-              <GoalsTimeline customer={customer} />
+              <ReactFlowProvider>
+                <GoalsTimelineNew customer={customer} />
+              </ReactFlowProvider>
             )}
           </>
         )}
