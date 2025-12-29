@@ -128,6 +128,16 @@ export default function CustomerManagementNew() {
     });
   }, [recommendations, categoryFilter, statusFilter, priorityFilter, sourceFilter]);
 
+  // בחירה אוטומטית של לקוח לפי URL
+  useEffect(() => {
+    if (clientIdFromUrl && customers.length > 0 && !selectedCustomer) {
+      const customerToSelect = customers.find(c => c.id === clientIdFromUrl);
+      if (customerToSelect) {
+        setSelectedCustomer(customerToSelect);
+      }
+    }
+  }, [clientIdFromUrl, customers, selectedCustomer]);
+
   // Handlers
   const handleTaskClick = (task) => {
     setSelectedTask(task);
