@@ -177,7 +177,7 @@ export const verticalLayout = (nodes, edges) => {
         });
       }
     });
-  });
+  }
 
   const positioned = [];
   Object.entries(rows).forEach(([row, nodesInRow]) => {
