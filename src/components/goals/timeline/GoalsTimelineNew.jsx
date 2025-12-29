@@ -34,6 +34,18 @@ export default function GoalsTimelineNew({ customer }) {
   const [layoutType, setLayoutType] = useState('horizontal');
   const [showGroups, setShowGroups] = useState(true);
 
+  // פונקציות עזר
+  const getStatusLabel = (status) => {
+    const labels = {
+      open: 'פתוח',
+      in_progress: 'בביצוע',
+      done: 'הושלם',
+      delayed: 'באיחור',
+      cancelled: 'בוטל'
+    };
+    return labels[status] || status;
+  };
+
   // טעינת יעדים
   const { data: goals = [], isLoading } = useQuery({
     queryKey: ['customerGoals', customer?.email],
@@ -132,18 +144,6 @@ export default function GoalsTimelineNew({ customer }) {
     setNodes(initialNodes);
     setEdges(initialEdges);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
-
-  // פונקציות עזר
-  const getStatusLabel = (status) => {
-    const labels = {
-      open: 'פתוח',
-      in_progress: 'בביצוע',
-      done: 'הושלם',
-      delayed: 'באיחור',
-      cancelled: 'בוטל'
-    };
-    return labels[status] || status;
-  };
 
   // Handlers
   const handleNodeClick = (goal) => {
