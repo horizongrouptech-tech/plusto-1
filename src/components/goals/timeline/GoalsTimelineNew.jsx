@@ -273,12 +273,21 @@ export default function GoalsTimelineNew({ customer }) {
     
     setIsExporting(true);
     try {
+      // הוספת class להסתרת UI elements
+      flowRef.current.classList.add('exporting-mode');
+      
+      // המתנה קצרה לרינדור
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const canvas = await html2canvas(flowRef.current, {
         backgroundColor: '#0A192F',
         scale: 2,
         logging: false,
         useCORS: true
       });
+      
+      // הסרת ה-class
+      flowRef.current.classList.remove('exporting-mode');
       
       const link = document.createElement('a');
       link.download = `timeline-${customer?.business_name || 'goals'}-${new Date().toISOString().split('T')[0]}.png`;
@@ -287,6 +296,9 @@ export default function GoalsTimelineNew({ customer }) {
     } catch (error) {
       console.error('Error exporting timeline:', error);
       alert('שגיאה בייצוא התרשים');
+      if (flowRef.current) {
+        flowRef.current.classList.remove('exporting-mode');
+      }
     } finally {
       setIsExporting(false);
     }
@@ -314,6 +326,14 @@ export default function GoalsTimelineNew({ customer }) {
 
   return (
     <div className="space-y-4" dir="rtl">
+      <style>
+        {`
+          .exporting-mode .react-flow__minimap,
+          .exporting-mode .react-flow__controls {
+            display: none !important;
+          }
+        `}
+      </style>
       <Card className="card-horizon overflow-hidden">
         <CardHeader className="bg-gradient-to-l from-horizon-primary/10 to-transparent">
           <CardTitle className="text-horizon-text flex items-center gap-2">
