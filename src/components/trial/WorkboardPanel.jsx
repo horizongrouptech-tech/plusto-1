@@ -12,6 +12,7 @@ import {
   Building2,
   Globe
 } from 'lucide-react';
+import { ReactFlowProvider } from 'reactflow';
 
 // ייבוא קומפוננטות קיימות
 import CustomerFileUploadManager from '@/components/admin/CustomerFileUploadManager';
@@ -26,6 +27,7 @@ import RecommendationFilters from '@/components/admin/RecommendationFilters';
 import ManagerAssignmentTab from './ManagerAssignmentTab';
 import CashFlowManager from '@/components/cashflow/CashFlowManager';
 import GoalsTimeline from '@/components/goals/GoalsTimeline';
+import GoalsTimelineNew from '@/components/goals/timeline/GoalsTimelineNew';
 import OrganizationChartBuilder from '@/components/organization/OrganizationChartBuilder';
 
 const tabs = [
