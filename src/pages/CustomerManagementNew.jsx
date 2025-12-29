@@ -29,6 +29,10 @@ export default function CustomerManagementNew() {
   const [activeWorkboardTab, setActiveWorkboardTab] = useState('recommendations');
   const [customerFilter, setCustomerFilter] = useState('all');
   
+  // קריאת פרמטר clientId מה-URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const clientIdFromUrl = urlParams.get('clientId');
+  
   // Modal states
   const [overviewModalOpen, setOverviewModalOpen] = useState(false);
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);

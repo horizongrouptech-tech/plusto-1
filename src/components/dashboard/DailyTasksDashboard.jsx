@@ -518,7 +518,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                     {client.business_type || 'other'}
                   </div>
                   <div className="space-y-2">
-                    <Link to={createPageUrl('CustomerManagement') + `?clientId=${client.id}&source=onboarding`}>
+                    <Link to={createPageUrl('CustomerManagementNew') + `?clientId=${client.id}`}>
                       <Button
                         size="sm"
                         className="w-full bg-[#32acc1] hover:bg-[#32acc1]/90 text-white rounded-lg h-9"
