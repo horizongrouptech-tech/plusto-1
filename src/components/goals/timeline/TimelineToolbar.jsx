@@ -46,6 +46,7 @@ export default function TimelineToolbar({
   onFitView,
   onToggleGroups,
   showGroups = true,
+  isExporting = false,
   
   // סטטיסטיקות
   totalGoals = 0,
@@ -198,10 +199,11 @@ export default function TimelineToolbar({
           variant="outline"
           size="sm"
           onClick={onExport}
-          className="border-green-500 text-green-400 hover:bg-green-500/10"
+          disabled={isExporting}
+          className="border-green-500 text-green-400 hover:bg-green-500/10 disabled:opacity-50"
         >
           <Download className="w-4 h-4 ml-2" />
-          ייצא
+          {isExporting ? 'מייצא...' : 'ייצא'}
         </Button>
       </div>
     </div>

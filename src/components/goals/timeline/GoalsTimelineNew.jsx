@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import ReactFlow, {
   Controls,
   Background,
@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Target, Loader2 } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 // קומפוננטות חדשות
 import TimelineToolbar from './TimelineToolbar';
@@ -27,12 +28,14 @@ const nodeTypes = {
 export default function GoalsTimelineNew({ customer }) {
   const queryClient = useQueryClient();
   const reactFlowInstance = useReactFlow();
+  const flowRef = useRef(null);
   
   // State
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [layoutType, setLayoutType] = useState('horizontal');
   const [showGroups, setShowGroups] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
 
   // פונקציות עזר
   const getStatusLabel = (status) => {
@@ -265,8 +268,28 @@ export default function GoalsTimelineNew({ customer }) {
   const handleFitView = () => reactFlowInstance?.fitView({ padding: 0.2 });
 
   // ייצוא
-  const handleExport = () => {
-    console.log('Export functionality - to be implemented');
+  const handleExport = async () => {
+    if (!flowRef.current) return;
+    
+    setIsExporting(true);
+    try {
+      const canvas = await html2canvas(flowRef.current, {
+        backgroundColor: '#0A192F',
+        scale: 2,
+        logging: false,
+        useCORS: true
+      });
+      
+      const link = document.createElement('a');
+      link.download = `timeline-${customer?.business_name || 'goals'}-${new Date().toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (error) {
+      console.error('Error exporting timeline:', error);
+      alert('שגיאה בייצוא התרשים');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   if (isLoading) {
@@ -316,10 +339,11 @@ export default function GoalsTimelineNew({ customer }) {
           showGroups={showGroups}
           totalGoals={goals.length}
           visibleGoals={filteredGoals.length}
+          isExporting={isExporting}
         />
 
         <CardContent className="p-0">
-          <div className="h-[700px] bg-gradient-to-br from-[#0A192F] via-[#112240] to-[#0A192F]">
+          <div ref={flowRef} className="h-[700px] bg-gradient-to-br from-[#0A192F] via-[#112240] to-[#0A192F]">
             <ReactFlow
               nodes={nodes}
               edges={edges}
