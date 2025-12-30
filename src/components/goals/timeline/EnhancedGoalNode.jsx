@@ -75,14 +75,17 @@ const EnhancedGoalNode = ({ data, selected }) => {
     <div
       className={`
         relative w-72 min-h-[160px] rounded-2xl
-        bg-gradient-to-br ${config.gradient}
-        backdrop-blur-sm
+        bg-horizon-card/95
+        backdrop-blur-md
         border-2 ${config.border}
         shadow-xl hover:shadow-2xl
         transition-all duration-300 cursor-pointer
         ${selected ? 'ring-2 ring-horizon-primary ring-offset-2 ring-offset-horizon-dark' : ''}
         ${showActions ? 'scale-105' : 'hover:scale-102'}
       `}
+      style={{
+        background: 'rgba(17, 34, 64, 0.95)'
+      }}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
       onClick={handleClick}
@@ -159,7 +162,12 @@ const EnhancedGoalNode = ({ data, selected }) => {
 
         {/* Goal Name */}
         <div className="min-h-[45px]">
-          <h3 className="text-sm font-bold text-horizon-text leading-tight break-words line-clamp-3">
+          <h3 
+            className="text-sm font-bold text-horizon-text leading-tight break-words line-clamp-3"
+            style={{
+              textShadow: '0 2px 4px rgba(0, 0, 0, 0.8), 0 1px 2px rgba(0, 0, 0, 0.6)'
+            }}
+          >
             {data.label}
           </h3>
         </div>
@@ -186,17 +194,41 @@ const EnhancedGoalNode = ({ data, selected }) => {
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-horizon/30">
           {/* Date */}
           {data.endDate && (
-            <div className="flex items-center gap-1 text-xs text-horizon-accent">
-              <Calendar className="w-3 h-3 flex-shrink-0" />
-              <span>{format(new Date(data.endDate), 'dd/MM/yy', { locale: he })}</span>
+            <div 
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-horizon-dark/70 border border-horizon/50"
+              style={{
+                backdropFilter: 'blur(12px)'
+              }}
+            >
+              <Calendar className="w-3 h-3 flex-shrink-0 text-horizon-primary" />
+              <span 
+                className="text-xs font-semibold text-horizon-text"
+                style={{
+                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)'
+                }}
+              >
+                {format(new Date(data.endDate), 'dd/MM/yy', { locale: he })}
+              </span>
             </div>
           )}
 
           {/* Assignee */}
           {data.assignee && (
-            <div className="flex items-center gap-1 text-xs text-horizon-accent">
-              <User className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate max-w-[100px]">{data.assignee}</span>
+            <div 
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-horizon-dark/70 border border-horizon/50"
+              style={{
+                backdropFilter: 'blur(12px)'
+              }}
+            >
+              <User className="w-3 h-3 flex-shrink-0 text-horizon-secondary" />
+              <span 
+                className="truncate max-w-[100px] text-xs font-semibold text-horizon-text"
+                style={{
+                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)'
+                }}
+              >
+                {data.assignee}
+              </span>
             </div>
           )}
         </div>

@@ -33,6 +33,7 @@ export default function GoalsTimelineNew({ customer }) {
   // State
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [viewMode, setViewMode] = useState('all');
   const [layoutType, setLayoutType] = useState('horizontal');
   const [showGroups, setShowGroups] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
@@ -72,9 +73,20 @@ export default function GoalsTimelineNew({ customer }) {
         return false;
       }
       
+      // סינון לפי סוג תצוגה
+      const isGoal = !goal.parent_id || goal.task_type === 'goal';
+      const isTask = goal.parent_id || goal.task_type === 'one_time' || goal.task_type === 'recurring';
+      
+      if (viewMode === 'goals' && !isGoal) {
+        return false;
+      }
+      if (viewMode === 'tasks' && !isTask) {
+        return false;
+      }
+      
       return true;
     });
-  }, [goals, searchTerm, statusFilter]);
+  }, [goals, searchTerm, statusFilter, viewMode]);
 
   // המרת יעדים ל-nodes ו-edges
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
@@ -348,6 +360,8 @@ export default function GoalsTimelineNew({ customer }) {
           onStatusFilterChange={setStatusFilter}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
           layoutType={layoutType}
           onLayoutChange={handleLayoutChange}
           onAutoLayout={handleAutoLayout}

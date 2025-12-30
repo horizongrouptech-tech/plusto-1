@@ -34,6 +34,10 @@ export default function TimelineToolbar({
   searchTerm = '',
   onSearchChange,
   
+  // פילטר חדש - סוג תצוגה
+  viewMode = 'all',
+  onViewModeChange,
+  
   // תצוגה
   layoutType = 'horizontal',
   onLayoutChange,

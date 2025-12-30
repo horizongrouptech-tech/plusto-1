@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { format, isToday, isPast, isFuture, parseISO } from 'date-fns';
 
-export default function TasksPanel({ customer, tasks, onRefresh, onCollapse, onTaskClick }) {
+export default function TasksPanel({ customer, tasks, onRefresh, onCollapse, onTaskClick, currentUser }) {
   const [newTaskName, setNewTaskName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
@@ -66,7 +66,7 @@ export default function TasksPanel({ customer, tasks, onRefresh, onCollapse, onT
     return { todayTasks, overdueTasks, inProgressTasks, openTasks, completedTasks };
   }, [relevantTasks]);
 
-  const handleAddTask = async (e) => {
+  const handleAddTask = async (e, currentUser) => {
     e.preventDefault();
     if (!newTaskName.trim() || !customer?.email) return;
 
@@ -81,6 +81,8 @@ export default function TasksPanel({ customer, tasks, onRefresh, onCollapse, onT
         status: 'open',
         task_type: 'one_time',
         end_date: endDate.toISOString().split('T')[0],
+        assignee_email: currentUser?.email,
+        assigned_users: currentUser?.email ? [currentUser.email] : [],
         is_active: true
       });
 
@@ -205,7 +207,7 @@ export default function TasksPanel({ customer, tasks, onRefresh, onCollapse, onT
         </div>
 
         {/* הוספת משימה מהירה */}
-        <form onSubmit={handleAddTask} className="flex gap-2">
+        <form onSubmit={(e) => handleAddTask(e, currentUser)} className="flex gap-2">
           <Input
             placeholder="משימה חדשה..."
             value={newTaskName}

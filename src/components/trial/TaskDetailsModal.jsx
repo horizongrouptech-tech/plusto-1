@@ -30,17 +30,30 @@ export default function TaskDetailsModal({
   onClose, 
   onSave, 
   onDelete,
-  users = []
+  users = [],
+  customer = null,
+  currentUser = null
 }) {
-  const [editedTask, setEditedTask] = useState(task || {});
+  const [editedTask, setEditedTask] = useState(task || {
+    customer_email: customer?.email,
+    assignee_email: currentUser?.email,
+    assigned_users: currentUser?.email ? [currentUser.email] : []
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [showComments, setShowComments] = useState(false);
 
   useEffect(() => {
     if (task) {
       setEditedTask(task);
+    } else if (!task && customer && currentUser) {
+      // משימה חדשה - הגדרת ברירות מחדל
+      setEditedTask({
+        customer_email: customer.email,
+        assignee_email: currentUser.email,
+        assigned_users: [currentUser.email]
+      });
     }
-  }, [task]);
+  }, [task, customer, currentUser]);
 
   const statusOptions = [
     { value: 'open', label: 'פתוח', color: 'bg-gray-500' },
@@ -63,15 +76,18 @@ export default function TaskDetailsModal({
 
     setIsSaving(true);
     try {
-      await base44.entities.CustomerGoal.update(task.id, {
+      const dataToSave = {
         name: editedTask.name,
         status: editedTask.status,
         start_date: editedTask.start_date,
         end_date: editedTask.end_date,
         assignee_email: editedTask.assignee_email,
         notes: editedTask.notes,
-        due_time: editedTask.due_time
-      });
+        due_time: editedTask.due_time,
+        customer_email: editedTask.customer_email || customer?.email
+      };
+
+      await base44.entities.CustomerGoal.update(task.id, dataToSave);
 
       if (onSave) onSave();
       onClose();
