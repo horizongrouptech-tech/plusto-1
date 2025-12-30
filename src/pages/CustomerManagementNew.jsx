@@ -217,7 +217,10 @@ export default function CustomerManagementNew() {
             customerFilter={customerFilter}
             onFilterChange={setCustomerFilter}
             onOpenSettings={() => setSettingsDrawerOpen(true)}
-            onOpenOverview={() => setOverviewModalOpen(true)}
+            onOpenOverview={(customer) => {
+              setSelectedCustomer(customer);
+              setOverviewModalOpen(true);
+            }}
             onCollapse={() => setCustomerListCollapsed(true)}
             isLoading={isLoadingCustomers}
             currentUser={user}
