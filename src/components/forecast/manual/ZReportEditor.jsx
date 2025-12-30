@@ -13,7 +13,8 @@ export default function ZReportEditor({
   zReport, 
   monthName,
   services,
-  onSave 
+  onSave,
+  onDelete
 }) {
   const [editedProducts, setEditedProducts] = useState(() => {
     const products = zReport?.detailed_products || [];
@@ -272,22 +273,41 @@ export default function ZReportEditor({
 
         <DialogFooter>
           <div className="flex justify-between items-center w-full gap-3">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="border-horizon text-horizon-text"
-            >
-              <X className="w-4 h-4 ml-2" />
-              ביטול
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={!hasChanges}
-              className="btn-horizon-primary"
-            >
-              <Save className="w-4 h-4 ml-2" />
-              שמור שינויים
-            </Button>
+            <div>
+              {onDelete && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (confirm('האם למחוק את דוח Z זה לצמיתות?')) {
+                      onDelete(zReport);
+                      onClose();
+                    }
+                  }}
+                  className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                >
+                  <Trash2 className="w-4 h-4 ml-2" />
+                  מחק דוח
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={onClose}
+                className="border-horizon text-horizon-text"
+              >
+                <X className="w-4 h-4 ml-2" />
+                ביטול
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={!hasChanges}
+                className="btn-horizon-primary"
+              >
+                <Save className="w-4 h-4 ml-2" />
+                שמור שינויים
+              </Button>
+            </div>
           </div>
         </DialogFooter>
       </DialogContent>

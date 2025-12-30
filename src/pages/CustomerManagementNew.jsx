@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 
 // קומפוננטות
 import CustomerListPanel from '@/components/trial/CustomerListPanel';
@@ -22,6 +24,8 @@ import RecommendationEditModal from '@/components/admin/RecommendationEditModal'
 import RecommendationUpgradeModal from '@/components/admin/RecommendationUpgradeModal';
 
 export default function CustomerManagementNew() {
+  const navigate = useNavigate();
+  
   // State management
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [customerListCollapsed, setCustomerListCollapsed] = useState(false);
@@ -189,9 +193,22 @@ export default function CustomerManagementNew() {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden bg-horizon-dark" dir="rtl">
-      {/* פאנל לקוחות */}
-      {!customerListCollapsed && (
+    <div className="h-screen flex flex-col overflow-hidden bg-horizon-dark" dir="rtl">
+      {/* כפתור חזרה */}
+      <div className="bg-horizon-card border-b border-horizon px-4 py-3">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(createPageUrl('Admin'))}
+          className="text-horizon-accent hover:text-horizon-primary hover:bg-horizon-primary/10"
+        >
+          <ArrowRight className="w-4 h-4 ml-2" />
+          חזרה לדשבורד ראשי
+        </Button>
+      </div>
+
+      <div className="flex-1 flex overflow-hidden">
+        {/* פאנל לקוחות */}
+        {!customerListCollapsed && (
         <div className="w-80 border-l border-horizon flex-shrink-0">
           <CustomerListPanel
             customers={filteredCustomers}
@@ -208,22 +225,22 @@ export default function CustomerManagementNew() {
         </div>
       )}
 
-      {/* כפתור הצגה של פאנל לקוחות */}
-      {customerListCollapsed && (
-        <div className="flex-shrink-0 border-l border-horizon bg-horizon-card">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCustomerListCollapsed(false)}
-            className="h-full rounded-none hover:bg-horizon-dark"
-          >
-            <ChevronLeft className="w-5 h-5 text-horizon-accent" />
-          </Button>
-        </div>
-      )}
+        {/* כפתור הצגה של פאנל לקוחות */}
+        {customerListCollapsed && (
+          <div className="flex-shrink-0 border-l border-horizon bg-horizon-card">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCustomerListCollapsed(false)}
+              className="h-full rounded-none hover:bg-horizon-dark"
+            >
+              <ChevronLeft className="w-5 h-5 text-horizon-accent" />
+            </Button>
+          </div>
+        )}
 
-      {/* Workboard - אזור העבודה המרכזי */}
-      <WorkboardPanel
+        {/* Workboard - אזור העבודה המרכזי */}
+        <WorkboardPanel
         customer={selectedCustomer}
         activeTab={activeWorkboardTab}
         onTabChange={setActiveWorkboardTab}
@@ -252,33 +269,35 @@ export default function CustomerManagementNew() {
         currentUser={user}
       />
 
-      {/* כפתור הצגה של פאנל משימות */}
-      {tasksCollapsed && (
-        <div className="flex-shrink-0 border-r border-horizon bg-horizon-card">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTasksCollapsed(false)}
-            className="h-full rounded-none hover:bg-horizon-dark"
-          >
-            <ChevronRight className="w-5 h-5 text-horizon-accent" />
-          </Button>
-        </div>
-      )}
+        {/* כפתור הצגה של פאנל משימות */}
+        {tasksCollapsed && (
+          <div className="flex-shrink-0 border-r border-horizon bg-horizon-card">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setTasksCollapsed(false)}
+              className="h-full rounded-none hover:bg-horizon-dark"
+            >
+              <ChevronRight className="w-5 h-5 text-horizon-accent" />
+            </Button>
+          </div>
+        )}
 
-      {/* פאנל משימות */}
-      {!tasksCollapsed && (
-        <div className="w-80 border-r border-horizon flex-shrink-0">
-          <TasksPanel
-            customer={selectedCustomer}
-            tasks={tasks}
-            isLoading={isLoadingTasks}
-            onTaskClick={handleTaskClick}
-            onCollapse={() => setTasksCollapsed(true)}
-            allUsers={allUsers}
-          />
-        </div>
-      )}
+        {/* פאנל משימות */}
+        {!tasksCollapsed && (
+          <div className="w-80 border-r border-horizon flex-shrink-0">
+            <TasksPanel
+              customer={selectedCustomer}
+              tasks={tasks}
+              isLoading={isLoadingTasks}
+              onTaskClick={handleTaskClick}
+              onCollapse={() => setTasksCollapsed(true)}
+              allUsers={allUsers}
+              currentUser={user}
+            />
+          </div>
+        )}
+      </div>
 
       {/* מודלים */}
       <CustomerOverviewModal
@@ -329,6 +348,8 @@ export default function CustomerManagementNew() {
           }
         }}
         allUsers={allUsers}
+        customer={selectedCustomer}
+        currentUser={user}
       />
 
       {/* מודלים להמלצות */}
