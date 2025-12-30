@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Search, Save, X, Plus, Users, Building2 } from 'lucide-react';
+import { getFinancialManagers } from '@/functions/getFinancialManagers';
 
 export default function ManagerAssignmentModal({ isOpen, onClose, currentUser }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,16 +24,17 @@ export default function ManagerAssignmentModal({ isOpen, onClose, currentUser })
     queryFn: () => base44.entities.OnboardingRequest.list()
   });
 
-  // טעינת מנהלי כספים
-  const { data: financialManagers = [], isLoading: loadingManagers } = useQuery({
+  // טעינת מנהלי כספים דרך backend function
+  const { data: financialManagersData, isLoading: loadingManagers } = useQuery({
     queryKey: ['financialManagers'],
     queryFn: async () => {
-      const users = await base44.entities.User.list();
-      return users.filter(u => 
-        u.user_type === 'financial_manager'
-      );
-    }
+      const response = await getFinancialManagers({});
+      return response.data?.managers || [];
+    },
+    enabled: !!currentUser
   });
+
+  const financialManagers = financialManagersData || [];
 
   // סינון לקוחות לפי הרשאות
   const filteredRequests = useMemo(() => {

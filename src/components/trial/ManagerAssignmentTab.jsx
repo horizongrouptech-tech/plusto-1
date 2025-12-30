@@ -41,15 +41,17 @@ export default function ManagerAssignmentTab({ customer, currentUser }) {
     enabled: isAdmin || isDepartmentManager
   });
 
-  // טעינת רשימת מנהלי כספים
-  const { data: financialManagers = [] } = useQuery({
+  // טעינת רשימת מנהלי כספים דרך backend function
+  const { data: financialManagersData } = useQuery({
     queryKey: ['financialManagers'],
     queryFn: async () => {
-      const users = await base44.entities.User.list();
-      return users.filter(u => u.user_type === 'financial_manager');
+      const response = await getFinancialManagers({});
+      return response.data?.managers || [];
     },
-    enabled: isAdmin || isDepartmentManager
+    enabled: (isAdmin || isDepartmentManager) && !!currentUser
   });
+
+  const financialManagers = financialManagersData || [];
 
   // אתחול assignments מהנתונים הקיימים
   useEffect(() => {
