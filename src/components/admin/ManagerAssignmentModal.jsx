@@ -29,8 +29,7 @@ export default function ManagerAssignmentModal({ isOpen, onClose, currentUser })
     queryFn: async () => {
       const users = await base44.entities.User.list();
       return users.filter(u => 
-        u.user_type === 'financial_manager' && 
-        u.is_approved_by_admin === true
+        u.user_type === 'financial_manager'
       );
     }
   });
@@ -39,12 +38,9 @@ export default function ManagerAssignmentModal({ isOpen, onClose, currentUser })
   const filteredRequests = useMemo(() => {
     let filtered = onboardingRequests;
     
-    // מנהל מחלקה רואה רק לקוחות משוייכים אליו
+    // מנהל מחלקה רואה את כל הלקוחות (כמו אדמין)
     if (currentUser?.department_manager_role === 'department_manager' && currentUser?.role !== 'admin') {
-      filtered = onboardingRequests.filter(req =>
-        req.assigned_financial_manager_email === currentUser.email ||
-        req.additional_assigned_financial_manager_emails?.includes(currentUser.email)
-      );
+      filtered = onboardingRequests; // רואה את כל הלקוחות
     }
     
     // סינון לפי חיפוש
