@@ -18,8 +18,9 @@ import { Label } from "@/components/ui/label";
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, Plus, Save, Trash2, Edit3, Loader2, User } from 'lucide-react';
+import EnhancedOrgNode from './EnhancedOrgNode';
 
-// Custom Organization Node with Handles
+// Custom Organization Node with Handles (Fallback - kept for compatibility)
 const OrgNode = ({ data }) => {
   return (
     <div 
@@ -68,7 +69,8 @@ const OrgNode = ({ data }) => {
 };
 
 const nodeTypes = {
-  orgNode: OrgNode
+  orgNode: OrgNode,
+  enhancedOrgNode: EnhancedOrgNode
 };
 
 export default function OrganizationChartBuilder({ customer }) {
@@ -124,7 +126,7 @@ export default function OrganizationChartBuilder({ customer }) {
 
     const nodes = orgChart.nodes.map(node => ({
       id: node.id,
-      type: 'orgNode',
+      type: 'enhancedOrgNode',
       position: node.position || { x: 0, y: 0 },
       data: {
         name: node.name,
@@ -149,7 +151,11 @@ export default function OrganizationChartBuilder({ customer }) {
           type: MarkerType.ArrowClosed,
           color: '#32acc1'
         },
-        style: { stroke: '#32acc1', strokeWidth: 1.5 }
+        style: { 
+          stroke: 'url(#edgeGradient)', 
+          strokeWidth: 1.5,
+          filter: 'drop-shadow(0 0 4px rgba(50, 172, 193, 0.5))'
+        }
       }));
 
     return { nodes, edges };
@@ -331,7 +337,7 @@ export default function OrganizationChartBuilder({ customer }) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="h-[500px] bg-gradient-to-br from-horizon-dark to-horizon-card rounded-xl border-2 border-horizon shadow-inner overflow-hidden">
+          <div className="h-[500px] bg-gradient-to-br from-[#0A192F] via-[#112240] to-[#0A192F] rounded-xl border-2 border-horizon-primary/30 shadow-2xl overflow-hidden">
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -345,17 +351,36 @@ export default function OrganizationChartBuilder({ customer }) {
               connectionMode="loose"
               connectionLineStyle={{ 
                 stroke: '#32acc1', 
-                strokeWidth: 1.5,
-                strokeDasharray: '5,5'
+                strokeWidth: 2,
+                strokeDasharray: '5,5',
+                filter: 'drop-shadow(0 0 4px rgba(50, 172, 193, 0.5))'
               }}
               connectionLineType="smoothstep"
             >
-              <Background color="#32acc1" gap={20} size={1} />
-              <Controls className="bg-horizon-card border-horizon rounded-lg shadow-lg" />
+              {/* SVG Gradient Definition */}
+              <svg style={{ position: 'absolute', width: 0, height: 0 }}>
+                <defs>
+                  <linearGradient id="edgeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#32acc1" />
+                    <stop offset="100%" stopColor="#fc9f67" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              
+              <Background 
+                color="#32acc1" 
+                gap={24} 
+                size={1.5}
+                style={{ opacity: 0.15 }}
+              />
+              <Controls 
+                className="bg-horizon-card/95 backdrop-blur-sm border border-horizon rounded-lg shadow-xl"
+                showInteractive={false}
+              />
             </ReactFlow>
           </div>
-          <div className="mt-4 bg-horizon-card/50 rounded-lg p-3 text-sm text-horizon-accent text-center">
-            💡 <strong>טיפ:</strong> גרור תפקידים להזזה, חבר בין תפקידים (גרירה מנקודה לנקודה) ליצירת היררכיה
+          <div className="mt-4 bg-gradient-to-l from-horizon-primary/10 via-horizon-secondary/10 to-horizon-primary/10 border border-horizon-primary/30 rounded-lg p-3 text-sm text-horizon-text text-center backdrop-blur-sm">
+            💡 <strong className="text-horizon-primary">טיפ:</strong> גרור תפקידים להזזה • חבר בין תפקידים ליצירת היררכיה • העבר עכבר על צומת לפרטים נוספים
           </div>
         </CardContent>
       </Card>

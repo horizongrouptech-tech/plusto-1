@@ -150,11 +150,21 @@ const EnhancedGoalNode = ({ data, selected }) => {
       <div className="p-4 space-y-3">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
-          <div className={`${config.bg} ${config.color} w-10 h-10 rounded-xl flex items-center justify-center shadow-md flex-shrink-0`}>
+          <div 
+            className={`${config.bg} ${config.color} w-10 h-10 rounded-xl flex items-center justify-center shadow-md flex-shrink-0`}
+            style={{
+              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.4)'
+            }}
+          >
             <StatusIcon className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <Badge className={`text-[10px] ${config.bg} ${config.color} border ${config.border}`}>
+            <Badge 
+              className={`text-[10px] font-bold ${config.bg} ${config.color} border ${config.border}`}
+              style={{
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)'
+              }}
+            >
               {data.statusLabel || data.status}
             </Badge>
           </div>
@@ -175,15 +185,21 @@ const EnhancedGoalNode = ({ data, selected }) => {
         {/* Progress Bar (if subtasks exist) */}
         {data.subtasks_total > 0 && (
           <div className="space-y-1">
-            <div className="flex items-center justify-between text-xs text-horizon-accent">
-              <span>{data.subtasks_done || 0} / {data.subtasks_total}</span>
-              <span>{Math.round(((data.subtasks_done || 0) / data.subtasks_total) * 100)}%</span>
+            <div 
+              className="flex items-center justify-between text-xs font-semibold"
+              style={{
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)'
+              }}
+            >
+              <span className="text-horizon-text">{data.subtasks_done || 0} / {data.subtasks_total}</span>
+              <span className="text-horizon-primary">{Math.round(((data.subtasks_done || 0) / data.subtasks_total) * 100)}%</span>
             </div>
-            <div className="h-1.5 bg-horizon-dark/50 rounded-full overflow-hidden">
+            <div className="h-2 bg-horizon-dark/70 rounded-full overflow-hidden border border-horizon/40">
               <div
-                className={`h-full ${config.bg} ${config.color} transition-all duration-500`}
+                className="h-full bg-gradient-to-r from-horizon-primary to-horizon-secondary transition-all duration-500"
                 style={{ 
-                  width: `${((data.subtasks_done || 0) / data.subtasks_total) * 100}%` 
+                  width: `${((data.subtasks_done || 0) / data.subtasks_total) * 100}%`,
+                  boxShadow: '0 0 8px rgba(50, 172, 193, 0.6)'
                 }}
               />
             </div>
