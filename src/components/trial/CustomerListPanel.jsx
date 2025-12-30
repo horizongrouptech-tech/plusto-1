@@ -189,7 +189,7 @@ export default function CustomerListPanel({
                           size="icon"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onOpenOverview();
+                            if (onOpenOverview) onOpenOverview(customer);
                           }}
                           className="h-7 w-7 text-white bg-blue-500 hover:bg-blue-600 rounded-full shadow-lg transition-all hover:scale-110"
                           title="לחץ לסקירה מהירה"
