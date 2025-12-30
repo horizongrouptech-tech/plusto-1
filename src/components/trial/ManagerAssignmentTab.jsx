@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Search, Save, UserPlus, Users, X, Plus } from 'lucide-react';
+import { getFinancialManagers } from '@/functions/getFinancialManagers';
 
 export default function ManagerAssignmentTab({ customer, currentUser }) {
   const [searchTerm, setSearchTerm] = useState('');
