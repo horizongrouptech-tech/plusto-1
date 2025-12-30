@@ -90,7 +90,7 @@ export default function CustomerListPanel({
         </div>
 
         {/* סינון קבוצות */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
             size="sm"
             variant={customerFilter === 'all' ? 'default' : 'outline'}
@@ -124,6 +124,17 @@ export default function CustomerListPanel({
           >
             קבוצה B
           </Button>
+          <Button
+            size="sm"
+            variant={customerFilter === 'archived' ? 'default' : 'outline'}
+            onClick={() => onFilterChange('archived')}
+            className={customerFilter === 'archived' 
+              ? 'bg-orange-500 text-white' 
+              : 'border-horizon text-horizon-accent hover:text-horizon-text'
+            }
+          >
+            ארכיון
+          </Button>
         </div>
       </div>
 
@@ -154,11 +165,17 @@ export default function CustomerListPanel({
                     {/* שורה ראשונה: שם העסק + Badge */}
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-bold text-horizon-text text-base flex-1">
-                        {customer.business_name || 'ללא שם עסק'}
+                       {customer.business_name || 'ללא שם עסק'}
                       </p>
-                      <Badge className={`text-xs flex-shrink-0 ${groupColors[customer.customer_group] || 'bg-gray-500/20 text-gray-400'}`}>
-                        {customer.customer_group || '-'}
-                      </Badge>
+                      {customer.is_archived ? (
+                       <Badge className="text-xs flex-shrink-0 bg-orange-500/20 text-orange-400 border-orange-500/30">
+                         ארכיון
+                       </Badge>
+                      ) : (
+                       <Badge className={`text-xs flex-shrink-0 ${groupColors[customer.customer_group] || 'bg-gray-500/20 text-gray-400'}`}>
+                         {customer.customer_group || '-'}
+                       </Badge>
+                      )}
                     </div>
                     
                     {/* שורה שנייה: שם המנהל + כפתורים */}

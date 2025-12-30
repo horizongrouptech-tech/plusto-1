@@ -32,7 +32,8 @@ export default function CustomerOverviewModal({
   isOpen, 
   onClose,
   onOpenSettings,
-  onNavigateToTab
+  onNavigateToTab,
+  onArchive
 }) {
   const [ofek360Open, setOfek360Open] = useState(false);
   // טעינת המלצות
@@ -88,18 +89,37 @@ export default function CustomerOverviewModal({
                 <Building2 className="w-6 h-6 text-horizon-primary" />
                 סקירה כללית - {customer.business_name}
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  onClose();
-                  onOpenSettings();
-                }}
-                className="border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10"
-              >
-                <Edit className="w-4 h-4 ml-2" />
-                ערוך פרטים
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onOpenSettings) {
+                      onOpenSettings();
+                    }
+                  }}
+                  className="border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10"
+                >
+                  <Edit className="w-4 h-4 ml-2" />
+                  ערוך פרטים
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (!confirm('האם להעביר את הלקוח לארכיון?')) return;
+                    if (onArchive) {
+                      await onArchive(customer);
+                    }
+                  }}
+                  className="border-orange-500 text-orange-400 hover:bg-orange-500/10"
+                >
+                  <AlertCircle className="w-4 h-4 ml-2" />
+                  העבר לארכיון
+                </Button>
+              </div>
             </DialogTitle>
           </DialogHeader>
 

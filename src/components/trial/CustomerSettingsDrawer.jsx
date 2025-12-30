@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
-export default function CustomerSettingsDrawer({ customer, open, onClose }) {
+export default function CustomerSettingsDrawer({ customer, isOpen, onClose }) {
   const [formData, setFormData] = useState({});
   const [isSaving, setIsSaving] = useState(false);
 
@@ -58,7 +58,7 @@ export default function CustomerSettingsDrawer({ customer, open, onClose }) {
   if (!customer) return null;
 
   return (
-    <Sheet open={open} onOpenChange={onClose}>
+    <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent side="right" className="w-[400px] bg-horizon-card border-horizon overflow-y-auto">
         <SheetHeader className="border-b border-horizon pb-4 mb-4">
           <SheetTitle className="text-horizon-text flex items-center gap-2">

@@ -68,7 +68,7 @@ export default function CustomerManagementNew() {
     queryFn: () => base44.auth.me()
   });
 
-  // טעינת לקוחות פעילים
+  // טעינת לקוחות (כולל ארכיון)
   const { data: customers = [], isLoading: isLoadingCustomers } = useQuery({
     queryKey: ['activeCustomers'],
     queryFn: async () => {
@@ -115,10 +115,15 @@ export default function CustomerManagementNew() {
     queryFn: () => base44.entities.User.list()
   });
 
-  // סינון לקוחות לפי קבוצה
+  // סינון לקוחות לפי קבוצה או ארכיון
   const filteredCustomers = useMemo(() => {
-    if (customerFilter === 'all') return customers;
-    return customers.filter(c => c.customer_group === customerFilter);
+    if (customerFilter === 'archived') {
+      return customers.filter(c => c.is_archived === true);
+    }
+    if (customerFilter === 'all') {
+      return customers.filter(c => !c.is_archived);
+    }
+    return customers.filter(c => c.customer_group === customerFilter && !c.is_archived);
   }, [customers, customerFilter]);
 
   // סינון המלצות
@@ -314,6 +319,21 @@ export default function CustomerManagementNew() {
         onNavigateToTab={(tab) => {
           setOverviewModalOpen(false);
           setActiveWorkboardTab(tab);
+        }}
+        onArchive={async (customer) => {
+          try {
+            await base44.entities.OnboardingRequest.update(customer.id, {
+              is_archived: true,
+              archived_date: new Date().toISOString(),
+              archived_by: user?.email
+            });
+            queryClient.invalidateQueries(['activeCustomers']);
+            setOverviewModalOpen(false);
+            setSelectedCustomer(null);
+            alert('הלקוח הועבר לארכיון');
+          } catch (error) {
+            alert('שגיאה: ' + error.message);
+          }
         }}
       />
 
