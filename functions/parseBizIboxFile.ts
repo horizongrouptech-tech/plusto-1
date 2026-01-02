@@ -25,29 +25,29 @@ Deno.serve(async (req) => {
 
     if (isPdf) {
       // ניתוח PDF באמצעות InvokeLLM עם Vision
+      console.log('Starting PDF analysis for BiziBox file...');
+      
       try {
         const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `נתח את קובץ התזרים הכספי מ-BiziBox ומצא את כל התנועות הבנקאיות.
-          
-עבור כל תנועה, חלץ:
-- תאריך בפורמט YYYY-MM-DD
-- תיאור התנועה
-- סוג חשבון
-- סוג תשלום  
-- קטגוריה
-- אסמכתא (מספר ייחוס)
-- זכות (הכנסה) - מספר, 0 אם אין
-- חובה (הוצאה) - מספר, 0 אם אין
-- יתרה - מספר
+          prompt: `Extract all bank transactions from this BiziBox cash flow report.
 
-חשוב: 
-1. המר תאריכים מפורמט DD/MM/YYYY ל-YYYY-MM-DD
-2. הסר תווים מיוחדים מהסכומים (כמו פסיקים)
-3. המר סכומים לערכים מספריים
-4. אם שדה ריק/חסר, השתמש ב-null או 0 (למספרים)
-5. דלג על שורות כותרת או סיכום
+For each transaction row in the table, extract:
+- date (convert from DD/MM/YYYY to YYYY-MM-DD format)
+- description (the transaction description)
+- account_type (if exists)
+- payment_type (if exists)
+- category (the category name)
+- reference (reference number if exists)
+- debit (expense amount - number only, 0 if empty)
+- credit (income amount - number only, 0 if empty)
+- balance (balance amount - number only)
 
-החזר JSON עם מערך transactions בלבד.`,
+Important:
+- Remove commas and currency symbols from numbers
+- Convert all amounts to pure numbers
+- Skip header rows and summary rows
+- If a field is empty, use empty string for text fields and 0 for numbers
+- Return ONLY the transactions array, nothing else`,
           file_urls: [fileUrl],
           response_json_schema: {
             type: "object",
@@ -73,19 +73,25 @@ Deno.serve(async (req) => {
           }
         });
 
+        console.log('LLM Response:', JSON.stringify(result));
+
         rows = result?.transactions || [];
+        
+        console.log(`Found ${rows.length} transactions in PDF`);
 
         if (rows.length === 0) {
+          console.error('No transactions found in PDF');
           return Response.json({ 
             success: false, 
-            error: 'לא נמצאו תנועות בקובץ ה-PDF. ייתכן שהקובץ אינו בפורמט תקין של BiziBox או שהוא קובץ ריק/פגום.' 
+            error: 'לא נמצאו תנועות בקובץ ה-PDF. ייתכן שהקובץ אינו בפורמט תקין של BiziBox או שהוא ריק.' 
           });
         }
 
       } catch (pdfError) {
+        console.error('PDF parsing error:', pdfError);
         return Response.json({ 
           success: false, 
-          error: 'שגיאה בניתוח קובץ PDF: ' + pdfError.message + '. נא לוודא שהקובץ הוא דוח תזרים תקין מ-BiziBox.' 
+          error: 'שגיאה בניתוח קובץ PDF: ' + pdfError.message 
         });
       }
 
@@ -99,6 +105,8 @@ Deno.serve(async (req) => {
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       rows = XLSX.utils.sheet_to_json(firstSheet);
     }
+
+    console.log(`Total rows to process: ${rows.length}`);
 
     if (!rows || rows.length === 0) {
       return Response.json({ 
@@ -199,10 +207,13 @@ Deno.serve(async (req) => {
       }
     }
 
+    console.log(`Valid cash flow entries: ${cashFlowEntries.length}`);
+    console.log(`Categories found: ${Object.keys(categorySums).length}`);
+
     if (cashFlowEntries.length === 0) {
       return Response.json({ 
         success: false, 
-        error: 'לא נמצאו תנועות תקינות בקובץ (או שכולן מחוץ לטווח התאריכים שנבחר)' 
+        error: 'לא נמצאו תנועות תקינות בקובץ. טווח שנבחר: ' + dateRangeStart + ' עד ' + dateRangeEnd 
       });
     }
 
@@ -217,7 +228,9 @@ Deno.serve(async (req) => {
     }
 
     // שמירה בבסיס הנתונים
+    console.log('Saving cash flow entries to database...');
     await base44.asServiceRole.entities.CashFlow.bulkCreate(cashFlowEntries);
+    console.log('Cash flow entries saved successfully');
 
     // יצירת הוצאות קבועות
     const recurringExpenses = [];
@@ -259,6 +272,8 @@ Deno.serve(async (req) => {
       }
     }
 
+    console.log('Process completed successfully');
+    
     return Response.json({
       success: true,
       cashFlowEntries: cashFlowEntries.length,
