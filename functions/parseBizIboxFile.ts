@@ -24,41 +24,70 @@ Deno.serve(async (req) => {
     let rows = [];
 
     if (isPdf) {
-      // ניתוח PDF באמצעות AI
-      const extractResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
-        file_url: fileUrl,
-        json_schema: {
-          type: "object",
-          properties: {
-            transactions: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  date: { type: "string" },
-                  description: { type: "string" },
-                  account_type: { type: "string" },
-                  payment_type: { type: "string" },
-                  category: { type: "string" },
-                  reference: { type: "string" },
-                  debit: { type: "number" },
-                  credit: { type: "number" },
-                  balance: { type: "number" }
+      // ניתוח PDF באמצעות InvokeLLM עם Vision
+      try {
+        const result = await base44.integrations.Core.InvokeLLM({
+          prompt: `נתח את קובץ התזרים הכספי מ-BiziBox ומצא את כל התנועות הבנקאיות.
+          
+עבור כל תנועה, חלץ:
+- תאריך בפורמט YYYY-MM-DD
+- תיאור התנועה
+- סוג חשבון
+- סוג תשלום  
+- קטגוריה
+- אסמכתא (מספר ייחוס)
+- זכות (הכנסה) - מספר, 0 אם אין
+- חובה (הוצאה) - מספר, 0 אם אין
+- יתרה - מספר
+
+חשוב: 
+1. המר תאריכים מפורמט DD/MM/YYYY ל-YYYY-MM-DD
+2. הסר תווים מיוחדים מהסכומים (כמו פסיקים)
+3. המר סכומים לערכים מספריים
+4. אם שדה ריק/חסר, השתמש ב-null או 0 (למספרים)
+5. דלג על שורות כותרת או סיכום
+
+החזר JSON עם מערך transactions בלבד.`,
+          file_urls: [fileUrl],
+          response_json_schema: {
+            type: "object",
+            properties: {
+              transactions: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    date: { type: "string" },
+                    description: { type: "string" },
+                    account_type: { type: "string" },
+                    payment_type: { type: "string" },
+                    category: { type: "string" },
+                    reference: { type: "string" },
+                    debit: { type: "number" },
+                    credit: { type: "number" },
+                    balance: { type: "number" }
+                  }
                 }
               }
             }
           }
-        }
-      });
+        });
 
-      if (extractResult.status === 'error') {
+        rows = result?.transactions || [];
+
+        if (rows.length === 0) {
+          return Response.json({ 
+            success: false, 
+            error: 'לא נמצאו תנועות בקובץ ה-PDF. ייתכן שהקובץ אינו בפורמט תקין של BiziBox או שהוא קובץ ריק/פגום.' 
+          });
+        }
+
+      } catch (pdfError) {
         return Response.json({ 
           success: false, 
-          error: 'שגיאה בניתוח קובץ PDF: ' + extractResult.details 
+          error: 'שגיאה בניתוח קובץ PDF: ' + pdfError.message + '. נא לוודא שהקובץ הוא דוח תזרים תקין מ-BiziBox.' 
         });
       }
-
-      rows = extractResult.output?.transactions || [];
 
     } else {
       // ניתוח Excel

@@ -73,15 +73,38 @@ export default function CashFlowManager({ customer }) {
       if (response.data.success) {
         queryClient.invalidateQueries(['cashFlow', customer.email]);
         queryClient.invalidateQueries(['recurringExpenses', customer.email]);
-        alert('הקובץ נותח והועלה בהצלחה!');
+        
+        const summary = `הקובץ נותח בהצלחה!\n\n` +
+          `📊 נמצאו ${response.data.cashFlowEntries} תנועות\n` +
+          `📁 זוהו ${response.data.categories?.length || 0} קטגוריות\n` +
+          `📈 נוצרו ${response.data.recurringExpenses} הוצאות קבועות\n` +
+          `📅 טווח: ${response.data.dateRange || ''}`;
+        
+        alert(summary);
       } else {
         throw new Error(response.data.error || 'שגיאה בניתוח הקובץ');
       }
     } catch (error) {
       console.error('Error uploading file:', error);
-      alert('שגיאה בהעלאת הקובץ: ' + error.message);
+      
+      let errorMessage = 'שגיאה בהעלאת הקובץ: ';
+      
+      if (error.message.includes('לא נמצאו תנועות')) {
+        errorMessage += 'הקובץ ריק או לא מכיל נתוני תזרים תקינים מ-BiziBox.';
+      } else if (error.message.includes('JSON')) {
+        errorMessage += 'הקובץ לא בפורמט תקין. נא לוודא שמדובר בדוח תזרים מ-BiziBox.';
+      } else if (error.message.includes('טווח התאריכים')) {
+        errorMessage += 'לא נמצאו תנועות בטווח התאריכים שנבחר. נסה להרחיב את הטווח.';
+      } else {
+        errorMessage += error.message;
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsUploading(false);
+      // איפוס שדה הקובץ
+      const fileInput = document.getElementById('bizibox-upload');
+      if (fileInput) fileInput.value = '';
     }
   };
 
@@ -166,24 +189,29 @@ export default function CashFlowManager({ customer }) {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* בחירת טווח תאריכים */}
-          <div className="flex gap-4 items-center">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-horizon-accent" />
-              <span className="text-sm text-horizon-accent">טווח תאריכים:</span>
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+            <div className="flex gap-4 items-center">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-400" />
+                <span className="text-sm font-medium text-blue-400">בחר טווח תאריכים לפני העלאת הקובץ:</span>
+              </div>
+              <Input
+                type="date"
+                value={dateRange.start}
+                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                className="w-40 bg-horizon-dark border-blue-500/50 text-horizon-text"
+              />
+              <span className="text-horizon-accent">עד</span>
+              <Input
+                type="date"
+                value={dateRange.end}
+                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                className="w-40 bg-horizon-dark border-blue-500/50 text-horizon-text"
+              />
             </div>
-            <Input
-              type="date"
-              value={dateRange.start}
-              onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-              className="w-40 bg-horizon-dark border-horizon text-horizon-text"
-            />
-            <span className="text-horizon-accent">עד</span>
-            <Input
-              type="date"
-              value={dateRange.end}
-              onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-              className="w-40 bg-horizon-dark border-horizon text-horizon-text"
-            />
+            <p className="text-xs text-blue-300 mt-2">
+              💡 הקובץ שתעלה צריך להכיל תנועות בטווח תאריכים זה
+            </p>
           </div>
 
           {/* סיכומי זכות וחובה */}
