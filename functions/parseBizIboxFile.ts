@@ -84,8 +84,16 @@ Deno.serve(async (req) => {
           }
         });
 
-        console.log('LLM Response received');
-        console.log('First 3 rows sample:', JSON.stringify(result?.transactions?.slice(0, 3), null, 2));
+        console.log('=== AI RESPONSE DEBUG ===');
+        console.log('Full result type:', typeof result);
+        console.log('Result is array?', Array.isArray(result));
+        console.log('Result keys:', Object.keys(result || {}));
+        console.log('Transactions exists?', !!result?.transactions);
+        console.log('Transactions length:', result?.transactions?.length);
+        console.log('First row full object:', JSON.stringify(result?.transactions?.[0], null, 2));
+        console.log('Second row full object:', JSON.stringify(result?.transactions?.[1], null, 2));
+        console.log('Third row full object:', JSON.stringify(result?.transactions?.[2], null, 2));
+        console.log('=== END DEBUG ===');
 
         rows = result?.transactions || [];
         
