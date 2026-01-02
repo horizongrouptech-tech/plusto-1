@@ -29,25 +29,35 @@ Deno.serve(async (req) => {
       
       try {
         const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `Extract all bank transactions from this BiziBox cash flow report.
+          prompt: `אתה צריך לחלץ נתוני תנועות בנקאיות מדוח תזרים של BiziBox.
 
-For each transaction row in the table, extract:
-- date (convert from DD/MM/YYYY to YYYY-MM-DD format)
-- description (the transaction description)
-- account_type (if exists)
-- payment_type (if exists)
-- category (the category name)
-- reference (reference number if exists)
-- debit (expense amount - number only, 0 if empty)
-- credit (income amount - number only, 0 if empty)
-- balance (balance amount - number only)
+בדוח יש טבלה עם עמודות:
+- תאריך (בפורמט DD/MM/YYYY)
+- תיאור
+- סוג חשבון  
+- סוג תשלום
+- קטגוריה
+- אסמכתא/מספר ייחוס
+- חובה (הוצאה) - מספר עם פסיק
+- זכות (הכנסה) - מספר עם פסיק
+- יתרה - מספר עם פסיק
 
-Important:
-- Remove commas and currency symbols from numbers
-- Convert all amounts to pure numbers
-- Skip header rows and summary rows
-- If a field is empty, use empty string for text fields and 0 for numbers
-- Return ONLY the transactions array, nothing else`,
+עבור כל שורת תנועה בטבלה, חלץ:
+1. date - המר תאריך מ-DD/MM/YYYY ל-YYYY-MM-DD (לדוגמה: 03/10/2025 -> 2025-10-03)
+2. description - תיאור התנועה בעברית
+3. account_type - סוג החשבון (אם קיים)
+4. payment_type - סוג התשלום (אם קיים)
+5. category - שם הקטגוריה בעברית (REQUIRED - חובה!)
+6. reference - מספר אסמכתא (אם קיים)
+7. debit - סכום חובה, הסר פסיקים והמר למספר (0 אם ריק)
+8. credit - סכום זכות, הסר פסיקים והמר למספר (0 אם ריק)
+9. balance - יתרה, הסר פסיקים והמר למספר
+
+חשוב מאוד:
+- התעלם משורות כותרת וסיכום
+- כל שורה חייבת להכיל תאריך וקטגוריה תקינים
+- המר את כל הסכומים למספרים טהורים ללא פסיקים ותווים מיוחדים
+- החזר רק את ה-transactions array`,
           file_urls: [fileUrl],
           response_json_schema: {
             type: "object",
@@ -57,23 +67,25 @@ Important:
                 items: {
                   type: "object",
                   properties: {
-                    date: { type: "string" },
-                    description: { type: "string" },
-                    account_type: { type: "string" },
-                    payment_type: { type: "string" },
-                    category: { type: "string" },
-                    reference: { type: "string" },
-                    debit: { type: "number" },
-                    credit: { type: "number" },
-                    balance: { type: "number" }
-                  }
+                    date: { type: "string", description: "Date in YYYY-MM-DD format" },
+                    description: { type: "string", description: "Transaction description" },
+                    account_type: { type: "string", description: "Account type" },
+                    payment_type: { type: "string", description: "Payment type" },
+                    category: { type: "string", description: "Category name - REQUIRED" },
+                    reference: { type: "string", description: "Reference number" },
+                    debit: { type: "number", description: "Debit amount (expense)" },
+                    credit: { type: "number", description: "Credit amount (income)" },
+                    balance: { type: "number", description: "Balance amount" }
+                  },
+                  required: ["date", "category"]
                 }
               }
             }
           }
         });
 
-        console.log('LLM Response:', JSON.stringify(result));
+        console.log('LLM Response received');
+        console.log('First 3 rows sample:', JSON.stringify(result?.transactions?.slice(0, 3), null, 2));
 
         rows = result?.transactions || [];
         
