@@ -119,19 +119,24 @@ Important:
     const categorySums = {};
 
     for (const row of rows) {
-      // מיפוי עמודות גמיש - תמיכה בשמות שונים
-      const date = row['תאריך'] || row['date'] || row['Date'];
-      const description = row['תיאור'] || row['description'] || row['Description'] || '';
-      const source = row['מאת'] || row['source'] || row['Source'] || description;
-      const accountType = row['סוג חשבון'] || row['account_type'] || row['Account Type'] || '';
-      const paymentType = row['סוג תשלום'] || row['payment_type'] || row['Payment Type'] || '';
-      const category = row['קטגוריה'] || row['category'] || row['Category'];
-      const creditRaw = row['זכות'] || row['credit'] || row['Credit'] || 0;
-      const debitRaw = row['חובה'] || row['debit'] || row['Debit'] || 0;
-      const reference = row['אסמכתא'] || row['reference'] || row['Reference'] || '';
-      const balance = row['יתרה'] || row['balance'] || row['Balance'] || 0;
+      // מיפוי עמודות גמיש - תמיכה בשמות שונים (אנגלית קודמת למקרה של AI)
+      const date = row.date || row['date'] || row['תאריך'] || row['Date'];
+      const description = row.description || row['description'] || row['תיאור'] || row['Description'] || '';
+      const source = row.source || row['source'] || row['מאת'] || row['Source'] || description;
+      const accountType = row.account_type || row['account_type'] || row['סוג חשבון'] || row['Account Type'] || '';
+      const paymentType = row.payment_type || row['payment_type'] || row['סוג תשלום'] || row['Payment Type'] || '';
+      const category = row.category || row['category'] || row['קטגוריה'] || row['Category'] || '';
+      const creditRaw = row.credit || row['credit'] || row['זכות'] || row['Credit'] || 0;
+      const debitRaw = row.debit || row['debit'] || row['חובה'] || row['Debit'] || 0;
+      const reference = row.reference || row['reference'] || row['אסמכתא'] || row['Reference'] || '';
+      const balance = row.balance || row['balance'] || row['יתרה'] || row['Balance'] || 0;
 
-      if (!date || !category) continue;
+      console.log(`Processing row - date: ${date}, category: ${category}, debit: ${debitRaw}, credit: ${creditRaw}`);
+
+      if (!date || !category) {
+        console.log(`Skipping row - missing date (${!!date}) or category (${!!category})`);
+        continue;
+      }
 
       // המרת תאריך
       let parsedDate;
@@ -141,20 +146,30 @@ Important:
         parsedDate = XLSX.SSF.parse_date_code(date);
         parsedDate = new Date(parsedDate.y, parsedDate.m - 1, parsedDate.d);
       } else if (typeof date === 'string') {
-        // ניסיון לפרש תאריך בפורמטים שונים
-        if (date.includes('/')) {
+        // תמיכה בפורמט YYYY-MM-DD (מה-AI)
+        if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          parsedDate = new Date(date);
+        }
+        // תמיכה בפורמט DD/MM/YYYY
+        else if (date.includes('/')) {
           const parts = date.split('/');
           if (parts.length === 3) {
+            // DD/MM/YYYY
             parsedDate = new Date(parts[2], parts[1] - 1, parts[0]);
           }
-        } else {
+        } 
+        // תמיכה בכל פורמט אחר
+        else {
           parsedDate = new Date(date);
         }
       } else {
         parsedDate = new Date(date);
       }
 
-      if (isNaN(parsedDate.getTime())) continue;
+      if (isNaN(parsedDate.getTime())) {
+        console.log(`Invalid date format: ${date}`);
+        continue;
+      }
 
       const dateString = parsedDate.toISOString().split('T')[0];
 
