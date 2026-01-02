@@ -63,7 +63,7 @@ export default function CashFlowManager({ customer }) {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       
       // קריאה לפונקציה שמנתחת את הקובץ
-      const response = await base44.functions.invoke('parseBusyBoxFile', {
+      const response = await base44.functions.invoke('parseBizIboxFile', {
         fileUrl: file_url,
         customerEmail: customer.email,
         dateRangeStart: dateRange.start,
@@ -131,13 +131,13 @@ export default function CashFlowManager({ customer }) {
             <div className="flex gap-2">
               <input
                 type="file"
-                accept=".xlsx,.xls,.csv"
+                accept=".xlsx,.xls,.csv,.pdf"
                 onChange={handleFileUpload}
                 className="hidden"
-                id="busybox-upload"
+                id="bizibox-upload"
               />
               <Button
-                onClick={() => document.getElementById('busybox-upload').click()}
+                onClick={() => document.getElementById('bizibox-upload').click()}
                 disabled={isUploading}
                 className="btn-horizon-primary"
               >
@@ -149,7 +149,7 @@ export default function CashFlowManager({ customer }) {
                 ) : (
                   <>
                     <Upload className="w-4 h-4 ml-2" />
-                    העלה מ-BusyBox
+                    העלה מ-BiziBox
                   </>
                 )}
               </Button>
@@ -241,7 +241,7 @@ export default function CashFlowManager({ customer }) {
                 <div className="text-center py-12">
                   <FileSpreadsheet className="w-16 h-16 mx-auto mb-4 text-horizon-accent opacity-50" />
                   <p className="text-horizon-accent mb-2">אין נתוני תזרים</p>
-                  <p className="text-sm text-horizon-accent">העלה קובץ מ-BusyBox כדי להתחיל</p>
+                  <p className="text-sm text-horizon-accent">העלה קובץ מ-BiziBox כדי להתחיל</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -249,11 +249,12 @@ export default function CashFlowManager({ customer }) {
                     <TableHeader className="bg-horizon-dark">
                       <TableRow>
                         <TableHead className="text-right text-horizon-text">תאריך</TableHead>
-                        <TableHead className="text-right text-horizon-text">מקור</TableHead>
+                        <TableHead className="text-right text-horizon-text">תיאור</TableHead>
                         <TableHead className="text-right text-horizon-text">סוג תשלום</TableHead>
                         <TableHead className="text-right text-horizon-text">קטגוריה</TableHead>
                         <TableHead className="text-right text-horizon-text">זכות</TableHead>
                         <TableHead className="text-right text-horizon-text">חובה</TableHead>
+                        <TableHead className="text-right text-horizon-text">יתרה</TableHead>
                         <TableHead className="text-right text-horizon-text">אסמכתא</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -264,10 +265,10 @@ export default function CashFlowManager({ customer }) {
                             {format(new Date(item.date), 'dd/MM/yyyy')}
                           </TableCell>
                           <TableCell className="text-right text-horizon-accent">
-                            {item.source}
+                            {item.description || item.source || '-'}
                           </TableCell>
                           <TableCell className="text-right text-horizon-accent">
-                            {item.payment_type}
+                            {item.payment_type || '-'}
                           </TableCell>
                           <TableCell className="text-right">
                             <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
@@ -279,6 +280,9 @@ export default function CashFlowManager({ customer }) {
                           </TableCell>
                           <TableCell className="text-right text-red-400 font-medium">
                             {item.debit > 0 ? `₪${item.debit.toLocaleString()}` : '-'}
+                          </TableCell>
+                          <TableCell className="text-right text-blue-400 font-medium">
+                            {item.balance != null ? `₪${item.balance.toLocaleString()}` : '-'}
                           </TableCell>
                           <TableCell className="text-right text-horizon-accent text-sm">
                             {item.reference_number || '-'}
