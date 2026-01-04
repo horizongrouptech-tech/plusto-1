@@ -32,11 +32,11 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     const [isUpdatingAssignees, setIsUpdatingAssignees] = useState(false);
 
     const statusOptions = [
-        { value: 'open', label: 'פתוח', color: 'bg-gray-500' },
-        { value: 'in_progress', label: 'בביצוע', color: 'bg-blue-500' },
-        { value: 'done', label: 'הושלם', color: 'bg-green-500' },
-        { value: 'delayed', label: 'באיחור', color: 'bg-red-500' },
-        { value: 'cancelled', label: 'בוטל', color: 'bg-gray-400' }
+        { value: 'open', label: 'פתוח', color: 'bg-gray-500', badgeClass: 'bg-gray-500/20 text-gray-700 dark:text-gray-300 border-gray-500/30' },
+        { value: 'in_progress', label: 'בביצוע', color: 'bg-blue-500', badgeClass: 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30' },
+        { value: 'done', label: 'הושלם', color: 'bg-green-500', badgeClass: 'bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30' },
+        { value: 'delayed', label: 'באיחור', color: 'bg-red-500', badgeClass: 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30' },
+        { value: 'cancelled', label: 'בוטל', color: 'bg-gray-400', badgeClass: 'bg-gray-400/20 text-gray-700 dark:text-gray-300 border-gray-400/30' }
     ];
 
     const getStatusColor = (status) => {

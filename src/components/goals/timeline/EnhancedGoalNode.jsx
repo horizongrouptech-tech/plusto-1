@@ -25,35 +25,35 @@ const EnhancedGoalNode = ({ data, selected }) => {
   const statusConfig = {
     open: {
       icon: CircleIcon,
-      color: 'text-gray-400',
+      color: 'text-gray-700 dark:text-gray-300',
       bg: 'bg-gray-500/20',
       border: 'border-gray-500/50',
       gradient: 'from-gray-500/10 to-gray-600/5'
     },
     in_progress: {
       icon: Clock,
-      color: 'text-blue-400',
+      color: 'text-blue-700 dark:text-blue-300',
       bg: 'bg-blue-500/20',
       border: 'border-blue-500/50',
       gradient: 'from-blue-500/10 to-blue-600/5'
     },
     done: {
       icon: CheckCircle,
-      color: 'text-green-400',
+      color: 'text-green-700 dark:text-green-300',
       bg: 'bg-green-500/20',
       border: 'border-green-500/50',
       gradient: 'from-green-500/10 to-green-600/5'
     },
     delayed: {
       icon: AlertCircle,
-      color: 'text-red-400',
+      color: 'text-red-700 dark:text-red-300',
       bg: 'bg-red-500/20',
       border: 'border-red-500/50',
       gradient: 'from-red-500/10 to-red-600/5'
     },
     cancelled: {
       icon: XCircle,
-      color: 'text-gray-300',
+      color: 'text-gray-600 dark:text-gray-300',
       bg: 'bg-gray-400/20',
       border: 'border-gray-400/50',
       gradient: 'from-gray-400/10 to-gray-500/5'
@@ -75,7 +75,7 @@ const EnhancedGoalNode = ({ data, selected }) => {
     <div
       className={`
         relative w-72 min-h-[160px] rounded-2xl
-        bg-horizon-card/95
+        bg-horizon-card
         backdrop-blur-md
         border-2 ${config.border}
         shadow-xl hover:shadow-2xl
@@ -83,9 +83,6 @@ const EnhancedGoalNode = ({ data, selected }) => {
         ${selected ? 'ring-2 ring-horizon-primary ring-offset-2 ring-offset-horizon-dark' : ''}
         ${showActions ? 'scale-105' : 'hover:scale-102'}
       `}
-      style={{
-        background: 'rgba(17, 34, 64, 0.95)'
-      }}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
       onClick={handleClick}
@@ -152,19 +149,11 @@ const EnhancedGoalNode = ({ data, selected }) => {
         <div className="flex items-start justify-between gap-2">
           <div 
             className={`${config.bg} ${config.color} w-10 h-10 rounded-xl flex items-center justify-center shadow-md flex-shrink-0`}
-            style={{
-              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.4)'
-            }}
           >
             <StatusIcon className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <Badge 
-              className={`text-[10px] font-bold ${config.bg} ${config.color} border ${config.border}`}
-              style={{
-                textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)'
-              }}
-            >
+            <Badge className={`text-[10px] font-bold ${config.bg} ${config.color} border ${config.border}`}>
               {data.statusLabel || data.status}
             </Badge>
           </div>
@@ -172,12 +161,7 @@ const EnhancedGoalNode = ({ data, selected }) => {
 
         {/* Goal Name */}
         <div className="min-h-[45px]">
-          <h3 
-            className="text-sm font-bold text-horizon-text leading-tight break-words line-clamp-3"
-            style={{
-              textShadow: '0 2px 4px rgba(0, 0, 0, 0.8), 0 1px 2px rgba(0, 0, 0, 0.6)'
-            }}
-          >
+          <h3 className="text-sm font-bold text-horizon-text leading-tight break-words line-clamp-3">
             {data.label}
           </h3>
         </div>
@@ -185,21 +169,15 @@ const EnhancedGoalNode = ({ data, selected }) => {
         {/* Progress Bar (if subtasks exist) */}
         {data.subtasks_total > 0 && (
           <div className="space-y-1">
-            <div 
-              className="flex items-center justify-between text-xs font-semibold"
-              style={{
-                textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)'
-              }}
-            >
+            <div className="flex items-center justify-between text-xs font-semibold">
               <span className="text-horizon-text">{data.subtasks_done || 0} / {data.subtasks_total}</span>
               <span className="text-horizon-primary">{Math.round(((data.subtasks_done || 0) / data.subtasks_total) * 100)}%</span>
             </div>
-            <div className="h-2 bg-horizon-dark/70 rounded-full overflow-hidden border border-horizon/40">
+            <div className="h-2 bg-horizon-dark/70 rounded-full overflow-hidden border border-horizon">
               <div
-                className="h-full bg-gradient-to-r from-horizon-primary to-horizon-secondary transition-all duration-500"
+                className="h-full bg-gradient-to-r from-horizon-primary to-horizon-secondary transition-all duration-500 shadow-md"
                 style={{ 
-                  width: `${((data.subtasks_done || 0) / data.subtasks_total) * 100}%`,
-                  boxShadow: '0 0 8px rgba(50, 172, 193, 0.6)'
+                  width: `${((data.subtasks_done || 0) / data.subtasks_total) * 100}%`
                 }}
               />
             </div>
@@ -207,22 +185,12 @@ const EnhancedGoalNode = ({ data, selected }) => {
         )}
 
         {/* Meta Info */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-horizon/30">
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-horizon">
           {/* Date */}
           {data.endDate && (
-            <div 
-              className="flex items-center gap-1 px-2 py-1 rounded-md bg-horizon-dark/70 border border-horizon/50"
-              style={{
-                backdropFilter: 'blur(12px)'
-              }}
-            >
+            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-horizon-dark/70 border border-horizon backdrop-blur-sm">
               <Calendar className="w-3 h-3 flex-shrink-0 text-horizon-primary" />
-              <span 
-                className="text-xs font-semibold text-horizon-text"
-                style={{
-                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)'
-                }}
-              >
+              <span className="text-xs font-semibold text-horizon-text">
                 {format(new Date(data.endDate), 'dd/MM/yy', { locale: he })}
               </span>
             </div>
@@ -230,19 +198,9 @@ const EnhancedGoalNode = ({ data, selected }) => {
 
           {/* Assignee */}
           {data.assignee && (
-            <div 
-              className="flex items-center gap-1 px-2 py-1 rounded-md bg-horizon-dark/70 border border-horizon/50"
-              style={{
-                backdropFilter: 'blur(12px)'
-              }}
-            >
+            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-horizon-dark/70 border border-horizon backdrop-blur-sm">
               <User className="w-3 h-3 flex-shrink-0 text-horizon-secondary" />
-              <span 
-                className="truncate max-w-[100px] text-xs font-semibold text-horizon-text"
-                style={{
-                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)'
-                }}
-              >
+              <span className="truncate max-w-[100px] text-xs font-semibold text-horizon-text">
                 {data.assignee}
               </span>
             </div>

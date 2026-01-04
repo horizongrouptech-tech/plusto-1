@@ -193,7 +193,7 @@ export default function CustomerListPanel({
                               const whatsappUrl = `https://wa.me/${customer.phone.replace(/[^0-9]/g, '')}`;
                               window.open(whatsappUrl, '_blank');
                             }}
-                            className="h-7 w-7 text-white bg-green-500 hover:bg-green-600 rounded-full shadow-lg transition-all hover:scale-110"
+                            className="h-7 w-7 text-white bg-[#25D366] hover:bg-[#128C7E] rounded-full shadow-lg transition-all hover:scale-110"
                             title="שלח וואטסאפ"
                           >
                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -208,7 +208,7 @@ export default function CustomerListPanel({
                             e.stopPropagation();
                             if (onOpenOverview) onOpenOverview(customer);
                           }}
-                          className="h-7 w-7 text-white bg-blue-500 hover:bg-blue-600 rounded-full shadow-lg transition-all hover:scale-110"
+                          className="h-7 w-7 text-white bg-horizon-primary hover:bg-horizon-primary/80 rounded-full shadow-lg transition-all hover:scale-110"
                           title="לחץ לסקירה מהירה"
                         >
                           <Eye className="w-4 h-4" />

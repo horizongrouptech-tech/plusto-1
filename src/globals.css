@@ -11,11 +11,13 @@
   --horizon-card-bg: #ffffff;
   --horizon-border: #e1e8ed;
   
-  --horizon-primary: #32acc1;
-  --horizon-secondary: #fc9f67;
+  --horizon-primary: #1e90b0;
+  --horizon-secondary: #e67e3c;
   
   --horizon-text: #121725;
   --horizon-accent: #5a6c7d;
+  
+  --horizon-surface: #f1f5f9;
   
   --horizon-green: #38A169;
   --horizon-red: #E53E3E;
@@ -46,6 +48,8 @@
   
   --horizon-text: #ffffff;
   --horizon-accent: #cbd5e0;
+  
+  --horizon-surface: #1a2942;
   
   --horizon-green: #48BB78;
   --horizon-red: #FC8181;
@@ -88,6 +92,7 @@
 .bg-horizon-secondary { background-color: var(--horizon-secondary); }
 .bg-horizon-dark { background-color: var(--horizon-dark); }
 .bg-horizon-card { background-color: var(--horizon-card-bg); }
+.bg-horizon-surface { background-color: var(--horizon-surface); }
 
 /* Text Colors */
 .text-horizon-primary { color: var(--horizon-primary); }

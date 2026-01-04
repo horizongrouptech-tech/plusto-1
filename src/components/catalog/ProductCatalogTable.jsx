@@ -48,7 +48,7 @@ export default function ProductCatalogTable({
     if (product.is_suggested || product.data_source === 'ai_suggestion') {
       return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">הצעת AI</Badge>;
     }
-    return <Badge variant="outline" className="text-zinc-50 px-2.5 py-0.5 text-xs font-semibold rounded-full inline-flex items-center border transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">קיים</Badge>;
+    return <Badge variant="outline" className="text-horizon-text border-horizon">קיים</Badge>;
   };
 
   if (products.length === 0) {

@@ -36,8 +36,8 @@ const EnhancedOrgNode = ({ data, selected }) => {
 
       <div
         onClick={data.onEdit}
-        className="
-          bg-gradient-to-br from-horizon-card via-horizon-dark to-horizon-card/80
+        className={`
+          bg-horizon-card
           backdrop-blur-md
           border-2 border-horizon-primary/60
           rounded-2xl
@@ -49,11 +49,9 @@ const EnhancedOrgNode = ({ data, selected }) => {
           duration-300
           overflow-hidden
           relative
-        "
+          ${isHovered ? 'bg-gradient-to-br from-horizon-primary/10 to-horizon-secondary/10' : ''}
+        `}
         style={{
-          background: isHovered 
-            ? 'linear-gradient(135deg, rgba(50, 172, 193, 0.15) 0%, rgba(252, 159, 103, 0.15) 100%)'
-            : 'rgba(17, 34, 64, 0.95)',
           boxShadow: isHovered
             ? '0 20px 40px rgba(50, 172, 193, 0.4), 0 0 60px rgba(252, 159, 103, 0.2)'
             : '0 10px 30px rgba(0, 0, 0, 0.3)'
@@ -91,33 +89,17 @@ const EnhancedOrgNode = ({ data, selected }) => {
 
           {/* Name & Role */}
           <div>
-            <h3 
-              className="font-bold text-sm text-horizon-text leading-tight mb-1"
-              style={{
-                textShadow: '0 2px 4px rgba(0, 0, 0, 0.6)'
-              }}
-            >
+            <h3 className="font-bold text-sm text-horizon-text leading-tight mb-1">
               {data.name}
             </h3>
-            <p 
-              className="text-xs text-horizon-primary font-semibold"
-              style={{
-                textShadow: '0 1px 2px rgba(0, 0, 0, 0.6)'
-              }}
-            >
+            <p className="text-xs text-horizon-primary font-semibold">
               {data.role}
             </p>
           </div>
 
           {/* Department Badge */}
           {data.department && (
-            <Badge 
-              className="bg-horizon-secondary/30 text-horizon-secondary border border-horizon-secondary/50 text-[10px] font-bold px-2 py-0.5"
-              style={{
-                backdropFilter: 'blur(8px)',
-                textShadow: '0 1px 2px rgba(0, 0, 0, 0.6)'
-              }}
-            >
+            <Badge className="bg-horizon-secondary/30 text-horizon-secondary border border-horizon-secondary/50 text-[10px] font-bold px-2 py-0.5 backdrop-blur-sm">
               <Briefcase className="w-3 h-3 ml-1 inline" />
               {data.department}
             </Badge>
@@ -143,13 +125,7 @@ const EnhancedOrgNode = ({ data, selected }) => {
                 </div>
               )}
               {data.salary && (
-                <div 
-                  className="flex items-center justify-center gap-1.5 text-xs font-bold text-green-400 bg-green-400/20 border border-green-400/30 rounded-lg py-1"
-                  style={{
-                    backdropFilter: 'blur(8px)',
-                    textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)'
-                  }}
-                >
+                <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-green-400 bg-green-400/20 border border-green-400/30 rounded-lg py-1 backdrop-blur-sm">
                   <DollarSign className="w-3 h-3" />
                   ₪{data.salary.toLocaleString()}
                 </div>
