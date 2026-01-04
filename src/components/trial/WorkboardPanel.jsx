@@ -33,7 +33,7 @@ import OrganizationChartBuilder from '@/components/organization/OrganizationChar
 import ServiceContactsTab from '@/components/admin/ServiceContactsTab';
 
 const tabs = [
-  { id: 'files', label: 'קבצים ואתרים', icon: FolderOpen },
+  { id: 'files', label: 'קבצים וסריקת אתר, icon: FolderOpen },
   { id: 'recommendations', label: 'המלצות', icon: Lightbulb },
   { id: 'catalog', label: 'קטלוג', icon: Package },
   { id: 'forecast', label: 'תוכנית עסקית', icon: FileText },
