@@ -110,7 +110,7 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
 
   return (
     <Dialog open={isOpen} onOpenChange={handleCancel}>
-      <DialogContent className="max-w-4xl bg-horizon-dark border-horizon" dir="rtl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-horizon-dark border-horizon" dir="rtl">
         <DialogHeader>
           <DialogTitle className="text-2xl text-horizon-text flex items-center gap-2">
             <FileSpreadsheet className="w-6 h-6 text-horizon-primary" />
@@ -218,13 +218,13 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
               </CardContent>
             </Card>
 
-            <div className="max-h-96 overflow-y-auto">
+            <div className="border border-horizon rounded-lg max-h-[50vh] overflow-y-auto">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-horizon-card">
-                  <tr className="border-b border-horizon">
-                    <th className="text-right py-2 px-3 text-horizon-accent">מוצר</th>
-                    <th className="text-center py-2 px-3 text-horizon-accent">כמות נמכרה</th>
-                    <th className="text-left py-2 px-3 text-horizon-accent">מחזור</th>
+                <thead className="sticky top-0 bg-horizon-card/95 backdrop-blur-sm z-10">
+                  <tr className="border-b-2 border-horizon">
+                    <th className="text-right py-2 px-3 text-horizon-accent font-semibold">מוצר</th>
+                    <th className="text-center py-2 px-3 text-horizon-accent font-semibold">כמות נמכרה</th>
+                    <th className="text-left py-2 px-3 text-horizon-accent font-semibold">מחזור</th>
                   </tr>
                 </thead>
                 <tbody>

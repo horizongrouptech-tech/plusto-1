@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, Link as LinkIcon, AlertCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { CheckCircle, Link as LinkIcon, AlertCircle, Loader2 } from "lucide-react";
 import { formatCurrency } from './utils/numberFormatter';
 
 function findBestMatch(zProduct, servicesList, existingMapping) {
@@ -50,6 +51,8 @@ function findBestMatch(zProduct, servicesList, existingMapping) {
 export default function ZReportProductMapper({ zProducts, services, existingMapping, onMappingComplete, onCancel }) {
   const [mapping, setMapping] = useState({});
   const [unmappedCount, setUnmappedCount] = useState(0);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
 
   useEffect(() => {
     const initialMapping = {};
@@ -85,12 +88,29 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
     });
   };
 
-  const handleConfirm = () => {
-    onMappingComplete(mapping);
+  const handleConfirm = async () => {
+    setIsConfirming(true);
+    setProcessingProgress(0);
+
+    // עיבוד הנתונים בצורה אסינכרונית כדי לא לחסום את ה-UI
+    try {
+      await new Promise(resolve => setTimeout(resolve, 100)); // תן ל-UI להתעדכן
+      setProcessingProgress(50);
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setProcessingProgress(100);
+      
+      // קריאה ל-callback עם המיפוי
+      onMappingComplete(mapping);
+    } catch (error) {
+      console.error('Error during confirmation:', error);
+      alert('שגיאה בעיבוד המיפוי: ' + error.message);
+      setIsConfirming(false);
+    }
   };
 
   return (
-    <Card className="card-horizon">
+    <Card className="card-horizon max-h-[90vh] overflow-hidden flex flex-col">
       <CardHeader>
         <CardTitle className="text-xl text-horizon-text flex items-center gap-2">
           <LinkIcon className="w-5 h-5 text-horizon-primary" />
@@ -100,7 +120,7 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
           התאם את המוצרים מהדוח למוצרים בתחזית שלך
         </p>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 flex-1 overflow-y-auto">
         <div className="flex gap-3 mb-4">
           <Badge variant="outline" className="border-green-500 text-green-400">
             <CheckCircle className="w-3 h-3 ml-1" />
@@ -114,7 +134,7 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
           )}
         </div>
 
-        <div className="max-h-96 overflow-y-auto space-y-2">
+        <div className="max-h-[50vh] overflow-y-auto space-y-2 border border-horizon rounded-lg p-2"}
           {zProducts.map((zProduct, idx) => (
             <div key={idx} className="bg-horizon-card/30 border border-horizon rounded-lg p-3">
               <div className="flex items-center gap-3">
@@ -150,20 +170,41 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
           ))}
         </div>
 
+        {isConfirming && (
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+            <div className="flex items-center gap-3 mb-2">
+              <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
+              <p className="text-horizon-text font-medium">מעבד נתונים, אנא המתן...</p>
+            </div>
+            <Progress value={processingProgress} className="h-2" />
+          </div>
+        )}
+
         <div className="flex justify-end gap-3 pt-4 border-t border-horizon">
           <Button
             variant="outline"
             onClick={onCancel}
+            disabled={isConfirming}
             className="border-horizon text-horizon-text"
           >
             ביטול
           </Button>
           <Button
             onClick={handleConfirm}
+            disabled={isConfirming}
             className="btn-horizon-primary"
           >
-            <CheckCircle className="w-4 h-4 ml-2" />
-            ייבא נתונים ({zProducts.length - unmappedCount} מוצרים)
+            {isConfirming ? (
+              <>
+                <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                מייבא נתונים...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4 ml-2" />
+                אשר נתונים ({zProducts.length - unmappedCount} מוצרים)
+              </>
+            )}
           </Button>
         </div>
       </CardContent>
