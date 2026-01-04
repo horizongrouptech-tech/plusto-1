@@ -118,14 +118,19 @@ export default function GoalsTimelineNew({ customer }) {
       };
     });
 
-    // יצירת edges לפי תלויות
-    const edges = filteredGoals
-      .filter(goal => goal.depends_on_goal_id)
-      .filter(goal => filteredGoals.find(g => g.id === goal.depends_on_goal_id)) // רק אם שני הצמתים מוצגים
-      .map(goal => ({
-        id: `e-${goal.depends_on_goal_id}-${goal.id}`,
-        source: goal.depends_on_goal_id,
-        target: goal.id,
+    // יצירת edges לפי תלויות (תמיכה במערך ובשדה בודד)
+    const edges = [];
+    
+    filteredGoals.forEach(goal => {
+      const dependencies = goal.depends_on_goal_ids || (goal.depends_on_goal_id ? [goal.depends_on_goal_id] : []);
+      
+      dependencies.forEach(depId => {
+        // רק אם שני הצמתים מוצגים
+        if (filteredGoals.find(g => g.id === depId)) {
+          edges.push({
+            id: `e-${depId}-${goal.id}`,
+            source: depId,
+            target: goal.id,
         type: 'smoothstep',
         animated: goal.status === 'in_progress',
         markerEnd: {
@@ -146,8 +151,10 @@ export default function GoalsTimelineNew({ customer }) {
           fill: '#0A192F',
           fillOpacity: 0.9
         }
-      }));
-
+          });
+        }
+      });
+    
     return { nodes, edges };
   }, [filteredGoals, goals]);
 
@@ -218,15 +225,48 @@ export default function GoalsTimelineNew({ customer }) {
       setEdges((eds) => addEdge(newEdge, eds));
       
       try {
+        // קריאת היעד הנוכחי
+        const targetGoal = goals.find(g => g.id === params.target);
+        const currentDependencies = targetGoal?.depends_on_goal_ids || [];
+        
+        // הוספת התלות החדשה
+        const updatedDependencies = [...currentDependencies, params.source].filter((v, i, a) => a.indexOf(v) === i);
+        
         await base44.entities.CustomerGoal.update(params.target, {
-          depends_on_goal_id: params.source
+          depends_on_goal_ids: updatedDependencies
         });
         queryClient.invalidateQueries(['customerGoals', customer.email]);
       } catch (error) {
         console.error('Error saving connection:', error);
+        alert('שגיאה בשמירת התלות');
       }
     },
-    [setEdges, customer, queryClient]
+    [setEdges, customer, queryClient, goals]
+  );
+
+  // ניתוק תלות
+  const onEdgesDelete = useCallback(
+    async (edgesToDelete) => {
+      try {
+        for (const edge of edgesToDelete) {
+          const targetGoal = goals.find(g => g.id === edge.target);
+          if (!targetGoal) continue;
+          
+          const currentDependencies = targetGoal.depends_on_goal_ids || [];
+          const updatedDependencies = currentDependencies.filter(id => id !== edge.source);
+          
+          await base44.entities.CustomerGoal.update(edge.target, {
+            depends_on_goal_ids: updatedDependencies
+          });
+        }
+        
+        queryClient.invalidateQueries(['customerGoals', customer.email]);
+      } catch (error) {
+        console.error('Error deleting dependency:', error);
+        alert('שגיאה בניתוק התלות');
+      }
+    },
+    [goals, customer, queryClient]
   );
 
   const handleNodeDragStop = useCallback(
@@ -242,8 +282,12 @@ export default function GoalsTimelineNew({ customer }) {
     []
   );
 
-  // סידור אוטומטי
+  // סידור אוטומטי - עם אישור
   const handleAutoLayout = useCallback(() => {
+    if (!confirm('האם לסדר מחדש את כל היעדים? פעולה זו תשנה את המיקומים הנוכחיים.')) {
+      return;
+    }
+    
     const layoutedNodes = applyLayout(layoutType, nodes, edges);
     setNodes(layoutedNodes);
     
@@ -377,13 +421,14 @@ export default function GoalsTimelineNew({ customer }) {
         />
 
         <CardContent className="p-0">
-          <div ref={flowRef} className="h-[700px] bg-gradient-to-br from-[#0A192F] via-[#112240] to-[#0A192F]">
+          <div ref={flowRef} className="h-[650px] w-full bg-gradient-to-br from-[#0A192F] via-[#112240] to-[#0A192F]">
             <ReactFlow
               nodes={nodes}
               edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
+              onEdgesDelete={onEdgesDelete}
               onNodeDragStop={handleNodeDragStop}
               nodeTypes={nodeTypes}
               fitView

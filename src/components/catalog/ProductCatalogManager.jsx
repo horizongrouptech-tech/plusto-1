@@ -910,7 +910,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
           {selectedCatalogId ? (
             <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
               <div className="bg-horizon-card/30 p-4 rounded-lg text-center">
-                <div className="text-2xl font-bold text-horizon-text">{catalogStats.total}</div>
+                <div className="text-2xl font-bold text-horizon-text">{catalogStats.total.toLocaleString()}</div>
                 <div className="text-sm text-horizon-accent">סה"כ מוצרים</div>
               </div>
               <div className="bg-green-500/10 p-4 rounded-lg text-center border border-green-500/20">

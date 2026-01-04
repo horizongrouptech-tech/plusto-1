@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { format, isToday, isPast, isFuture, parseISO } from 'date-fns';
 
-export default function TasksPanel({ customer, tasks, onRefresh, onCollapse, onTaskClick, currentUser }) {
+export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCollapse, onTaskClick, allUsers, currentUser }) {
   const [newTaskName, setNewTaskName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
@@ -72,14 +72,16 @@ export default function TasksPanel({ customer, tasks, onRefresh, onCollapse, onT
 
     setIsAdding(true);
     try {
+      const startDate = new Date();
       const endDate = new Date();
-      endDate.setDate(endDate.getDate() + 7); // ברירת מחדל - שבוע מהיום
+      endDate.setDate(endDate.getDate() + 14); // ברירת מחדל - 14 יום (שבועיים) מהיום
 
       await base44.entities.CustomerGoal.create({
         customer_email: customer.email,
         name: newTaskName.trim(),
         status: 'open',
         task_type: 'one_time',
+        start_date: startDate.toISOString().split('T')[0],
         end_date: endDate.toISOString().split('T')[0],
         assignee_email: currentUser?.email,
         assigned_users: currentUser?.email ? [currentUser.email] : [],
@@ -87,9 +89,10 @@ export default function TasksPanel({ customer, tasks, onRefresh, onCollapse, onT
       });
 
       setNewTaskName('');
-      onRefresh();
+      if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Error adding task:", error);
+      alert('שגיאה בהוספת משימה');
     } finally {
       setIsAdding(false);
     }
@@ -98,9 +101,10 @@ export default function TasksPanel({ customer, tasks, onRefresh, onCollapse, onT
   const handleMarkDone = async (taskId) => {
     try {
       await base44.entities.CustomerGoal.update(taskId, { status: 'done' });
-      onRefresh();
+      if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Error marking task done:", error);
+      alert('שגיאה בעדכון משימה');
     }
   };
 
