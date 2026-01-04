@@ -131,29 +131,30 @@ export default function GoalsTimelineNew({ customer }) {
             id: `e-${depId}-${goal.id}`,
             source: depId,
             target: goal.id,
-        type: 'smoothstep',
-        animated: goal.status === 'in_progress',
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: '#32acc1'
-        },
-        style: { 
-          stroke: '#32acc1', 
-          strokeWidth: 2.5 
-        },
-        label: 'תלוי ב-',
-        labelStyle: {
-          fill: '#32acc1',
-          fontSize: 10,
-          fontWeight: 600
-        },
-        labelBgStyle: {
-          fill: '#0A192F',
-          fillOpacity: 0.9
-        }
+            type: 'smoothstep',
+            animated: goal.status === 'in_progress',
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: '#32acc1'
+            },
+            style: { 
+              stroke: '#32acc1', 
+              strokeWidth: 2.5 
+            },
+            label: 'תלוי ב-',
+            labelStyle: {
+              fill: '#32acc1',
+              fontSize: 10,
+              fontWeight: 600
+            },
+            labelBgStyle: {
+              fill: '#0A192F',
+              fillOpacity: 0.9
+            }
           });
         }
       });
+    });
     
     return { nodes, edges };
   }, [filteredGoals, goals]);
