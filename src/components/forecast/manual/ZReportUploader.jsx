@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Upload, Loader2, CheckCircle, FileSpreadsheet, Calendar, AlertTriangle } from "lucide-react";
-import { parseZReport } from "@/functions/parseZReport";
 import { base44 } from "@/api/base44Client";
 import { formatCurrency } from './utils/numberFormatter';
 
@@ -34,23 +33,25 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       
       if (!file_url) {
-        throw new Error('Failed to upload file');
+        throw new Error('העלאת הקובץ נכשלה');
       }
 
       setUploadStatus('מפענח דוח Z...');
 
-      const { data, error } = await parseZReport({
+      const response = await base44.functions.invoke('parseZReport', {
         fileUrl: file_url,
         fileName: file.name
       });
 
-      if (error || !data.success) {
-        throw new Error(data.error || 'Failed to parse Z report');
+      console.log('📥 Parse response:', response.data);
+
+      if (!response.data || !response.data.success) {
+        throw new Error(response.data?.error || 'ניתוח דוח Z נכשל');
       }
 
       setParsedData({
-        products: data.data.products,
-        summary: data.data.summary,
+        products: response.data.data.products,
+        summary: response.data.data.summary,
         file_name: file.name,
         file_url
       });
@@ -59,9 +60,22 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
       setUploadStatus('');
 
     } catch (error) {
-      console.error('Error uploading Z report:', error);
+      console.error('❌ Error uploading Z report:', error);
       setUploadStatus('');
-      alert('שגיאה בעיבוד הקובץ: ' + error.message);
+      
+      let errorMessage = 'שגיאה בעיבוד הקובץ:\n';
+      
+      if (error.message.includes('No products found')) {
+        errorMessage += 'לא נמצאו מוצרים בדוח. וודא שהקובץ מכיל נתוני מכירות תקינים.';
+      } else if (error.message.includes('File is empty')) {
+        errorMessage += 'הקובץ ריק או לא ניתן לקריאה. נסה קובץ אחר.';
+      } else if (error.message.includes('Unsupported file format')) {
+        errorMessage += 'פורמט קובץ לא נתמך. העלה קובץ Excel או CSV בלבד.';
+      } else {
+        errorMessage += error.message;
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
