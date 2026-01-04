@@ -8,6 +8,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { base44 } from '@/api/base44Client';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   Save,
   X,
@@ -23,6 +24,7 @@ import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import GoalCommentsModal from '@/components/admin/goals/GoalCommentsModal';
 import MentionInput from '@/components/shared/MentionInput';
+import GoalDependenciesSelector from './GoalDependenciesSelector';
 
 export default function TaskDetailsModal({ 
   task, 
@@ -30,10 +32,11 @@ export default function TaskDetailsModal({
   onClose, 
   onSave, 
   onDelete,
-  users = [],
+  allUsers = [],
   customer = null,
   currentUser = null
 }) {
+  const queryClient = useQueryClient();
   const [editedTask, setEditedTask] = useState(task || {
     customer_email: customer?.email,
     assignee_email: currentUser?.email,
@@ -41,6 +44,16 @@ export default function TaskDetailsModal({
   });
   const [isSaving, setIsSaving] = useState(false);
   const [showComments, setShowComments] = useState(false);
+
+  // טעינת כל היעדים עבור selector התלויות
+  const { data: allGoals = [] } = useQuery({
+    queryKey: ['customerGoals', customer?.email],
+    queryFn: () => base44.entities.CustomerGoal.filter({
+      customer_email: customer?.email,
+      is_active: true
+    }),
+    enabled: !!customer?.email && isOpen
+  });
 
   useEffect(() => {
     if (task) {
@@ -84,11 +97,13 @@ export default function TaskDetailsModal({
         assignee_email: editedTask.assignee_email,
         notes: editedTask.notes,
         due_time: editedTask.due_time,
-        customer_email: editedTask.customer_email || customer?.email
+        customer_email: editedTask.customer_email || customer?.email,
+        depends_on_goal_ids: editedTask.depends_on_goal_ids || []
       };
 
       await base44.entities.CustomerGoal.update(task.id, dataToSave);
 
+      queryClient.invalidateQueries(['customerGoals', customer?.email]);
       if (onSave) onSave();
       onClose();
     } catch (error) {
@@ -103,7 +118,8 @@ export default function TaskDetailsModal({
     if (!confirm('האם אתה בטוח שברצונך למחוק את המשימה?')) return;
 
     try {
-      await base44.entities.CustomerGoal.update(task.id, { is_active: false });
+      await base44.entities.CustomerGoal.delete(task.id);
+      queryClient.invalidateQueries(['customerGoals', customer?.email]);
       if (onDelete) onDelete();
       onClose();
     } catch (error) {
@@ -229,7 +245,7 @@ export default function TaskDetailsModal({
             </div>
 
             {/* אחראי */}
-            {users.length > 0 && (
+            {allUsers.length > 0 && (
               <div>
                 <label className="text-sm text-horizon-accent mb-2 block">אחראי</label>
                 <Select
@@ -241,7 +257,7 @@ export default function TaskDetailsModal({
                   </SelectTrigger>
                   <SelectContent className="bg-horizon-dark border-horizon">
                     <SelectItem value={null}>ללא אחראי</SelectItem>
-                    {users.map(user => (
+                    {allUsers.map(user => (
                       <SelectItem key={user.email} value={user.email}>
                         {user.full_name}
                       </SelectItem>
@@ -251,13 +267,25 @@ export default function TaskDetailsModal({
               </div>
             )}
 
+            {/* תלויות ביעדים - רק ליעדים ראשיים */}
+            {(!task?.parent_id || task?.task_type === 'goal') && (
+              <div>
+                <GoalDependenciesSelector
+                  goals={allGoals}
+                  currentGoalId={task?.id}
+                  selectedDependencies={editedTask.depends_on_goal_ids || []}
+                  onChange={(deps) => setEditedTask({ ...editedTask, depends_on_goal_ids: deps })}
+                />
+              </div>
+            )}
+
             {/* הערות */}
             <div>
               <label className="text-sm text-horizon-accent mb-2 block">הערות</label>
               <MentionInput
                 value={editedTask.notes || ''}
                 onChange={(val) => setEditedTask({ ...editedTask, notes: val })}
-                customerEmail={task.customer_email}
+                customerEmail={task?.customer_email}
                 placeholder="הוסף הערות ותייג משתמשים..."
                 className="min-h-[100px]"
               />
