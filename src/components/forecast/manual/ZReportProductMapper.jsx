@@ -134,7 +134,7 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
           )}
         </div>
 
-        <div className="max-h-[50vh] overflow-y-auto space-y-2 border border-horizon rounded-lg p-2"}
+        <div className="max-h-[50vh] overflow-y-auto space-y-2 border border-horizon rounded-lg p-2">
           {zProducts.map((zProduct, idx) => (
             <div key={idx} className="bg-horizon-card/30 border border-horizon rounded-lg p-3">
               <div className="flex items-center gap-3">
