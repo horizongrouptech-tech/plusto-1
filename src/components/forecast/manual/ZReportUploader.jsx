@@ -204,11 +204,11 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-horizon-accent">יחידות שנמכרו</p>
-                    <p className="text-2xl font-bold text-horizon-text">{parsedData.summary.total_quantity_sold}</p>
+                    <p className="text-2xl font-bold text-horizon-text">{parsedData.summary.total_quantity_sold.toFixed(2)}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-horizon-accent">מחזור כולל מע"מ</p>
-                    <p className="text-2xl font-bold text-green-400">{formatCurrency(parsedData.summary.total_revenue_with_vat)}</p>
+                    <p className="text-2xl font-bold text-green-400">{formatCurrency(parsedData.summary.total_revenue_with_vat, 2)}</p>
                   </div>
                 </div>
 
@@ -231,8 +231,8 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
                   {parsedData.products.map((product, idx) => (
                     <tr key={idx} className="border-b border-horizon/50 hover:bg-horizon-card/50">
                       <td className="py-2 px-3 text-right text-horizon-text">{product.product_name}</td>
-                      <td className="py-2 px-3 text-center text-horizon-text">{product.quantity_sold}</td>
-                      <td className="py-2 px-3 text-left text-horizon-text">{formatCurrency(product.revenue_with_vat)}</td>
+                      <td className="py-2 px-3 text-center text-horizon-text">{product.quantity_sold.toFixed(2)}</td>
+                      <td className="py-2 px-3 text-left text-horizon-text">{formatCurrency(product.revenue_with_vat, 2)}</td>
                     </tr>
                   ))}
                 </tbody>

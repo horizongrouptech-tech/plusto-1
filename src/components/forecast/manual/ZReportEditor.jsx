@@ -217,7 +217,7 @@ export default function ZReportEditor({
                     <Input
                       type="number"
                       step="0.01"
-                      value={product.quantity_sold}
+                      value={parseFloat(product.quantity_sold).toFixed(2)}
                       onChange={(e) => handleUpdateProduct(product.tempId, 'quantity_sold', e.target.value)}
                       className="bg-horizon-card border-horizon text-horizon-text h-8 text-sm w-24"
                     />
@@ -226,7 +226,7 @@ export default function ZReportEditor({
                     <Input
                       type="number"
                       step="0.01"
-                      value={product.unit_price || 0}
+                      value={parseFloat(product.unit_price || 0).toFixed(2)}
                       onChange={(e) => handleUpdateProduct(product.tempId, 'unit_price', e.target.value)}
                       className="bg-horizon-card border-horizon text-horizon-text h-8 text-sm w-24"
                     />
@@ -235,7 +235,7 @@ export default function ZReportEditor({
                     <Input
                       type="number"
                       step="0.01"
-                      value={product.revenue_with_vat}
+                      value={parseFloat(product.revenue_with_vat).toFixed(2)}
                       onChange={(e) => handleUpdateProduct(product.tempId, 'revenue_with_vat', e.target.value)}
                       className="bg-horizon-card border-green-400/30 text-green-400 h-8 text-sm font-bold w-28"
                     />
