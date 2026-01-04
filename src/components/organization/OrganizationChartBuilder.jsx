@@ -204,6 +204,31 @@ export default function OrganizationChartBuilder({ customer }) {
     [setEdges, orgChart, queryClient, customer]
   );
 
+  // ניתוק חיבור (מחיקת edge)
+  const onEdgesDelete = useCallback(
+    async (edgesToDelete) => {
+      try {
+        for (const edge of edgesToDelete) {
+          // מציאת ה-target node ועדכון ה-parent_id שלו ל-null
+          const updatedNodes = orgChart.nodes.map(n => 
+            n.id === edge.target 
+              ? { ...n, parent_id: null }
+              : n
+          );
+          
+          await base44.entities.OrganizationChart.update(orgChart.id, {
+            nodes: updatedNodes
+          });
+        }
+        
+        queryClient.invalidateQueries(['orgChart', customer.email]);
+      } catch (error) {
+        console.error('Error deleting connection:', error);
+      }
+    },
+    [orgChart, queryClient, customer]
+  );
+
   const handleEditNode = (node) => {
     setEditingNode(node);
     setFormData({
@@ -337,12 +362,13 @@ export default function OrganizationChartBuilder({ customer }) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="h-[500px] bg-gradient-to-br from-[#0A192F] via-[#112240] to-[#0A192F] rounded-xl border-2 border-horizon-primary/30 shadow-2xl overflow-hidden">
+          <div className="h-[600px] w-full bg-gradient-to-br from-[#0A192F] via-[#112240] to-[#0A192F] rounded-xl border-2 border-horizon-primary/30 shadow-2xl">
             <ReactFlow
               nodes={nodes}
               edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
+              onEdgesDelete={onEdgesDelete}
               onConnect={onConnect}
               onNodeDragStop={handleNodeDragStop}
               nodeTypes={nodeTypes}
@@ -356,6 +382,8 @@ export default function OrganizationChartBuilder({ customer }) {
                 filter: 'drop-shadow(0 0 4px rgba(50, 172, 193, 0.5))'
               }}
               connectionLineType="smoothstep"
+              edgesReconnectable={true}
+              edgesFocusable={true}
             >
               {/* SVG Gradient Definition */}
               <svg style={{ position: 'absolute', width: 0, height: 0 }}>
