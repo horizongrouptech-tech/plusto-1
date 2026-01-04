@@ -10,7 +10,8 @@ import {
   Truck,
   DollarSign,
   Building2,
-  Globe
+  Globe,
+  Users
 } from 'lucide-react';
 import { ReactFlowProvider } from 'reactflow';
 
@@ -29,15 +30,16 @@ import CashFlowManager from '@/components/cashflow/CashFlowManager';
 import GoalsTimeline from '@/components/goals/GoalsTimeline';
 import GoalsTimelineNew from '@/components/goals/timeline/GoalsTimelineNew';
 import OrganizationChartBuilder from '@/components/organization/OrganizationChartBuilder';
+import ServiceContactsTab from '@/components/admin/ServiceContactsTab';
 
 const tabs = [
-  { id: 'files', label: 'קבצים', icon: FolderOpen },
+  { id: 'files', label: 'קבצים ואתרים', icon: FolderOpen },
   { id: 'recommendations', label: 'המלצות', icon: Lightbulb },
   { id: 'catalog', label: 'קטלוג', icon: Package },
   { id: 'forecast', label: 'תוכנית עסקית', icon: FileText },
   { id: 'goals', label: 'יעדים', icon: Target },
   { id: 'suppliers', label: 'ספקים', icon: Truck },
-  { id: 'website', label: 'סריקת אתר', icon: Globe },
+  { id: 'contacts', label: 'אנשי קשר', icon: Users },
   { id: 'cashflow', label: 'תזרים כספים', icon: DollarSign },
   { id: 'org_chart', label: 'עץ ארגוני', icon: Building2 }
 ];
@@ -129,7 +131,10 @@ export default function WorkboardPanel({
       {/* Tab Content */}
       <div className="flex-1 overflow-auto p-4" dir="rtl">
         {activeTab === 'files' && (
-          <CustomerFileUploadManager customer={customer} />
+          <div className="space-y-6">
+            <CustomerFileUploadManager customer={customer} />
+            <WebsiteScanner customer={customer} />
+          </div>
         )}
         
         {activeTab === 'recommendations' && (
@@ -208,8 +213,8 @@ export default function WorkboardPanel({
           <CustomerSuppliersTab customer={customer} />
         )}
         
-        {activeTab === 'website' && (
-          <WebsiteScanner customer={customer} />
+        {activeTab === 'contacts' && (
+          <ServiceContactsTab customer={customer} />
         )}
         
         {activeTab === 'cashflow' && (
