@@ -225,16 +225,16 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
               <div className="flex gap-4 text-sm">
                 <div className="text-center">
                   <span className="text-horizon-accent block">מכירות</span>
-                  <span className="text-horizon-primary font-bold">{formatCurrency(totalSummary.totalRevenue, 0)}</span>
+                  <span className="text-horizon-primary font-bold">{formatCurrency(totalSummary.totalRevenue, 2)}</span>
                 </div>
                 <div className="text-center">
                   <span className="text-horizon-accent block">עלות</span>
-                  <span className="text-red-400 font-bold">{formatCurrency(totalSummary.totalCost, 0)}</span>
+                  <span className="text-red-400 font-bold">{formatCurrency(totalSummary.totalCost, 2)}</span>
                 </div>
                 <div className="text-center">
                   <span className="text-horizon-accent block">רווח</span>
                   <span className={`font-bold ${totalSummary.totalProfit > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {formatCurrency(totalSummary.totalProfit, 0)}
+                    {formatCurrency(totalSummary.totalProfit, 2)}
                   </span>
                 </div>
               </div>
@@ -308,17 +308,17 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
                         <div className="space-y-2 text-xs">
                           <div className="flex justify-between items-center">
                             <span className="text-horizon-accent">מכירות:</span>
-                            <span className="font-bold text-horizon-text">{formatCurrency(summary.totalRevenue, 0)}</span>
+                            <span className="font-bold text-horizon-text">{formatCurrency(summary.totalRevenue, 2)}</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-horizon-accent">עלות:</span>
-                            <span className="font-bold text-red-400">{formatCurrency(summary.totalCost, 0)}</span>
+                            <span className="font-bold text-red-400">{formatCurrency(summary.totalCost, 2)}</span>
                           </div>
                           <div className="flex justify-between items-center pt-2 border-t border-horizon">
                             <span className="text-horizon-accent font-semibold">רווח:</span>
                             <div className="text-left">
                               <div className={`font-bold ${isProfitable ? 'text-green-400' : 'text-red-400'}`}>
-                                {formatCurrency(summary.profit, 0)}
+                                {formatCurrency(summary.profit, 2)}
                               </div>
                               <div className={`text-[10px] flex items-center gap-0.5 ${isProfitable ? 'text-green-400' : 'text-red-400'}`}>
                                 {isProfitable ? (
@@ -326,7 +326,7 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
                                 ) : (
                                   <TrendingDown className="w-2.5 h-2.5" />
                                 )}
-                                {summary.profitMargin.toFixed(1)}%
+                                {summary.profitMargin.toFixed(2)}%
                               </div>
                             </div>
                           </div>
