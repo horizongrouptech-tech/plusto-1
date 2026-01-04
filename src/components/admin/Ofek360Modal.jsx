@@ -243,7 +243,7 @@ function MonthlyStatusCell({ step, stepIndex, month, year, currentUser, onUpdate
 
 export default function Ofek360Modal({ customer, isOpen, onClose }) {
   const queryClient = useQueryClient();
-  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   // טעינת נתוני המודל
   const { data: modelData, isLoading } = useQuery({
@@ -260,7 +260,7 @@ export default function Ofek360Modal({ customer, isOpen, onClose }) {
         ...step,
         monthly_status: Array.from({ length: 12 }, (_, i) => ({
           month: i + 1,
-          year: currentYear,
+          year: selectedYear,
           status: 'current',
           comments: []
         }))
@@ -270,7 +270,7 @@ export default function Ofek360Modal({ customer, isOpen, onClose }) {
       const newModel = await base44.entities.Ofek360Model.create({
         customer_email: customer.email,
         customer_source: customer.source || 'user',
-        current_year: currentYear,
+        current_year: selectedYear,
         steps_data: initialStepsData,
         last_updated_by: currentUser.email
       });
@@ -358,7 +358,7 @@ export default function Ofek360Modal({ customer, isOpen, onClose }) {
 
     modelData.steps_data.forEach((step) => {
       (step.monthly_status || []).forEach((monthData) => {
-        if (monthData.year === currentYear) {
+        if (monthData.year === selectedYear) {
           totalMonths++;
           if (monthData.status === 'desired') {
             desiredMonths++;
@@ -405,12 +405,37 @@ export default function Ofek360Modal({ customer, isOpen, onClose }) {
           </p>
         </DialogHeader>
 
+        {/* בורר שנה */}
+        <Card className="card-horizon mb-6">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-center gap-4">
+              <Label className="text-horizon-text font-semibold">בחר שנה:</Label>
+              <div className="flex gap-2">
+                <Button
+                  variant={selectedYear === 2025 ? 'default' : 'outline'}
+                  onClick={() => setSelectedYear(2025)}
+                  className={selectedYear === 2025 ? 'bg-horizon-primary text-white' : 'border-horizon text-horizon-text'}
+                >
+                  2025
+                </Button>
+                <Button
+                  variant={selectedYear === 2026 ? 'default' : 'outline'}
+                  onClick={() => setSelectedYear(2026)}
+                  className={selectedYear === 2026 ? 'bg-horizon-primary text-white' : 'border-horizon text-horizon-text'}
+                >
+                  2026
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* אינדיקטור התקדמות כללי */}
         <Card className="card-horizon mb-6">
           <CardContent className="p-6">
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-horizon-text">התקדמות כוללת - {currentYear}</h3>
+                <h3 className="text-lg font-semibold text-horizon-text">התקדמות כוללת - {selectedYear}</h3>
                 <Badge className="bg-horizon-primary text-white text-lg px-4 py-1">
                   {progress.percentage}%
                 </Badge>
@@ -439,7 +464,7 @@ export default function Ofek360Modal({ customer, isOpen, onClose }) {
           {modelData?.steps_data?.map((step, stepIndex) => {
             const stepMonthlyStatus = step.monthly_status || [];
             const stepDesiredCount = stepMonthlyStatus.filter(
-              (ms) => ms.year === currentYear && ms.status === 'desired'
+              (ms) => ms.year === selectedYear && ms.status === 'desired'
             ).length;
             const stepProgress = Math.round(stepDesiredCount / 12 * 100);
 
@@ -496,8 +521,8 @@ export default function Ofek360Modal({ customer, isOpen, onClose }) {
                     {/* מעקב חודשי */}
                     <div className="bg-horizon-card/30 rounded-lg p-4">
                       <h4 className="text-sm font-semibold text-horizon-text mb-3 flex items-center gap-2">
-                        מעקב חודשי - {currentYear}
-                        <Badge variant="outline" className="text-slate-50 mr-auto px-2.5 py-0.5 text-xs font-semibold rounded-full inline-flex items-center border transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                        מעקב חודשי - {selectedYear}
+                        <Badge variant="outline" className="text-horizon-text border-horizon mr-auto">
                           לחץ על כל חודש לעריכת סטטוס והוספת הערות
                         </Badge>
                       </h4>
@@ -511,7 +536,7 @@ export default function Ofek360Modal({ customer, isOpen, onClose }) {
                             step={step}
                             stepIndex={stepIndex}
                             month={month}
-                            year={currentYear}
+                            year={selectedYear}
                             currentUser={currentUser}
                             onUpdate={handleUpdateMonthlyStatus} />
 
