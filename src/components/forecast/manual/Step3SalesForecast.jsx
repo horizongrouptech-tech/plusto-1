@@ -12,6 +12,7 @@ import { formatCurrency, formatNumber } from './utils/numberFormatter';
 import ZReportUploader from './ZReportUploader';
 import ZReportProductMapper from './ZReportProductMapper';
 import ZReportMonthSummary from './ZReportMonthSummary';
+import ChunkedProcessingOverlay from '@/components/shared/ChunkedProcessingOverlay';
 import { base44 } from "@/api/base44Client";
 import ServiceCategoryGroup from './ServiceCategoryGroup';
 import AggregatePlanning from './AggregatePlanning';
@@ -45,7 +46,10 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   const [viewMode, setViewMode] = useState('category'); // 'category' או 'list'
   const [planningMode, setPlanningMode] = useState(forecastData.use_aggregate_planning ? 'aggregate' : 'detailed');
   const [isProcessingZReport, setIsProcessingZReport] = useState(false);
-  const [processingProgress, setProcessingProgress] = useState(0);
+  const [currentChunk, setCurrentChunk] = useState(0);
+  const [totalChunks, setTotalChunks] = useState(0);
+  const [processedItems, setProcessedItems] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
   const [processingMessage, setProcessingMessage] = useState('');
 
   // ✅ useEffect נשאר רק כ-fallback למקרים מיוחדים
@@ -127,74 +131,88 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   const handleMappingComplete = async (mapping) => {
     if (!pendingZData) return;
 
-    // 🔒 סגור את ה-Dialog מיד לפני תחילת העיבוד
+    // 🔒 סגור את ה-Dialog מיד
     setShowProductMapper(false);
 
-    // 📊 הצג loading overlay מלא מסך
+    const allProducts = pendingZData.products;
+    const CHUNK_SIZE = 500;
+    const chunks = [];
+    
+    for (let i = 0; i < allProducts.length; i += CHUNK_SIZE) {
+      chunks.push(allProducts.slice(i, i + CHUNK_SIZE));
+    }
+
+    const zReportId = `zreport_${Date.now()}_${forecastData.id}`;
+    
+    // 📊 הצג loading עם chunks
     setIsProcessingZReport(true);
-    setProcessingProgress(0);
-    setProcessingMessage('מתחיל עיבוד...');
+    setTotalChunks(chunks.length);
+    setTotalItems(allProducts.length);
+    setProcessedItems(0);
+    setCurrentChunk(0);
+    setProcessingMessage('מתחיל ייבוא נתונים...');
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      let finalSalesForecast = null;
+      let finalUploadedReports = null;
 
-      setProcessingMessage('שולח נתונים לשרת...');
-      setProcessingProgress(10);
+      for (let i = 0; i < chunks.length; i++) {
+        setCurrentChunk(i + 1);
+        setProcessedItems((i * CHUNK_SIZE) + Math.min(CHUNK_SIZE, chunks[i].length));
+        setProcessingMessage(`מעבד חבילה ${i + 1} מתוך ${chunks.length}...`);
 
-      // 🚀 קריאה ל-backend function שעושה הכל בצד השרת
-      const response = await base44.functions.invoke('processBulkZReportImport', {
-        forecastId: forecastData.id,
-        zProducts: pendingZData.products,
-        mapping: mapping,
-        monthAssigned: pendingZData.month,
-        fileName: pendingZData.file_name,
-        fileUrl: pendingZData.file_url,
-        totalRevenue: pendingZData.summary.total_revenue_with_vat,
-        currentSalesForecast: salesForecast,
-        currentServices: forecastData.services
-      });
+        const response = await base44.functions.invoke('processBulkZReportImportChunked', {
+          forecast_id: forecastData.id,
+          z_products: chunks[i],
+          mapping: mapping,
+          assigned_month: pendingZData.month,
+          chunk_index: i,
+          total_chunks: chunks.length,
+          is_first_chunk: i === 0,
+          is_last_chunk: i === chunks.length - 1,
+          z_report_id: zReportId
+        });
 
-      setProcessingProgress(50);
-      setProcessingMessage('מעבד נתונים בשרת...');
+        if (!response.data.success) {
+          throw new Error(response.data.error || `שגיאה בחבילה ${i + 1}`);
+        }
 
-      await new Promise(resolve => setTimeout(resolve, 500));
+        finalSalesForecast = response.data.sales_forecast;
+        if (response.data.uploaded_reports) {
+          finalUploadedReports = response.data.uploaded_reports;
+        }
 
-      if (!response.data.success) {
-        throw new Error(response.data.error || 'שגיאה בעיבוד');
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      setProcessingProgress(90);
-      setProcessingMessage('מסיים...');
-
-      // עדכון state המקומי
-      setSalesForecast(response.data.updated_sales_forecast);
+      // עדכון ה-state המקומי
+      setSalesForecast(Object.values(finalSalesForecast || {}));
 
       if (onUpdateForecast) {
         onUpdateForecast({
-          sales_forecast_onetime: response.data.updated_sales_forecast,
-          z_reports_uploaded: response.data.updated_reports,
-          z_report_product_mapping: {
-            ...(forecastData.z_report_product_mapping || {}),
+          sales_forecast_onetime: Object.values(finalSalesForecast || {}),
+          uploaded_reports: finalUploadedReports,
+          z_product_mapping: {
+            ...(forecastData.z_product_mapping || {}),
             ...mapping
           }
         });
       }
 
-      setProcessingProgress(100);
-
-      await new Promise(resolve => setTimeout(resolve, 300));
+      setProcessingMessage('הושלם בהצלחה!');
+      await new Promise(resolve => setTimeout(resolve, 800));
 
       setPendingZData(null);
       setIsProcessingZReport(false);
 
       const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
-      alert(`✓ דוח Z יובא בהצלחה!\n${response.data.products_updated} מוצרים עודכנו בחודש ${monthNames[pendingZData.month - 1]}`);
+      alert(`✅ דוח Z יובא בהצלחה!\n${allProducts.length} מוצרים יובאו בחודש ${monthNames[pendingZData.month - 1]}`);
 
     } catch (error) {
-      console.error('❌ Error in Z-report import:', error);
+      console.error('❌ Error in chunked import:', error);
       setIsProcessingZReport(false);
       setPendingZData(null);
-      alert('שגיאה בייבוא דוח Z:\n' + error.message + '\n\nאנא נסה שוב.');
+      alert('שגיאה בייבוא דוח Z:\n' + error.message);
     }
   };
 
@@ -310,33 +328,15 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
 
   return (
     <>
-      {/* Global Loading Overlay - מחוץ ל-Dialog */}
-      {isProcessingZReport && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center">
-          <div className="bg-horizon-card border-2 border-horizon-primary rounded-2xl p-10 shadow-2xl max-w-lg mx-4">
-            <div className="text-center space-y-6">
-              <Loader2 className="w-20 h-20 animate-spin text-horizon-primary mx-auto" />
-              <div>
-                <h3 className="text-2xl font-bold text-horizon-text mb-2">
-                  {processingMessage}
-                </h3>
-                <p className="text-sm text-horizon-accent">
-                  מעבד {pendingZData?.products?.length || 0} מוצרים מדוח Z
-                </p>
-              </div>
-              <Progress value={processingProgress} className="h-4" />
-              <p className="text-3xl font-bold text-horizon-primary">
-                {processingProgress.toFixed(0)}%
-              </p>
-              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
-                <p className="text-xs text-yellow-400 font-semibold">
-                  ⚠️ אנא אל תסגור את החלון או תעזוב את הדף
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* מסך טעינה אלגנטי עם chunked progress */}
+      <ChunkedProcessingOverlay
+        isVisible={isProcessingZReport}
+        currentChunk={currentChunk}
+        totalChunks={totalChunks}
+        processedItems={processedItems}
+        totalItems={totalItems}
+        message={processingMessage}
+      />
 
     <div className="space-y-6" dir="rtl">
       {/* בחירת מצב תכנון */}
