@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle, Link as LinkIcon, AlertCircle, Loader2 } from "lucide-react";
+import { CheckCircle, Link as LinkIcon, AlertCircle, Loader2, Search, ChevronLeft, ChevronRight, SkipForward } from "lucide-react";
 import { formatCurrency } from './utils/numberFormatter';
 import { base44 } from "@/api/base44Client";
 
@@ -14,6 +15,9 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
   const [isConfirming, setIsConfirming] = useState(false);
   const [isAutoMapping, setIsAutoMapping] = useState(true);
   const [autoMappingProgress, setAutoMappingProgress] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const ITEMS_PER_PAGE = 50;
 
   useEffect(() => {
     // 🚀 Auto-Mapping בצד השרת - לא חוסם את ה-UI!
@@ -70,6 +74,24 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
       
       return updated;
     });
+  };
+
+  // סינון ו-pagination
+  const filteredProducts = zProducts.filter(p => 
+    !mapping[p.product_name] && 
+    (searchTerm === '' || p.product_name.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+  
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE, 
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const handleSkipAll = () => {
+    if (confirm(`האם לדלג על ${unmappedCount} מוצרים לא ממופים?\nרק ${zProducts.length - unmappedCount} מוצרים ייכנסו לתחזית.`)) {
+      onMappingComplete(mapping);
+    }
   };
 
   const handleConfirm = async () => {
@@ -137,8 +159,32 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
         )}
 
         {!isAutoMapping && (
-          <div className="max-h-[50vh] overflow-y-auto space-y-2 border border-horizon rounded-lg p-2">
-            {zProducts.map((zProduct, idx) => (
+          <>
+            <div className="flex gap-3 items-center mb-4">
+              <div className="flex-1 relative">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-horizon-accent" />
+                <Input
+                  placeholder="חפש מוצר..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="pr-10 bg-horizon-card border-horizon text-horizon-text"
+                />
+              </div>
+              <Button
+                onClick={handleSkipAll}
+                variant="outline"
+                className="border-yellow-500 text-yellow-400 hover:bg-yellow-500/10"
+              >
+                <SkipForward className="w-4 h-4 ml-2" />
+                דלג על כל הלא ממופים ({unmappedCount})
+              </Button>
+            </div>
+
+            <div className="max-h-[40vh] overflow-y-auto space-y-2 border border-horizon rounded-lg p-2">
+              {paginatedProducts.map((zProduct, idx) => (
             <div key={idx} className="bg-horizon-card/30 border border-horizon rounded-lg p-3">
               <div className="flex items-center gap-3">
                 <div className="flex-1">
@@ -171,8 +217,36 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
               </div>
               </div>
             ))}
-          </div>
-        )}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-horizon">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="border-horizon text-horizon-text"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+
+              <span className="text-sm text-horizon-accent">
+                עמוד {currentPage} מתוך {totalPages} ({filteredProducts.length} מוצרים)
+              </span>
+
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="border-horizon text-horizon-text"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+            </div>
+            )}
+            </>
+            )}
 
         <div className="flex justify-end gap-3 pt-4 border-t border-horizon">
           <Button
