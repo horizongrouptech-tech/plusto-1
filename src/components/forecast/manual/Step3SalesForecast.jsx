@@ -610,12 +610,6 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
           <ChevronLeft className="w-4 h-4 mr-2" />
         </Button>
       </div>
-    </div>
-    </>
-  );
-}
-
-// ✅ הזזתי את הסגירה מכאן למטה
 
       {showZReportUploader && (
         <ZReportUploader
@@ -647,5 +641,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
           </DialogContent>
         </Dialog>
       )}
+    </div>
+    </>
   );
 }
