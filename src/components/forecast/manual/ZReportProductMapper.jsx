@@ -6,127 +6,50 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle, Link as LinkIcon, AlertCircle, Loader2 } from "lucide-react";
 import { formatCurrency } from './utils/numberFormatter';
-
-// ✅ יצירת Hash Maps לחיפוש מהיר O(1)
-function createServiceLookupMaps(servicesList) {
-  const byCatalogId = new Map();
-  const byBarcode = new Map();
-  const byItemCode = new Map();
-  const byExactName = new Map();
-  const byNormalizedName = new Map();
-
-  servicesList.forEach(service => {
-    const serviceName = service.service_name;
-    
-    if (service.catalog_product_id) {
-      byCatalogId.set(service.catalog_product_id.toString().trim(), serviceName);
-    }
-    if (service.barcode) {
-      byBarcode.set(service.barcode.toString().trim(), serviceName);
-    }
-    if (service.item_code) {
-      byItemCode.set(service.item_code.toString().trim(), serviceName);
-    }
-    
-    const normalized = serviceName.toLowerCase().trim();
-    byExactName.set(normalized, serviceName);
-    
-    // לחיפוש חלקי - שומר את כל המילים
-    normalized.split(' ').forEach(word => {
-      if (word.length > 2) {
-        if (!byNormalizedName.has(word)) {
-          byNormalizedName.set(word, []);
-        }
-        byNormalizedName.get(word).push(serviceName);
-      }
-    });
-  });
-
-  return { byCatalogId, byBarcode, byItemCode, byExactName, byNormalizedName };
-}
-
-function findBestMatch(zProduct, lookupMaps, existingMapping) {
-  // 1. Existing manual mapping
-  if (existingMapping && existingMapping[zProduct.product_name]) {
-    return existingMapping[zProduct.product_name];
-  }
-
-  const { byCatalogId, byBarcode, byItemCode, byExactName, byNormalizedName } = lookupMaps;
-  const zBarcode = zProduct.barcode ? zProduct.barcode.toString().trim() : '';
-  const normalizedName = zProduct.product_name.toLowerCase().trim();
-
-  // 2. Barcode Match (O(1) lookup)
-  if (zBarcode) {
-    if (byCatalogId.has(zBarcode)) return byCatalogId.get(zBarcode);
-    if (byBarcode.has(zBarcode)) return byBarcode.get(zBarcode);
-    if (byItemCode.has(zBarcode)) return byItemCode.get(zBarcode);
-  }
-
-  // 3. Exact Name Match (O(1) lookup)
-  if (byExactName.has(normalizedName)) {
-    return byExactName.get(normalizedName);
-  }
-
-  // 4. Partial Name Match (חיפוש מהיר יותר)
-  const words = normalizedName.split(' ').filter(w => w.length > 2);
-  for (const word of words) {
-    if (byNormalizedName.has(word)) {
-      const matches = byNormalizedName.get(word);
-      if (matches.length === 1) {
-        return matches[0];
-      }
-    }
-  }
-  
-  return null;
-}
+import { base44 } from "@/api/base44Client";
 
 export default function ZReportProductMapper({ zProducts, services, existingMapping, onMappingComplete, onCancel }) {
   const [mapping, setMapping] = useState({});
   const [unmappedCount, setUnmappedCount] = useState(0);
   const [isConfirming, setIsConfirming] = useState(false);
-  const [processingProgress, setProcessingProgress] = useState(0);
   const [isAutoMapping, setIsAutoMapping] = useState(true);
   const [autoMappingProgress, setAutoMappingProgress] = useState(0);
 
   useEffect(() => {
-    // 🚀 Auto-Mapping אסינכרוני ב-chunks כדי לא לחסום את ה-UI
+    // 🚀 Auto-Mapping בצד השרת - לא חוסם את ה-UI!
     const performAutoMapping = async () => {
       setIsAutoMapping(true);
-      setAutoMappingProgress(0);
+      setAutoMappingProgress(10);
       
-      // יצירת hash maps פעם אחת לכל ה-services
-      const lookupMaps = createServiceLookupMaps(services);
-      
-      const initialMapping = {};
-      let unmapped = 0;
-      const CHUNK_SIZE = 100;
-      const totalProducts = zProducts.length;
-
-      for (let i = 0; i < totalProducts; i += CHUNK_SIZE) {
-        const chunk = zProducts.slice(i, i + CHUNK_SIZE);
+      try {
+        console.log(`🗺️ Sending ${zProducts.length} products to server for auto-mapping...`);
         
-        chunk.forEach(product => {
-          const match = findBestMatch(product, lookupMaps, existingMapping);
-          if (match) {
-            initialMapping[product.product_name] = match;
-          } else {
-            unmapped++;
-          }
+        const response = await base44.functions.invoke('autoMapZReportProducts', {
+          zProducts,
+          services,
+          existingMapping
         });
 
-        // עדכון התקדמות
-        const progress = Math.min(((i + CHUNK_SIZE) / totalProducts) * 100, 100);
-        setAutoMappingProgress(progress);
-        
-        // תן ל-UI להתעדכן
-        await new Promise(resolve => setTimeout(resolve, 0));
-      }
+        setAutoMappingProgress(80);
 
-      setMapping(initialMapping);
-      setUnmappedCount(unmapped);
-      setIsAutoMapping(false);
-      console.log(`✅ Auto-mapping completed: ${Object.keys(initialMapping).length} matched, ${unmapped} unmatched`);
+        if (!response.data.success) {
+          throw new Error(response.data.error || 'שגיאה במיפוי');
+        }
+
+        setMapping(response.data.mapping);
+        setUnmappedCount(response.data.unmatched);
+        setAutoMappingProgress(100);
+
+        console.log(`✅ Server auto-mapping completed: ${response.data.matched} matched, ${response.data.unmatched} unmatched`);
+
+        await new Promise(resolve => setTimeout(resolve, 300));
+        setIsAutoMapping(false);
+
+      } catch (error) {
+        console.error('❌ Error in auto-mapping:', error);
+        setIsAutoMapping(false);
+        alert('שגיאה במיפוי אוטומטי: ' + error.message);
+      }
     };
 
     performAutoMapping();
