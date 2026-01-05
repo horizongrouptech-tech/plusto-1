@@ -7,41 +7,74 @@ import { Progress } from "@/components/ui/progress";
 import { CheckCircle, Link as LinkIcon, AlertCircle, Loader2 } from "lucide-react";
 import { formatCurrency } from './utils/numberFormatter';
 
-function findBestMatch(zProduct, servicesList, existingMapping) {
+// ✅ יצירת Hash Maps לחיפוש מהיר O(1)
+function createServiceLookupMaps(servicesList) {
+  const byCatalogId = new Map();
+  const byBarcode = new Map();
+  const byItemCode = new Map();
+  const byExactName = new Map();
+  const byNormalizedName = new Map();
+
+  servicesList.forEach(service => {
+    const serviceName = service.service_name;
+    
+    if (service.catalog_product_id) {
+      byCatalogId.set(service.catalog_product_id.toString().trim(), serviceName);
+    }
+    if (service.barcode) {
+      byBarcode.set(service.barcode.toString().trim(), serviceName);
+    }
+    if (service.item_code) {
+      byItemCode.set(service.item_code.toString().trim(), serviceName);
+    }
+    
+    const normalized = serviceName.toLowerCase().trim();
+    byExactName.set(normalized, serviceName);
+    
+    // לחיפוש חלקי - שומר את כל המילים
+    normalized.split(' ').forEach(word => {
+      if (word.length > 2) {
+        if (!byNormalizedName.has(word)) {
+          byNormalizedName.set(word, []);
+        }
+        byNormalizedName.get(word).push(serviceName);
+      }
+    });
+  });
+
+  return { byCatalogId, byBarcode, byItemCode, byExactName, byNormalizedName };
+}
+
+function findBestMatch(zProduct, lookupMaps, existingMapping) {
   // 1. Existing manual mapping
   if (existingMapping && existingMapping[zProduct.product_name]) {
     return existingMapping[zProduct.product_name];
   }
 
+  const { byCatalogId, byBarcode, byItemCode, byExactName, byNormalizedName } = lookupMaps;
   const zBarcode = zProduct.barcode ? zProduct.barcode.toString().trim() : '';
   const normalizedName = zProduct.product_name.toLowerCase().trim();
-  
-  for (const service of servicesList) {
-    // 2. Barcode Match (Exact)
-    if (zBarcode) {
-      // Check against catalog_product_id (often used as SKU/Barcode)
-      if (service.catalog_product_id && service.catalog_product_id.toString().trim() === zBarcode) {
-        return service.service_name;
-      }
-      // Check against explicit barcode field if it exists
-      if (service.barcode && service.barcode.toString().trim() === zBarcode) {
-        return service.service_name;
-      }
-      // Check against item_code field if it exists
-      if (service.item_code && service.item_code.toString().trim() === zBarcode) {
-        return service.service_name;
-      }
-    }
 
-    // 3. Name Match (Exact & Fuzzy)
-    const serviceName = service.service_name.toLowerCase().trim();
-    
-    if (serviceName === normalizedName) {
-      return service.service_name;
-    }
-    
-    if (serviceName.includes(normalizedName) || normalizedName.includes(serviceName)) {
-      return service.service_name;
+  // 2. Barcode Match (O(1) lookup)
+  if (zBarcode) {
+    if (byCatalogId.has(zBarcode)) return byCatalogId.get(zBarcode);
+    if (byBarcode.has(zBarcode)) return byBarcode.get(zBarcode);
+    if (byItemCode.has(zBarcode)) return byItemCode.get(zBarcode);
+  }
+
+  // 3. Exact Name Match (O(1) lookup)
+  if (byExactName.has(normalizedName)) {
+    return byExactName.get(normalizedName);
+  }
+
+  // 4. Partial Name Match (חיפוש מהיר יותר)
+  const words = normalizedName.split(' ').filter(w => w.length > 2);
+  for (const word of words) {
+    if (byNormalizedName.has(word)) {
+      const matches = byNormalizedName.get(word);
+      if (matches.length === 1) {
+        return matches[0];
+      }
     }
   }
   
@@ -53,22 +86,50 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
   const [unmappedCount, setUnmappedCount] = useState(0);
   const [isConfirming, setIsConfirming] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [isAutoMapping, setIsAutoMapping] = useState(true);
+  const [autoMappingProgress, setAutoMappingProgress] = useState(0);
 
   useEffect(() => {
-    const initialMapping = {};
-    let unmapped = 0;
+    // 🚀 Auto-Mapping אסינכרוני ב-chunks כדי לא לחסום את ה-UI
+    const performAutoMapping = async () => {
+      setIsAutoMapping(true);
+      setAutoMappingProgress(0);
+      
+      // יצירת hash maps פעם אחת לכל ה-services
+      const lookupMaps = createServiceLookupMaps(services);
+      
+      const initialMapping = {};
+      let unmapped = 0;
+      const CHUNK_SIZE = 100;
+      const totalProducts = zProducts.length;
 
-    zProducts.forEach(product => {
-      const match = findBestMatch(product, services, existingMapping);
-      if (match) {
-        initialMapping[product.product_name] = match;
-      } else {
-        unmapped++;
+      for (let i = 0; i < totalProducts; i += CHUNK_SIZE) {
+        const chunk = zProducts.slice(i, i + CHUNK_SIZE);
+        
+        chunk.forEach(product => {
+          const match = findBestMatch(product, lookupMaps, existingMapping);
+          if (match) {
+            initialMapping[product.product_name] = match;
+          } else {
+            unmapped++;
+          }
+        });
+
+        // עדכון התקדמות
+        const progress = Math.min(((i + CHUNK_SIZE) / totalProducts) * 100, 100);
+        setAutoMappingProgress(progress);
+        
+        // תן ל-UI להתעדכן
+        await new Promise(resolve => setTimeout(resolve, 0));
       }
-    });
 
-    setMapping(initialMapping);
-    setUnmappedCount(unmapped);
+      setMapping(initialMapping);
+      setUnmappedCount(unmapped);
+      setIsAutoMapping(false);
+      console.log(`✅ Auto-mapping completed: ${Object.keys(initialMapping).length} matched, ${unmapped} unmatched`);
+    };
+
+    performAutoMapping();
   }, [zProducts, services, existingMapping]);
 
   const handleMappingChange = (zProductName, serviceName) => {
@@ -112,15 +173,36 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
 
   return (
     <>
-      {/* Global Loading Overlay */}
-      {isConfirming && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center">
+      {/* Loading Overlay - Auto-Mapping */}
+      {isAutoMapping && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-center justify-center">
           <div className="bg-horizon-card border-2 border-horizon-primary rounded-2xl p-8 shadow-2xl max-w-md mx-4">
             <div className="text-center space-y-4">
               <Loader2 className="w-16 h-16 animate-spin text-horizon-primary mx-auto" />
               <div>
                 <h3 className="text-xl font-bold text-horizon-text mb-2">
-                  {processingProgress < 80 ? 'מעבד מוצרים...' : 
+                  מתאים מוצרים אוטומטית...
+                </h3>
+                <p className="text-sm text-horizon-accent">מעבד {zProducts.length} מוצרים מדוח Z</p>
+              </div>
+              <Progress value={autoMappingProgress} className="h-3" />
+              <p className="text-2xl font-bold text-horizon-primary">
+                {autoMappingProgress.toFixed(0)}%
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading Overlay - Confirming Data */}
+      {isConfirming && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-center justify-center">
+          <div className="bg-horizon-card border-2 border-horizon-primary rounded-2xl p-8 shadow-2xl max-w-md mx-4">
+            <div className="text-center space-y-4">
+              <Loader2 className="w-16 h-16 animate-spin text-horizon-primary mx-auto" />
+              <div>
+                <h3 className="text-xl font-bold text-horizon-text mb-2">
+                  {processingProgress < 80 ? 'מייבא מוצרים לתחזית...' : 
                    processingProgress < 95 ? 'שומר לדאטהבייס...' : 
                    'משלים...'}
                 </h3>
@@ -129,6 +211,9 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
               <Progress value={processingProgress} className="h-3" />
               <p className="text-2xl font-bold text-horizon-primary">
                 {processingProgress.toFixed(0)}%
+              </p>
+              <p className="text-xs text-horizon-accent mt-2">
+                ⚠️ אל תסגור את הדפדפן
               </p>
             </div>
           </div>
@@ -146,21 +231,24 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
           </p>
         </CardHeader>
         <CardContent className="space-y-4 flex-1 overflow-y-auto">
-        <div className="flex gap-3 mb-4">
-          <Badge variant="outline" className="border-green-500 text-green-400">
-            <CheckCircle className="w-3 h-3 ml-1" />
-            {zProducts.length - unmappedCount} הותאמו אוטומטית
-          </Badge>
-          {unmappedCount > 0 && (
-            <Badge variant="outline" className="border-yellow-500 text-yellow-400">
-              <AlertCircle className="w-3 h-3 ml-1" />
-              {unmappedCount} דורשים התאמה ידנית
+        {!isAutoMapping && (
+          <div className="flex gap-3 mb-4">
+            <Badge variant="outline" className="border-green-500 text-green-400">
+              <CheckCircle className="w-3 h-3 ml-1" />
+              {zProducts.length - unmappedCount} הותאמו אוטומטית
             </Badge>
-          )}
-        </div>
+            {unmappedCount > 0 && (
+              <Badge variant="outline" className="border-yellow-500 text-yellow-400">
+                <AlertCircle className="w-3 h-3 ml-1" />
+                {unmappedCount} דורשים התאמה ידנית
+              </Badge>
+            )}
+          </div>
+        )}
 
-        <div className="max-h-[50vh] overflow-y-auto space-y-2 border border-horizon rounded-lg p-2">
-          {zProducts.map((zProduct, idx) => (
+        {!isAutoMapping && (
+          <div className="max-h-[50vh] overflow-y-auto space-y-2 border border-horizon rounded-lg p-2">
+            {zProducts.map((zProduct, idx) => (
             <div key={idx} className="bg-horizon-card/30 border border-horizon rounded-lg p-3">
               <div className="flex items-center gap-3">
                 <div className="flex-1">
@@ -191,22 +279,23 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
                   </Select>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 pt-4 border-t border-horizon">
           <Button
             variant="outline"
             onClick={onCancel}
-            disabled={isConfirming}
+            disabled={isConfirming || isAutoMapping}
             className="border-horizon text-horizon-text"
           >
             ביטול
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={isConfirming}
+            disabled={isConfirming || isAutoMapping}
             className="btn-horizon-primary"
           >
             {isConfirming ? (

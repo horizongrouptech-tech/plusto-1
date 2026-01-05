@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ChevronRight, ChevronLeft, GripVertical, Eye, EyeOff, TrendingUp, Calendar, Upload, FileSpreadsheet, CheckCircle2, Package, BarChart3, Calculator } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { formatCurrency, formatNumber } from './utils/numberFormatter';
 import ZReportUploader from './ZReportUploader';
@@ -647,16 +648,25 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       )}
 
       {showProductMapper && pendingZData && (
-        <ZReportProductMapper
-          zProducts={pendingZData.products}
-          services={forecastData.services || []}
-          existingMapping={forecastData.z_report_product_mapping || {}}
-          onMappingComplete={handleMappingComplete}
-          onCancel={() => {
+        <Dialog open={showProductMapper} onOpenChange={(open) => {
+          if (!open) {
             setShowProductMapper(false);
             setPendingZData(null);
-          }}
-        />
+          }
+        }}>
+          <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden bg-horizon-dark border-horizon p-0" dir="rtl">
+            <ZReportProductMapper
+              zProducts={pendingZData.products}
+              services={forecastData.services || []}
+              existingMapping={forecastData.z_report_product_mapping || {}}
+              onMappingComplete={handleMappingComplete}
+              onCancel={() => {
+                setShowProductMapper(false);
+                setPendingZData(null);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
