@@ -109,16 +109,44 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
       return;
     }
 
-    // ✅ אם אין detailed_products - שחזר אותם מהקובץ המקורי
-    if (!zReport.detailed_products || zReport.detailed_products.length === 0) {
-      if (!zReport.file_url) {
-        alert('⚠️ דוח זה לא מכיל פרטי מוצרים ולא נמצא קובץ מקור.\nהעלה דוח Z מחדש כדי לאפשר עריכה.');
-        return;
+    setIsReconstructing(true);
+    try {
+      let detailedProducts = [];
+
+      // ✅ נסה לטעון מהישות החדשה ZReportProduct תחילה
+      if (zReport.z_report_id) {
+        console.log('🔍 Loading detailed products from ZReportProduct entity...');
+        const products = await base44.entities.ZReportProduct.filter({
+          z_report_id: zReport.z_report_id
+        });
+        
+        if (products && products.length > 0) {
+          detailedProducts = products.map(p => ({
+            product_name: p.product_name,
+            barcode: p.barcode || '',
+            quantity_sold: p.quantity_sold,
+            unit_price: p.unit_price,
+            revenue_with_vat: p.revenue_with_vat,
+            mapped_service: p.mapped_service
+          }));
+          console.log(`✅ Loaded ${detailedProducts.length} products from ZReportProduct entity`);
+        }
       }
 
-      // שחזור אוטומטי
-      setIsReconstructing(true);
-      try {
+      // ✅ אם לא נמצא בישות החדשה - נסה detailed_products הישנים
+      if (detailedProducts.length === 0 && zReport.detailed_products && zReport.detailed_products.length > 0) {
+        console.log('📦 Using detailed_products from z_reports_uploaded (legacy)');
+        detailedProducts = zReport.detailed_products;
+      }
+
+      // ✅ אם עדיין אין - שחזר מהקובץ המקורי
+      if (detailedProducts.length === 0) {
+        if (!zReport.file_url) {
+          alert('⚠️ דוח זה לא מכיל פרטי מוצרים ולא נמצא קובץ מקור.\nהעלה דוח Z מחדש כדי לאפשר עריכה.');
+          setIsReconstructing(false);
+          return;
+        }
+
         console.log('🔄 Reconstructing Z-report from original file:', zReport.file_url);
 
         const response = await base44.functions.invoke('parseZReport', {
@@ -130,46 +158,30 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
           throw new Error(response.data.error || 'שגיאה בפענוח הקובץ');
         }
 
-        const reconstructedProducts = response.data.data.products.map(p => ({
+        detailedProducts = response.data.data.products.map(p => ({
           product_name: p.product_name,
           barcode: p.barcode || '',
           quantity_sold: p.quantity_sold,
           unit_price: p.quantity_sold > 0 ? p.revenue_with_vat / p.quantity_sold : 0,
           revenue_with_vat: p.revenue_with_vat,
-          mapped_service: '' // ייקבע בעורך
+          mapped_service: ''
         }));
 
-        // עדכון הדוח עם המוצרים המשוחזרים
-        const updatedReport = {
-          ...zReport,
-          detailed_products: reconstructedProducts,
-          products_count: reconstructedProducts.length
-        };
-
-        // שמירה ב-DB
-        const updatedReports = (forecastData.z_reports_uploaded || []).map(r =>
-          r.month_assigned === zReport.month_assigned ? updatedReport : r
-        );
-
-        if (forecastData.id) {
-          await base44.entities.ManualForecast.update(forecastData.id, {
-            z_reports_uploaded: updatedReports
-          });
-        }
-
-        console.log('✅ Z-report reconstructed successfully:', reconstructedProducts.length, 'products');
-        setEditingMonth({ ...updatedReport, monthIndex: monthIdx });
-        
-      } catch (error) {
-        console.error('❌ Error reconstructing Z-report:', error);
-        alert('❌ שגיאה בשחזור הדוח:\n' + error.message + '\n\nנסה להעלות את הדוח מחדש.');
-      } finally {
-        setIsReconstructing(false);
+        console.log('✅ Z-report reconstructed successfully:', detailedProducts.length, 'products');
       }
-      return;
+      
+      setEditingMonth({ 
+        ...zReport, 
+        detailed_products: detailedProducts,
+        monthIndex: monthIdx 
+      });
+      
+    } catch (error) {
+      console.error('❌ Error loading Z-report:', error);
+      alert('❌ שגיאה בטעינת הדוח:\n' + error.message);
+    } finally {
+      setIsReconstructing(false);
     }
-    
-    setEditingMonth({ ...zReport, monthIndex: monthIdx });
   };
 
   const handleSaveEditedReport = async (updatedReport) => {
