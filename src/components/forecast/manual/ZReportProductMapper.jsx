@@ -151,29 +151,22 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
 
   const handleConfirm = async () => {
     setIsConfirming(true);
-    setProcessingProgress(0);
 
     try {
-      // תן ל-UI להתעדכן עם ה-loading state
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
-      // קריאה ל-callback עם המיפוי והעברת פונקציית progress
-      await onMappingComplete(mapping, (progress) => {
-        setProcessingProgress(progress);
-      });
+      // קריאה ל-callback עם המיפוי (ללא progress - זה יהיה בצד השרת)
+      await onMappingComplete(mapping);
       
       // הפונקציה הצליחה - הרכיב יסגר מ-Step3
     } catch (error) {
       console.error('Error during confirmation:', error);
       alert('שגיאה בעיבוד המיפוי: ' + error.message);
       setIsConfirming(false);
-      setProcessingProgress(0);
     }
   };
 
   return (
     <>
-      {/* Loading Overlay - Auto-Mapping */}
+      {/* Loading Overlay - Auto-Mapping בלבד */}
       {isAutoMapping && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-center justify-center">
           <div className="bg-horizon-card border-2 border-horizon-primary rounded-2xl p-8 shadow-2xl max-w-md mx-4">
@@ -188,32 +181,6 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
               <Progress value={autoMappingProgress} className="h-3" />
               <p className="text-2xl font-bold text-horizon-primary">
                 {autoMappingProgress.toFixed(0)}%
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Loading Overlay - Confirming Data */}
-      {isConfirming && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-center justify-center">
-          <div className="bg-horizon-card border-2 border-horizon-primary rounded-2xl p-8 shadow-2xl max-w-md mx-4">
-            <div className="text-center space-y-4">
-              <Loader2 className="w-16 h-16 animate-spin text-horizon-primary mx-auto" />
-              <div>
-                <h3 className="text-xl font-bold text-horizon-text mb-2">
-                  {processingProgress < 80 ? 'מייבא מוצרים לתחזית...' : 
-                   processingProgress < 95 ? 'שומר לדאטהבייס...' : 
-                   'משלים...'}
-                </h3>
-                <p className="text-sm text-horizon-accent">אנא המתן, זה עשוי לקחת מספר שניות</p>
-              </div>
-              <Progress value={processingProgress} className="h-3" />
-              <p className="text-2xl font-bold text-horizon-primary">
-                {processingProgress.toFixed(0)}%
-              </p>
-              <p className="text-xs text-horizon-accent mt-2">
-                ⚠️ אל תסגור את הדפדפן
               </p>
             </div>
           </div>

@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ChevronRight, ChevronLeft, GripVertical, Eye, EyeOff, TrendingUp, Calendar, Upload, FileSpreadsheet, CheckCircle2, Package, BarChart3, Calculator } from "lucide-react";
+import { ChevronRight, ChevronLeft, GripVertical, Eye, EyeOff, TrendingUp, Calendar, Upload, FileSpreadsheet, CheckCircle2, Package, BarChart3, Calculator, Loader2 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { formatCurrency, formatNumber } from './utils/numberFormatter';
 import ZReportUploader from './ZReportUploader';
@@ -43,6 +44,9 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   const [pendingZData, setPendingZData] = useState(null);
   const [viewMode, setViewMode] = useState('category'); // 'category' או 'list'
   const [planningMode, setPlanningMode] = useState(forecastData.use_aggregate_planning ? 'aggregate' : 'detailed');
+  const [isProcessingZReport, setIsProcessingZReport] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [processingMessage, setProcessingMessage] = useState('');
 
   // ✅ useEffect נשאר רק כ-fallback למקרים מיוחדים
   useEffect(() => {
@@ -120,142 +124,55 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     setShowProductMapper(true);
   };
 
-  const handleMappingComplete = async (mapping, onProgress) => {
+  const handleMappingComplete = async (mapping) => {
     if (!pendingZData) return;
 
-    const monthIndex = pendingZData.month - 1;
-    const updated = [...salesForecast];
-    let productsUpdated = 0;
+    // 🔒 סגור את ה-Dialog מיד לפני תחילת העיבוד
+    setShowProductMapper(false);
 
-    console.log('🗺️ Z-Report Mapping:', mapping);
-    console.log('📦 Products from Z-Report:', pendingZData.products);
-
-    // ✅ יצירת ID ייחודי לדוח Z
-    const zReportId = `zrpt_${Date.now()}_${pendingZData.month}`;
-    const detailedProducts = [];
-
-    // 🚀 עיבוד ב-chunks כדי לא לחסום את ה-UI
-    const CHUNK_SIZE = 100;
-    const totalProducts = pendingZData.products.length;
-
-    for (let i = 0; i < totalProducts; i += CHUNK_SIZE) {
-      const chunk = pendingZData.products.slice(i, i + CHUNK_SIZE);
-
-      chunk.forEach(zProduct => {
-        const mappedServiceName = mapping[zProduct.product_name];
-        if (!mappedServiceName) return;
-
-        const serviceIndex = updated.findIndex(s => s.service_name === mappedServiceName);
-        if (serviceIndex === -1) return;
-
-        // ✅ דורס (מחליף) את הכמות במקום להוסיף
-        updated[serviceIndex].actual_monthly_quantities[monthIndex] = zProduct.quantity_sold;
-
-        // ✅ דורס (מחליף) את המחזור הממשי מהדוח Z
-        const realRevenue = zProduct.revenue_with_vat || 0;
-        updated[serviceIndex].actual_monthly_revenue[monthIndex] = realRevenue;
-
-        // ✅ שמירת פרטי המוצר המלאים
-        detailedProducts.push({
-          product_name: zProduct.product_name,
-          barcode: zProduct.barcode || '',
-          quantity_sold: zProduct.quantity_sold,
-          unit_price: zProduct.quantity_sold > 0 ? realRevenue / zProduct.quantity_sold : 0,
-          revenue_with_vat: realRevenue,
-          mapped_service: mappedServiceName
-        });
-
-        productsUpdated++;
-      });
-
-      if (onProgress) {
-        onProgress(Math.min(((i + CHUNK_SIZE) / totalProducts) * 60, 60));
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 0));
-    }
-
-    console.log(`✅ Processed ${productsUpdated} products in chunks`);
-    setSalesForecast(updated);
-
-    if (onProgress) onProgress(65);
+    // 📊 הצג loading overlay מלא מסך
+    setIsProcessingZReport(true);
+    setProcessingProgress(0);
+    setProcessingMessage('מתחיל עיבוד...');
 
     try {
-      // 🚀 שלב 1: שמירת מוצרים מפורטים בישות ZReportProduct (ב-batches)
-      console.log('💾 Saving detailed products to ZReportProduct entity...');
-      const zReportProductRecords = detailedProducts.map(p => ({
-        z_report_id: zReportId,
-        customer_email: forecastData.customer_email || forecastData.created_by,
-        product_name: p.product_name,
-        barcode: p.barcode,
-        quantity_sold: p.quantity_sold,
-        unit_price: p.unit_price,
-        revenue_with_vat: p.revenue_with_vat,
-        mapped_service: p.mapped_service,
-        month_assigned: pendingZData.month
-      }));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      // שמירה ב-batches של 500 מוצרים
-      const SAVE_BATCH_SIZE = 500;
-      for (let i = 0; i < zReportProductRecords.length; i += SAVE_BATCH_SIZE) {
-        const batch = zReportProductRecords.slice(i, i + SAVE_BATCH_SIZE);
-        await base44.entities.ZReportProduct.bulkCreate(batch);
-        if (onProgress) {
-          onProgress(65 + (i / zReportProductRecords.length) * 15);
-        }
-      }
-      console.log(`✅ Saved ${zReportProductRecords.length} products to ZReportProduct entity`);
+      setProcessingMessage('שולח נתונים לשרת...');
+      setProcessingProgress(10);
 
-      if (onProgress) onProgress(80);
+      // 🚀 קריאה ל-backend function שעושה הכל בצד השרת
+      const response = await base44.functions.invoke('processBulkZReportImport', {
+        forecastId: forecastData.id,
+        zProducts: pendingZData.products,
+        mapping: mapping,
+        monthAssigned: pendingZData.month,
+        fileName: pendingZData.file_name,
+        fileUrl: pendingZData.file_url,
+        totalRevenue: pendingZData.summary.total_revenue_with_vat,
+        currentSalesForecast: salesForecast,
+        currentServices: forecastData.services
+      });
 
-      // 🚀 שלב 2: שמירת metadata בלבד ב-ManualForecast (ללא detailed_products!)
-      const uploadRecord = {
-        z_report_id: zReportId,
-        file_name: pendingZData.file_name,
-        upload_date: new Date().toISOString(),
-        month_assigned: pendingZData.month,
-        products_updated: productsUpdated,
-        total_revenue: pendingZData.summary.total_revenue_with_vat,
-        file_url: pendingZData.file_url,
-        products_count: detailedProducts.length
-      };
+      setProcessingProgress(50);
+      setProcessingMessage('מעבד נתונים בשרת...');
 
-      const existingReports = forecastData.z_reports_uploaded || [];
-      const updatedReports = [...existingReports, uploadRecord];
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      console.log('💾 Saving forecast updates to ManualForecast...');
-
-      // שמירה בשלושה שלבים נפרדים למניעת timeout
-      if (forecastData.id) {
-        // שלב 2א: עדכון sales_forecast_onetime
-        await base44.entities.ManualForecast.update(forecastData.id, {
-          sales_forecast_onetime: updated
-        });
-        if (onProgress) onProgress(85);
-
-        // שלב 2ב: עדכון z_reports_uploaded
-        await base44.entities.ManualForecast.update(forecastData.id, {
-          z_reports_uploaded: updatedReports
-        });
-        if (onProgress) onProgress(90);
-
-        // שלב 2ג: עדכון z_report_product_mapping
-        await base44.entities.ManualForecast.update(forecastData.id, {
-          z_report_product_mapping: {
-            ...(forecastData.z_report_product_mapping || {}),
-            ...mapping
-          }
-        });
-        if (onProgress) onProgress(95);
-
-        console.log('✅ All data saved successfully');
+      if (!response.data.success) {
+        throw new Error(response.data.error || 'שגיאה בעיבוד');
       }
 
-      // עדכון forecastData המקומי
+      setProcessingProgress(90);
+      setProcessingMessage('מסיים...');
+
+      // עדכון state המקומי
+      setSalesForecast(response.data.updated_sales_forecast);
+
       if (onUpdateForecast) {
         onUpdateForecast({
-          sales_forecast_onetime: updated,
-          z_reports_uploaded: updatedReports,
+          sales_forecast_onetime: response.data.updated_sales_forecast,
+          z_reports_uploaded: response.data.updated_reports,
           z_report_product_mapping: {
             ...(forecastData.z_report_product_mapping || {}),
             ...mapping
@@ -263,27 +180,21 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
         });
       }
 
-      if (onProgress) onProgress(100);
+      setProcessingProgress(100);
 
-      setShowProductMapper(false);
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       setPendingZData(null);
-      alert(`✓ דוח Z יובא בהצלחה!\n${productsUpdated} מוצרים עודכנו בחודש ${monthNames[monthIndex]}`);
+      setIsProcessingZReport(false);
+
+      const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+      alert(`✓ דוח Z יובא בהצלחה!\n${response.data.products_updated} מוצרים עודכנו בחודש ${monthNames[pendingZData.month - 1]}`);
 
     } catch (error) {
-      console.error('❌ Error saving Z report:', error);
-
-      // ניקוי במקרה של כשלון
-      try {
-        if (zReportId) {
-          await base44.entities.ZReportProduct.delete({ z_report_id: zReportId });
-          console.log('🧹 Cleaned up failed Z-report products');
-        }
-      } catch (cleanupError) {
-        console.error('Error during cleanup:', cleanupError);
-      }
-
-      alert('שגיאה בשמירת דוח Z: ' + error.message + '\nאנא נסה שוב.');
-      throw error;
+      console.error('❌ Error in Z-report import:', error);
+      setIsProcessingZReport(false);
+      setPendingZData(null);
+      alert('שגיאה בייבוא דוח Z:\n' + error.message + '\n\nאנא נסה שוב.');
     }
   };
 
@@ -398,6 +309,35 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   };
 
   return (
+    <>
+      {/* Global Loading Overlay - מחוץ ל-Dialog */}
+      {isProcessingZReport && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center">
+          <div className="bg-horizon-card border-2 border-horizon-primary rounded-2xl p-10 shadow-2xl max-w-lg mx-4">
+            <div className="text-center space-y-6">
+              <Loader2 className="w-20 h-20 animate-spin text-horizon-primary mx-auto" />
+              <div>
+                <h3 className="text-2xl font-bold text-horizon-text mb-2">
+                  {processingMessage}
+                </h3>
+                <p className="text-sm text-horizon-accent">
+                  מעבד {pendingZData?.products?.length || 0} מוצרים מדוח Z
+                </p>
+              </div>
+              <Progress value={processingProgress} className="h-4" />
+              <p className="text-3xl font-bold text-horizon-primary">
+                {processingProgress.toFixed(0)}%
+              </p>
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                <p className="text-xs text-yellow-400 font-semibold">
+                  ⚠️ אנא אל תסגור את החלון או תעזוב את הדף
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     <div className="space-y-6" dir="rtl">
       {/* בחירת מצב תכנון */}
       <Card className="card-horizon border-2 border-horizon-primary/30">
@@ -670,6 +610,12 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
           <ChevronLeft className="w-4 h-4 mr-2" />
         </Button>
       </div>
+    </div>
+    </>
+  );
+}
+
+// ✅ הזזתי את הסגירה מכאן למטה
 
       {showZReportUploader && (
         <ZReportUploader
@@ -701,6 +647,5 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
           </DialogContent>
         </Dialog>
       )}
-    </div>
   );
 }
