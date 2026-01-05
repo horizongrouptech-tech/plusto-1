@@ -119,7 +119,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     setShowProductMapper(true);
   };
 
-  const handleMappingComplete = async (mapping) => {
+  const handleMappingComplete = async (mapping, onProgress) => {
     if (!pendingZData) return;
 
     const monthIndex = pendingZData.month - 1;
@@ -132,35 +132,53 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     // ✅ שמירת פרטי המוצרים המלאים לעריכה עתידית
     const detailedProducts = [];
 
-    pendingZData.products.forEach(zProduct => {
-      const mappedServiceName = mapping[zProduct.product_name];
-      if (!mappedServiceName) return;
+    // 🚀 עיבוד ב-chunks כדי לא לחסום את ה-UI
+    const CHUNK_SIZE = 100;
+    const totalProducts = pendingZData.products.length;
+    
+    for (let i = 0; i < totalProducts; i += CHUNK_SIZE) {
+      const chunk = pendingZData.products.slice(i, i + CHUNK_SIZE);
+      
+      chunk.forEach(zProduct => {
+        const mappedServiceName = mapping[zProduct.product_name];
+        if (!mappedServiceName) return;
 
-      const serviceIndex = updated.findIndex(s => s.service_name === mappedServiceName);
-      if (serviceIndex === -1) return;
+        const serviceIndex = updated.findIndex(s => s.service_name === mappedServiceName);
+        if (serviceIndex === -1) return;
 
-      // ✅ דורס (מחליף) את הכמות במקום להוסיף
-      updated[serviceIndex].actual_monthly_quantities[monthIndex] = zProduct.quantity_sold;
+        // ✅ דורס (מחליף) את הכמות במקום להוסיף
+        updated[serviceIndex].actual_monthly_quantities[monthIndex] = zProduct.quantity_sold;
 
-      // ✅ דורס (מחליף) את המחזור הממשי מהדוח Z
-      const realRevenue = zProduct.revenue_with_vat || 0;
-      updated[serviceIndex].actual_monthly_revenue[monthIndex] = realRevenue;
+        // ✅ דורס (מחליף) את המחזור הממשי מהדוח Z
+        const realRevenue = zProduct.revenue_with_vat || 0;
+        updated[serviceIndex].actual_monthly_revenue[monthIndex] = realRevenue;
 
-      // ✅ שמירת פרטי המוצר המלאים
-      detailedProducts.push({
-        product_name: zProduct.product_name,
-        barcode: zProduct.barcode || '',
-        quantity_sold: zProduct.quantity_sold,
-        unit_price: zProduct.quantity_sold > 0 ? realRevenue / zProduct.quantity_sold : 0,
-        revenue_with_vat: realRevenue,
-        mapped_service: mappedServiceName
+        // ✅ שמירת פרטי המוצר המלאים
+        detailedProducts.push({
+          product_name: zProduct.product_name,
+          barcode: zProduct.barcode || '',
+          quantity_sold: zProduct.quantity_sold,
+          unit_price: zProduct.quantity_sold > 0 ? realRevenue / zProduct.quantity_sold : 0,
+          revenue_with_vat: realRevenue,
+          mapped_service: mappedServiceName
+        });
+
+        productsUpdated++;
       });
 
-      console.log(`✅ Updated "${mappedServiceName}": ${zProduct.quantity_sold} units, ₪${realRevenue} (replaced with real Z-report data)`);
-      productsUpdated++;
-    });
+      // דווח על התקדמות
+      if (onProgress) {
+        onProgress(Math.min(((i + CHUNK_SIZE) / totalProducts) * 80, 80));
+      }
+      
+      // תן ל-UI להתעדכן
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
 
+    console.log(`✅ Processed ${productsUpdated} products in chunks`);
     setSalesForecast(updated);
+
+    if (onProgress) onProgress(85);
 
     const uploadRecord = {
       file_name: pendingZData.file_name,
@@ -195,11 +213,15 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       onUpdateForecast(completeUpdates);
     }
 
+    if (onProgress) onProgress(90);
+
     if (forecastData.id) {
       try {
         console.log('💾 Saving Z-report data to DB...');
         await base44.entities.ManualForecast.update(forecastData.id, completeUpdates);
         console.log('✅ Z-report data saved successfully to DB');
+        
+        if (onProgress) onProgress(95);
         
         // ✅ וידוא שהנתונים נשמרו - קריאה חזרה
         const verification = await base44.entities.ManualForecast.get(forecastData.id);
@@ -215,8 +237,11 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       } catch (error) {
         console.error('❌ Error saving Z report upload history:', error);
         alert('שגיאה בשמירת דוח Z: ' + error.message);
+        throw error;
       }
     }
+
+    if (onProgress) onProgress(100);
 
     // ✅ עדכון forecastData המקומי כדי שהסיכום יראה את הנתונים מיד
     if (onUpdateForecast) {

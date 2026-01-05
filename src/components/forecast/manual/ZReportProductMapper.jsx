@@ -92,35 +92,60 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
     setIsConfirming(true);
     setProcessingProgress(0);
 
-    // עיבוד הנתונים בצורה אסינכרונית כדי לא לחסום את ה-UI
     try {
-      await new Promise(resolve => setTimeout(resolve, 100)); // תן ל-UI להתעדכן
-      setProcessingProgress(50);
+      // תן ל-UI להתעדכן עם ה-loading state
+      await new Promise(resolve => setTimeout(resolve, 50));
       
-      await new Promise(resolve => setTimeout(resolve, 100));
-      setProcessingProgress(100);
+      // קריאה ל-callback עם המיפוי והעברת פונקציית progress
+      await onMappingComplete(mapping, (progress) => {
+        setProcessingProgress(progress);
+      });
       
-      // קריאה ל-callback עם המיפוי
-      onMappingComplete(mapping);
+      // הפונקציה הצליחה - הרכיב יסגר מ-Step3
     } catch (error) {
       console.error('Error during confirmation:', error);
       alert('שגיאה בעיבוד המיפוי: ' + error.message);
       setIsConfirming(false);
+      setProcessingProgress(0);
     }
   };
 
   return (
-    <Card className="card-horizon max-h-[90vh] overflow-hidden flex flex-col">
-      <CardHeader>
-        <CardTitle className="text-xl text-horizon-text flex items-center gap-2">
-          <LinkIcon className="w-5 h-5 text-horizon-primary" />
-          התאמת מוצרים מדוח Z
-        </CardTitle>
-        <p className="text-sm text-horizon-accent">
-          התאם את המוצרים מהדוח למוצרים בתחזית שלך
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-4 flex-1 overflow-y-auto">
+    <>
+      {/* Global Loading Overlay */}
+      {isConfirming && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center">
+          <div className="bg-horizon-card border-2 border-horizon-primary rounded-2xl p-8 shadow-2xl max-w-md mx-4">
+            <div className="text-center space-y-4">
+              <Loader2 className="w-16 h-16 animate-spin text-horizon-primary mx-auto" />
+              <div>
+                <h3 className="text-xl font-bold text-horizon-text mb-2">
+                  {processingProgress < 80 ? 'מעבד מוצרים...' : 
+                   processingProgress < 95 ? 'שומר לדאטהבייס...' : 
+                   'משלים...'}
+                </h3>
+                <p className="text-sm text-horizon-accent">אנא המתן, זה עשוי לקחת מספר שניות</p>
+              </div>
+              <Progress value={processingProgress} className="h-3" />
+              <p className="text-2xl font-bold text-horizon-primary">
+                {processingProgress.toFixed(0)}%
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <Card className="card-horizon max-h-[90vh] overflow-hidden flex flex-col">
+        <CardHeader>
+          <CardTitle className="text-xl text-horizon-text flex items-center gap-2">
+            <LinkIcon className="w-5 h-5 text-horizon-primary" />
+            התאמת מוצרים מדוח Z
+          </CardTitle>
+          <p className="text-sm text-horizon-accent">
+            התאם את המוצרים מהדוח למוצרים בתחזית שלך
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4 flex-1 overflow-y-auto">
         <div className="flex gap-3 mb-4">
           <Badge variant="outline" className="border-green-500 text-green-400">
             <CheckCircle className="w-3 h-3 ml-1" />
@@ -170,16 +195,6 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
           ))}
         </div>
 
-        {isConfirming && (
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-            <div className="flex items-center gap-3 mb-2">
-              <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
-              <p className="text-horizon-text font-medium">מעבד נתונים, אנא המתן...</p>
-            </div>
-            <Progress value={processingProgress} className="h-2" />
-          </div>
-        )}
-
         <div className="flex justify-end gap-3 pt-4 border-t border-horizon">
           <Button
             variant="outline"
@@ -209,5 +224,6 @@ export default function ZReportProductMapper({ zProducts, services, existingMapp
         </div>
       </CardContent>
     </Card>
+    </>
   );
 }
