@@ -87,6 +87,18 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
   const handleConfirmImport = () => {
     if (!parsedData || !selectedMonth) return;
 
+    // ✅ FIX #4: Validate products array
+    if (!parsedData.products || !Array.isArray(parsedData.products) || parsedData.products.length === 0) {
+      alert('שגיאה: לא נמצאו מוצרים בדוח. אנא נסה להעלות את הקובץ מחדש.');
+      return;
+    }
+
+    // ✅ Validate summary
+    if (!parsedData.summary) {
+      alert('שגיאה: נתוני סיכום חסרים. אנא נסה להעלות את הקובץ מחדש.');
+      return;
+    }
+
     onDataImported({
       month: selectedMonth,
       products: parsedData.products,
