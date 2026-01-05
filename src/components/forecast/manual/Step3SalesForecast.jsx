@@ -131,6 +131,22 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   const handleMappingComplete = async (mapping) => {
     if (!pendingZData) return;
 
+    // ✅ FIX #2: Validate products array
+    if (!pendingZData.products || !Array.isArray(pendingZData.products) || pendingZData.products.length === 0) {
+      alert('שגיאה: לא נמצאו מוצרים לייבוא');
+      setShowProductMapper(false);
+      setPendingZData(null);
+      return;
+    }
+
+    // ✅ Validate month
+    if (!pendingZData.month || pendingZData.month < 1 || pendingZData.month > 12) {
+      alert('שגיאה: חודש לא תקין');
+      setShowProductMapper(false);
+      setPendingZData(null);
+      return;
+    }
+
     // 🔒 סגור את ה-Dialog מיד
     setShowProductMapper(false);
 
@@ -185,12 +201,22 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
+      // ✅ FIX #3: Handle finalSalesForecast type correctly
+      let salesForecastArray = [];
+      if (finalSalesForecast) {
+        if (Array.isArray(finalSalesForecast)) {
+          salesForecastArray = finalSalesForecast;
+        } else if (typeof finalSalesForecast === 'object') {
+          salesForecastArray = Object.values(finalSalesForecast);
+        }
+      }
+
       // עדכון ה-state המקומי
-      setSalesForecast(Object.values(finalSalesForecast || {}));
+      setSalesForecast(salesForecastArray);
 
       if (onUpdateForecast) {
         onUpdateForecast({
-          sales_forecast_onetime: Object.values(finalSalesForecast || {}),
+          sales_forecast_onetime: salesForecastArray,
           uploaded_reports: finalUploadedReports,
           z_product_mapping: {
             ...(forecastData.z_product_mapping || {}),
@@ -202,11 +228,14 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       setProcessingMessage('הושלם בהצלחה!');
       await new Promise(resolve => setTimeout(resolve, 800));
 
+      // ✅ FIX #1: Store month before nullifying state
+      const importedMonth = pendingZData.month;
+      const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+
       setPendingZData(null);
       setIsProcessingZReport(false);
 
-      const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
-      alert(`✅ דוח Z יובא בהצלחה!\n${allProducts.length} מוצרים יובאו בחודש ${monthNames[pendingZData.month - 1]}`);
+      alert(`✅ דוח Z יובא בהצלחה!\n${allProducts.length} מוצרים יובאו בחודש ${monthNames[importedMonth - 1]}`);
 
     } catch (error) {
       console.error('❌ Error in chunked import:', error);
