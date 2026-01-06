@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Handle, Position } from 'reactflow';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Calendar,
   User,
@@ -14,13 +15,17 @@ import {
   Clock,
   AlertCircle,
   XCircle,
-  MoreVertical
+  MoreVertical,
+  ChevronDown,
+  ChevronUp,
+  ListChecks
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 
 const EnhancedGoalNode = ({ data, selected }) => {
   const [showActions, setShowActions] = useState(false);
+  const [showSubtasks, setShowSubtasks] = useState(false);
 
   const statusConfig = {
     open: {
@@ -166,13 +171,25 @@ const EnhancedGoalNode = ({ data, selected }) => {
           </h3>
         </div>
 
-        {/* Progress Bar (if subtasks exist) */}
+        {/* Progress Bar + Subtasks Toggle (if subtasks exist) */}
         {data.subtasks_total > 0 && (
           <div className="space-y-1">
-            <div className="flex items-center justify-between text-xs font-semibold">
-              <span className="text-horizon-text">{data.subtasks_done || 0} / {data.subtasks_total}</span>
-              <span className="text-horizon-primary">{Math.round(((data.subtasks_done || 0) / data.subtasks_total) * 100)}%</span>
-            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowSubtasks(!showSubtasks);
+              }}
+              className="w-full flex items-center justify-between text-xs font-semibold hover:bg-horizon-primary/10 rounded px-2 py-1 transition-colors"
+            >
+              <div className="flex items-center gap-1">
+                <ListChecks className="w-3 h-3 text-horizon-primary" />
+                <span className="text-horizon-text">{data.subtasks_done || 0} / {data.subtasks_total}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-horizon-primary">{Math.round(((data.subtasks_done || 0) / data.subtasks_total) * 100)}%</span>
+                {showSubtasks ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </div>
+            </button>
             <div className="h-2 bg-horizon-dark/70 rounded-full overflow-hidden border border-horizon">
               <div
                 className="h-full bg-gradient-to-r from-horizon-primary to-horizon-secondary transition-all duration-500 shadow-md"
@@ -181,6 +198,23 @@ const EnhancedGoalNode = ({ data, selected }) => {
                 }}
               />
             </div>
+            
+            {/* רשימת משימות */}
+            {showSubtasks && data.subtasks && data.subtasks.length > 0 && (
+              <div className="mt-2 space-y-1 max-h-40 overflow-y-auto border-t border-horizon pt-2">
+                {data.subtasks.map(subtask => (
+                  <div
+                    key={subtask.id}
+                    className="flex items-center gap-2 px-2 py-1 bg-horizon-dark/50 rounded text-xs hover:bg-horizon-primary/10 transition-colors"
+                  >
+                    <div className={`w-2 h-2 rounded-full ${subtask.status === 'done' ? 'bg-green-400' : 'bg-gray-400'}`} />
+                    <span className={`flex-1 truncate ${subtask.status === 'done' ? 'line-through text-horizon-accent' : 'text-horizon-text'}`}>
+                      {subtask.name}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

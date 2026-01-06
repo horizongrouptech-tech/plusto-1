@@ -13,7 +13,7 @@ import 'reactflow/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Target, Loader2 } from 'lucide-react';
+import { Target, Loader2, Trash2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 // קומפוננטות חדשות
@@ -487,6 +487,12 @@ export default function GoalsTimelineNew({ customer }) {
               edgesUpdatable={true}
               edgesFocusable={true}
               deleteKeyCode="Delete"
+              onEdgeClick={(event, edge) => {
+                event.preventDefault();
+                if (confirm('האם למחוק את החיבור הזה?')) {
+                  handleDeleteEdge(edge.source, edge.target);
+                }
+              }}
               minZoom={0.1}
               maxZoom={2}
             >
@@ -500,6 +506,10 @@ export default function GoalsTimelineNew({ customer }) {
                 className="bg-horizon-card/95 backdrop-blur-sm border border-horizon rounded-lg shadow-xl" 
                 showInteractive={false}
               />
+              <div className="absolute bottom-4 left-4 bg-horizon-card/95 backdrop-blur-sm border border-horizon rounded-lg p-2 text-xs text-horizon-accent z-10">
+                <p>💡 טיפ: לחץ על חיץ כדי למחוק חיבור</p>
+                <p>💡 לחץ Delete/Backspace על חיץ נבחר למחיקה</p>
+              </div>
               <MiniMap 
                 nodeColor={(node) => {
                   const colors = {
