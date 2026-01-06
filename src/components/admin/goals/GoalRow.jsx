@@ -18,7 +18,6 @@ import {
     Check,
     UserPlus
 } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, parse, isValid } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { base44 } from '@/api/base44Client';
