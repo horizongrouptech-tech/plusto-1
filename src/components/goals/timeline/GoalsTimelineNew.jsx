@@ -88,14 +88,17 @@ export default function GoalsTimelineNew({ customer }) {
     });
   }, [goals, searchTerm, statusFilter, viewMode]);
 
-  // המרת יעדים ל-nodes ו-edges
+  // המרת יעדים ל-nodes ו-edges - רק יעדים ראשיים
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
-    if (!filteredGoals.length) return { nodes: [], edges: [] };
+    // סינון - רק יעדים ראשיים (ללא parent_id) או task_type='goal'
+    const mainGoals = filteredGoals.filter(g => !g.parent_id || g.task_type === 'goal');
+    
+    if (!mainGoals.length) return { nodes: [], edges: [] };
 
-    // יצירת nodes
-    const nodes = filteredGoals.map((goal) => {
-      // ספירת משימות משנה
-      const subtasks = goals.filter(g => g.parent_id === goal.id);
+    // יצירת nodes - רק יעדים ראשיים
+    const nodes = mainGoals.map((goal) => {
+      // ספירת משימות משנה שפעילות
+      const subtasks = goals.filter(g => g.parent_id === goal.id && g.is_active !== false);
       const subtasks_done = subtasks.filter(g => g.status === 'done').length;
 
       return {
@@ -110,6 +113,7 @@ export default function GoalsTimelineNew({ customer }) {
           assignee: goal.assignee_email || goal.assigned_users?.[0],
           subtasks_total: subtasks.length,
           subtasks_done: subtasks_done,
+          subtasks: subtasks, // העברת המשימות לצורך הצגה בהרחבה
           onClick: () => handleNodeClick(goal),
           onEdit: () => handleNodeEdit(goal),
           onDuplicate: () => handleNodeDuplicate(goal),
@@ -118,15 +122,15 @@ export default function GoalsTimelineNew({ customer }) {
       };
     });
 
-    // יצירת edges לפי תלויות (תמיכה במערך ובשדה בודד)
+    // יצירת edges לפי תלויות - רק בין יעדים ראשיים
     const edges = [];
     
-    filteredGoals.forEach(goal => {
+    mainGoals.forEach(goal => {
       const dependencies = goal.depends_on_goal_ids || (goal.depends_on_goal_id ? [goal.depends_on_goal_id] : []);
       
       dependencies.forEach(depId => {
-        // רק אם שני הצמתים מוצגים
-        if (filteredGoals.find(g => g.id === depId)) {
+        // רק אם שני הצמתים מוצגים וגם הם יעדים ראשיים
+        if (mainGoals.find(g => g.id === depId)) {
           edges.push({
             id: `e-${depId}-${goal.id}`,
             source: depId,
@@ -150,6 +154,9 @@ export default function GoalsTimelineNew({ customer }) {
             labelBgStyle: {
               fill: '#0A192F',
               fillOpacity: 0.9
+            },
+            data: {
+              onDelete: () => handleDeleteEdge(depId, goal.id)
             }
           });
         }
@@ -245,9 +252,38 @@ export default function GoalsTimelineNew({ customer }) {
     [setEdges, customer, queryClient, goals]
   );
 
-  // ניתוק תלות
+  // ניתוק תלות עם אישור
+  const handleDeleteEdge = async (sourceId, targetId) => {
+    if (!confirm('האם למחוק את החיבור בין היעדים?')) return;
+    
+    try {
+      const targetGoal = goals.find(g => g.id === targetId);
+      if (!targetGoal) return;
+      
+      const currentDependencies = targetGoal.depends_on_goal_ids || [];
+      const updatedDependencies = currentDependencies.filter(id => id !== sourceId);
+      
+      await base44.entities.CustomerGoal.update(targetId, {
+        depends_on_goal_ids: updatedDependencies
+      });
+      
+      queryClient.invalidateQueries(['customerGoals', customer.email]);
+      console.log('✅ Connection deleted successfully');
+    } catch (error) {
+      console.error('❌ Error deleting dependency:', error);
+      alert('שגיאה בניתוק התלות');
+    }
+  };
+
+  // ניתוק תלות - גם תמיכה במחיקה רגילה
   const onEdgesDelete = useCallback(
     async (edgesToDelete) => {
+      const confirmMessage = edgesToDelete.length === 1 
+        ? 'האם למחוק את החיבור?' 
+        : `האם למחוק ${edgesToDelete.length} חיבורים?`;
+      
+      if (!confirm(confirmMessage)) return;
+      
       try {
         for (const edge of edgesToDelete) {
           const targetGoal = goals.find(g => g.id === edge.target);
@@ -262,8 +298,9 @@ export default function GoalsTimelineNew({ customer }) {
         }
         
         queryClient.invalidateQueries(['customerGoals', customer.email]);
+        console.log('✅ Connections deleted successfully');
       } catch (error) {
-        console.error('Error deleting dependency:', error);
+        console.error('❌ Error deleting dependencies:', error);
         alert('שגיאה בניתוק התלות');
       }
     },
@@ -447,6 +484,9 @@ export default function GoalsTimelineNew({ customer }) {
                 animated: false,
                 style: { strokeWidth: 2.5 }
               }}
+              edgesUpdatable={true}
+              edgesFocusable={true}
+              deleteKeyCode="Delete"
               minZoom={0.1}
               maxZoom={2}
             >
