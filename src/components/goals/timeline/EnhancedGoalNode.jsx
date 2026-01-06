@@ -166,8 +166,8 @@ const EnhancedGoalNode = ({ data, selected }) => {
           </h3>
         </div>
 
-        {/* Progress Bar (if subtasks exist) */}
-        {data.subtasks_total > 0 && (
+        {/* Progress Bar (if subtasks exist) - רק ליעדים */}
+        {data.isGoal && data.subtasks_total > 0 && (
           <div className="space-y-1">
             <div className="flex items-center justify-between text-xs font-semibold">
               <span className="text-horizon-text">{data.subtasks_done || 0} / {data.subtasks_total}</span>

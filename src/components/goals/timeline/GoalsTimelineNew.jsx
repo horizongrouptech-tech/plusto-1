@@ -92,9 +92,15 @@ export default function GoalsTimelineNew({ customer }) {
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     if (!filteredGoals.length) return { nodes: [], edges: [] };
 
-    // יצירת nodes
-    const nodes = filteredGoals.map((goal) => {
-      // ספירת משימות משנה
+    // הפרדה בין יעדים למשימות
+    const goalsOnly = filteredGoals.filter(g => !g.parent_id || g.task_type === 'goal');
+    const tasksOnly = filteredGoals.filter(g => g.parent_id || g.task_type === 'one_time' || g.task_type === 'recurring');
+
+    // יצירת nodes - רק יעדים בברירת מחדל
+    const displayItems = viewMode === 'tasks' ? tasksOnly : goalsOnly;
+    
+    const nodes = displayItems.map((goal) => {
+      // ספירת משימות משנה רק עבור יעדים
       const subtasks = goals.filter(g => g.parent_id === goal.id);
       const subtasks_done = subtasks.filter(g => g.status === 'done').length;
 
@@ -110,6 +116,7 @@ export default function GoalsTimelineNew({ customer }) {
           assignee: goal.assignee_email || goal.assigned_users?.[0],
           subtasks_total: subtasks.length,
           subtasks_done: subtasks_done,
+          isGoal: !goal.parent_id,
           onClick: () => handleNodeClick(goal),
           onEdit: () => handleNodeEdit(goal),
           onDuplicate: () => handleNodeDuplicate(goal),
@@ -118,15 +125,15 @@ export default function GoalsTimelineNew({ customer }) {
       };
     });
 
-    // יצירת edges לפי תלויות (תמיכה במערך ובשדה בודד)
+    // יצירת edges לפי תלויות (רק בין יעדים, לא משימות)
     const edges = [];
     
-    filteredGoals.forEach(goal => {
+    displayItems.forEach(goal => {
       const dependencies = goal.depends_on_goal_ids || (goal.depends_on_goal_id ? [goal.depends_on_goal_id] : []);
       
       dependencies.forEach(depId => {
         // רק אם שני הצמתים מוצגים
-        if (filteredGoals.find(g => g.id === depId)) {
+        if (displayItems.find(g => g.id === depId)) {
           edges.push({
             id: `e-${depId}-${goal.id}`,
             source: depId,
@@ -150,6 +157,9 @@ export default function GoalsTimelineNew({ customer }) {
             labelBgStyle: {
               fill: '#0A192F',
               fillOpacity: 0.9
+            },
+            data: {
+              onDelete: () => handleEdgeDelete(depId, goal.id)
             }
           });
         }
@@ -157,7 +167,7 @@ export default function GoalsTimelineNew({ customer }) {
     });
     
     return { nodes, edges };
-  }, [filteredGoals, goals]);
+  }, [filteredGoals, goals, viewMode]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -196,13 +206,47 @@ export default function GoalsTimelineNew({ customer }) {
   };
 
   const handleNodeDelete = async (goal) => {
-    if (!confirm(`האם למחוק את היעד "${goal.name}"?`)) return;
+    // בדיקה אם זה יעד עם משימות משנה
+    const subtasks = goals.filter(g => g.parent_id === goal.id);
+    const isParent = !goal.parent_id || subtasks.length > 0;
     
-    try {
-      await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
-      queryClient.invalidateQueries(['customerGoals', customer.email]);
-    } catch (error) {
-      console.error('Error deleting goal:', error);
+    if (subtasks.length > 0) {
+      const confirmMessage = `ליעד "${goal.name}" יש ${subtasks.length} תת-משימות.\n\nמה תרצה לעשות?\n\nלחץ "אישור" למחוק את היעד וכל התת-משימות\nלחץ "ביטול" להסיר את השיוך של התת-משימות (הן יישארו כמשימות עצמאיות)`;
+      
+      const deleteSubtasks = confirm(confirmMessage);
+      
+      try {
+        if (deleteSubtasks) {
+          // מחיקת כל התת-משימות
+          for (const subtask of subtasks) {
+            await base44.entities.CustomerGoal.update(subtask.id, { is_active: false });
+          }
+          // מחיקת היעד
+          await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
+        } else {
+          // הסרת השיוך של התת-משימות
+          for (const subtask of subtasks) {
+            await base44.entities.CustomerGoal.update(subtask.id, { parent_id: null });
+          }
+          // מחיקת היעד
+          await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
+        }
+        queryClient.invalidateQueries(['customerGoals', customer.email]);
+      } catch (error) {
+        console.error('Error deleting goal:', error);
+        alert('שגיאה במחיקת היעד: ' + error.message);
+      }
+    } else {
+      // משימה ללא תת-משימות - מחיקה רגילה
+      if (!confirm(`האם למחוק את ${isParent ? 'היעד' : 'המשימה'} "${goal.name}"?`)) return;
+      
+      try {
+        await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
+        queryClient.invalidateQueries(['customerGoals', customer.email]);
+      } catch (error) {
+        console.error('Error deleting goal:', error);
+        alert('שגיאה במחיקה: ' + error.message);
+      }
     }
   };
 
@@ -245,7 +289,7 @@ export default function GoalsTimelineNew({ customer }) {
     [setEdges, customer, queryClient, goals]
   );
 
-  // ניתוק תלות
+  // ניתוק תלות - תמיכה במחיקה ישירה באמצעות Backspace/Delete
   const onEdgesDelete = useCallback(
     async (edgesToDelete) => {
       try {
@@ -260,6 +304,29 @@ export default function GoalsTimelineNew({ customer }) {
             depends_on_goal_ids: updatedDependencies
           });
         }
+        
+        queryClient.invalidateQueries(['customerGoals', customer.email]);
+      } catch (error) {
+        console.error('Error deleting dependency:', error);
+        alert('שגיאה בניתוק התלות');
+      }
+    },
+    [goals, customer, queryClient]
+  );
+
+  // מחיקת חיבור ספציפי
+  const handleEdgeDelete = useCallback(
+    async (sourceId, targetId) => {
+      try {
+        const targetGoal = goals.find(g => g.id === targetId);
+        if (!targetGoal) return;
+        
+        const currentDependencies = targetGoal.depends_on_goal_ids || [];
+        const updatedDependencies = currentDependencies.filter(id => id !== sourceId);
+        
+        await base44.entities.CustomerGoal.update(targetId, {
+          depends_on_goal_ids: updatedDependencies
+        });
         
         queryClient.invalidateQueries(['customerGoals', customer.email]);
       } catch (error) {
@@ -431,6 +498,7 @@ export default function GoalsTimelineNew({ customer }) {
               onConnect={onConnect}
               onEdgesDelete={onEdgesDelete}
               onNodeDragStop={handleNodeDragStop}
+              deleteKeyCode={['Backspace', 'Delete']}
               nodeTypes={nodeTypes}
               fitView
               attributionPosition="bottom-left"
@@ -449,6 +517,8 @@ export default function GoalsTimelineNew({ customer }) {
               }}
               minZoom={0.1}
               maxZoom={2}
+              edgesUpdatable={false}
+              edgesFocusable={true}
             >
               <Background 
                 color="#32acc1" 
