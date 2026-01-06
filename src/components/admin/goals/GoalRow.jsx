@@ -23,6 +23,7 @@ import { he } from 'date-fns/locale';
 import { base44 } from '@/api/base44Client';
 import GoalCommentsModal from './GoalCommentsModal';
 import { syncTaskToFireberry } from '@/functions/syncTaskToFireberry';
+import InlineEditableField from './InlineEditableField';
 
 export default function GoalRow({ goal, users, refreshData, allGoals, isParent = false, isDragging = false }) {
     const [isEditing, setIsEditing] = useState(false);
@@ -30,6 +31,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     const [isSaving, setIsSaving] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [isUpdatingAssignees, setIsUpdatingAssignees] = useState(false);
+    const [quickEditMode, setQuickEditMode] = useState(null); // 'name', 'date', 'notes'
 
     const statusOptions = [
         { value: 'open', label: 'פתוח', color: 'bg-gray-500', badgeClass: 'bg-gray-500/20 text-gray-700 dark:text-gray-300 border-gray-500/30' },
@@ -148,45 +150,71 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     };
 
     const handleDelete = async () => {
-        // בדיקה אם יש תת-משימות ליעד הזה
+        // ⚠️ בדיקה קריטית - האם זו משימה או יעד?
+        const isSubtask = !!goal.parent_id;
+        
+        // אם זו משימה (לא יעד ראשי) - מחיקה פשוטה
+        if (isSubtask) {
+            if (!confirm(`האם אתה בטוח שברצונך למחוק את המשימה "${goal.name}"?`)) {
+                return;
+            }
+            
+            try {
+                console.log('🗑️ Deleting subtask:', goal.id, goal.name);
+                await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
+                await refreshData();
+                console.log('✅ Subtask deleted successfully');
+            } catch (error) {
+                console.error('❌ Error deleting subtask:', error);
+                alert('שגיאה במחיקת המשימה: ' + error.message);
+            }
+            return;
+        }
+        
+        // זה יעד ראשי - בדיקה אם יש תת-משימות
         const subtasks = allGoals.filter((t) => t.parent_id === goal.id);
         
         if (subtasks.length > 0) {
-          const confirmMessage = `ליעד "${goal.name}" יש ${subtasks.length} תת-משימות.\n\nמה תרצה לעשות?\n\nלחץ "אישור" למחוק את היעד וכל התת-משימות\nלחץ "ביטול" להסיר את השיוך של התת-משימות (הן יישארו כמשימות עצמאיות)`;
-          
-          const deleteSubtasks = confirm(confirmMessage);
-          
-          try {
-            if (deleteSubtasks) {
-              for (const subtask of subtasks) {
-                await base44.entities.CustomerGoal.update(subtask.id, { is_active: false });
-              }
-              await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
-              alert('היעד וכל התת-משימות נמחקו בהצלחה');
-            } else {
-              for (const subtask of subtasks) {
-                await base44.entities.CustomerGoal.update(subtask.id, { parent_id: null });
-              }
-              await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
-              alert('היעד נמחק והתת-משימות הפכו לעצמאיות');
+            const confirmMessage = `⚠️ ליעד "${goal.name}" יש ${subtasks.length} תת-משימות.\n\nמה תרצה לעשות?\n\n✅ לחץ "אישור" למחוק את היעד כולל כל התת-משימות\n❌ לחץ "ביטול" לבטל את הפעולה (ניתן למחוק משימות בנפרד)`;
+            
+            if (!confirm(confirmMessage)) {
+                return;
             }
-            await refreshData();
-          } catch (error) {
-            console.error('Error deleting goal:', error);
-            alert('שגיאה במחיקת היעד: ' + error.message);
-          }
+            
+            try {
+                console.log('🗑️ Deleting goal with subtasks:', goal.id, goal.name, `(${subtasks.length} subtasks)`);
+                
+                // מחיקת כל התת-משימות
+                for (const subtask of subtasks) {
+                    await base44.entities.CustomerGoal.update(subtask.id, { is_active: false });
+                    console.log('  ↳ Deleted subtask:', subtask.id, subtask.name);
+                }
+                
+                // מחיקת היעד עצמו
+                await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
+                console.log('✅ Goal and all subtasks deleted successfully');
+                
+                await refreshData();
+                alert('היעד וכל התת-משימות נמחקו בהצלחה');
+            } catch (error) {
+                console.error('❌ Error deleting goal with subtasks:', error);
+                alert('שגיאה במחיקת היעד: ' + error.message);
+            }
         } else {
-          if (!confirm(`האם אתה בטוח שברצונך למחוק את ${isParent ? 'היעד' : 'המשימה'} "${goal.name}"?`)) {
-            return;
-          }
+            // יעד ללא תת-משימות
+            if (!confirm(`האם אתה בטוח שברצונך למחוק את היעד "${goal.name}"?`)) {
+                return;
+            }
 
-          try {
-            await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
-            await refreshData();
-          } catch (error) {
-            console.error("Error deleting goal:", error);
-            alert('שגיאה במחיקת היעד: ' + error.message);
-          }
+            try {
+                console.log('🗑️ Deleting goal without subtasks:', goal.id, goal.name);
+                await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
+                await refreshData();
+                console.log('✅ Goal deleted successfully');
+            } catch (error) {
+                console.error('❌ Error deleting goal:', error);
+                alert('שגיאה במחיקת היעד: ' + error.message);
+            }
         }
     };
 
@@ -227,6 +255,22 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     const handleCancel = () => {
         setEditedGoal(goal);
         setIsEditing(false);
+    };
+
+    const handleQuickSave = async (field, value) => {
+        try {
+            const updateData = { [field]: field.includes('date') ? normalizeDate(value) : value };
+            await base44.entities.CustomerGoal.update(goal.id, updateData);
+            refreshData();
+            
+            // סנכרון לפיירברי ברקע
+            syncTaskToFireberry({ taskId: goal.id }).catch(error => {
+                console.error('Failed to sync to Fireberry:', error);
+            });
+        } catch (error) {
+            console.error("Error in quick save:", error);
+            alert('שגיאה בשמירה: ' + error.message);
+        }
     };
 
     if (isEditing) {
@@ -409,12 +453,15 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     return (
         <div className={`flex items-center gap-3 p-3 bg-horizon-card/30 border border-horizon rounded-lg hover:border-horizon-primary/50 transition-all ${isDragging ? 'opacity-50' : ''} ${isParent ? 'font-semibold' : ''}`}>
             <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-3 items-center">
-                <div 
-                    className="md:col-span-2 flex items-center gap-2 cursor-pointer"
-                    onClick={() => setIsEditing(true)}
-                >
+                <div className="md:col-span-2 flex items-center gap-2">
                     <div className={`w-3 h-3 rounded-full ${getStatusColor(goal.status)}`}></div>
-                    <span className="text-horizon-text">{goal.name}</span>
+                    <InlineEditableField
+                        value={goal.name}
+                        displayValue={<span className="text-horizon-text">{goal.name}</span>}
+                        onSave={(newValue) => handleQuickSave('name', newValue)}
+                        placeholder="הזן שם..."
+                        className="flex-1"
+                    />
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-horizon-accent">
@@ -515,23 +562,58 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-horizon-accent">
-                    {goal.end_date && (
-                        <div className="flex items-center gap-1">
-                            <CalendarIcon className="w-3 h-3" />
-                            <span>{format(new Date(goal.end_date), 'dd/MM/yyyy', { locale: he })}</span>
-                            {goal.due_time && <span className="mr-1">{goal.due_time}</span>}
-                        </div>
-                    )}
+                    <InlineEditableField
+                        value={goal.end_date}
+                        displayValue={
+                            goal.end_date ? (
+                                <div className="flex items-center gap-1">
+                                    <CalendarIcon className="w-3 h-3" />
+                                    <span>{format(new Date(goal.end_date), 'dd/MM/yyyy', { locale: he })}</span>
+                                    {goal.due_time && <span className="mr-1">{goal.due_time}</span>}
+                                </div>
+                            ) : (
+                                <span className="text-gray-400">ללא תאריך</span>
+                            )
+                        }
+                        onSave={(newValue) => handleQuickSave('end_date', newValue)}
+                        type="date"
+                    />
                 </div>
             </div>
 
             <div className="flex items-center gap-1">
+                {goal.notes && (
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-horizon-accent hover:text-horizon-text"
+                                title={goal.notes}
+                            >
+                                <MessageSquare className="w-4 h-4" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 bg-horizon-dark border-horizon" dir="rtl">
+                            <div className="space-y-2">
+                                <p className="text-xs font-semibold text-horizon-text">הערות:</p>
+                                <InlineEditableField
+                                    value={goal.notes}
+                                    displayValue={<p className="text-sm text-horizon-accent">{goal.notes}</p>}
+                                    onSave={(newValue) => handleQuickSave('notes', newValue)}
+                                    multiline={true}
+                                    placeholder="הוסף הערות..."
+                                />
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                )}
                 <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowComments(true)}
                     className="text-horizon-accent hover:text-horizon-text"
-                    title="הערות ודיונים"
+                    title="דיונים"
                 >
                     <MessageSquare className="w-4 h-4" />
                 </Button>
@@ -540,7 +622,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                     size="sm"
                     onClick={() => setIsEditing(true)}
                     className="text-horizon-primary hover:text-horizon-primary hover:bg-horizon-primary/20"
-                    title="ערוך"
+                    title="עריכה מלאה"
                 >
                     <Edit className="w-4 h-4" />
                 </Button>

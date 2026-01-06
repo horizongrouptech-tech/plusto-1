@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertCircle, Download, FileSpreadsheet, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Edit, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Download, FileSpreadsheet, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Edit, Loader2, Trash2 } from "lucide-react";
 import { formatCurrency } from './utils/numberFormatter';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -188,6 +188,47 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
     }
   };
 
+  const handleDeleteZReport = async (monthIdx) => {
+    const zReport = (forecastData.z_reports_uploaded || []).find(
+      r => r.month_assigned === monthIdx + 1
+    );
+    
+    if (!zReport) {
+      alert('⚠️ דוח לא נמצא');
+      return;
+    }
+
+    const confirmMessage = `⚠️ האם אתה בטוח שברצונך למחוק את דוח Z של חודש ${monthNames[monthIdx]}?\n\n⚠️ פעולה זו תמחק את הדוח וכל הנתונים שבו.\nהנתונים שכבר סונכרנו לתחזית יישארו ללא שינוי.`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      console.log('🗑️ Deleting Z-report for month:', monthIdx + 1);
+      
+      const updatedReports = (forecastData.z_reports_uploaded || []).filter(
+        r => r.month_assigned !== monthIdx + 1
+      );
+
+      if (forecastData.id) {
+        await base44.entities.ManualForecast.update(forecastData.id, {
+          z_reports_uploaded: updatedReports
+        });
+      }
+
+      if (onUpdateZReport) {
+        await onUpdateZReport({ deleted: true, month: monthIdx + 1 });
+      }
+
+      console.log('✅ Z-report deleted successfully');
+      alert('✅ דוח Z נמחק בהצלחה');
+    } catch (error) {
+      console.error('❌ Error deleting Z-report:', error);
+      alert('❌ שגיאה במחיקת הדוח: ' + error.message);
+    }
+  };
+
   // ✅ לוג לניפוי שגיאות
   useEffect(() => {
     console.log('📊 ZReportMonthSummary - Data received:', {
@@ -338,37 +379,48 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
                       )}
 
                       {/* כפתורי פעולה */}
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEditReport(idx)}
-                          disabled={isReconstructing}
-                          className="flex-1 border-horizon-primary/30 text-horizon-primary hover:bg-horizon-primary/10 h-7 text-xs disabled:opacity-50"
-                        >
-                          {isReconstructing ? (
-                            <>
-                              <Loader2 className="w-3 h-3 ml-1 animate-spin" />
-                              משחזר...
-                            </>
-                          ) : (
-                            <>
-                              <Edit className="w-3 h-3 ml-1" />
-                              ערוך
-                            </>
-                          )}
-                        </Button>
-                        {summary.zReport.file_url && (
+                      <div className="space-y-1">
+                        <div className="flex gap-1">
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleDownloadReport(summary.zReport.file_url)}
-                            className="flex-1 border-horizon-primary/30 text-horizon-primary hover:bg-horizon-primary/10 h-7 text-xs"
+                            onClick={() => handleEditReport(idx)}
+                            disabled={isReconstructing}
+                            className="flex-1 border-horizon-primary/30 text-horizon-primary hover:bg-horizon-primary/10 h-7 text-xs disabled:opacity-50"
                           >
-                            <Download className="w-3 h-3 ml-1" />
-                            הורד
+                            {isReconstructing ? (
+                              <>
+                                <Loader2 className="w-3 h-3 ml-1 animate-spin" />
+                                משחזר...
+                              </>
+                            ) : (
+                              <>
+                                <Edit className="w-3 h-3 ml-1" />
+                                ערוך
+                              </>
+                            )}
                           </Button>
-                        )}
+                          {summary.zReport.file_url && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDownloadReport(summary.zReport.file_url)}
+                              className="flex-1 border-horizon-primary/30 text-horizon-primary hover:bg-horizon-primary/10 h-7 text-xs"
+                            >
+                              <Download className="w-3 h-3 ml-1" />
+                              הורד
+                            </Button>
+                          )}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteZReport(idx)}
+                          className="w-full border-red-400/30 text-red-400 hover:bg-red-500/10 h-7 text-xs"
+                        >
+                          <Trash2 className="w-3 h-3 ml-1" />
+                          מחק דוח
+                        </Button>
                       </div>
                     </div>
                   ) : (

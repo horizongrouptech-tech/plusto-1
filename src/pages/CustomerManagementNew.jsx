@@ -85,7 +85,8 @@ export default function CustomerManagementNew() {
         );
       }
       
-      return filtered.filter(req => req.is_active);
+      // סינון - רק לקוחות פעילים שלא בארכיון
+      return filtered.filter(req => req.is_active && !req.is_archived);
     },
     enabled: !!user
   });
