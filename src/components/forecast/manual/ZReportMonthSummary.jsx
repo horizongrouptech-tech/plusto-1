@@ -2,14 +2,14 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertCircle, Download, FileSpreadsheet, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Edit, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Download, FileSpreadsheet, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Edit, Loader2, Trash2 } from "lucide-react";
 import { formatCurrency } from './utils/numberFormatter';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import ZReportEditor from './ZReportEditor';
 import { base44 } from "@/api/base44Client";
 
-export default function ZReportMonthSummary({ forecastData, salesForecast, services, onUpdateZReport }) {
+export default function ZReportMonthSummary({ forecastData, salesForecast, services, onUpdateZReport, onUpdateForecast }) {
   const [editingMonth, setEditingMonth] = useState(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isReconstructing, setIsReconstructing] = useState(false);
@@ -200,6 +200,67 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
     }
   };
 
+  const handleDeleteReport = async (monthIdx) => {
+    const zReport = (forecastData.z_reports_uploaded || []).find(
+      r => r.month_assigned === monthIdx + 1
+    );
+    
+    if (!zReport) return;
+
+    if (!confirm(`האם למחוק את דוח Z של חודש ${monthNames[monthIdx]}?\n\nנתוני המכירות בפועל לחודש זה יימחקו מהתחזית.`)) {
+      return;
+    }
+
+    try {
+      // 1. מחיקת כל המוצרים הקשורים לדוח
+      if (zReport.z_report_id) {
+        const productsToDelete = await base44.entities.ZReportProduct.filter({
+          z_report_id: zReport.z_report_id
+        });
+        
+        for (const product of productsToDelete) {
+          await base44.entities.ZReportProduct.update(product.id, { is_active: false });
+        }
+      }
+
+      // 2. עדכון salesForecast - איפוס הנתונים של החודש
+      const updatedSalesForecast = (salesForecast || []).map(item => {
+        const updated = { ...item };
+        if (updated.actual_monthly_quantities) {
+          updated.actual_monthly_quantities[monthIdx] = 0;
+        }
+        if (updated.actual_monthly_revenue) {
+          updated.actual_monthly_revenue[monthIdx] = 0;
+        }
+        return updated;
+      });
+
+      // 3. הסרת הדוח מרשימת הדוחות
+      const updatedReports = (forecastData.z_reports_uploaded || []).filter(
+        r => r.month_assigned !== zReport.month_assigned
+      );
+
+      // 4. שמירה ל-DB
+      const updates = {
+        sales_forecast_onetime: updatedSalesForecast,
+        z_reports_uploaded: updatedReports
+      };
+
+      if (forecastData.id) {
+        await base44.entities.ManualForecast.update(forecastData.id, updates);
+      }
+
+      if (onUpdateForecast) {
+        onUpdateForecast(updates);
+      }
+
+      alert(`✅ דוח Z של ${monthNames[monthIdx]} נמחק בהצלחה`);
+    } catch (error) {
+      console.error('Error deleting Z report:', error);
+      alert('שגיאה במחיקת הדוח: ' + error.message);
+    }
+  };
+
   // ✅ לוג לניפוי שגיאות
   useEffect(() => {
     console.log('📊 ZReportMonthSummary - Data received:', {
@@ -350,7 +411,7 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
                       )}
 
                       {/* כפתורי פעולה */}
-                      <div className="flex gap-2">
+                      <div className="flex gap-1">
                         <Button
                           size="sm"
                           variant="outline"
@@ -375,12 +436,21 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
                             size="sm"
                             variant="outline"
                             onClick={() => handleDownloadReport(summary.zReport.file_url)}
-                            className="flex-1 border-horizon-primary/30 text-horizon-primary hover:bg-horizon-primary/10 h-7 text-xs"
+                            className="border-horizon-primary/30 text-horizon-primary hover:bg-horizon-primary/10 h-7 w-7 p-0"
+                            title="הורד קובץ"
                           >
-                            <Download className="w-3 h-3 ml-1" />
-                            הורד
+                            <Download className="w-3 h-3" />
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteReport(idx)}
+                          className="border-red-500/30 text-red-400 hover:bg-red-500/10 h-7 w-7 p-0"
+                          title="מחק דוח"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
                       </div>
                     </div>
                   ) : (

@@ -420,6 +420,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
             salesForecast={salesForecast}
             services={forecastData.services || []}
             onUpdateZReport={handleUpdateZReport}
+            onUpdateForecast={onUpdateForecast}
           />
 
           {/* העלאת קובץ הכנסה עתידי */}
