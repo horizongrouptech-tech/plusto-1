@@ -18,6 +18,7 @@ import { base44 } from "@/api/base44Client";
 import ServiceCategoryGroup from './ServiceCategoryGroup';
 import AggregatePlanning from './AggregatePlanning';
 import FutureRevenueUploader from './FutureRevenueUploader';
+import { AlertCircle, Calculator, ChevronRight } from "lucide-react";
 
 export default function Step3SalesForecast({ forecastData, onUpdateForecast, onNext, onBack }) {
   // ✅ CRITICAL: Validate data before initializing state
@@ -30,7 +31,57 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     );
   }
 
-  // ✅ תיקון: טוען נתונים קיימים מיד בהתחלה, לא אפסים!
+  // ✅ CRITICAL: בדיקת גודל נתונים - מניעת קריסה
+  const servicesCount = forecastData.services?.length || 0;
+  const salesForecastCount = forecastData.sales_forecast_onetime?.length || 0;
+  const maxDataSize = Math.max(servicesCount, salesForecastCount);
+
+  if (maxDataSize > 1000) {
+    return (
+      <Card className="p-8 card-horizon">
+        <CardHeader>
+          <CardTitle className="text-xl text-red-400 flex items-center gap-2">
+            <AlertCircle className="w-6 h-6" />
+            מערך נתונים גדול מדי
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert className="bg-red-500/10 border-red-500/30">
+            <AlertDescription className="text-horizon-text">
+              התחזית מכילה <strong>{maxDataSize.toLocaleString()}</strong> מוצרים - זה גדול מדי לתצוגה מפורטת.
+              <br /><br />
+              <strong>פתרונות מומלצים:</strong>
+              <ul className="list-disc mr-6 mt-2 space-y-1">
+                <li>השתמש ב<strong>תכנון כללי</strong> (מחזור מכירות + אחוז עלות)</li>
+                <li>פצל את הקטלוג למספר תחזיות קטנות יותר לפי קטגוריות</li>
+                <li>סנן מוצרים עם מכירות בפועל בלבד</li>
+              </ul>
+            </AlertDescription>
+          </Alert>
+
+          <div className="flex gap-3">
+            <Button onClick={onBack} variant="outline" className="flex-1 border-horizon text-horizon-text">
+              <ChevronRight className="w-4 h-4 ml-2" />
+              חזור
+            </Button>
+            <Button 
+              onClick={() => {
+                // מעבר לתכנון כללי
+                onUpdateForecast({ use_aggregate_planning: true });
+                window.location.reload();
+              }} 
+              className="flex-1 btn-horizon-primary"
+            >
+              <Calculator className="w-4 h-4 ml-2" />
+              עבור לתכנון כללי
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ✅ OPTIMIZED: טעינת נתונים חכמה עם memo למניעת re-calculations
   const [salesForecast, setSalesForecast] = useState(() => {
     try {
       if (!forecastData.services || !Array.isArray(forecastData.services)) {
@@ -38,12 +89,18 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
         return [];
       }
 
+      const servicesCount = forecastData.services.length;
+      console.log(`📊 Initializing ${servicesCount} products for sales forecast`);
+
+      // ✅ אופטימיזציה - יצירת map למציאה מהירה
+      const existingMap = new Map();
+      (forecastData.sales_forecast_onetime || []).forEach(item => {
+        existingMap.set(item.service_name, item);
+      });
+
       return forecastData.services.map((service) => {
-        // מחפש אם יש נתונים קיימים למוצר הזה
-        const existingForecast = (forecastData.sales_forecast_onetime || []).find(
-          (f) => f.service_name === service.service_name
-        );
-        
+        const existingForecast = existingMap.get(service.service_name);
+
         // אם יש נתונים קיימים - משתמש בהם, אחרת - יוצר אפסים
         return existingForecast || {
           service_name: service.service_name,
@@ -390,8 +447,11 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
         return {};
       }
 
+      // ✅ הגבלה - עד 500 מוצרים בתצוגת קטגוריה
+      const servicesToGroup = forecastData.services.slice(0, 500);
+
       const grouped = {};
-      forecastData.services.forEach((service, idx) => {
+      servicesToGroup.forEach((service, idx) => {
         const category = service.category || 'ללא קטגוריה';
         if (!grouped[category]) {
           grouped[category] = { services: [], startIndex: idx };
@@ -644,24 +704,24 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
             // תצוגה רגילה - רשימה עם pagination
             (() => {
               try {
-                // סינון לפי נתונים וחיפוש
+                // ✅ OPTIMIZED: סינון עם הגבלת תוצאות
                 const filtered = salesForecast.filter((item, idx) => {
                   if (!item) return false;
-                  
+
                   // סינון לפי חיפוש
                   if (searchFilter && !item.service_name?.toLowerCase().includes(searchFilter.toLowerCase())) {
                     return false;
                   }
-                  
+
                   // סינון לפי "רק עם נתונים"
                   if (showOnlyWithData) {
                     const hasData = item.planned_monthly_quantities?.some(q => q > 0) || 
                                     item.actual_monthly_quantities?.some(q => q > 0);
                     return hasData;
                   }
-                  
+
                   return true;
-                });
+                }).slice(0, 1000); // ✅ הגבלה קשיחה - מקסימום 1000 מוצרים בכל מקרה
                 
                 const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
                 const paginatedItems = filtered.slice(

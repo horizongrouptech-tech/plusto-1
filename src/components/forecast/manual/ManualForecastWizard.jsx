@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,9 @@ export default function ManualForecastWizard({
   onSave,
   onCancel
 }) {
+  // ✅ CRITICAL: memoize customer object למניעת re-renders
+  const stableCustomer = useMemo(() => customer, [customer?.email]);
+  
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,7 +34,7 @@ export default function ManualForecastWizard({
   const saveTimeoutRef = useRef(null);
 
   const [forecastData, setForecastData] = useState({
-    customer_email: customer.email,
+    customer_email: stableCustomer.email,
     forecast_name: '',
     forecast_year: new Date().getFullYear(),
     start_month: 1,
@@ -57,8 +60,7 @@ export default function ManualForecastWizard({
     summary: {}
   });
 
-  console.log('🔍 ManualForecastWizard - customer:', customer);
-  console.log('🔍 ManualForecastWizard - forecastData.customer_email:', forecastData.customer_email);
+  // ✅ REMOVED: Console logs מיותרים
 
   // ===== פונקציות Sanitization - מבטיחות שאין איבוד מידע =====
   
@@ -213,18 +215,30 @@ export default function ManualForecastWizard({
     return sanitized;
   };
 
+  // ✅ OPTIMIZED: טעינת תחזית עם בדיקת גודל מוקדמת
   useEffect(() => {
     const loadForecast = async () => {
       if (forecast && forecast.id) {
         setIsLoading(true);
         try {
           const existingForecast = await base44.entities.ManualForecast.get(forecast.id);
-          console.log('📥 Loaded forecast from DB:', {
+          
+          // ✅ לוג מידע בסיסי בלבד
+          const servicesCount = existingForecast.services?.length || 0;
+          const salesForecastCount = existingForecast.sales_forecast_onetime?.length || 0;
+          
+          console.log('📥 Loaded forecast:', {
             id: existingForecast.id,
-            z_reports_count: existingForecast.z_reports_uploaded?.length || 0,
-            has_mapping: !!existingForecast.z_report_product_mapping,
-            sales_forecast_count: existingForecast.sales_forecast_onetime?.length || 0
+            name: existingForecast.forecast_name,
+            services: servicesCount,
+            salesForecast: salesForecastCount
           });
+          
+          // ✅ אזהרה אם יש מספר גדול של מוצרים
+          if (servicesCount > 1000 || salesForecastCount > 1000) {
+            console.warn('⚠️ Large dataset detected:', { servicesCount, salesForecastCount });
+          }
+          
           setForecastData({
             ...existingForecast,
             company_type: existingForecast.company_type || 'company'
@@ -243,7 +257,7 @@ export default function ManualForecastWizard({
     };
 
     loadForecast();
-  }, [forecast, initialForecastData]);
+  }, [forecast?.id]); // ✅ תלות רק ב-ID
 
   // ✅ REMOVED: טעינה מיותרת - הנתונים כבר מסונכרנים דרך auto-save
 
@@ -305,15 +319,14 @@ export default function ManualForecastWizard({
         ...prev,
         ...updates
       };
-      
-      // ✅ לוג לניפוי שגיאות
-      console.log('📝 Updating forecast with:', Object.keys(updates));
+
+      // ✅ לוג מוגבל - רק עבור שדות קריטיים
       if (updates.sales_forecast_onetime) {
-        console.log('🔄 Updated sales_forecast_onetime:', updates.sales_forecast_onetime.length, 'items');
+        console.log('🔄 sales_forecast updated:', updates.sales_forecast_onetime.length, 'items');
       }
-      
+
       autoSaveForecast(newData);
-      
+
       return newData;
     });
   };
