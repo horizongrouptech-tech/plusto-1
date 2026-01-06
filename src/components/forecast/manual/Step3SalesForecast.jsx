@@ -62,11 +62,13 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   const [workingDays, setWorkingDays] = useState(forecastData.working_days_per_month || 22);
   const [collapsedServices, setCollapsedServices] = useState(() => {
     // ✅ ברירת מחדל - כל המוצרים collapsed כדי למנוע קריסה
+    // אם יש יותר מ-50 מוצרים, התחל עם הכל collapsed
+    const shouldCollapseAll = salesForecast.length > 50;
     try {
       const initial = {};
-      const maxItems = Math.min(salesForecast.length, 1000);
+      const maxItems = Math.min(salesForecast.length, 2000);
       for (let idx = 0; idx < maxItems; idx++) {
-        initial[idx] = true;
+        initial[idx] = shouldCollapseAll;
       }
       return initial;
     } catch (error) {
@@ -88,36 +90,9 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   const [showOnlyWithData, setShowOnlyWithData] = useState(true);
   const [searchFilter, setSearchFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 20;
+  const ITEMS_PER_PAGE = 30; // ✅ הגדלה ל-30 לביצועים טובים יותר
 
-  // ✅ OPTIMIZED: useEffect עם בדיקה קלה במקום JSON.stringify
-  useEffect(() => {
-    try {
-      if (!forecastData.services || !Array.isArray(forecastData.services)) return;
-
-      // בדיקה קלה - רק השוואת אורך במקום כל הנתונים
-      if (salesForecast.length !== forecastData.services.length) {
-        console.log('🔄 Services count changed, updating forecast...');
-        
-        const updatedForecast = forecastData.services.map((service) => {
-          const existingForecast = (forecastData.sales_forecast_onetime || []).find(
-            (f) => f.service_name === service.service_name
-          );
-          return existingForecast || {
-            service_name: service.service_name,
-            planned_monthly_quantities: Array(12).fill(0),
-            actual_monthly_quantities: Array(12).fill(0),
-            planned_monthly_revenue: Array(12).fill(0),
-            actual_monthly_revenue: Array(12).fill(0)
-          };
-        });
-        
-        setSalesForecast(updatedForecast);
-      }
-    } catch (error) {
-      console.error('❌ Error in useEffect sync:', error);
-    }
-  }, [forecastData.services?.length]);
+  // ✅ REMOVED: useEffect מיותר - ה-useState כבר מטפל בזה בתחילת הקומפוננטה
 
   const handleDragEnd = (result) => {
     if (!result.destination) return;
@@ -695,7 +670,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                 );
                 
                 // ✅ OPTIMIZATION: Disable DragDrop for large datasets
-                const isDragEnabled = filtered.length < 100;
+                const isDragEnabled = filtered.length < 50; // ✅ הורדה ל-50 למניעת קריסות
                 
                 return (
                   <>
