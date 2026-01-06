@@ -204,9 +204,15 @@ export default function OrganizationChartBuilder({ customer }) {
     [setEdges, orgChart, queryClient, customer]
   );
 
-  // ניתוק חיבור (מחיקת edge)
+  // ניתוק חיבור (מחיקת edge) - עם אישור
   const onEdgesDelete = useCallback(
     async (edgesToDelete) => {
+      const confirmMessage = edgesToDelete.length === 1 
+        ? 'האם למחוק את החיבור הזה בעץ הארגוני?' 
+        : `האם למחוק ${edgesToDelete.length} חיבורים?`;
+      
+      if (!confirm(confirmMessage)) return;
+      
       try {
         for (const edge of edgesToDelete) {
           // מציאת ה-target node ועדכון ה-parent_id שלו ל-null
@@ -222,8 +228,10 @@ export default function OrganizationChartBuilder({ customer }) {
         }
         
         queryClient.invalidateQueries(['orgChart', customer.email]);
+        console.log('✅ Connections deleted successfully');
       } catch (error) {
-        console.error('Error deleting connection:', error);
+        console.error('❌ Error deleting connection:', error);
+        alert('שגיאה במחיקת החיבור');
       }
     },
     [orgChart, queryClient, customer]
@@ -384,6 +392,13 @@ export default function OrganizationChartBuilder({ customer }) {
               connectionLineType="smoothstep"
               edgesReconnectable={true}
               edgesFocusable={true}
+              deleteKeyCode="Delete"
+              onEdgeClick={(event, edge) => {
+                event.preventDefault();
+                if (confirm('האם למחוק את החיבור הזה?')) {
+                  onEdgesDelete([edge]);
+                }
+              }}
             >
               {/* SVG Gradient Definition */}
               <svg style={{ position: 'absolute', width: 0, height: 0 }}>
@@ -408,7 +423,7 @@ export default function OrganizationChartBuilder({ customer }) {
             </ReactFlow>
           </div>
           <div className="mt-4 bg-gradient-to-l from-horizon-primary/10 via-horizon-secondary/10 to-horizon-primary/10 border border-horizon-primary/30 rounded-lg p-3 text-sm text-horizon-text text-center backdrop-blur-sm">
-            💡 <strong className="text-horizon-primary">טיפ:</strong> גרור תפקידים להזזה • חבר בין תפקידים ליצירת היררכיה • העבר עכבר על צומת לפרטים נוספים
+            💡 <strong className="text-horizon-primary">טיפ:</strong> גרור תפקידים להזזה • חבר בין תפקידים ליצירת היררכיה • <strong className="text-horizon-secondary">לחץ על חיץ למחיקת חיבור</strong> • העבר עכבר על צומת לפרטים נוספים
           </div>
         </CardContent>
       </Card>
