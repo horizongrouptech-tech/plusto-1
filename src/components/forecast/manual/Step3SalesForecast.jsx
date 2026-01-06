@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ChevronRight, ChevronLeft, GripVertical, Eye, EyeOff, TrendingUp, Calendar, Upload, FileSpreadsheet, CheckCircle2, Package, BarChart3, Calculator, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ChevronRight, ChevronLeft, GripVertical, Eye, EyeOff, TrendingUp, Calendar, Upload, FileSpreadsheet, CheckCircle2, Package, BarChart3, Calculator, Loader2, Filter, Search, ChevronUp, ChevronDown } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -39,7 +40,14 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   });
   
   const [workingDays, setWorkingDays] = useState(forecastData.working_days_per_month || 22);
-  const [collapsedServices, setCollapsedServices] = useState({});
+  const [collapsedServices, setCollapsedServices] = useState(() => {
+    // ✅ ברירת מחדל - כל המוצרים collapsed כדי למנוע קריסה
+    const initial = {};
+    salesForecast.forEach((_, idx) => {
+      initial[idx] = true;
+    });
+    return initial;
+  });
   const [showZReportUploader, setShowZReportUploader] = useState(false);
   const [showProductMapper, setShowProductMapper] = useState(false);
   const [pendingZData, setPendingZData] = useState(null);
@@ -51,6 +59,10 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   const [processedItems, setProcessedItems] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
   const [processingMessage, setProcessingMessage] = useState('');
+  const [showOnlyWithData, setShowOnlyWithData] = useState(true);
+  const [searchFilter, setSearchFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
 
   // ✅ useEffect נשאר רק כ-fallback למקרים מיוחדים
   useEffect(() => {
@@ -490,8 +502,8 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
 
           {planningMode === 'detailed' && (
             <>
-              {/* מקרא */}
-              <div className="flex gap-4 mb-4 p-3 bg-horizon-card/30 rounded-lg border border-horizon">
+              {/* מקרא ופילטרים */}
+              <div className="flex gap-4 mb-4 p-3 bg-horizon-card/30 rounded-lg border border-horizon items-center flex-wrap">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-blue-400" />
                   <span className="text-sm text-horizon-text">תכנון</span>
@@ -499,6 +511,72 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-green-400" />
                   <span className="text-sm text-horizon-text">ביצוע בפועל</span>
+                </div>
+                
+                <div className="flex-1 min-w-[20px]" />
+                
+                {/* חיפוש */}
+                {viewMode === 'list' && (
+                  <div className="relative w-48">
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-horizon-accent" />
+                    <Input
+                      placeholder="חפש מוצר..."
+                      value={searchFilter}
+                      onChange={(e) => {
+                        setSearchFilter(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="pr-10 bg-horizon-card border-horizon text-horizon-text h-8 text-sm"
+                    />
+                  </div>
+                )}
+                
+                {/* פילטר - רק עם נתונים */}
+                <Button
+                  size="sm"
+                  variant={showOnlyWithData ? 'default' : 'outline'}
+                  onClick={() => {
+                    setShowOnlyWithData(!showOnlyWithData);
+                    setCurrentPage(1);
+                  }}
+                  className={showOnlyWithData ? 'btn-horizon-primary h-8' : 'border-horizon text-horizon-text h-8'}
+                >
+                  <Filter className="w-3 h-3 ml-1" />
+                  {showOnlyWithData ? 'רק עם נתונים' : 'הצג הכל'}
+                </Button>
+                
+                {/* כפתורים expand/collapse הכל */}
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const newState = {};
+                      salesForecast.forEach((_, idx) => {
+                        newState[idx] = false;
+                      });
+                      setCollapsedServices(newState);
+                    }}
+                    className="border-horizon text-horizon-text h-8 text-xs"
+                  >
+                    <ChevronDown className="w-3 h-3 ml-1" />
+                    פתח הכל
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const newState = {};
+                      salesForecast.forEach((_, idx) => {
+                        newState[idx] = true;
+                      });
+                      setCollapsedServices(newState);
+                    }}
+                    className="border-horizon text-horizon-text h-8 text-xs"
+                  >
+                    <ChevronUp className="w-3 h-3 ml-1" />
+                    סגור הכל
+                  </Button>
                 </div>
               </div>
 
@@ -518,20 +596,48 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
               ))}
             </div>
           ) : (
-            // תצוגה רגילה - רשימה
-            <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="sales-forecast-list">
-              {(provided) => (
-                <div
-                  {...provided.droppableProps}
-                  ref={provided.innerRef}
-                  className="space-y-4"
-                >
-                  {salesForecast.map((item, serviceIndex) => (
+            // תצוגה רגילה - רשימה עם pagination
+            (() => {
+              // סינון לפי נתונים וחיפוש
+              const filtered = salesForecast.filter((item, idx) => {
+                // סינון לפי חיפוש
+                if (searchFilter && !item.service_name.toLowerCase().includes(searchFilter.toLowerCase())) {
+                  return false;
+                }
+                
+                // סינון לפי "רק עם נתונים"
+                if (showOnlyWithData) {
+                  const hasData = item.planned_monthly_quantities.some(q => q > 0) || 
+                                  item.actual_monthly_quantities.some(q => q > 0);
+                  return hasData;
+                }
+                
+                return true;
+              });
+              
+              const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+              const paginatedItems = filtered.slice(
+                (currentPage - 1) * ITEMS_PER_PAGE,
+                currentPage * ITEMS_PER_PAGE
+              );
+              
+              return (
+                <>
+                  <DragDropContext onDragEnd={handleDragEnd}>
+                    <Droppable droppableId="sales-forecast-list">
+                      {(provided) => (
+                        <div
+                          {...provided.droppableProps}
+                          ref={provided.innerRef}
+                          className="space-y-4"
+                        >
+                          {paginatedItems.map((item, displayIdx) => {
+                            const serviceIndex = salesForecast.indexOf(item);
+                            return (
                     <Draggable
                       key={`sales-${serviceIndex}`}
                       draggableId={`sales-${serviceIndex}`}
-                      index={serviceIndex}
+                      index={displayIdx}
                     >
                       {(provided, snapshot) => (
                         <div
@@ -616,12 +722,50 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                         </div>
                       )}
                     </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
+                            );
+                          })}
+                          {provided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
+                  </DragDropContext>
+                  
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-horizon">
+                      <Button
+                        variant="outline"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="border-horizon text-horizon-text"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                        הקודם
+                      </Button>
+                      
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-horizon-accent">
+                          עמוד {currentPage} מתוך {totalPages}
+                        </span>
+                        <Badge className="bg-horizon-primary/20 text-horizon-primary border-horizon-primary/30">
+                          {filtered.length} מוצרים
+                        </Badge>
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="border-horizon text-horizon-text"
+                      >
+                        הבא
+                        <ChevronLeft className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </>
+              );
+            })()
           )}
             </>
           )}
