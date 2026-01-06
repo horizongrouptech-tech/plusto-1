@@ -2,14 +2,14 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertCircle, Download, FileSpreadsheet, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Edit, Loader2, Trash2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Download, FileSpreadsheet, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Edit, Loader2 } from "lucide-react";
 import { formatCurrency } from './utils/numberFormatter';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import ZReportEditor from './ZReportEditor';
 import { base44 } from "@/api/base44Client";
 
-export default function ZReportMonthSummary({ forecastData, salesForecast, services, onUpdateZReport, onUpdateForecast }) {
+export default function ZReportMonthSummary({ forecastData, salesForecast, services, onUpdateZReport }) {
   const [editingMonth, setEditingMonth] = useState(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isReconstructing, setIsReconstructing] = useState(false);
@@ -109,44 +109,16 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
       return;
     }
 
-    setIsReconstructing(true);
-    try {
-      let detailedProducts = [];
-
-      // ✅ נסה לטעון מהישות החדשה ZReportProduct תחילה
-      if (zReport.z_report_id) {
-        console.log('🔍 Loading detailed products from ZReportProduct entity...');
-        const products = await base44.entities.ZReportProduct.filter({
-          z_report_id: zReport.z_report_id
-        });
-        
-        if (products && products.length > 0) {
-          detailedProducts = products.map(p => ({
-            product_name: p.product_name,
-            barcode: p.barcode || '',
-            quantity_sold: p.quantity_sold,
-            unit_price: p.unit_price,
-            revenue_with_vat: p.revenue_with_vat,
-            mapped_service: p.mapped_service
-          }));
-          console.log(`✅ Loaded ${detailedProducts.length} products from ZReportProduct entity`);
-        }
+    // ✅ אם אין detailed_products - שחזר אותם מהקובץ המקורי
+    if (!zReport.detailed_products || zReport.detailed_products.length === 0) {
+      if (!zReport.file_url) {
+        alert('⚠️ דוח זה לא מכיל פרטי מוצרים ולא נמצא קובץ מקור.\nהעלה דוח Z מחדש כדי לאפשר עריכה.');
+        return;
       }
 
-      // ✅ אם לא נמצא בישות החדשה - נסה detailed_products הישנים
-      if (detailedProducts.length === 0 && zReport.detailed_products && zReport.detailed_products.length > 0) {
-        console.log('📦 Using detailed_products from z_reports_uploaded (legacy)');
-        detailedProducts = zReport.detailed_products;
-      }
-
-      // ✅ אם עדיין אין - שחזר מהקובץ המקורי
-      if (detailedProducts.length === 0) {
-        if (!zReport.file_url) {
-          alert('⚠️ דוח זה לא מכיל פרטי מוצרים ולא נמצא קובץ מקור.\nהעלה דוח Z מחדש כדי לאפשר עריכה.');
-          setIsReconstructing(false);
-          return;
-        }
-
+      // שחזור אוטומטי
+      setIsReconstructing(true);
+      try {
         console.log('🔄 Reconstructing Z-report from original file:', zReport.file_url);
 
         const response = await base44.functions.invoke('parseZReport', {
@@ -158,30 +130,46 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
           throw new Error(response.data.error || 'שגיאה בפענוח הקובץ');
         }
 
-        detailedProducts = response.data.data.products.map(p => ({
+        const reconstructedProducts = response.data.data.products.map(p => ({
           product_name: p.product_name,
           barcode: p.barcode || '',
           quantity_sold: p.quantity_sold,
           unit_price: p.quantity_sold > 0 ? p.revenue_with_vat / p.quantity_sold : 0,
           revenue_with_vat: p.revenue_with_vat,
-          mapped_service: ''
+          mapped_service: '' // ייקבע בעורך
         }));
 
-        console.log('✅ Z-report reconstructed successfully:', detailedProducts.length, 'products');
+        // עדכון הדוח עם המוצרים המשוחזרים
+        const updatedReport = {
+          ...zReport,
+          detailed_products: reconstructedProducts,
+          products_count: reconstructedProducts.length
+        };
+
+        // שמירה ב-DB
+        const updatedReports = (forecastData.z_reports_uploaded || []).map(r =>
+          r.month_assigned === zReport.month_assigned ? updatedReport : r
+        );
+
+        if (forecastData.id) {
+          await base44.entities.ManualForecast.update(forecastData.id, {
+            z_reports_uploaded: updatedReports
+          });
+        }
+
+        console.log('✅ Z-report reconstructed successfully:', reconstructedProducts.length, 'products');
+        setEditingMonth({ ...updatedReport, monthIndex: monthIdx });
+        
+      } catch (error) {
+        console.error('❌ Error reconstructing Z-report:', error);
+        alert('❌ שגיאה בשחזור הדוח:\n' + error.message + '\n\nנסה להעלות את הדוח מחדש.');
+      } finally {
+        setIsReconstructing(false);
       }
-      
-      setEditingMonth({ 
-        ...zReport, 
-        detailed_products: detailedProducts,
-        monthIndex: monthIdx 
-      });
-      
-    } catch (error) {
-      console.error('❌ Error loading Z-report:', error);
-      alert('❌ שגיאה בטעינת הדוח:\n' + error.message);
-    } finally {
-      setIsReconstructing(false);
+      return;
     }
+    
+    setEditingMonth({ ...zReport, monthIndex: monthIdx });
   };
 
   const handleSaveEditedReport = async (updatedReport) => {
@@ -197,67 +185,6 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
     } catch (error) {
       console.error('Error saving edited report:', error);
       alert('❌ שגיאה בשמירת השינויים: ' + error.message);
-    }
-  };
-
-  const handleDeleteReport = async (monthIdx) => {
-    const zReport = (forecastData.z_reports_uploaded || []).find(
-      r => r.month_assigned === monthIdx + 1
-    );
-    
-    if (!zReport) return;
-
-    if (!confirm(`האם למחוק את דוח Z של חודש ${monthNames[monthIdx]}?\n\nנתוני המכירות בפועל לחודש זה יימחקו מהתחזית.`)) {
-      return;
-    }
-
-    try {
-      // 1. מחיקת כל המוצרים הקשורים לדוח
-      if (zReport.z_report_id) {
-        const productsToDelete = await base44.entities.ZReportProduct.filter({
-          z_report_id: zReport.z_report_id
-        });
-        
-        for (const product of productsToDelete) {
-          await base44.entities.ZReportProduct.update(product.id, { is_active: false });
-        }
-      }
-
-      // 2. עדכון salesForecast - איפוס הנתונים של החודש
-      const updatedSalesForecast = (salesForecast || []).map(item => {
-        const updated = { ...item };
-        if (updated.actual_monthly_quantities) {
-          updated.actual_monthly_quantities[monthIdx] = 0;
-        }
-        if (updated.actual_monthly_revenue) {
-          updated.actual_monthly_revenue[monthIdx] = 0;
-        }
-        return updated;
-      });
-
-      // 3. הסרת הדוח מרשימת הדוחות
-      const updatedReports = (forecastData.z_reports_uploaded || []).filter(
-        r => r.month_assigned !== zReport.month_assigned
-      );
-
-      // 4. שמירה ל-DB
-      const updates = {
-        sales_forecast_onetime: updatedSalesForecast,
-        z_reports_uploaded: updatedReports
-      };
-
-      if (forecastData.id) {
-        await base44.entities.ManualForecast.update(forecastData.id, updates);
-      }
-
-      if (onUpdateForecast) {
-        onUpdateForecast(updates);
-      }
-
-      alert(`✅ דוח Z של ${monthNames[monthIdx]} נמחק בהצלחה`);
-    } catch (error) {
-      console.error('Error deleting Z report:', error);
-      alert('שגיאה במחיקת הדוח: ' + error.message);
     }
   };
 
@@ -411,7 +338,7 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
                       )}
 
                       {/* כפתורי פעולה */}
-                      <div className="flex gap-1">
+                      <div className="flex gap-2">
                         <Button
                           size="sm"
                           variant="outline"
@@ -436,21 +363,12 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
                             size="sm"
                             variant="outline"
                             onClick={() => handleDownloadReport(summary.zReport.file_url)}
-                            className="border-horizon-primary/30 text-horizon-primary hover:bg-horizon-primary/10 h-7 w-7 p-0"
-                            title="הורד קובץ"
+                            className="flex-1 border-horizon-primary/30 text-horizon-primary hover:bg-horizon-primary/10 h-7 text-xs"
                           >
-                            <Download className="w-3 h-3" />
+                            <Download className="w-3 h-3 ml-1" />
+                            הורד
                           </Button>
                         )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDeleteReport(idx)}
-                          className="border-red-500/30 text-red-400 hover:bg-red-500/10 h-7 w-7 p-0"
-                          title="מחק דוח"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
                       </div>
                     </div>
                   ) : (

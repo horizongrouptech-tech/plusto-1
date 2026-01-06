@@ -64,7 +64,7 @@ export default function LoadingScreen({ message = "טוען את לוח הבקר
         </div>
       </div>
 
-      <style>{`
+      <style jsx>{`
         @keyframes loading {
           0%, 100% {
             width: 0%;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,9 +23,6 @@ export default function ManualForecastWizard({
   onSave,
   onCancel
 }) {
-  // ✅ CRITICAL: memoize customer object למניעת re-renders
-  const stableCustomer = useMemo(() => customer, [customer?.email]);
-  
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -34,7 +31,7 @@ export default function ManualForecastWizard({
   const saveTimeoutRef = useRef(null);
 
   const [forecastData, setForecastData] = useState({
-    customer_email: stableCustomer.email,
+    customer_email: customer.email,
     forecast_name: '',
     forecast_year: new Date().getFullYear(),
     start_month: 1,
@@ -60,7 +57,8 @@ export default function ManualForecastWizard({
     summary: {}
   });
 
-  // ✅ REMOVED: Console logs מיותרים
+  console.log('🔍 ManualForecastWizard - customer:', customer);
+  console.log('🔍 ManualForecastWizard - forecastData.customer_email:', forecastData.customer_email);
 
   // ===== פונקציות Sanitization - מבטיחות שאין איבוד מידע =====
   
@@ -215,30 +213,18 @@ export default function ManualForecastWizard({
     return sanitized;
   };
 
-  // ✅ OPTIMIZED: טעינת תחזית עם בדיקת גודל מוקדמת
   useEffect(() => {
     const loadForecast = async () => {
       if (forecast && forecast.id) {
         setIsLoading(true);
         try {
           const existingForecast = await base44.entities.ManualForecast.get(forecast.id);
-          
-          // ✅ לוג מידע בסיסי בלבד
-          const servicesCount = existingForecast.services?.length || 0;
-          const salesForecastCount = existingForecast.sales_forecast_onetime?.length || 0;
-          
-          console.log('📥 Loaded forecast:', {
+          console.log('📥 Loaded forecast from DB:', {
             id: existingForecast.id,
-            name: existingForecast.forecast_name,
-            services: servicesCount,
-            salesForecast: salesForecastCount
+            z_reports_count: existingForecast.z_reports_uploaded?.length || 0,
+            has_mapping: !!existingForecast.z_report_product_mapping,
+            sales_forecast_count: existingForecast.sales_forecast_onetime?.length || 0
           });
-          
-          // ✅ אזהרה אם יש מספר גדול של מוצרים
-          if (servicesCount > 1000 || salesForecastCount > 1000) {
-            console.warn('⚠️ Large dataset detected:', { servicesCount, salesForecastCount });
-          }
-          
           setForecastData({
             ...existingForecast,
             company_type: existingForecast.company_type || 'company'
@@ -257,9 +243,32 @@ export default function ManualForecastWizard({
     };
 
     loadForecast();
-  }, [forecast?.id]); // ✅ תלות רק ב-ID
+  }, [forecast, initialForecastData]);
 
-  // ✅ REMOVED: טעינה מיותרת - הנתונים כבר מסונכרנים דרך auto-save
+  // ✅ טעינה מחדש מה-DB כשעוברים לשלב 5 - מבטיח שכל הנתונים עדכניים
+  useEffect(() => {
+    const reloadForStep5 = async () => {
+      if (currentStep === 5 && forecastData.id) {
+        console.log('🔄 Reloading forecast from DB before Step 5...');
+        try {
+          const freshData = await base44.entities.ManualForecast.get(forecastData.id);
+          console.log('✅ Fresh data loaded:', {
+            z_reports_count: freshData.z_reports_uploaded?.length || 0,
+            has_mapping: !!freshData.z_report_product_mapping,
+            sales_forecast_count: freshData.sales_forecast_onetime?.length || 0
+          });
+          setForecastData(prev => ({
+            ...prev,
+            ...freshData
+          }));
+        } catch (error) {
+          console.error('❌ Error reloading forecast for Step 5:', error);
+        }
+      }
+    };
+
+    reloadForStep5();
+  }, [currentStep, forecastData.id]);
 
   useEffect(() => {
     return () => {
@@ -319,14 +328,15 @@ export default function ManualForecastWizard({
         ...prev,
         ...updates
       };
-
-      // ✅ לוג מוגבל - רק עבור שדות קריטיים
+      
+      // ✅ לוג לניפוי שגיאות
+      console.log('📝 Updating forecast with:', Object.keys(updates));
       if (updates.sales_forecast_onetime) {
-        console.log('🔄 sales_forecast updated:', updates.sales_forecast_onetime.length, 'items');
+        console.log('🔄 Updated sales_forecast_onetime:', updates.sales_forecast_onetime.length, 'items');
       }
-
+      
       autoSaveForecast(newData);
-
+      
       return newData;
     });
   };

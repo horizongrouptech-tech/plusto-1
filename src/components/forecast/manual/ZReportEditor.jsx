@@ -104,7 +104,7 @@ export default function ZReportEditor({
     setHasChanges(true);
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     // בדיקת תקינות
     const invalidProducts = editedProducts.filter(p => 
       !p.product_name || p.quantity_sold < 0 || p.revenue_with_vat < 0
@@ -115,62 +115,20 @@ export default function ZReportEditor({
       return;
     }
 
-    try {
-      // ✅ אם יש z_report_id - עדכן בישות ZReportProduct
-      if (zReport.z_report_id) {
-        console.log('💾 Updating products in ZReportProduct entity...');
-        
-        // מחק את המוצרים הישנים
-        await base44.entities.ZReportProduct.delete({
-          z_report_id: zReport.z_report_id
-        });
+    // יצירת דוח מעודכן
+    const updatedReport = {
+      ...zReport,
+      detailed_products: editedProducts.map(p => {
+        const { tempId, ...productData } = p;
+        return productData;
+      }),
+      products_updated: editedProducts.length,
+      total_revenue: summary.total_revenue_with_vat,
+      last_edited_date: new Date().toISOString(),
+      products_count: editedProducts.length
+    };
 
-        // צור רשומות חדשות
-        const zReportProductRecords = editedProducts.map(p => ({
-          z_report_id: zReport.z_report_id,
-          customer_email: zReport.customer_email,
-          product_name: p.product_name,
-          barcode: p.barcode || '',
-          quantity_sold: p.quantity_sold,
-          unit_price: p.unit_price,
-          revenue_with_vat: p.revenue_with_vat,
-          mapped_service: p.mapped_service,
-          month_assigned: zReport.month_assigned
-        }));
-
-        // שמור ב-batches של 500
-        const BATCH_SIZE = 500;
-        for (let i = 0; i < zReportProductRecords.length; i += BATCH_SIZE) {
-          const batch = zReportProductRecords.slice(i, i + BATCH_SIZE);
-          await base44.entities.ZReportProduct.bulkCreate(batch);
-        }
-        
-        console.log(`✅ Updated ${zReportProductRecords.length} products in ZReportProduct`);
-      }
-
-      // יצירת דוח מעודכן (metadata בלבד אם יש z_report_id)
-      const updatedReport = {
-        ...zReport,
-        products_updated: editedProducts.length,
-        total_revenue: summary.total_revenue_with_vat,
-        last_edited_date: new Date().toISOString(),
-        products_count: editedProducts.length,
-        // שמור detailed_products רק אם אין z_report_id (backward compatibility)
-        ...(zReport.z_report_id ? {} : {
-          detailed_products: editedProducts.map(p => {
-            const { tempId, ...productData } = p;
-            return productData;
-          })
-        })
-      };
-
-      await onSave(updatedReport);
-      
-    } catch (error) {
-      console.error('❌ Error saving Z-report:', error);
-      alert('שגיאה בשמירה: ' + error.message);
-      throw error;
-    }
+    onSave(updatedReport);
   };
 
   return (

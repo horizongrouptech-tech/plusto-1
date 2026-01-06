@@ -30,13 +30,6 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     const [isSaving, setIsSaving] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [isUpdatingAssignees, setIsUpdatingAssignees] = useState(false);
-    
-    // ✅ Inline editing states
-    const [isEditingTitle, setIsEditingTitle] = useState(false);
-    const [tempTitle, setTempTitle] = useState(goal.name);
-    const [isEditingDate, setIsEditingDate] = useState(false);
-    const [isEditingDesc, setIsEditingDesc] = useState(false);
-    const [tempDesc, setTempDesc] = useState(goal.notes || '');
 
     const statusOptions = [
         { value: 'open', label: 'פתוח', color: 'bg-gray-500', badgeClass: 'bg-gray-500/20 text-gray-700 dark:text-gray-300 border-gray-500/30' },
@@ -155,30 +148,10 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     };
 
     const handleDelete = async () => {
-        // ✅ FIX: בדיקה אם זו משימה או יעד
-        const isTask = !!goal.parent_id;
+        // בדיקה אם יש תת-משימות ליעד הזה
         const subtasks = allGoals.filter((t) => t.parent_id === goal.id);
         
-        console.log('🗑️ GoalRow Delete:', {
-          id: goal.id,
-          name: goal.name,
-          isTask,
-          hasSubtasks: subtasks.length
-        });
-        
-        if (isTask) {
-          // ✅ מחיקת משימה - ללא תת-משימות
-          if (!confirm(`האם למחוק את המשימה "${goal.name}"?`)) return;
-          
-          try {
-            await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
-            await refreshData();
-          } catch (error) {
-            console.error("Error deleting task:", error);
-            alert('שגיאה במחיקת המשימה: ' + error.message);
-          }
-        } else if (subtasks.length > 0) {
-          // ✅ מחיקת יעד עם משימות
+        if (subtasks.length > 0) {
           const confirmMessage = `ליעד "${goal.name}" יש ${subtasks.length} תת-משימות.\n\nמה תרצה לעשות?\n\nלחץ "אישור" למחוק את היעד וכל התת-משימות\nלחץ "ביטול" להסיר את השיוך של התת-משימות (הן יישארו כמשימות עצמאיות)`;
           
           const deleteSubtasks = confirm(confirmMessage);
@@ -188,20 +161,24 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
               for (const subtask of subtasks) {
                 await base44.entities.CustomerGoal.update(subtask.id, { is_active: false });
               }
+              await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
+              alert('היעד וכל התת-משימות נמחקו בהצלחה');
             } else {
               for (const subtask of subtasks) {
                 await base44.entities.CustomerGoal.update(subtask.id, { parent_id: null });
               }
+              await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
+              alert('היעד נמחק והתת-משימות הפכו לעצמאיות');
             }
-            await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
             await refreshData();
           } catch (error) {
             console.error('Error deleting goal:', error);
             alert('שגיאה במחיקת היעד: ' + error.message);
           }
         } else {
-          // ✅ מחיקת יעד ללא משימות
-          if (!confirm(`האם למחוק את היעד "${goal.name}"?`)) return;
+          if (!confirm(`האם אתה בטוח שברצונך למחוק את ${isParent ? 'היעד' : 'המשימה'} "${goal.name}"?`)) {
+            return;
+          }
 
           try {
             await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
@@ -250,20 +227,6 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     const handleCancel = () => {
         setEditedGoal(goal);
         setIsEditing(false);
-    };
-
-    // ✅ עריכה מהירה של שדות בודדים
-    const handleQuickUpdate = async (updates) => {
-        try {
-            await base44.entities.CustomerGoal.update(goal.id, updates);
-            await refreshData();
-            
-            // סנכרון לפיירברי ברקע
-            syncTaskToFireberry({ taskId: goal.id }).catch(console.error);
-        } catch (error) {
-            console.error('Error in quick update:', error);
-            alert('שגיאה בעדכון: ' + error.message);
-        }
     };
 
     if (isEditing) {
@@ -446,39 +409,12 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     return (
         <div className={`flex items-center gap-3 p-3 bg-horizon-card/30 border border-horizon rounded-lg hover:border-horizon-primary/50 transition-all ${isDragging ? 'opacity-50' : ''} ${isParent ? 'font-semibold' : ''}`}>
             <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-3 items-center">
-                {/* ✅ עריכה מהירה של שם */}
-                <div className="md:col-span-2 flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full ${getStatusColor(goal.status)} flex-shrink-0`}></div>
-                    {isEditingTitle ? (
-                        <Input
-                            value={tempTitle}
-                            onChange={(e) => setTempTitle(e.target.value)}
-                            onBlur={async () => {
-                                if (tempTitle !== goal.name && tempTitle.trim()) {
-                                    await handleQuickUpdate({ name: tempTitle });
-                                } else {
-                                    setTempTitle(goal.name);
-                                }
-                                setIsEditingTitle(false);
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') e.target.blur();
-                                if (e.key === 'Escape') {
-                                    setTempTitle(goal.name);
-                                    setIsEditingTitle(false);
-                                }
-                            }}
-                            autoFocus
-                            className="text-sm font-medium bg-horizon-dark border-horizon-primary text-horizon-text"
-                        />
-                    ) : (
-                        <span 
-                            onClick={() => setIsEditingTitle(true)}
-                            className="text-horizon-text cursor-pointer hover:bg-horizon-primary/10 px-2 py-1 rounded transition-colors flex-1"
-                        >
-                            {goal.name}
-                        </span>
-                    )}
+                <div 
+                    className="md:col-span-2 flex items-center gap-2 cursor-pointer"
+                    onClick={() => setIsEditing(true)}
+                >
+                    <div className={`w-3 h-3 rounded-full ${getStatusColor(goal.status)}`}></div>
+                    <span className="text-horizon-text">{goal.name}</span>
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-horizon-accent">
@@ -578,98 +514,33 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                     </Popover>
                 </div>
 
-                {/* ✅ עריכה מהירה של תאריך */}
                 <div className="flex items-center gap-2 text-sm text-horizon-accent">
-                    {isEditingDate ? (
-                        <Input
-                            type="date"
-                            value={goal.end_date || ''}
-                            onChange={async (e) => {
-                                if (e.target.value) {
-                                    await handleQuickUpdate({ end_date: e.target.value });
-                                }
-                                setIsEditingDate(false);
-                            }}
-                            onBlur={() => setIsEditingDate(false)}
-                            autoFocus
-                            className="w-36 h-8 text-xs bg-horizon-dark border-horizon-primary text-horizon-text"
-                        />
-                    ) : goal.end_date ? (
-                        <div 
-                            className="flex items-center gap-1 cursor-pointer hover:bg-horizon-primary/10 px-2 py-1 rounded transition-colors"
-                            onClick={() => setIsEditingDate(true)}
-                        >
+                    {goal.end_date && (
+                        <div className="flex items-center gap-1">
                             <CalendarIcon className="w-3 h-3" />
                             <span>{format(new Date(goal.end_date), 'dd/MM/yyyy', { locale: he })}</span>
                             {goal.due_time && <span className="mr-1">{goal.due_time}</span>}
                         </div>
-                    ) : (
-                        <span 
-                            onClick={() => setIsEditingDate(true)}
-                            className="text-xs text-horizon-accent cursor-pointer hover:bg-horizon-primary/10 px-2 py-1 rounded"
-                        >
-                            הוסף תאריך
-                        </span>
                     )}
                 </div>
             </div>
 
             <div className="flex items-center gap-1">
-                {/* ✅ עריכה מהירה של תיאור */}
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-horizon-accent hover:text-horizon-text"
-                            title="הערות"
-                        >
-                            <MessageSquare className="w-4 h-4" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80 bg-horizon-dark border-horizon p-3" dir="rtl">
-                        <div className="space-y-2">
-                            <label className="text-xs font-semibold text-horizon-text">תיאור/הערות:</label>
-                            {isEditingDesc ? (
-                                <Textarea
-                                    value={tempDesc}
-                                    onChange={(e) => setTempDesc(e.target.value)}
-                                    onBlur={async () => {
-                                        if (tempDesc !== (goal.notes || '')) {
-                                            await handleQuickUpdate({ notes: tempDesc });
-                                        }
-                                        setIsEditingDesc(false);
-                                    }}
-                                    rows={4}
-                                    autoFocus
-                                    className="bg-horizon-card border-horizon text-horizon-text text-xs"
-                                />
-                            ) : (
-                                <p 
-                                    onClick={() => setIsEditingDesc(true)}
-                                    className="text-xs text-horizon-accent bg-horizon-card/50 p-2 rounded cursor-pointer hover:bg-horizon-card transition-colors min-h-[60px]"
-                                >
-                                    {goal.notes || 'הוסף תיאור...'}
-                                </p>
-                            )}
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setShowComments(true)}
-                                className="w-full border-horizon text-horizon-text h-7 text-xs"
-                            >
-                                פתח דיונים מלאים
-                            </Button>
-                        </div>
-                    </PopoverContent>
-                </Popover>
-
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowComments(true)}
+                    className="text-horizon-accent hover:text-horizon-text"
+                    title="הערות ודיונים"
+                >
+                    <MessageSquare className="w-4 h-4" />
+                </Button>
                 <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setIsEditing(true)}
                     className="text-horizon-primary hover:text-horizon-primary hover:bg-horizon-primary/20"
-                    title="עריכה מלאה"
+                    title="ערוך"
                 >
                     <Edit className="w-4 h-4" />
                 </Button>

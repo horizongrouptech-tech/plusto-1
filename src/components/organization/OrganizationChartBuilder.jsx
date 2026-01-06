@@ -204,41 +204,12 @@ export default function OrganizationChartBuilder({ customer }) {
     [setEdges, orgChart, queryClient, customer]
   );
 
-  // ✅ מחיקת edge בלחיצה
-  const onEdgeClick = useCallback(
-    async (event, edge) => {
-      event.stopPropagation();
-      
-      if (!confirm('האם למחוק קשר זה?')) return;
-      
-      try {
-        const updatedNodes = orgChart.nodes.map(n => 
-          n.id === edge.target 
-            ? { ...n, parent_id: null }
-            : n
-        );
-        
-        await base44.entities.OrganizationChart.update(orgChart.id, {
-          nodes: updatedNodes
-        });
-        
-        // הסרה מיידית מה-state
-        setEdges(edges => edges.filter(e => e.id !== edge.id));
-        
-        queryClient.invalidateQueries(['orgChart', customer.email]);
-      } catch (error) {
-        console.error('Error deleting connection:', error);
-        alert('שגיאה במחיקת הקשר');
-      }
-    },
-    [orgChart, customer, queryClient, setEdges]
-  );
-
-  // ניתוק חיבור (מחיקת edge) - Backspace/Delete
+  // ניתוק חיבור (מחיקת edge)
   const onEdgesDelete = useCallback(
     async (edgesToDelete) => {
       try {
         for (const edge of edgesToDelete) {
+          // מציאת ה-target node ועדכון ה-parent_id שלו ל-null
           const updatedNodes = orgChart.nodes.map(n => 
             n.id === edge.target 
               ? { ...n, parent_id: null }
@@ -398,12 +369,10 @@ export default function OrganizationChartBuilder({ customer }) {
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onEdgesDelete={onEdgesDelete}
-              onEdgeClick={onEdgeClick}
               onConnect={onConnect}
               onNodeDragStop={handleNodeDragStop}
               nodeTypes={nodeTypes}
               fitView
-              deleteKeyCode={['Backspace', 'Delete']}
               style={{ direction: 'ltr' }}
               connectionMode="loose"
               connectionLineStyle={{ 
@@ -415,9 +384,6 @@ export default function OrganizationChartBuilder({ customer }) {
               connectionLineType="smoothstep"
               edgesReconnectable={true}
               edgesFocusable={true}
-              defaultEdgeOptions={{
-                style: { cursor: 'pointer' }
-              }}
             >
               {/* SVG Gradient Definition */}
               <svg style={{ position: 'absolute', width: 0, height: 0 }}>

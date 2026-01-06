@@ -35,12 +35,8 @@ export default function TimelineToolbar({
   onSearchChange,
   
   // פילטר חדש - סוג תצוגה
-  viewMode = 'goals',
+  viewMode = 'all',
   onViewModeChange,
-  
-  // הצגת משימות בצמתים
-  showTasksInNodes = false,
-  onToggleTasksInNodes,
   
   // תצוגה
   layoutType = 'horizontal',
@@ -100,32 +96,6 @@ export default function TimelineToolbar({
             <SelectItem value="cancelled">בוטל</SelectItem>
           </SelectContent>
         </Select>
-
-        {/* ✅ סינון דחיפות */}
-        <Select value={priorityFilter} onValueChange={onPriorityFilterChange}>
-          <SelectTrigger className="w-[140px] bg-horizon-dark border-horizon text-horizon-text">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4" />
-              <SelectValue placeholder="דחיפות" />
-            </div>
-          </SelectTrigger>
-          <SelectContent className="bg-horizon-dark border-horizon">
-            <SelectItem value="all">כל הדחיפויות</SelectItem>
-            <SelectItem value="high">גבוהה</SelectItem>
-            <SelectItem value="medium">בינונית</SelectItem>
-            <SelectItem value="low">נמוכה</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* ✅ הצג משימות */}
-        <Button
-          variant={showTasksInNodes ? 'default' : 'outline'}
-          size="sm"
-          onClick={onToggleTasksInNodes}
-          className={showTasksInNodes ? 'bg-horizon-primary text-white' : 'border-horizon text-horizon-text'}
-        >
-          {showTasksInNodes ? 'הסתר משימות' : 'הצג משימות'}
-        </Button>
 
         {/* סטטיסטיקות */}
         <div className="flex items-center gap-2 px-3 py-1.5 bg-horizon-primary/10 border border-horizon-primary/30 rounded-lg">

@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -68,17 +69,13 @@ export default function UniversalFileProcessor({
     return 'document'; // ברירת מחדל
   }, []);
 
-  // ✅ ניתוח קובץ עם AI + Retry Logic
+  // ניתוח קובץ עם AI
   const analyzeFileWithAI = useCallback(async (fileUrl, strategy) => {
     setProgress(20);
     
-    let retries = 0;
-    const MAX_RETRIES = 3;
-    
-    while (retries < MAX_RETRIES) {
-      try {
-        let analysisPrompt = '';
-        let responseSchema = {};
+    try {
+      let analysisPrompt = '';
+      let responseSchema = {};
 
       switch (strategy) {
         case 'tabular':
@@ -207,87 +204,68 @@ export default function UniversalFileProcessor({
           };
       }
 
-        const analysisResult = await InvokeLLM({
-          prompt: analysisPrompt,
-          response_json_schema: responseSchema,
-          file_urls: [fileUrl]
-        });
+      const analysisResult = await InvokeLLM({
+        prompt: analysisPrompt,
+        response_json_schema: responseSchema,
+        file_urls: [fileUrl]
+      });
 
-        setProgress(50);
-        return analysisResult;
+      setProgress(50);
+      return analysisResult;
 
-      } catch (error) {
-        retries++;
-        console.error(`❌ AI Analysis attempt ${retries}/${MAX_RETRIES} failed:`, error);
-        
-        if (retries >= MAX_RETRIES) {
-          throw new Error(`שגיאה בניתוח קובץ (${MAX_RETRIES} ניסיונות): ${error.message}`);
-        }
-        
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, 2000 * retries));
-      }
+    } catch (error) {
+      console.error('Error in AI analysis:', error);
+      throw new Error(`שגיאה בניתוח קובץ: ${error.message}`);
     }
   }, []);
 
-  // ✅ חילוץ נתונים מובנים + Retry
+  // חילוץ נתונים מובנים
   const extractStructuredData = useCallback(async (fileUrl, analysisResult) => {
     setProgress(70);
 
-    let retries = 0;
-    const MAX_RETRIES = 2;
-
-    while (retries < MAX_RETRIES) {
-      try {
-        // אם זה קובץ טבלאי עם עמודות מזוהות
-        if (analysisResult.columns_detected && analysisResult.file_type) {
-          const extractionSchema = {
-            type: "object",
-            properties: {
-              records: {
-                type: "array",
-                items: {
-                  type: "object",
-                  additionalProperties: true
-                }
-              },
-              total_extracted: { type: "number" },
-              extraction_notes: { type: "string" }
-            }
-          };
-
-          const extractedData = await ExtractDataFromUploadedFile({
-            file_url: fileUrl,
-            json_schema: extractionSchema
-          });
-
-          setProgress(90);
-          return extractedData;
-        }
-
-        // אחרת, נחזיר את תוצאת הניתוח כמו שהיא
-        return {
-          records: [],
-          analysis_only: true,
-          content: analysisResult
+    try {
+      // אם זה קובץ טבלאי עם עמודות מזוהות
+      if (analysisResult.columns_detected && analysisResult.file_type) {
+        const extractionSchema = {
+          type: "object",
+          properties: {
+            records: {
+              type: "array",
+              items: {
+                type: "object",
+                additionalProperties: true
+              }
+            },
+            total_extracted: { type: "number" },
+            extraction_notes: { type: "string" }
+          }
         };
 
-      } catch (error) {
-        retries++;
-        console.error(`❌ Extraction attempt ${retries}/${MAX_RETRIES} failed:`, error);
-        
-        if (retries >= MAX_RETRIES) {
-          // לא נזרוק שגיאה - פשוט נחזיר ניתוח בלבד
-          return {
-            records: [],
-            analysis_only: true,
-            content: analysisResult,
-            extraction_error: error.message
-          };
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 1500 * retries));
+        const extractedData = await ExtractDataFromUploadedFile({
+          file_url: fileUrl,
+          json_schema: extractionSchema
+        });
+
+        setProgress(90);
+        return extractedData;
       }
+
+      // אחרת, נחזיר את תוצאת הניתוח כמו שהיא
+      return {
+        records: [],
+        analysis_only: true,
+        content: analysisResult
+      };
+
+    } catch (error) {
+      console.error('Error extracting data:', error);
+      // לא נזרוק שגיאה כאן - פשוט נחזיר ניתוח בלבד
+      return {
+        records: [],
+        analysis_only: true,
+        content: analysisResult,
+        extraction_error: error.message
+      };
     }
   }, []);
 
