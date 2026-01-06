@@ -206,6 +206,38 @@ const EnhancedGoalNode = ({ data, selected }) => {
             </div>
           )}
         </div>
+
+        {/* ✅ רשימת משימות (אם מופעלת) */}
+        {data.showTasks && data.subtasks && data.subtasks.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-horizon space-y-1.5">
+            <p className="text-[10px] text-horizon-accent font-semibold mb-2">
+              משימות ({data.subtasks.length}):
+            </p>
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {data.subtasks.map((task, idx) => (
+                <div 
+                  key={task.id || idx}
+                  className="flex items-center gap-2 bg-horizon-dark/50 rounded-lg px-2 py-1.5 hover:bg-horizon-dark/70 transition-colors"
+                >
+                  <div className={`w-1.5 h-1.5 rounded-full ${
+                    task.status === 'done' ? 'bg-green-400' :
+                    task.status === 'in_progress' ? 'bg-blue-400' :
+                    task.status === 'delayed' ? 'bg-red-400' :
+                    'bg-gray-400'
+                  }`} />
+                  <span className="text-[10px] text-horizon-text flex-1 line-clamp-1">
+                    {task.name}
+                  </span>
+                  {task.end_date && (
+                    <span className="text-[9px] text-horizon-accent">
+                      {format(new Date(task.end_date), 'dd/MM', { locale: he })}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

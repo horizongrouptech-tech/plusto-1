@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,9 +7,17 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
 export default function ClientList({ clients, selectedClient, onClientSelect }) {
+    // ✅ סינון לקוחות לא פעילים
+    const activeClients = (clients || []).filter(client => {
+        return client.is_active !== false && 
+               client.is_archived !== true &&
+               client.account_status !== 'archived' &&
+               client.account_status !== 'inactive';
+    });
+
     return (
         <div className="space-y-3">
-            {clients.map(client => (
+            {activeClients.map(client => (
                 <Card
                     key={client.id}
                     className={`card-horizon cursor-pointer transition-all hover:border-horizon-primary/50 ${

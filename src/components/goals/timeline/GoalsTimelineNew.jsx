@@ -33,7 +33,9 @@ export default function GoalsTimelineNew({ customer }) {
   // State
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [viewMode, setViewMode] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [viewMode, setViewMode] = useState('goals'); // ✅ ברירת מחדל - רק יעדים
+  const [showTasksInNodes, setShowTasksInNodes] = useState(false);
   const [layoutType, setLayoutType] = useState('horizontal');
   const [showGroups, setShowGroups] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
@@ -60,9 +62,12 @@ export default function GoalsTimelineNew({ customer }) {
     enabled: !!customer?.email
   });
 
-  // סינון יעדים
+  // ✅ סינון יעדים משופר
   const filteredGoals = useMemo(() => {
     return goals.filter(goal => {
+      // ✅ תמיד סנן רק יעדים (לא משימות) - חייבים parent_id = null
+      if (goal.parent_id) return false;
+      
       // סינון לפי חיפוש
       if (searchTerm && !goal.name.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false;
@@ -73,35 +78,38 @@ export default function GoalsTimelineNew({ customer }) {
         return false;
       }
       
-      // סינון לפי סוג תצוגה
-      const isGoal = !goal.parent_id || goal.task_type === 'goal';
-      const isTask = goal.parent_id || goal.task_type === 'one_time' || goal.task_type === 'recurring';
-      
-      if (viewMode === 'goals' && !isGoal) {
-        return false;
-      }
-      if (viewMode === 'tasks' && !isTask) {
+      // ✅ סינון לפי דחיפות
+      if (priorityFilter !== 'all' && goal.priority !== priorityFilter) {
         return false;
       }
       
       return true;
     });
-  }, [goals, searchTerm, statusFilter, viewMode]);
+  }, [goals, searchTerm, statusFilter, priorityFilter]);
 
-  // המרת יעדים ל-nodes ו-edges
+  // ✅ מיפוי משימות ליעדים
+  const tasksByGoal = useMemo(() => {
+    if (!showTasksInNodes) return {};
+    
+    const mapping = {};
+    goals.forEach(goal => {
+      if (goal.parent_id) {
+        if (!mapping[goal.parent_id]) {
+          mapping[goal.parent_id] = [];
+        }
+        mapping[goal.parent_id].push(goal);
+      }
+    });
+    return mapping;
+  }, [goals, showTasksInNodes]);
+
+  // ✅ המרת יעדים ל-nodes ו-edges - רק יעדים!
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     if (!filteredGoals.length) return { nodes: [], edges: [] };
 
-    // הפרדה בין יעדים למשימות
-    const goalsOnly = filteredGoals.filter(g => !g.parent_id || g.task_type === 'goal');
-    const tasksOnly = filteredGoals.filter(g => g.parent_id || g.task_type === 'one_time' || g.task_type === 'recurring');
-
-    // יצירת nodes - רק יעדים בברירת מחדל
-    const displayItems = viewMode === 'tasks' ? tasksOnly : goalsOnly;
-    
-    const nodes = displayItems.map((goal) => {
-      // ספירת משימות משנה רק עבור יעדים
-      const subtasks = goals.filter(g => g.parent_id === goal.id);
+    const nodes = filteredGoals.map((goal) => {
+      // ספירת משימות משנה
+      const subtasks = tasksByGoal[goal.id] || [];
       const subtasks_done = subtasks.filter(g => g.status === 'done').length;
 
       return {
@@ -116,7 +124,9 @@ export default function GoalsTimelineNew({ customer }) {
           assignee: goal.assignee_email || goal.assigned_users?.[0],
           subtasks_total: subtasks.length,
           subtasks_done: subtasks_done,
-          isGoal: !goal.parent_id,
+          subtasks: showTasksInNodes ? subtasks : [],
+          showTasks: showTasksInNodes,
+          isGoal: true,
           onClick: () => handleNodeClick(goal),
           onEdit: () => handleNodeEdit(goal),
           onDuplicate: () => handleNodeDuplicate(goal),
@@ -125,15 +135,14 @@ export default function GoalsTimelineNew({ customer }) {
       };
     });
 
-    // יצירת edges לפי תלויות (רק בין יעדים, לא משימות)
+    // יצירת edges לפי תלויות בין יעדים
     const edges = [];
     
-    displayItems.forEach(goal => {
+    filteredGoals.forEach(goal => {
       const dependencies = goal.depends_on_goal_ids || (goal.depends_on_goal_id ? [goal.depends_on_goal_id] : []);
       
       dependencies.forEach(depId => {
-        // רק אם שני הצמתים מוצגים
-        if (displayItems.find(g => g.id === depId)) {
+        if (filteredGoals.find(g => g.id === depId)) {
           edges.push({
             id: `e-${depId}-${goal.id}`,
             source: depId,
@@ -157,9 +166,6 @@ export default function GoalsTimelineNew({ customer }) {
             labelBgStyle: {
               fill: '#0A192F',
               fillOpacity: 0.9
-            },
-            data: {
-              onDelete: () => handleEdgeDelete(depId, goal.id)
             }
           });
         }
@@ -167,7 +173,7 @@ export default function GoalsTimelineNew({ customer }) {
     });
     
     return { nodes, edges };
-  }, [filteredGoals, goals, viewMode]);
+  }, [filteredGoals, tasksByGoal, showTasksInNodes]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -206,39 +212,53 @@ export default function GoalsTimelineNew({ customer }) {
   };
 
   const handleNodeDelete = async (goal) => {
-    // בדיקה אם זה יעד עם משימות משנה
+    // ✅ FIX: בדיקה נכונה אם זו משימה או יעד
+    const isTask = !!goal.parent_id;
     const subtasks = goals.filter(g => g.parent_id === goal.id);
-    const isParent = !goal.parent_id || subtasks.length > 0;
     
-    if (subtasks.length > 0) {
+    console.log('🗑️ Deleting:', {
+      id: goal.id,
+      name: goal.name,
+      isTask,
+      hasSubtasks: subtasks.length
+    });
+    
+    if (isTask) {
+      // ✅ מחיקת משימה - ללא תת-משימות
+      if (!confirm(`האם למחוק את המשימה "${goal.name}"?`)) return;
+      
+      try {
+        await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
+        queryClient.invalidateQueries(['customerGoals', customer.email]);
+      } catch (error) {
+        console.error('Error deleting task:', error);
+        alert('שגיאה במחיקת המשימה: ' + error.message);
+      }
+    } else if (subtasks.length > 0) {
+      // ✅ מחיקת יעד עם משימות
       const confirmMessage = `ליעד "${goal.name}" יש ${subtasks.length} תת-משימות.\n\nמה תרצה לעשות?\n\nלחץ "אישור" למחוק את היעד וכל התת-משימות\nלחץ "ביטול" להסיר את השיוך של התת-משימות (הן יישארו כמשימות עצמאיות)`;
       
       const deleteSubtasks = confirm(confirmMessage);
       
       try {
         if (deleteSubtasks) {
-          // מחיקת כל התת-משימות
           for (const subtask of subtasks) {
             await base44.entities.CustomerGoal.update(subtask.id, { is_active: false });
           }
-          // מחיקת היעד
-          await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
         } else {
-          // הסרת השיוך של התת-משימות
           for (const subtask of subtasks) {
             await base44.entities.CustomerGoal.update(subtask.id, { parent_id: null });
           }
-          // מחיקת היעד
-          await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
         }
+        await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
         queryClient.invalidateQueries(['customerGoals', customer.email]);
       } catch (error) {
         console.error('Error deleting goal:', error);
         alert('שגיאה במחיקת היעד: ' + error.message);
       }
     } else {
-      // משימה ללא תת-משימות - מחיקה רגילה
-      if (!confirm(`האם למחוק את ${isParent ? 'היעד' : 'המשימה'} "${goal.name}"?`)) return;
+      // ✅ מחיקת יעד ללא משימות
+      if (!confirm(`האם למחוק את היעד "${goal.name}"?`)) return;
       
       try {
         await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
@@ -289,7 +309,37 @@ export default function GoalsTimelineNew({ customer }) {
     [setEdges, customer, queryClient, goals]
   );
 
-  // ניתוק תלות - תמיכה במחיקה ישירה באמצעות Backspace/Delete
+  // ✅ מחיקת edge בלחיצה ישירה
+  const onEdgeClick = useCallback(
+    async (event, edge) => {
+      event.stopPropagation();
+      
+      if (!confirm('האם למחוק חיבור זה?')) return;
+      
+      try {
+        const targetGoal = goals.find(g => g.id === edge.target);
+        if (!targetGoal) return;
+        
+        const currentDependencies = targetGoal.depends_on_goal_ids || [];
+        const updatedDependencies = currentDependencies.filter(id => id !== edge.source);
+        
+        await base44.entities.CustomerGoal.update(edge.target, {
+          depends_on_goal_ids: updatedDependencies
+        });
+        
+        // הסרה מיידית מה-state
+        setEdges(edges => edges.filter(e => e.id !== edge.id));
+        
+        queryClient.invalidateQueries(['customerGoals', customer.email]);
+      } catch (error) {
+        console.error('Error deleting edge:', error);
+        alert('שגיאה במחיקת החיבור');
+      }
+    },
+    [goals, customer, queryClient, setEdges]
+  );
+
+  // ניתוק תלות - תמיכה במחיקה באמצעות Backspace/Delete
   const onEdgesDelete = useCallback(
     async (edgesToDelete) => {
       try {
@@ -304,29 +354,6 @@ export default function GoalsTimelineNew({ customer }) {
             depends_on_goal_ids: updatedDependencies
           });
         }
-        
-        queryClient.invalidateQueries(['customerGoals', customer.email]);
-      } catch (error) {
-        console.error('Error deleting dependency:', error);
-        alert('שגיאה בניתוק התלות');
-      }
-    },
-    [goals, customer, queryClient]
-  );
-
-  // מחיקת חיבור ספציפי
-  const handleEdgeDelete = useCallback(
-    async (sourceId, targetId) => {
-      try {
-        const targetGoal = goals.find(g => g.id === targetId);
-        if (!targetGoal) return;
-        
-        const currentDependencies = targetGoal.depends_on_goal_ids || [];
-        const updatedDependencies = currentDependencies.filter(id => id !== sourceId);
-        
-        await base44.entities.CustomerGoal.update(targetId, {
-          depends_on_goal_ids: updatedDependencies
-        });
         
         queryClient.invalidateQueries(['customerGoals', customer.email]);
       } catch (error) {
@@ -470,10 +497,14 @@ export default function GoalsTimelineNew({ customer }) {
         <TimelineToolbar
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
+          priorityFilter={priorityFilter}
+          onPriorityFilterChange={setPriorityFilter}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
+          showTasksInNodes={showTasksInNodes}
+          onToggleTasksInNodes={() => setShowTasksInNodes(!showTasksInNodes)}
           layoutType={layoutType}
           onLayoutChange={handleLayoutChange}
           onAutoLayout={handleAutoLayout}
@@ -483,7 +514,7 @@ export default function GoalsTimelineNew({ customer }) {
           onFitView={handleFitView}
           onToggleGroups={() => setShowGroups(!showGroups)}
           showGroups={showGroups}
-          totalGoals={goals.length}
+          totalGoals={goals.filter(g => !g.parent_id).length}
           visibleGoals={filteredGoals.length}
           isExporting={isExporting}
         />
@@ -497,6 +528,7 @@ export default function GoalsTimelineNew({ customer }) {
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
               onEdgesDelete={onEdgesDelete}
+              onEdgeClick={onEdgeClick}
               onNodeDragStop={handleNodeDragStop}
               deleteKeyCode={['Backspace', 'Delete']}
               nodeTypes={nodeTypes}
@@ -513,7 +545,7 @@ export default function GoalsTimelineNew({ customer }) {
               defaultEdgeOptions={{
                 type: 'smoothstep',
                 animated: false,
-                style: { strokeWidth: 2.5 }
+                style: { strokeWidth: 2.5, cursor: 'pointer' }
               }}
               minZoom={0.1}
               maxZoom={2}
