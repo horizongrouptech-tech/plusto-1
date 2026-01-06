@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,33 +20,59 @@ import AggregatePlanning from './AggregatePlanning';
 import FutureRevenueUploader from './FutureRevenueUploader';
 
 export default function Step3SalesForecast({ forecastData, onUpdateForecast, onNext, onBack }) {
+  // ✅ CRITICAL: Validate data before initializing state
+  if (!forecastData) {
+    return (
+      <Card className="p-8 text-center card-horizon">
+        <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-horizon-primary" />
+        <p className="text-horizon-text">טוען נתוני תחזית...</p>
+      </Card>
+    );
+  }
+
   // ✅ תיקון: טוען נתונים קיימים מיד בהתחלה, לא אפסים!
   const [salesForecast, setSalesForecast] = useState(() => {
-    return (forecastData.services || []).map((service) => {
-      // מחפש אם יש נתונים קיימים למוצר הזה
-      const existingForecast = (forecastData.sales_forecast_onetime || []).find(
-        (f) => f.service_name === service.service_name
-      );
-      
-      // אם יש נתונים קיימים - משתמש בהם, אחרת - יוצר אפסים
-      return existingForecast || {
-        service_name: service.service_name,
-        planned_monthly_quantities: Array(12).fill(0),
-        actual_monthly_quantities: Array(12).fill(0),
-        planned_monthly_revenue: Array(12).fill(0),
-        actual_monthly_revenue: Array(12).fill(0)
-      };
-    });
+    try {
+      if (!forecastData.services || !Array.isArray(forecastData.services)) {
+        console.warn('⚠️ No services found in forecastData');
+        return [];
+      }
+
+      return forecastData.services.map((service) => {
+        // מחפש אם יש נתונים קיימים למוצר הזה
+        const existingForecast = (forecastData.sales_forecast_onetime || []).find(
+          (f) => f.service_name === service.service_name
+        );
+        
+        // אם יש נתונים קיימים - משתמש בהם, אחרת - יוצר אפסים
+        return existingForecast || {
+          service_name: service.service_name,
+          planned_monthly_quantities: Array(12).fill(0),
+          actual_monthly_quantities: Array(12).fill(0),
+          planned_monthly_revenue: Array(12).fill(0),
+          actual_monthly_revenue: Array(12).fill(0)
+        };
+      });
+    } catch (error) {
+      console.error('❌ Error initializing sales forecast:', error);
+      return [];
+    }
   });
   
   const [workingDays, setWorkingDays] = useState(forecastData.working_days_per_month || 22);
   const [collapsedServices, setCollapsedServices] = useState(() => {
     // ✅ ברירת מחדל - כל המוצרים collapsed כדי למנוע קריסה
-    const initial = {};
-    salesForecast.forEach((_, idx) => {
-      initial[idx] = true;
-    });
-    return initial;
+    try {
+      const initial = {};
+      const maxItems = Math.min(salesForecast.length, 1000);
+      for (let idx = 0; idx < maxItems; idx++) {
+        initial[idx] = true;
+      }
+      return initial;
+    } catch (error) {
+      console.error('Error initializing collapsed state:', error);
+      return {};
+    }
   });
   const [showZReportUploader, setShowZReportUploader] = useState(false);
   const [showProductMapper, setShowProductMapper] = useState(false);
@@ -64,35 +90,34 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
 
-  // ✅ useEffect נשאר רק כ-fallback למקרים מיוחדים
+  // ✅ OPTIMIZED: useEffect עם בדיקה קלה במקום JSON.stringify
   useEffect(() => {
-    // אופטימיזציה: בדיקה אם באמת צריך לחשב מחדש
-    if (!forecastData.services) return;
+    try {
+      if (!forecastData.services || !Array.isArray(forecastData.services)) return;
 
-    // עדכון רק אם יש שינויים במוצרים או בנתוני התחזית
-    const updatedForecast = (forecastData.services || []).map((service) => {
-      const existingForecast = (forecastData.sales_forecast_onetime || []).find(
-        (f) => f.service_name === service.service_name
-      );
-      return existingForecast || {
-        service_name: service.service_name,
-        planned_monthly_quantities: Array(12).fill(0),
-        actual_monthly_quantities: Array(12).fill(0),
-        planned_monthly_revenue: Array(12).fill(0),
-        actual_monthly_revenue: Array(12).fill(0)
-      };
-    });
-    
-    // שימוש ב-timeout קצר כדי לא לחסום את ה-UI אם יש עדכונים תכופים
-    const timeoutId = setTimeout(() => {
-        const hasChanges = JSON.stringify(updatedForecast) !== JSON.stringify(salesForecast);
-        if (hasChanges) {
-          setSalesForecast(updatedForecast);
-        }
-    }, 10);
-
-    return () => clearTimeout(timeoutId);
-  }, [forecastData.services, forecastData.sales_forecast_onetime]);
+      // בדיקה קלה - רק השוואת אורך במקום כל הנתונים
+      if (salesForecast.length !== forecastData.services.length) {
+        console.log('🔄 Services count changed, updating forecast...');
+        
+        const updatedForecast = forecastData.services.map((service) => {
+          const existingForecast = (forecastData.sales_forecast_onetime || []).find(
+            (f) => f.service_name === service.service_name
+          );
+          return existingForecast || {
+            service_name: service.service_name,
+            planned_monthly_quantities: Array(12).fill(0),
+            actual_monthly_quantities: Array(12).fill(0),
+            planned_monthly_revenue: Array(12).fill(0),
+            actual_monthly_revenue: Array(12).fill(0)
+          };
+        });
+        
+        setSalesForecast(updatedForecast);
+      }
+    } catch (error) {
+      console.error('❌ Error in useEffect sync:', error);
+    }
+  }, [forecastData.services?.length]);
 
   const handleDragEnd = (result) => {
     if (!result.destination) return;
@@ -112,24 +137,33 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   };
 
   const updateQuantity = (serviceIndex, monthIndex, type, value) => {
-    const updated = [...salesForecast];
-    const parsedValue = parseFloat(value) || 0;
+    try {
+      if (serviceIndex < 0 || serviceIndex >= salesForecast.length) {
+        console.error('Invalid serviceIndex:', serviceIndex);
+        return;
+      }
 
-    if (type === 'planned') {
-      updated[serviceIndex].planned_monthly_quantities[monthIndex] = parsedValue;
+      const updated = [...salesForecast];
+      const parsedValue = parseFloat(value) || 0;
 
-      const service = forecastData.services[serviceIndex];
-      const price = service?.price || 0;
-      updated[serviceIndex].planned_monthly_revenue[monthIndex] = parsedValue * price;
-    } else {
-      updated[serviceIndex].actual_monthly_quantities[monthIndex] = parsedValue;
+      if (type === 'planned') {
+        updated[serviceIndex].planned_monthly_quantities[monthIndex] = parsedValue;
 
-      const service = forecastData.services[serviceIndex];
-      const price = service?.price || 0;
-      updated[serviceIndex].actual_monthly_revenue[monthIndex] = parsedValue * price;
+        const service = forecastData.services?.[serviceIndex];
+        const price = service?.price || 0;
+        updated[serviceIndex].planned_monthly_revenue[monthIndex] = parsedValue * price;
+      } else {
+        updated[serviceIndex].actual_monthly_quantities[monthIndex] = parsedValue;
+
+        const service = forecastData.services?.[serviceIndex];
+        const price = service?.price || 0;
+        updated[serviceIndex].actual_monthly_revenue[monthIndex] = parsedValue * price;
+      }
+
+      setSalesForecast(updated);
+    } catch (error) {
+      console.error('❌ Error updating quantity:', error);
     }
-
-    setSalesForecast(updated);
   };
 
   const monthNames = ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יוני', 'יולי', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'];
@@ -189,20 +223,41 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
         setProcessedItems((i * CHUNK_SIZE) + Math.min(CHUNK_SIZE, chunks[i].length));
         setProcessingMessage(`מעבד חבילה ${i + 1} מתוך ${chunks.length}...`);
 
-        const response = await base44.functions.invoke('processBulkZReportImportChunked', {
-          forecast_id: forecastData.id,
-          z_products: chunks[i],
-          mapping: mapping,
-          assigned_month: pendingZData.month,
-          chunk_index: i,
-          total_chunks: chunks.length,
-          is_first_chunk: i === 0,
-          is_last_chunk: i === chunks.length - 1,
-          z_report_id: zReportId
-        });
+        // ✅ NETWORK ERROR HANDLING: Retry logic
+        let retries = 0;
+        const MAX_RETRIES = 3;
+        let response;
 
-        if (!response.data.success) {
-          throw new Error(response.data.error || `שגיאה בחבילה ${i + 1}`);
+        while (retries < MAX_RETRIES) {
+          try {
+            response = await base44.functions.invoke('processBulkZReportImportChunked', {
+              forecast_id: forecastData.id,
+              z_products: chunks[i],
+              mapping: mapping,
+              assigned_month: pendingZData.month,
+              chunk_index: i,
+              total_chunks: chunks.length,
+              is_first_chunk: i === 0,
+              is_last_chunk: i === chunks.length - 1,
+              z_report_id: zReportId
+            });
+
+            if (!response?.data?.success) {
+              throw new Error(response?.data?.error || `שגיאה בחבילה ${i + 1}`);
+            }
+
+            break; // Success - exit retry loop
+          } catch (error) {
+            retries++;
+            console.error(`❌ Attempt ${retries}/${MAX_RETRIES} failed:`, error);
+            
+            if (retries >= MAX_RETRIES) {
+              throw new Error(`נכשל אחרי ${MAX_RETRIES} ניסיונות: ${error.message}`);
+            }
+            
+            // Wait before retry (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+          }
         }
 
         finalSalesForecast = response.data.sales_forecast;
@@ -263,6 +318,10 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
 
   const handleUpdateZReport = async (updatedReport) => {
     try {
+      if (!updatedReport || !updatedReport.month_assigned) {
+        throw new Error('נתוני דוח לא תקינים');
+      }
+
       // 1. עדכון רשימת דוחות Z
       const existingReports = forecastData.z_reports_uploaded || [];
       const reportIndex = existingReports.findIndex(
@@ -282,8 +341,10 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
 
       // איפוס הנתונים של החודש הזה
       updated.forEach(item => {
-        item.actual_monthly_quantities[monthIndex] = 0;
-        item.actual_monthly_revenue[monthIndex] = 0;
+        if (item.actual_monthly_quantities && item.actual_monthly_revenue) {
+          item.actual_monthly_quantities[monthIndex] = 0;
+          item.actual_monthly_revenue[monthIndex] = 0;
+        }
       });
 
       // עדכון מחדש לפי המוצרים החדשים
@@ -313,52 +374,61 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       }
     } catch (error) {
       console.error('❌ Error updating Z report:', error);
+      alert('שגיאה בעדכון הדוח: ' + error.message);
       throw error;
     }
   };
 
   const handleContinue = async () => {
-    console.log('💾 Step3 - Saving sales forecast before continue:', salesForecast.length, 'items');
-    
-    const updates = {
-      sales_forecast_onetime: salesForecast,
-      working_days_per_month: workingDays
-    };
-    
-    if (onUpdateForecast) {
-      onUpdateForecast(updates);
-    }
-    
-    // ✅ המתן לשמירה לפני המעבר לשלב הבא
-    if (forecastData.id) {
-      try {
+    try {
+      console.log('💾 Step3 - Saving sales forecast before continue:', salesForecast.length, 'items');
+      
+      const updates = {
+        sales_forecast_onetime: salesForecast,
+        working_days_per_month: workingDays
+      };
+      
+      if (onUpdateForecast) {
+        onUpdateForecast(updates);
+      }
+      
+      // ✅ המתן לשמירה לפני המעבר לשלב הבא
+      if (forecastData.id) {
         console.log('💾 Explicitly saving to DB before moving to next step...');
         await base44.entities.ManualForecast.update(forecastData.id, updates);
         console.log('✅ Save completed successfully');
-      } catch (error) {
-        console.error('❌ Error saving before continue:', error);
       }
-    }
-    
-    if (onNext) {
-      onNext();
+      
+      if (onNext) {
+        onNext();
+      }
+    } catch (error) {
+      console.error('❌ Error in handleContinue:', error);
+      alert('שגיאה בשמירת הנתונים. אנא נסה שוב.');
     }
   };
 
-  // קיבוץ מוצרים לפי קטגוריה
-  const groupServicesByCategory = () => {
-    const grouped = {};
-    forecastData.services?.forEach((service, idx) => {
-      const category = service.category || 'ללא קטגוריה';
-      if (!grouped[category]) {
-        grouped[category] = { services: [], startIndex: idx };
+  // ✅ OPTIMIZED: קיבוץ מוצרים לפי קטגוריה עם useMemo
+  const categorizedServices = useMemo(() => {
+    try {
+      if (!forecastData.services || !Array.isArray(forecastData.services)) {
+        return {};
       }
-      grouped[category].services.push(service);
-    });
-    return grouped;
-  };
 
-  const categorizedServices = groupServicesByCategory();
+      const grouped = {};
+      forecastData.services.forEach((service, idx) => {
+        const category = service.category || 'ללא קטגוריה';
+        if (!grouped[category]) {
+          grouped[category] = { services: [], startIndex: idx };
+        }
+        grouped[category].services.push(service);
+      });
+      return grouped;
+    } catch (error) {
+      console.error('Error grouping services:', error);
+      return {};
+    }
+  }, [forecastData.services]);
 
   const handlePlanningModeChange = (mode) => {
     setPlanningMode(mode);
@@ -598,42 +668,49 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
           ) : (
             // תצוגה רגילה - רשימה עם pagination
             (() => {
-              // סינון לפי נתונים וחיפוש
-              const filtered = salesForecast.filter((item, idx) => {
-                // סינון לפי חיפוש
-                if (searchFilter && !item.service_name.toLowerCase().includes(searchFilter.toLowerCase())) {
-                  return false;
-                }
+              try {
+                // סינון לפי נתונים וחיפוש
+                const filtered = salesForecast.filter((item, idx) => {
+                  if (!item) return false;
+                  
+                  // סינון לפי חיפוש
+                  if (searchFilter && !item.service_name?.toLowerCase().includes(searchFilter.toLowerCase())) {
+                    return false;
+                  }
+                  
+                  // סינון לפי "רק עם נתונים"
+                  if (showOnlyWithData) {
+                    const hasData = item.planned_monthly_quantities?.some(q => q > 0) || 
+                                    item.actual_monthly_quantities?.some(q => q > 0);
+                    return hasData;
+                  }
+                  
+                  return true;
+                });
                 
-                // סינון לפי "רק עם נתונים"
-                if (showOnlyWithData) {
-                  const hasData = item.planned_monthly_quantities.some(q => q > 0) || 
-                                  item.actual_monthly_quantities.some(q => q > 0);
-                  return hasData;
-                }
+                const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+                const paginatedItems = filtered.slice(
+                  (currentPage - 1) * ITEMS_PER_PAGE,
+                  currentPage * ITEMS_PER_PAGE
+                );
                 
-                return true;
-              });
-              
-              const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-              const paginatedItems = filtered.slice(
-                (currentPage - 1) * ITEMS_PER_PAGE,
-                currentPage * ITEMS_PER_PAGE
-              );
-              
-              return (
-                <>
-                  <DragDropContext onDragEnd={handleDragEnd}>
-                    <Droppable droppableId="sales-forecast-list">
-                      {(provided) => (
-                        <div
-                          {...provided.droppableProps}
-                          ref={provided.innerRef}
-                          className="space-y-4"
-                        >
-                          {paginatedItems.map((item, displayIdx) => {
-                            const serviceIndex = salesForecast.indexOf(item);
-                            return (
+                // ✅ OPTIMIZATION: Disable DragDrop for large datasets
+                const isDragEnabled = filtered.length < 100;
+                
+                return (
+                  <>
+                    {isDragEnabled ? (
+                      <DragDropContext onDragEnd={handleDragEnd}>
+                        <Droppable droppableId="sales-forecast-list">
+                          {(provided) => (
+                            <div
+                              {...provided.droppableProps}
+                              ref={provided.innerRef}
+                              className="space-y-4"
+                            >
+                              {paginatedItems.map((item, displayIdx) => {
+                                const serviceIndex = salesForecast.indexOf(item);
+                                return (
                     <Draggable
                       key={`sales-${serviceIndex}`}
                       draggableId={`sales-${serviceIndex}`}
@@ -722,16 +799,106 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                         </div>
                       )}
                     </Draggable>
-                            );
-                          })}
-                          {provided.placeholder}
-                        </div>
-                      )}
-                    </Droppable>
-                  </DragDropContext>
+                                );
+                              })}
+                              {provided.placeholder}
+                            </div>
+                          )}
+                        </Droppable>
+                      </DragDropContext>
+                    ) : (
+                      // רשימה רגילה ללא drag & drop למערכי נתונים גדולים
+                      <div className="space-y-4">
+                        {!isDragEnabled && (
+                          <Alert className="bg-yellow-500/10 border-yellow-500/30">
+                            <AlertDescription className="text-horizon-text text-sm">
+                              גרירה מבוטלת - יותר מ-100 מוצרים. השתמש בחיפוש ופילטרים.
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                        {paginatedItems.map((item, displayIdx) => {
+                          const serviceIndex = salesForecast.indexOf(item);
+                          return (
+                            <div
+                              key={`sales-${serviceIndex}`}
+                              className="bg-horizon-card/30 border border-horizon rounded-lg p-4"
+                            >
+                              <div className="flex items-center gap-3 mb-3">
+                                <h4 className="font-semibold text-horizon-text flex-1">
+                                  {item.service_name}
+                                </h4>
+
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => toggleServiceCollapse(serviceIndex)}
+                                  className="text-horizon-accent"
+                                >
+                                  {collapsedServices[serviceIndex] ? (
+                                    <Eye className="w-4 h-4" />
+                                  ) : (
+                                    <EyeOff className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              </div>
+
+                              {!collapsedServices[serviceIndex] && (
+                                <div className="mr-8">
+                                  <div className="grid grid-cols-6 gap-3">
+                                    {monthNames.map((month, monthIndex) => (
+                                      <div key={monthIndex} className="space-y-2">
+                                        <div className="flex flex-col items-center">
+                                          <Label className="text-xs text-horizon-accent block text-center">{month}</Label>
+                                          {item.actual_monthly_quantities[monthIndex] > 0 && (
+                                            <div className="flex items-center gap-1 mt-0.5 bg-green-100 px-1.5 py-0.5 rounded-full border border-green-200 shadow-sm">
+                                              <CheckCircle2 className="w-3 h-3 text-green-600" />
+                                              <span className="text-[10px] text-green-700 font-medium">נקלט</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                        
+                                        {/* תכנון */}
+                                        <div className="space-y-1">
+                                          <Label className="text-[10px] text-blue-400">תכנון</Label>
+                                          <Input
+                                            type="number"
+                                            value={item.planned_monthly_quantities[monthIndex]}
+                                            onChange={(e) => updateQuantity(serviceIndex, monthIndex, 'planned', e.target.value)}
+                                            className="bg-horizon-card border-blue-400/30 text-horizon-text text-sm h-8"
+                                            placeholder="0"
+                                          />
+                                          <div className="text-[10px] text-blue-400 text-center">
+                                            {formatCurrency(item.planned_monthly_revenue[monthIndex], 0)}
+                                          </div>
+                                        </div>
+
+                                        {/* ביצוע */}
+                                        <div className="space-y-1">
+                                          <Label className="text-[10px] text-green-400">ביצוע</Label>
+                                          <Input
+                                            type="number"
+                                            value={item.actual_monthly_quantities[monthIndex]}
+                                            onChange={(e) => updateQuantity(serviceIndex, monthIndex, 'actual', e.target.value)}
+                                            className="bg-horizon-card border-green-400/30 text-horizon-text text-sm h-8"
+                                            placeholder="0"
+                                          />
+                                          <div className="text-[10px] text-green-400 text-center">
+                                            {formatCurrency(item.actual_monthly_revenue[monthIndex], 0)}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   
-                  {/* Pagination */}
-                  {totalPages > 1 && (
+                    {/* Pagination */}
+                    {totalPages > 1 && (
                     <div className="flex items-center justify-between mt-6 pt-4 border-t border-horizon">
                       <Button
                         variant="outline"
@@ -762,9 +929,19 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                         <ChevronLeft className="w-4 h-4" />
                       </Button>
                     </div>
-                  )}
-                </>
-              );
+                    )}
+                  </>
+                );
+              } catch (error) {
+                console.error('❌ Error rendering list view:', error);
+                return (
+                  <Alert className="bg-red-500/10 border-red-500/30">
+                    <AlertDescription className="text-red-400">
+                      שגיאה בטעינת רשימת המוצרים. אנא רענן את הדף.
+                    </AlertDescription>
+                  </Alert>
+                );
+              }
             })()
           )}
             </>
