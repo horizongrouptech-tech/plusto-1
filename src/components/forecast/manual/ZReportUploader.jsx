@@ -3,9 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Upload, Loader2, CheckCircle, FileSpreadsheet, Calendar, AlertTriangle } from "lucide-react";
+import { Upload, Loader2, CheckCircle, FileSpreadsheet, Calendar, AlertTriangle, Download, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { formatCurrency } from './utils/numberFormatter';
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 
 export default function ZReportUploader({ isOpen, onClose, forecastData, onDataImported }) {
   const [selectedMonth, setSelectedMonth] = useState(null);
@@ -13,13 +15,27 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
   const [uploadStatus, setUploadStatus] = useState('');
   const [parsedData, setParsedData] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [parsingProgress, setParsingProgress] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const fileInputRef = useRef(null);
+  
+  const ITEMS_PER_PAGE = 50;
+  const MAX_FILE_SIZE_MB = 10;
 
   const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 
   const handleFileSelect = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // בדיקת גודל קובץ
+    const fileSizeMB = file.size / (1024 * 1024);
+    if (fileSizeMB > MAX_FILE_SIZE_MB) {
+      alert(`⚠️ הקובץ גדול מדי (${fileSizeMB.toFixed(1)}MB).\nהגודל המקסימלי: ${MAX_FILE_SIZE_MB}MB`);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
 
     if (!selectedMonth) {
       alert('אנא בחר חודש לפני העלאת הקובץ');
@@ -28,6 +44,7 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
 
     setIsUploading(true);
     setUploadStatus('מעלה קובץ...');
+    setParsingProgress(10);
 
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
@@ -37,17 +54,21 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
       }
 
       setUploadStatus('מפענח דוח Z...');
+      setParsingProgress(30);
 
       const response = await base44.functions.invoke('parseZReport', {
         fileUrl: file_url,
         fileName: file.name
       });
 
+      setParsingProgress(70);
       console.log('📥 Parse response:', response.data);
 
       if (!response.data || !response.data.success) {
         throw new Error(response.data?.error || 'ניתוח דוח Z נכשל');
       }
+
+      setParsingProgress(90);
 
       setParsedData({
         products: response.data.data.products,
@@ -56,8 +77,11 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
         file_url
       });
 
+      setParsingProgress(100);
       setShowPreview(true);
       setUploadStatus('');
+      setCurrentPage(1);
+      setSearchTerm('');
 
     } catch (error) {
       console.error('❌ Error uploading Z report:', error);
@@ -105,8 +129,42 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
     setParsedData(null);
     setShowPreview(false);
     setSelectedMonth(null);
+    setSearchTerm('');
+    setCurrentPage(1);
+    setParsingProgress(0);
     onClose();
   };
+
+  const exportToExcel = () => {
+    if (!parsedData) return;
+    
+    const csvContent = [
+      ['מוצר', 'ברקוד', 'כמות נמכרה', 'מחזור'].join(','),
+      ...parsedData.products.map(p => [
+        `"${p.product_name}"`,
+        p.barcode || '',
+        p.quantity_sold.toFixed(2),
+        p.revenue_with_vat.toFixed(2)
+      ].join(','))
+    ].join('\n');
+    
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${parsedData.file_name.replace(/\.[^/.]+$/, '')}_מעובד.csv`;
+    link.click();
+  };
+
+  // חישוב pagination
+  const filteredProducts = parsedData?.products.filter(p => 
+    !searchTerm || p.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.barcode && p.barcode.toString().includes(searchTerm))
+  ) || [];
+  
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentProducts = filteredProducts.slice(startIndex, endIndex);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleCancel}>
@@ -192,9 +250,28 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
           </div>
         ) : (
           <div className="space-y-6 py-4">
+            {/* Progress Bar בזמן Parsing */}
+            {isUploading && (
+              <div className="space-y-2">
+                <Progress value={parsingProgress} className="h-2" />
+                <p className="text-sm text-horizon-accent text-center">{uploadStatus} - {parsingProgress}%</p>
+              </div>
+            )}
+
             <Card className="card-horizon">
               <CardHeader>
-                <CardTitle className="text-lg text-horizon-text">סיכום דוח Z</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg text-horizon-text">סיכום דוח Z</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportToExcel}
+                    className="border-green-500 text-green-400 hover:bg-green-500/10"
+                  >
+                    <Download className="w-4 h-4 ml-1" />
+                    ייצא ל-Excel
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 gap-4 mb-4">
@@ -204,7 +281,7 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-horizon-accent">יחידות שנמכרו</p>
-                    <p className="text-2xl font-bold text-horizon-text">{parsedData.summary.total_quantity_sold.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-horizon-text">{parsedData.summary.total_quantity_sold.toLocaleString('he-IL')}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-horizon-accent">מחזור כולל מע"מ</p>
@@ -218,26 +295,96 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
               </CardContent>
             </Card>
 
-            <div className="max-h-96 overflow-y-auto">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-horizon-card">
-                  <tr className="border-b border-horizon">
-                    <th className="text-right py-2 px-3 text-horizon-accent">מוצר</th>
-                    <th className="text-center py-2 px-3 text-horizon-accent">כמות נמכרה</th>
-                    <th className="text-left py-2 px-3 text-horizon-accent">מחזור</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {parsedData.products.map((product, idx) => (
-                    <tr key={idx} className="border-b border-horizon/50 hover:bg-horizon-card/50">
-                      <td className="py-2 px-3 text-right text-horizon-text">{product.product_name}</td>
-                      <td className="py-2 px-3 text-center text-horizon-text">{product.quantity_sold.toFixed(2)}</td>
-                      <td className="py-2 px-3 text-left text-horizon-text">{formatCurrency(product.revenue_with_vat, 2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* חיפוש ופילטור */}
+            <div className="relative">
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-horizon-accent" />
+              <Input
+                type="text"
+                placeholder="חפש מוצר לפי שם או ברקוד..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="bg-horizon-card border-horizon text-horizon-text pr-10"
+              />
             </div>
+
+            {parsedData.products.length > 100 ? (
+              // תצוגה מצומצמת לדוחות גדולים
+              <Card className="bg-green-500/10 border-green-500/30">
+                <CardContent className="p-6 text-center space-y-3">
+                  <CheckCircle className="w-12 h-12 mx-auto text-green-400" />
+                  <h3 className="text-xl font-bold text-horizon-text">דוח גדול זוהה!</h3>
+                  <p className="text-horizon-accent">
+                    הדוח מכיל {parsedData.products.length.toLocaleString('he-IL')} מוצרים.
+                  </p>
+                  <p className="text-sm text-horizon-accent">
+                    לצפייה בפירוט מלא - ייצא לאקסל. לייבוא לתחזית - לחץ "אשר וייבא נתונים" למטה.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              // תצוגה מלאה עם pagination לדוחות בינוניים
+              <>
+                <div className="border border-horizon rounded-lg overflow-hidden">
+                  <div className="max-h-96 overflow-y-auto">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-horizon-card border-b-2 border-horizon">
+                        <tr>
+                          <th className="text-right py-2 px-3 text-horizon-accent font-semibold">מוצר</th>
+                          <th className="text-center py-2 px-3 text-horizon-accent font-semibold">ברקוד</th>
+                          <th className="text-center py-2 px-3 text-horizon-accent font-semibold">כמות נמכרה</th>
+                          <th className="text-left py-2 px-3 text-horizon-accent font-semibold">מחזור</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {currentProducts.map((product, idx) => (
+                          <tr key={idx} className="border-b border-horizon/50 hover:bg-horizon-card/50">
+                            <td className="py-2 px-3 text-right text-horizon-text">{product.product_name}</td>
+                            <td className="py-2 px-3 text-center text-horizon-accent text-xs">{product.barcode || '-'}</td>
+                            <td className="py-2 px-3 text-center text-horizon-text font-medium">{product.quantity_sold.toFixed(2)}</td>
+                            <td className="py-2 px-3 text-left text-horizon-text font-semibold">{formatCurrency(product.revenue_with_vat, 2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between pt-4">
+                    <div className="text-sm text-horizon-accent">
+                      מציג {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} מתוך {filteredProducts.length} מוצרים
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="border-horizon text-horizon-text"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                      <span className="text-sm text-horizon-text px-3">
+                        עמוד {currentPage} מתוך {totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="border-horizon text-horizon-text"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
 
             <div className="flex justify-end gap-3 pt-4 border-t border-horizon">
               <Button
@@ -252,7 +399,7 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
                 className="btn-horizon-primary"
               >
                 <CheckCircle className="w-4 h-4 ml-2" />
-                אשר וייבא נתונים
+                אשר וייבא נתונים ({parsedData.products.length} מוצרים)
               </Button>
             </div>
           </div>

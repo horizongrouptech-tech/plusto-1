@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Save, X, Trash2, Plus, AlertCircle, Calculator } from "lucide-react";
+import { Save, X, Trash2, Plus, AlertCircle, Calculator, Search, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { formatCurrency } from './utils/numberFormatter';
 import { base44 } from "@/api/base44Client";
 
@@ -37,6 +37,11 @@ export default function ZReportEditor({
   });
 
   const [hasChanges, setHasChanges] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  const ITEMS_PER_PAGE = 50;
+  const isLargeReport = editedProducts.length > 100;
 
   // חישוב סיכום
   const summary = useMemo(() => {
@@ -105,6 +110,39 @@ export default function ZReportEditor({
     setEditedProducts(prev => [...prev, newProduct]);
     setHasChanges(true);
   };
+
+  const exportToExcel = () => {
+    const csvContent = [
+      ['שם מוצר', 'ברקוד', 'כמות נמכרה', 'מחיר יחידה', 'מחזור כולל', 'שירות ממופה'].join(','),
+      ...editedProducts.map(p => [
+        `"${p.product_name}"`,
+        p.barcode || '',
+        p.quantity_sold.toFixed(2),
+        p.unit_price.toFixed(2),
+        p.revenue_with_vat.toFixed(2),
+        `"${p.mapped_service || ''}"`
+      ].join(','))
+    ].join('\n');
+    
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `דוח_Z_${monthName}_מעובד.csv`;
+    link.click();
+  };
+
+  // חיפוש ופילטור
+  const filteredProducts = editedProducts.filter(p => 
+    !searchTerm || 
+    p.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.barcode && p.barcode.toString().includes(searchTerm))
+  );
+
+  // Pagination
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentDisplayProducts = filteredProducts.slice(startIndex, endIndex);
 
   const handleSave = async () => {
     // בדיקת תקינות
@@ -200,6 +238,40 @@ export default function ZReportEditor({
           </Alert>
         )}
 
+        {/* אזהרה לדוחות גדולים */}
+        {isLargeReport && (
+          <Alert className="bg-blue-500/10 border-blue-500/30">
+            <AlertCircle className="h-4 w-4 text-blue-400" />
+            <AlertDescription className="text-horizon-text">
+              <strong>דוח גדול:</strong> {editedProducts.length} מוצרים. השתמש בחיפוש למציאת מוצרים ספציפיים.
+              <Button
+                onClick={exportToExcel}
+                size="sm"
+                variant="outline"
+                className="mr-3 border-green-500 text-green-400 hover:bg-green-500/10"
+              >
+                <Download className="w-3 h-3 ml-1" />
+                ייצא לאקסל
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* חיפוש */}
+        <div className="relative">
+          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-horizon-accent" />
+          <Input
+            type="text"
+            placeholder="חפש מוצר לפי שם או ברקוד..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="bg-horizon-card border-horizon text-horizon-text pr-10"
+          />
+        </div>
+
         {/* טבלת עריכה */}
         <div className="overflow-auto max-h-[50vh] border border-horizon rounded-lg">
           <table className="w-full text-sm" dir="rtl">
@@ -215,7 +287,7 @@ export default function ZReportEditor({
               </tr>
             </thead>
             <tbody>
-              {editedProducts.map((product, idx) => (
+              {currentDisplayProducts.map((product, idx) => (
                 <tr 
                   key={product.tempId} 
                   className={`border-b border-horizon hover:bg-horizon-card/30 transition-colors ${
@@ -285,6 +357,39 @@ export default function ZReportEditor({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-3">
+            <div className="text-sm text-horizon-accent">
+              מציג {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} מתוך {filteredProducts.length} מוצרים
+              {searchTerm && ` (סונן מתוך ${editedProducts.length})`}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="border-horizon text-horizon-text"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+              <span className="text-sm text-horizon-text px-3">
+                עמוד {currentPage} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="border-horizon text-horizon-text"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* כפתור הוספת מוצר */}
         <Button
