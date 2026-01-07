@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Save, X, Trash2, Plus, AlertCircle, Calculator } from "lucide-react";
 import { formatCurrency } from './utils/numberFormatter';
+import { base44 } from "@/api/base44Client";
 
 export default function ZReportEditor({ 
   isOpen, 
@@ -14,7 +15,8 @@ export default function ZReportEditor({
   monthName,
   services,
   onSave,
-  onDelete
+  onDelete,
+  customer
 }) {
   const [editedProducts, setEditedProducts] = useState(() => {
     const products = zReport?.detailed_products || [];
@@ -104,7 +106,7 @@ export default function ZReportEditor({
     setHasChanges(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // בדיקת תקינות
     const invalidProducts = editedProducts.filter(p => 
       !p.product_name || p.quantity_sold < 0 || p.revenue_with_vat < 0
@@ -115,20 +117,43 @@ export default function ZReportEditor({
       return;
     }
 
-    // יצירת דוח מעודכן
-    const updatedReport = {
-      ...zReport,
-      detailed_products: editedProducts.map(p => {
+    try {
+      console.log('💾 Saving edited Z-report...');
+
+      const productsToSave = editedProducts.map(p => {
         const { tempId, ...productData } = p;
         return productData;
-      }),
-      products_updated: editedProducts.length,
-      total_revenue: summary.total_revenue_with_vat,
-      last_edited_date: new Date().toISOString(),
-      products_count: editedProducts.length
-    };
+      });
 
-    onSave(updatedReport);
+      // ✅ עדכון ZReportDetails entity אם קיים
+      if (zReport.z_report_detail_id) {
+        console.log('📝 Updating ZReportDetails entity:', zReport.z_report_detail_id);
+        
+        await base44.entities.ZReportDetails.update(zReport.z_report_detail_id, {
+          detailed_products: productsToSave,
+          products_count: productsToSave.length,
+          total_revenue: summary.total_revenue_with_vat
+        });
+        
+        console.log('✅ ZReportDetails entity updated');
+      }
+
+      // ✅ עדכון התחזית עצמה (דרך callback)
+      const updatedReport = {
+        ...zReport,
+        z_report_detail_id: zReport.z_report_detail_id,  // שמירת ה-reference
+        products_count: productsToSave.length,
+        total_revenue: summary.total_revenue_with_vat,
+        last_edited_date: new Date().toISOString()
+      };
+
+      onSave(updatedReport);
+      console.log('✅ Z-report saved successfully');
+      
+    } catch (error) {
+      console.error('❌ Error saving Z-report:', error);
+      alert('שגיאה בשמירת הדוח: ' + error.message);
+    }
   };
 
   return (
