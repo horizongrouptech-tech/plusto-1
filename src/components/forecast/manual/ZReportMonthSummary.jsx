@@ -109,67 +109,79 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
       return;
     }
 
-    // ✅ אם אין detailed_products - שחזר אותם מהקובץ המקורי
-    if (!zReport.detailed_products || zReport.detailed_products.length === 0) {
-      if (!zReport.file_url) {
-        alert('⚠️ דוח זה לא מכיל פרטי מוצרים ולא נמצא קובץ מקור.\nהעלה דוח Z מחדש כדי לאפשר עריכה.');
+    setIsReconstructing(true);
+
+    try {
+      // ✅ שלב 1: טעינת נתונים מ-ZReportDetails entity
+      if (zReport.z_report_detail_id) {
+        console.log('🔄 Loading from ZReportDetails entity:', zReport.z_report_detail_id);
+        
+        const zReportDetail = await base44.entities.ZReportDetails.get(zReport.z_report_detail_id);
+        
+        if (zReportDetail && zReportDetail.detailed_products) {
+          console.log('✅ Loaded detailed products from entity:', zReportDetail.detailed_products.length);
+          
+          setEditingMonth({
+            ...zReport,
+            detailed_products: zReportDetail.detailed_products,
+            monthIndex: monthIdx
+          });
+          
+          setIsReconstructing(false);
+          return;
+        }
+      }
+
+      // ✅ שלב 2: fallback - אם יש detailed_products ישירות (דוחות ישנים)
+      if (zReport.detailed_products && zReport.detailed_products.length > 0) {
+        console.log('✅ Using legacy detailed_products from forecast');
+        setEditingMonth({ ...zReport, monthIndex: monthIdx });
+        setIsReconstructing(false);
         return;
       }
 
-      // שחזור אוטומטי
-      setIsReconstructing(true);
-      try {
-        console.log('🔄 Reconstructing Z-report from original file:', zReport.file_url);
-
-        const response = await base44.functions.invoke('parseZReport', {
-          fileUrl: zReport.file_url,
-          fileName: zReport.file_name
-        });
-
-        if (!response.data.success) {
-          throw new Error(response.data.error || 'שגיאה בפענוח הקובץ');
-        }
-
-        const reconstructedProducts = response.data.data.products.map(p => ({
-          product_name: p.product_name,
-          barcode: p.barcode || '',
-          quantity_sold: p.quantity_sold,
-          unit_price: p.quantity_sold > 0 ? p.revenue_with_vat / p.quantity_sold : 0,
-          revenue_with_vat: p.revenue_with_vat,
-          mapped_service: '' // ייקבע בעורך
-        }));
-
-        // עדכון הדוח עם המוצרים המשוחזרים
-        const updatedReport = {
-          ...zReport,
-          detailed_products: reconstructedProducts,
-          products_count: reconstructedProducts.length
-        };
-
-        // שמירה ב-DB
-        const updatedReports = (forecastData.z_reports_uploaded || []).map(r =>
-          r.month_assigned === zReport.month_assigned ? updatedReport : r
-        );
-
-        if (forecastData.id) {
-          await base44.entities.ManualForecast.update(forecastData.id, {
-            z_reports_uploaded: updatedReports
-          });
-        }
-
-        console.log('✅ Z-report reconstructed successfully:', reconstructedProducts.length, 'products');
-        setEditingMonth({ ...updatedReport, monthIndex: monthIdx });
-        
-      } catch (error) {
-        console.error('❌ Error reconstructing Z-report:', error);
-        alert('❌ שגיאה בשחזור הדוח:\n' + error.message + '\n\nנסה להעלות את הדוח מחדש.');
-      } finally {
+      // ✅ שלב 3: fallback אחרון - שחזור מהקובץ המקורי
+      if (!zReport.file_url) {
+        alert('⚠️ דוח זה לא מכיל פרטי מוצרים ולא נמצא קובץ מקור.\nהעלה דוח Z מחדש כדי לאפשר עריכה.');
         setIsReconstructing(false);
+        return;
       }
-      return;
+
+      console.log('🔄 Reconstructing from original file:', zReport.file_url);
+
+      const response = await base44.functions.invoke('parseZReport', {
+        fileUrl: zReport.file_url,
+        fileName: zReport.file_name
+      });
+
+      if (!response.data.success) {
+        throw new Error(response.data.error || 'שגיאה בפענוח הקובץ');
+      }
+
+      const reconstructedProducts = response.data.data.products.map(p => ({
+        product_name: p.product_name,
+        barcode: p.barcode || '',
+        quantity_sold: p.quantity_sold,
+        unit_price: p.quantity_sold > 0 ? p.revenue_with_vat / p.quantity_sold : 0,
+        revenue_with_vat: p.revenue_with_vat,
+        mapped_service: forecastData.z_report_product_mapping?.[p.product_name] || ''
+      }));
+
+      setEditingMonth({
+        ...zReport,
+        detailed_products: reconstructedProducts,
+        products_count: reconstructedProducts.length,
+        monthIndex: monthIdx
+      });
+
+      console.log('✅ Z-report reconstructed successfully:', reconstructedProducts.length, 'products');
+      
+    } catch (error) {
+      console.error('❌ Error loading Z-report for editing:', error);
+      alert('❌ שגיאה בטעינת הדוח:\n' + error.message);
+    } finally {
+      setIsReconstructing(false);
     }
-    
-    setEditingMonth({ ...zReport, monthIndex: monthIdx });
   };
 
   const handleSaveEditedReport = async (updatedReport) => {
@@ -462,6 +474,8 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
           monthName={monthNames[editingMonth.monthIndex]}
           services={services}
           onSave={handleSaveEditedReport}
+          onDelete={handleDeleteZReport}
+          customer={customer}
         />
       )}
     </Card>
