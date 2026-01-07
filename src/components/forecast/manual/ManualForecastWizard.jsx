@@ -278,6 +278,35 @@ export default function ManualForecastWizard({
     };
   }, []);
 
+  // ✅ פונקציה חדשה: וידוא שקיימת תחזית במערכת לפני פעולות קריטיות
+  const ensureForecastExists = async () => {
+    if (forecastData.id) {
+      console.log('✅ Forecast ID exists:', forecastData.id);
+      return forecastData.id;
+    }
+
+    if (!forecastData.forecast_name?.trim()) {
+      const autoName = `תחזית ${forecastData.forecast_year || new Date().getFullYear()}`;
+      console.log('⚠️ Creating forecast with auto-generated name:', autoName);
+      forecastData.forecast_name = autoName;
+    }
+
+    console.log('🆕 Creating new forecast for customer:', customer.email);
+    
+    try {
+      const sanitizedData = sanitizeAllForecastData(forecastData);
+      const newForecast = await base44.entities.ManualForecast.create(sanitizedData);
+      
+      console.log('✅ Forecast created successfully:', newForecast.id);
+      
+      setForecastData(prev => ({ ...prev, id: newForecast.id }));
+      return newForecast.id;
+    } catch (error) {
+      console.error('❌ Error creating forecast:', error);
+      throw new Error('יצירת תחזית נכשלה: ' + error.message);
+    }
+  };
+
   const autoSaveForecast = (dataToSave) => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -559,6 +588,9 @@ export default function ManualForecastWizard({
             onUpdateForecast={updateForecast}
             onNext={() => setCurrentStep(4)}
             onBack={() => setCurrentStep(2)}
+            customer={customer}
+            sanitizeAllForecastData={sanitizeAllForecastData}
+            setForecastData={setForecastData}
           />
         )}
 

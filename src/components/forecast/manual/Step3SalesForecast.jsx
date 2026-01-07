@@ -15,7 +15,7 @@ import ServiceCategoryGroup from './ServiceCategoryGroup';
 import AggregatePlanning from './AggregatePlanning';
 import FutureRevenueUploader from './FutureRevenueUploader';
 
-export default function Step3SalesForecast({ forecastData, onUpdateForecast, onNext, onBack }) {
+export default function Step3SalesForecast({ forecastData, onUpdateForecast, onNext, onBack, customer, sanitizeAllForecastData, setForecastData }) {
   // ✅ תיקון: טוען נתונים קיימים מיד בהתחלה, לא אפסים!
   const [salesForecast, setSalesForecast] = useState(() => {
     return (forecastData.services || []).map((service) => {
@@ -122,110 +122,180 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   const handleMappingComplete = async (mapping) => {
     if (!pendingZData) return;
 
-    const monthIndex = pendingZData.month - 1;
-    const updated = [...salesForecast];
-    let productsUpdated = 0;
+    try {
+      // ✅ שלב 1: וידוא שיש ID לתחזית - אם לא, יוצר אותה!
+      console.log('🔍 Checking if forecast exists...');
+      let forecastId = forecastData.id;
+      
+      if (!forecastId) {
+        console.log('⚠️ No forecast ID - creating forecast first...');
+        alert('יוצר תחזית חדשה לפני ייבוא דוח Z...');
+        
+        // יצירת תחזית עם שם אוטומטי אם אין
+        const forecastName = forecastData.forecast_name?.trim() || `תחזית ${forecastData.forecast_year || new Date().getFullYear()}`;
+        
+        const newForecastData = {
+          ...forecastData,
+          forecast_name: forecastName,
+          customer_email: customer?.email || forecastData.customer_email
+        };
+        
+        const sanitizedData = sanitizeAllForecastData ? sanitizeAllForecastData(newForecastData) : newForecastData;
+        const createdForecast = await base44.entities.ManualForecast.create(sanitizedData);
+        
+        forecastId = createdForecast.id;
+        console.log('✅ Forecast created successfully:', forecastId);
+        
+        // עדכון state מיידי
+        setForecastData(prev => ({ ...prev, id: forecastId }));
+        if (onUpdateForecast) {
+          onUpdateForecast({ id: forecastId });
+        }
+      }
 
-    console.log('🗺️ Z-Report Mapping:', mapping);
-    console.log('📦 Products from Z-Report:', pendingZData.products);
+      // ✅ שלב 2: עדכון נתוני המכירות
+      const monthIndex = pendingZData.month - 1;
+      const updated = [...salesForecast];
+      let productsUpdated = 0;
 
-    // ✅ שמירת פרטי המוצרים המלאים לעריכה עתידית
-    const detailedProducts = [];
+      console.log('🗺️ Z-Report Mapping:', mapping);
+      console.log('📦 Products from Z-Report:', pendingZData.products);
 
-    pendingZData.products.forEach(zProduct => {
-      const mappedServiceName = mapping[zProduct.product_name];
-      if (!mappedServiceName) return;
+      // שמירת פרטי המוצרים למיפוי
+      const detailedProducts = [];
 
-      const serviceIndex = updated.findIndex(s => s.service_name === mappedServiceName);
-      if (serviceIndex === -1) return;
+      pendingZData.products.forEach(zProduct => {
+        const mappedServiceName = mapping[zProduct.product_name];
+        if (!mappedServiceName) return;
 
-      // ✅ דורס (מחליף) את הכמות במקום להוסיף
-      updated[serviceIndex].actual_monthly_quantities[monthIndex] = zProduct.quantity_sold;
+        const serviceIndex = updated.findIndex(s => s.service_name === mappedServiceName);
+        if (serviceIndex === -1) return;
 
-      // ✅ דורס (מחליף) את המחזור הממשי מהדוח Z
-      const realRevenue = zProduct.revenue_with_vat || 0;
-      updated[serviceIndex].actual_monthly_revenue[monthIndex] = realRevenue;
+        updated[serviceIndex].actual_monthly_quantities[monthIndex] = zProduct.quantity_sold;
+        const realRevenue = zProduct.revenue_with_vat || 0;
+        updated[serviceIndex].actual_monthly_revenue[monthIndex] = realRevenue;
 
-      // ✅ שמירת פרטי המוצר המלאים
-      detailedProducts.push({
-        product_name: zProduct.product_name,
-        barcode: zProduct.barcode || '',
-        quantity_sold: zProduct.quantity_sold,
-        unit_price: zProduct.quantity_sold > 0 ? realRevenue / zProduct.quantity_sold : 0,
-        revenue_with_vat: realRevenue,
-        mapped_service: mappedServiceName
+        detailedProducts.push({
+          product_name: zProduct.product_name,
+          barcode: zProduct.barcode || '',
+          quantity_sold: zProduct.quantity_sold,
+          unit_price: zProduct.quantity_sold > 0 ? realRevenue / zProduct.quantity_sold : 0,
+          revenue_with_vat: realRevenue,
+          mapped_service: mappedServiceName
+        });
+
+        console.log(`✅ Updated "${mappedServiceName}": ${zProduct.quantity_sold} units, ₪${realRevenue}`);
+        productsUpdated++;
       });
 
-      console.log(`✅ Updated "${mappedServiceName}": ${zProduct.quantity_sold} units, ₪${realRevenue} (replaced with real Z-report data)`);
-      productsUpdated++;
-    });
+      setSalesForecast(updated);
 
-    setSalesForecast(updated);
+      // ✅ שלב 3: יצירת ZReportDetails entity נפרד
+      console.log('💾 Creating ZReportDetails entity...');
+      const zReportDetail = await base44.entities.ZReportDetails.create({
+        forecast_id: forecastId,
+        customer_email: customer?.email || forecastData.customer_email,
+        month_assigned: pendingZData.month,
+        file_name: pendingZData.file_name,
+        file_url: pendingZData.file_url,
+        upload_date: new Date().toISOString(),
+        products_count: detailedProducts.length,
+        total_revenue: pendingZData.summary.total_revenue_with_vat,
+        detailed_products: detailedProducts
+      });
 
-    const uploadRecord = {
-      file_name: pendingZData.file_name,
-      upload_date: new Date().toISOString(),
-      month_assigned: pendingZData.month,
-      products_updated: productsUpdated,
-      total_revenue: pendingZData.summary.total_revenue_with_vat,
-      file_url: pendingZData.file_url,
-      detailed_products: detailedProducts,
-      products_count: detailedProducts.length
-    };
+      console.log('✅ ZReportDetails created:', zReportDetail.id);
 
-    const existingReports = forecastData.z_reports_uploaded || [];
-    const updatedReports = [...existingReports, uploadRecord];
+      // ✅ שלב 4: עדכון התחזית עם reference בלבד (ללא detailed_products!)
+      const uploadRecord = {
+        file_name: pendingZData.file_name,
+        upload_date: new Date().toISOString(),
+        month_assigned: pendingZData.month,
+        products_updated: productsUpdated,
+        total_revenue: pendingZData.summary.total_revenue_with_vat,
+        file_url: pendingZData.file_url,
+        z_report_detail_id: zReportDetail.id  // ✅ רק reference, לא כל הנתונים!
+      };
 
-    const completeUpdates = {
-      sales_forecast_onetime: updated,
-      z_reports_uploaded: updatedReports,
-      z_report_product_mapping: {
-        ...(forecastData.z_report_product_mapping || {}),
-        ...mapping
-      }
-    };
+      const existingReports = forecastData.z_reports_uploaded || [];
+      const updatedReports = [...existingReports, uploadRecord];
 
-    console.log('💾 Preparing to save complete Z-report updates:', {
-      sales_items: updated.length,
-      z_reports: updatedReports.length,
-      mapping_entries: Object.keys(completeUpdates.z_report_product_mapping).length
-    });
-
-    if (onUpdateForecast) {
-      onUpdateForecast(completeUpdates);
-    }
-
-    if (forecastData.id) {
-      try {
-        console.log('💾 Saving Z-report data to DB...');
-        await base44.entities.ManualForecast.update(forecastData.id, completeUpdates);
-        console.log('✅ Z-report data saved successfully to DB');
-        
-        // ✅ וידוא שהנתונים נשמרו - קריאה חזרה
-        const verification = await base44.entities.ManualForecast.get(forecastData.id);
-        console.log('🔍 Verification - Data in DB:', {
-          z_reports_in_db: verification.z_reports_uploaded?.length || 0,
-          mapping_in_db: Object.keys(verification.z_report_product_mapping || {}).length
-        });
-        
-        if (!verification.z_reports_uploaded || verification.z_reports_uploaded.length === 0) {
-          console.error('❌ WARNING: Z-reports not saved to DB!');
-          alert('⚠️ אזהרה: דוח Z לא נשמר כראוי. אנא נסה שוב.');
+      const completeUpdates = {
+        sales_forecast_onetime: updated,
+        z_reports_uploaded: updatedReports,
+        z_report_product_mapping: {
+          ...(forecastData.z_report_product_mapping || {}),
+          ...mapping
         }
-      } catch (error) {
-        console.error('❌ Error saving Z report upload history:', error);
-        alert('שגיאה בשמירת דוח Z: ' + error.message);
+      };
+
+      console.log('💾 Saving to ManualForecast (with reference only):', {
+        forecast_id: forecastId,
+        sales_items: updated.length,
+        z_reports: updatedReports.length
+      });
+
+      // עדכון state מקומי
+      if (onUpdateForecast) {
+        onUpdateForecast(completeUpdates);
       }
+
+      // שמירה ל-DB
+      await base44.entities.ManualForecast.update(forecastId, completeUpdates);
+      console.log('✅ Z-report data saved successfully');
+
+      setShowProductMapper(false);
+      setPendingZData(null);
+      alert(`✓ דוח Z יובא בהצלחה!\n${productsUpdated} מוצרים עודכנו בחודש ${monthNames[monthIndex]}`);
+
+    } catch (error) {
+      console.error('❌ Error in handleMappingComplete:', error);
+      alert('שגיאה בייבוא דוח Z: ' + error.message);
+    }
+  };
+
+  const autoSaveForecast = (dataToSave) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
 
-    // ✅ עדכון forecastData המקומי כדי שהסיכום יראה את הנתונים מיד
-    if (onUpdateForecast) {
-      onUpdateForecast(completeUpdates);
-    }
+    saveTimeoutRef.current = setTimeout(async () => {
+      if (!dataToSave.forecast_name?.trim()) {
+        console.log('Skipping auto-save - missing forecast name');
+        return;
+      }
 
-    setShowProductMapper(false);
-    setPendingZData(null);
-    alert(`✓ דוח Z יובא בהצלחה!\n${productsUpdated} מוצרים עודכנו בחודש ${monthNames[monthIndex]}`);
+      setSaveStatus('saving');
+      
+      try {
+        const sanitizedData = sanitizeAllForecastData(dataToSave);
+        
+        let savedForecast;
+        
+        if (sanitizedData.id) {
+          await base44.entities.ManualForecast.update(sanitizedData.id, sanitizedData);
+          savedForecast = sanitizedData;
+        } else {
+          savedForecast = await base44.entities.ManualForecast.create(sanitizedData);
+          setForecastData(prev => ({ ...prev, id: savedForecast.id }));
+        }
+        
+        setLastSaved(new Date());
+        setSaveStatus('saved');
+        
+        setTimeout(() => {
+          setSaveStatus(null);
+        }, 3000);
+        
+      } catch (error) {
+        console.error('Error auto-saving forecast:', error);
+        setSaveStatus('error');
+        
+        setTimeout(() => {
+          setSaveStatus(null);
+        }, 5000);
+      }
+    }, 1500);
   };
 
   const handleSalesForecastUpdate = (updatedForecast) => {
@@ -392,6 +462,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
             salesForecast={salesForecast}
             services={forecastData.services || []}
             onUpdateZReport={handleUpdateZReport}
+            customer={customer}
           />
 
           {/* העלאת קובץ הכנסה עתידי */}
