@@ -83,29 +83,44 @@ function extractZReportData(rows, headerRowIndex) {
   
   headers.forEach((h, index) => {
     const normalized = h.toLowerCase();
+    const normalizedTrimmed = normalized.trim();
     
     // Barcode / SKU column - MUST check first to not confuse with product name
-    if (normalized.includes('ברקוד') || normalized.includes('קוד פריט') || normalized === 'קוד' || 
-        normalized.includes('מק"ט') || normalized.includes('sku') || normalized.includes('barcode')) {
+    if (normalized.includes('ברקוד') || normalized.includes('קוד פריט') || normalizedTrimmed === 'קוד פריט' ||
+        normalizedTrimmed === 'קוד' || normalized.includes('מק"ט') || 
+        normalized.includes('sku') || normalized.includes('barcode')) {
       barcodeIndex = index;
       console.log(`✅ Found barcode column at index ${index}: "${h}"`);
     }
-    // Product name column - תאור, תיאור, שם מוצר, שם פריט
-    else if (normalized.includes('תאור') || normalized.includes('תיאור') || 
-        (normalized.includes('שם') && !normalized.includes('קוד')) ||
-        normalized === 'פריט' || normalized === 'מוצר' ||
-        normalized.includes('product') || normalized.includes('title') || 
-        normalized.includes('description')) {
-      if (productNameIndex === -1) {
-        productNameIndex = index;
-        console.log(`✅ Found product name column at index ${index}: "${h}"`);
-      }
+    
+    // Product name column - תאור פריט has highest priority
+    if (normalized.includes('תאור פריט') || normalized.includes('תיאור פריט')) {
+      productNameIndex = index;
+      console.log(`✅✅ Found EXACT product description column at index ${index}: "${h}"`);
+    } else if (productNameIndex === -1 && (normalized.includes('תאור') || normalized.includes('תיאור')) && !normalized.includes('קוד')) {
+      productNameIndex = index;
+      console.log(`✅ Found product description column at index ${index}: "${h}"`);
+    } else if (productNameIndex === -1 && 
+               ((normalized.includes('שם') && !normalized.includes('קוד')) ||
+                normalizedTrimmed === 'פריט' || normalizedTrimmed === 'מוצר' ||
+                normalized.includes('product') || normalized.includes('title') || 
+                normalized.includes('description'))) {
+      productNameIndex = index;
+      console.log(`✅ Found product name column at index ${index}: "${h}"`);
     }
     
-    // Sold quantity - נמכר, net items sold
-    if (normalized === 'נמכר' || (normalized.includes('נמכר') && !normalized.includes('מכיר')) ||
-        normalized.includes('net items sold') || normalized === 'sold') {
+    // Sold quantity - מכר (WITHOUT נו"ן) has highest priority, then נמכר
+    if (normalizedTrimmed === 'מכר' || normalized === 'מכר') {
       soldQtyIndex = index;
+      console.log(`✅✅ Found EXACT "מכר" quantity column at index ${index}: "${h}"`);
+    } else if (soldQtyIndex === -1 && (normalizedTrimmed === 'נמכר' || 
+               (normalized.includes('נמכר') && !normalized.includes('מכיר')))) {
+      soldQtyIndex = index;
+      console.log(`✅ Found "נמכר" quantity column at index ${index}: "${h}"`);
+    } else if (soldQtyIndex === -1 && (normalized.includes('net items sold') || normalizedTrimmed === 'sold' ||
+               normalized.includes('quantity sold'))) {
+      soldQtyIndex = index;
+      console.log(`✅ Found English quantity column at index ${index}: "${h}"`);
     }
     
     // Quantity ordered - for reports with "quantity ordered" column
@@ -113,14 +128,23 @@ function extractZReportData(rows, headerRowIndex) {
       orderedQtyIndex = index;
     }
     
-    // Revenue column - מכירות פריטים כולל מע"מ, total sales
-    if (normalized.includes('מכירות') || 
-        (normalized.includes('מכיר') && (normalized.includes('מע') || normalized.includes('כולל'))) ||
-        normalized.includes("מע\"מ") || 
-        normalized.includes("מע'מ") ||
-        normalized.includes('total sales') || 
-        (normalized === 'total' && headers.some(h2 => h2.toLowerCase().includes('sales')))) {
+    // Revenue column - פידיון בש"ח or רווח has highest priority (NOT כולל מע"מ!)
+    if ((normalized.includes('פידיון') || normalized.includes('פדיון')) && 
+        normalized.includes('בש') && !normalized.includes('כולל')) {
       revenueIndex = index;
+      console.log(`✅✅ Found EXACT "פידיון בש״ח" revenue column at index ${index}: "${h}"`);
+    } else if (revenueIndex === -1 && normalized.includes('רווח') && 
+               (normalized.includes('ממלאכה') || normalized.includes('בש'))) {
+      revenueIndex = index;
+      console.log(`✅✅ Found "רווח" revenue column at index ${index}: "${h}"`);
+    } else if (revenueIndex === -1 && normalized.includes('מכירות') && !normalized.includes('ללא')) {
+      revenueIndex = index;
+      console.log(`✅ Found sales revenue column at index ${index}: "${h}"`);
+    } else if (revenueIndex === -1 && 
+               (normalized.includes('total sales') || 
+                (normalizedTrimmed === 'total' && headers.some(h2 => h2.toLowerCase().includes('sales'))))) {
+      revenueIndex = index;
+      console.log(`✅ Found English revenue column at index ${index}: "${h}"`);
     }
   });
   
@@ -167,7 +191,13 @@ function extractZReportData(rows, headerRowIndex) {
     }
   }
   
-  console.log(`Column indices - Product: ${productNameIndex}, Sold: ${soldQtyIndex}, Revenue: ${revenueIndex}, Barcode: ${barcodeIndex}, Ordered: ${orderedQtyIndex}`);
+  console.log(`📊 Column indices detected:`);
+  console.log(`   - Barcode: ${barcodeIndex} ${barcodeIndex !== -1 ? `("${headers[barcodeIndex]}")` : '(not found)'}`);
+  console.log(`   - Product Name: ${productNameIndex} ${productNameIndex !== -1 ? `("${headers[productNameIndex]}")` : '(not found)'}`);
+  console.log(`   - Quantity Sold: ${soldQtyIndex} ${soldQtyIndex !== -1 ? `("${headers[soldQtyIndex]}")` : '(not found)'}`);
+  console.log(`   - Revenue: ${revenueIndex} ${revenueIndex !== -1 ? `("${headers[revenueIndex]}")` : '(not found)'}`);
+  console.log(`   - Ordered Qty: ${orderedQtyIndex} ${orderedQtyIndex !== -1 ? `("${headers[orderedQtyIndex]}")` : '(not found)'}`);
+  console.log(`\n📋 All headers:`, headers);
   
   const products = [];
   
@@ -189,7 +219,7 @@ function extractZReportData(rows, headerRowIndex) {
     const quantitySold = parseNumber(row[soldQtyIndex]);
     const revenue = parseNumber(row[revenueIndex]);
     
-    console.log(`Row ${i}: "${productName}" | Barcode: "${barcode}" | Qty: ${quantitySold} | Revenue: ${revenue}`);
+    console.log(`Row ${i}: Product="${productName}" | Barcode="${barcode}" | Qty=${quantitySold} (from col ${soldQtyIndex}) | Revenue=${revenue} (from col ${revenueIndex})`);
     
     if (quantitySold > 0 || revenue > 0) {
       products.push({
