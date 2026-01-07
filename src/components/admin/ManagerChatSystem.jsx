@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,6 +64,14 @@ export default function ManagerChatSystem({
         'created_date'
       );
       setMessages(conversationMessages);
+      
+      // ✅ גלילה לסוף ההודעות אחרי טעינה
+      setTimeout(() => {
+        const messagesContainer = document.querySelector('[data-messages-scroll]');
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+      }, 100);
       
       // סמן הודעות כנקראו
       const unreadMessages = conversationMessages.filter(
@@ -141,33 +148,45 @@ export default function ManagerChatSystem({
         last_message_by: currentManagerEmail
       });
 
-      // יצירת התראה למנהל השני (תיקון)
-      try {
-        const otherParticipantEmail = getOtherParticipant(selectedConversation);
-        if (otherParticipantEmail && otherParticipantEmail !== currentManagerEmail) {
-          await Notification.create({
-            recipient_email: otherParticipantEmail,
-            sender_email: currentManagerEmail,
-            type: 'new_message',
-            title: 'הודעה חדשה במערכת הצ\'אט',
-            message: `קיבלת הודעה חדשה מ-${currentManagerEmail}: ${messageText.substring(0, 100)}${messageText.length > 100 ? '...' : ''}`,
-            related_entity_id: selectedConversation.id || selectedConversation.conversation_id,
-            related_entity_type: 'chat_thread',
-            priority: 'medium'
-          });
-        }
-      } catch (notificationError) {
-        console.error('Failed to create notification for new message:', notificationError);
-      }
-
+      // ✅ עדכון אופטימיסטי - הוסף הודעה לUI מיד
       setMessages(prev => [...prev, newMessage]);
       setMessageText('');
       
-      // רענן רשימת שיחות
-      loadConversations();
+      // ✅ גלילה אוטומטית לסוף ההודעות
+      setTimeout(() => {
+        const messagesContainer = document.querySelector('[data-messages-scroll]');
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+      }, 50);
+
+      // יצירת התראה למנהל השני - ברקע
+      setTimeout(async () => {
+        try {
+          const otherParticipantEmail = getOtherParticipant(selectedConversation);
+          if (otherParticipantEmail && otherParticipantEmail !== currentManagerEmail) {
+            await Notification.create({
+              recipient_email: otherParticipantEmail,
+              sender_email: currentManagerEmail,
+              type: 'new_message',
+              title: 'הודעה חדשה במערכת הצ\'אט',
+              message: `קיבלת הודעה חדשה מ-${currentManagerEmail}: ${messageText.substring(0, 100)}${messageText.length > 100 ? '...' : ''}`,
+              related_entity_id: selectedConversation.id || selectedConversation.conversation_id,
+              related_entity_type: 'chat_thread',
+              priority: 'medium'
+            });
+          }
+        } catch (notificationError) {
+          console.error('Failed to create notification for new message:', notificationError);
+        }
+      }, 0);
+      
+      // רענן רשימת שיחות ברקע
+      setTimeout(loadConversations, 500);
       
     } catch (error) {
       console.error('Error sending message:', error);
+      alert('שגיאה בשליחת ההודעה');
     }
   };
 
@@ -352,7 +371,7 @@ export default function ManagerChatSystem({
                   </div>
 
                   {/* הודעות */}
-                  <ScrollArea className="flex-1 p-4">
+                  <ScrollArea className="flex-1 p-4" data-messages-scroll>
                     <div className="space-y-3">
                       {messages.map(message => (
                         <div

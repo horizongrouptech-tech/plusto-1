@@ -161,6 +161,9 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       console.log('🗺️ Z-Report Mapping:', mapping);
       console.log('📦 Products from Z-Report:', pendingZData.products);
 
+      // ✅ עדכון אופטימיסטי - הצג את השינויים מיד
+      setSalesForecast(updated);
+
       // שמירת פרטי המוצרים למיפוי
       const detailedProducts = [];
 
@@ -188,6 +191,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
         productsUpdated++;
       });
 
+      // ✅ עדכון מיידי של salesForecast בUI
       setSalesForecast(updated);
 
       // ✅ שלב 3: יצירת ZReportDetails entity נפרד

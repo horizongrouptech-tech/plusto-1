@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, X, MessageSquare, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -36,44 +35,48 @@ export default function FloatingNotificationCenter({ userEmail, onChatNotificati
   useEffect(() => {
     if (userEmail) {
       loadNotifications();
-      // רענון כל 30 שניות
-      const interval = setInterval(loadNotifications, 30000);
+      // ✅ רענון כל 15 שניות במקום 30 - real-time יותר
+      const interval = setInterval(loadNotifications, 15000);
       return () => clearInterval(interval);
     }
-  }, [userEmail, loadNotifications]); // loadNotifications is now a stable dependency due to useCallback
+  }, [userEmail, loadNotifications]);
 
   const handleNotificationClick = async (notification) => {
     try {
-      // סמן כנקרא
+      // ✅ עדכון אופטימיסטי - סמן כנקרא מיד בUI
       if (!notification.is_read) {
-        await Notification.update(notification.id, { is_read: true });
+        setNotifications(prev => 
+          prev.map(n => n.id === notification.id ? { ...n, is_read: true } : n)
+        );
         setUnreadCount(prev => Math.max(0, prev - 1));
+        
+        // עדכון בשרת ברקע
+        Notification.update(notification.id, { is_read: true }).catch(err => {
+          console.error('Failed to mark notification as read:', err);
+        });
       }
 
-      // בדוק אם זו התראה של צ'אט (תיקון ושיפור)
+      // בדוק אם זו התראה של צ'אט
       if (
         (notification.type === 'mention' || notification.type === 'new_message') &&
         notification.related_entity_type === 'chat_thread'
       ) {
         console.log('Notification clicked - chat thread:', notification.related_entity_id);
-        // קרא לפונקציה שתפתח את הצ'אט עם השיחה הספציפית
         if (onChatNotificationClick && notification.related_entity_id) {
           onChatNotificationClick(notification.related_entity_id);
-          setIsOpen(false); // סגור את מרכז ההתראות
+          setIsOpen(false);
           return;
         }
       }
 
-      // עבור התראות אחרות - נווט לפי הקישור הרגיל
+      // עבור התראות אחרות - נווט לפי הקישור
       if (notification.link) {
         if (notification.link.startsWith('#')) {
-          // קישור פנימי באפליקציה
           const element = document.querySelector(notification.link);
           if (element) {
             element.scrollIntoView({ behavior: 'smooth' });
           }
         } else {
-          // קישור חיצוני
           window.open(notification.link, '_blank');
         }
       }
@@ -87,18 +90,24 @@ export default function FloatingNotificationCenter({ userEmail, onChatNotificati
   const markAllAsRead = async () => {
     try {
       const unreadNotifications = notifications.filter(n => !n.is_read);
+      
+      // ✅ עדכון אופטימיסטי - מיידי בUI
+      setNotifications(prev => 
+        prev.map(n => ({ ...n, is_read: true }))
+      );
+      setUnreadCount(0);
+      
+      // ✅ עדכון בשרת ברקע
       await Promise.all(
         unreadNotifications.map(n => 
           Notification.update(n.id, { is_read: true })
         )
       );
       
-      setNotifications(prev => 
-        prev.map(n => ({ ...n, is_read: true }))
-      );
-      setUnreadCount(0);
     } catch (error) {
       console.error('Error marking all as read:', error);
+      // במקרה של שגיאה - טען מחדש
+      loadNotifications();
     }
   };
 

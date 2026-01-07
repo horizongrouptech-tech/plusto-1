@@ -28,6 +28,7 @@ import {
   filterDataByPeriod
 } from './utils/periodCalculations';
 import TopProductsInsights from './TopProductsInsights';
+import ForecastSensitivityAnalysis from './ForecastSensitivityAnalysis';
 
 export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave, onBack, isSaving }) {
   const [profitLossData, setProfitLossData] = useState([]);
@@ -84,11 +85,15 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
   };
 
   useEffect(() => {
-    // ✅ רק חשב מחדש אם יש שינויים רלוונטיים
-    if (forecastData.services || forecastData.sales_forecast_onetime || forecastData.global_employees) {
-      console.log('🔄 Recalculating profit & loss due to data changes');
-      calculateProfitLoss();
-    }
+    // ✅ חישוב מחדש עם debounce - מונע חישובים מיותרים
+    const timeoutId = setTimeout(() => {
+      if (forecastData.services || forecastData.sales_forecast_onetime || forecastData.global_employees) {
+        console.log('🔄 Recalculating profit & loss due to data changes');
+        calculateProfitLoss();
+      }
+    }, 100);
+    
+    return () => clearTimeout(timeoutId);
   }, [
     forecastData.sales_forecast_onetime,
     forecastData.services,
@@ -97,20 +102,17 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
     forecastData.financing_expenses,
     forecastData.company_type,
     forecastData.tax_rate,
-    forecastData.planned_employee_hires
+    forecastData.planned_employee_hires,
+    forecastData.use_aggregate_planning,
+    forecastData.planned_monthly_revenue_aggregate,
+    forecastData.average_cogs_percentage
   ]);
 
   const calculateProfitLoss = () => {
-    // ✅ לוגים מפורטים לניפוי שגיאות
-    console.log('🔍 ========== Starting Profit & Loss calculation ==========');
-    console.log('📊 Sales forecast items:', forecastData.sales_forecast_onetime?.length || 0);
-    console.log('🏷️ Services available:', forecastData.services?.length || 0);
-    console.log('🗺️ Z-report mapping entries:', Object.keys(forecastData.z_report_product_mapping || {}).length);
-    console.log('📋 Z-reports uploaded:', forecastData.z_reports_uploaded?.length || 0);
-    
-    // ✅ אזהרה אם יש נתונים בפועל אבל אין שירותים מתאימים
-    if (forecastData.sales_forecast_onetime?.length > 0 && (!forecastData.services || forecastData.services.length === 0)) {
-      console.error('⚠️ WARNING: Has sales data but NO services defined!');
+    // ✅ לוגים מפורטים - רק ב-development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Starting Profit & Loss calculation');
+      console.log('📊 Mode:', forecastData.use_aggregate_planning ? 'Aggregate' : 'Detailed');
     }
     
     const monthlyData = [];
@@ -147,11 +149,12 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
         const cogsPercentage = forecastData.average_cogs_percentage || 0;
         
         monthRevenue += aggregateRevenue;
-        monthCogs += (aggregateRevenue * cogsPercentage / 100);
+        const cogsCost = aggregateRevenue * (cogsPercentage / 100);
+        monthCogs += cogsCost;
         
-        // מע"מ על מכירות כלליות (מניחים שיש מע"מ)
+        // ✅ מע"מ על מכירות כלליות
         monthVATOnSales += calculateVATAmount(aggregateRevenue, true);
-        monthVATOnCosts += calculateVATAmount(aggregateRevenue * cogsPercentage / 100, true);
+        monthVATOnCosts += calculateVATAmount(cogsCost, true);
       } else {
         // תכנון פרטני - חישוב לפי מוצרים (רק נתוני ביצוע בפועל)
         (forecastData.sales_forecast_onetime || []).forEach((item) => {
@@ -197,10 +200,8 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
             console.log(`⚠️ Service not found for "${item.service_name}", using calculated price: ₪${avgPrice.toFixed(2)}`);
           }
           
-          // ✅ FIX: וודא ש-calculated קיים ותקין
+          // ✅ FIX: חישוב מחדש אוטומטי של service.calculated אם חסר
           if (!service.calculated || typeof service.calculated.cost_of_sale !== 'number') {
-            console.warn(`⚠️ Service "${service.service_name}" missing calculated fields - recalculating...`);
-            
             const VAT_RATE = 0.17;
             const rawPrice = parseFloat(service.price) || 0;
             const netPrice = service.has_vat ? rawPrice / (1 + VAT_RATE) : rawPrice;
@@ -221,6 +222,8 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
               gross_profit: netPrice - totalCost,
               gross_margin_percentage: netPrice > 0 ? ((netPrice - totalCost) / netPrice * 100) : 0
             };
+            
+            // ✅ לא להדפיס warning - זה נורמלי, פשוט חשב מחדש בשקט
           }
         
           // ✅ רק נתוני ביצוע
@@ -663,6 +666,9 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
         startMonth={startMonth}
         endMonth={endMonth}
       />
+
+      {/* ניתוח רגישות - מה אם? */}
+      <ForecastSensitivityAnalysis forecastData={forecastData} />
 
       {/* גרפים */}
       <ManualForecastCharts
