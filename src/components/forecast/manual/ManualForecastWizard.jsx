@@ -28,8 +28,8 @@ export default function ManualForecastWizard({
   const [isLoading, setIsLoading] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [saveStatus, setSaveStatus] = useState(null);
-  const [isSavingInProgress, setIsSavingInProgress] = useState(false);
   const saveTimeoutRef = useRef(null);
+  const [isSavingInProgress, setIsSavingInProgress] = useState(false);
 
   const [forecastData, setForecastData] = useState({
     customer_email: customer.email,
@@ -307,8 +307,6 @@ export default function ManualForecastWizard({
       throw new Error('יצירת תחזית נכשלה: ' + error.message);
     }
   };
-
-  const [isSavingInProgress, setIsSavingInProgress] = useState(false);
 
   const autoSaveForecast = (dataToSave) => {
     if (saveTimeoutRef.current) {
