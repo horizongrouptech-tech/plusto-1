@@ -84,15 +84,22 @@ function extractZReportData(rows, headerRowIndex) {
   headers.forEach((h, index) => {
     const normalized = h.toLowerCase();
     
-    // Barcode / SKU column
-    if (normalized.includes('ברקוד') || normalized.includes('מק"ט') || normalized.includes('קוד פריט') || normalized.includes('sku') || normalized.includes('barcode')) {
+    // Barcode / SKU column - MUST check first to not confuse with product name
+    if (normalized.includes('ברקוד') || normalized.includes('קוד פריט') || normalized === 'קוד' || 
+        normalized.includes('מק"ט') || normalized.includes('sku') || normalized.includes('barcode')) {
       barcodeIndex = index;
+      console.log(`✅ Found barcode column at index ${index}: "${h}"`);
     }
-
-    // Product name column - פריטים, פריט, מוצר, שם, product title
-    if (normalized.includes('פריט') || normalized.includes('מוצר') || normalized.includes('שם') || 
-        normalized.includes('product') || normalized.includes('title')) {
-      if (productNameIndex === -1) productNameIndex = index;
+    // Product name column - תאור, תיאור, שם מוצר, שם פריט
+    else if (normalized.includes('תאור') || normalized.includes('תיאור') || 
+        (normalized.includes('שם') && !normalized.includes('קוד')) ||
+        normalized === 'פריט' || normalized === 'מוצר' ||
+        normalized.includes('product') || normalized.includes('title') || 
+        normalized.includes('description')) {
+      if (productNameIndex === -1) {
+        productNameIndex = index;
+        console.log(`✅ Found product name column at index ${index}: "${h}"`);
+      }
     }
     
     // Sold quantity - נמכר, net items sold
@@ -117,8 +124,16 @@ function extractZReportData(rows, headerRowIndex) {
     }
   });
   
-  // If product name not found, use first column
-  if (productNameIndex === -1) productNameIndex = 0;
+  // If product name not found but barcode is found, use the column AFTER barcode
+  if (productNameIndex === -1) {
+    if (barcodeIndex !== -1 && headers.length > barcodeIndex + 1) {
+      productNameIndex = barcodeIndex + 1;
+      console.log(`⚠️ Using column after barcode as product name: ${productNameIndex}`);
+    } else {
+      productNameIndex = 0;
+      console.log(`⚠️ Defaulting to first column for product name`);
+    }
+  }
   
   // For Z reports with structure: פריטים | הוכן | הוחזר | נמכר | מכירות פריטים כולל מע"מ
   // soldQty should be column D (index 3) - "נמכר"
