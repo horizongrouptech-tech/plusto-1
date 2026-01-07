@@ -96,23 +96,47 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
     }
   }, [forecastData.services]);
 
-  // ⭐ טעינת קטלוגים - בדיוק כמו ב-ProductCatalogManager
+  // ⭐ טעינת קטלוגים עם caching
   const loadCatalogs = useCallback(async () => {
     if (!forecastData?.customer_email) {
       console.log('❌ No customer_email in forecastData');
       return;
     }
 
+    // ✅ בדיקת cache תחילה
+    const cacheKey = `catalogs_${forecastData.customer_email}`;
+    const cached = sessionStorage.getItem(cacheKey);
+    
+    if (cached) {
+      try {
+        const { data, timestamp } = JSON.parse(cached);
+        // אם Cache חדש מ-5 דקות - השתמש בו
+        if (Date.now() - timestamp < 5 * 60 * 1000) {
+          console.log('✅ Using cached catalogs');
+          setAvailableCatalogs(data);
+          return;
+        }
+      } catch (e) {
+        // cache לא תקין - המשך לטעינה רגילה
+      }
+    }
+
     console.log('🔍 Loading catalogs for customer:', forecastData.customer_email);
     setIsLoadingCatalogs(true);
     
     try {
-      // ✅ שימוש בישות Catalog (לא ProductCatalog!)
       const fetchedCatalogs = await base44.entities.Catalog.filter({ 
         customer_email: forecastData.customer_email 
       }, '-created_date');
       
       console.log('✅ Found catalogs:', fetchedCatalogs);
+      
+      // ✅ שמור ב-cache
+      sessionStorage.setItem(cacheKey, JSON.stringify({
+        data: fetchedCatalogs,
+        timestamp: Date.now()
+      }));
+      
       setAvailableCatalogs(fetchedCatalogs || []);
     } catch (error) {
       console.error('❌ Error loading catalogs:', error);

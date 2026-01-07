@@ -28,6 +28,7 @@ export default function ManualForecastWizard({
   const [isLoading, setIsLoading] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [saveStatus, setSaveStatus] = useState(null);
+  const [isSavingInProgress, setIsSavingInProgress] = useState(false);
   const saveTimeoutRef = useRef(null);
 
   const [forecastData, setForecastData] = useState({
@@ -307,6 +308,8 @@ export default function ManualForecastWizard({
     }
   };
 
+  const [isSavingInProgress, setIsSavingInProgress] = useState(false);
+
   const autoSaveForecast = (dataToSave) => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -318,6 +321,12 @@ export default function ManualForecastWizard({
         return;
       }
 
+      if (isSavingInProgress) {
+        console.log('Save already in progress, skipping...');
+        return;
+      }
+
+      setIsSavingInProgress(true);
       setSaveStatus('saving');
       
       try {
@@ -339,16 +348,18 @@ export default function ManualForecastWizard({
         setTimeout(() => {
           setSaveStatus(null);
         }, 3000);
-        
-      } catch (error) {
+
+        } catch (error) {
         console.error('Error auto-saving forecast:', error);
         setSaveStatus('error');
-        
+
         setTimeout(() => {
           setSaveStatus(null);
         }, 5000);
-      }
-    }, 1500);
+        } finally {
+        setIsSavingInProgress(false);
+        }
+        }, 3000);
   };
 
   const updateForecast = (updates) => {

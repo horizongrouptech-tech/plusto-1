@@ -50,8 +50,21 @@ function findBestMatch(zProduct, servicesList, existingMapping) {
 export default function ZReportProductMapper({ zProducts, services, existingMapping, onMappingComplete, onCancel }) {
   const [mapping, setMapping] = useState({});
   const [unmappedCount, setUnmappedCount] = useState(0);
+  const lastMappingCacheRef = React.useRef(null);
 
   useEffect(() => {
+    // ✅ מניעת חישובים מיותרים
+    const productsKey = zProducts.map(p => p.product_name).sort().join('|');
+    const servicesKey = services.map(s => s.service_name).sort().join('|');
+    const cacheKey = `${productsKey}_${servicesKey}`;
+    
+    if (lastMappingCacheRef.current === cacheKey) {
+      console.log('✅ Mapping unchanged, skipping recalculation');
+      return;
+    }
+    
+    lastMappingCacheRef.current = cacheKey;
+
     const initialMapping = {};
     let unmapped = 0;
 

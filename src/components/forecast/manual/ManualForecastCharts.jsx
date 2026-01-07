@@ -118,11 +118,11 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
     }
   };
 
-  // Tooltip מותאם אישית עם עיצוב מודרני
+  // Tooltip מותאם אישית עם תמיכה ב-dark mode
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white/98 backdrop-blur-xl border-2 border-horizon-primary/30 p-4 rounded-2xl shadow-2xl">
+        <div className="bg-horizon-card/98 backdrop-blur-xl border-2 border-horizon-primary/30 p-4 rounded-2xl shadow-2xl">
           <p className="text-horizon-text font-bold mb-3 text-base pb-2 border-b-2 border-horizon-primary/20">
             {label}
           </p>
@@ -134,12 +134,12 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
                     className="w-4 h-4 rounded-md shadow-md" 
                     style={{ backgroundColor: entry.color }}
                   />
-                  <span className="text-sm font-semibold text-horizon-accent">
+                  <span className="text-sm font-semibold text-horizon-text">
                     {entry.name}:
                   </span>
                 </div>
                 <span 
-                  className="font-bold text-base" 
+                  className="font-bold text-base text-horizon-primary" 
                   style={{ color: entry.color }}
                 >
                   {formatCurrency(entry.value, 0)}
@@ -167,7 +167,7 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
     <div className="space-y-8">
       {/* גרף תכנון מול ביצוע - מכירות */}
       <Card className="card-horizon overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b-2 border-blue-100">
+        <CardHeader className="bg-horizon-card/50 border-b-2 border-horizon">
           <div className="space-y-2">
             <CardTitle className="text-horizon-text flex items-center gap-3">
               <div className="p-2 bg-gradient-to-br from-[#32acc1] to-[#83ddec] rounded-xl shadow-lg">
@@ -182,77 +182,87 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
             </p>
           </div>
         </CardHeader>
-        <CardContent className="pt-8 pb-6 bg-gradient-to-br from-white to-gray-50">
+        <CardContent className="pt-8 pb-6 bg-horizon-dark/20">
           <ResponsiveContainer width="100%" height={450}>
             <BarChart 
               data={salesComparisonData} 
-              margin={{ top: 30, right: 30, left: 30, bottom: 70 }}
-              barGap={10}
-              barCategoryGap="25%"
+              margin={{ top: 30, right: 40, left: 40, bottom: 20 }}
+              barGap={12}
+              barCategoryGap="20%"
             >
               <defs>
                 <linearGradient id="planGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#32acc1" stopOpacity={0.95}/>
-                  <stop offset="95%" stopColor="#32acc1" stopOpacity={0.7}/>
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.9}/>
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.6}/>
                 </linearGradient>
                 <linearGradient id="actualGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.95}/>
-                  <stop offset="95%" stopColor="#10B981" stopOpacity={0.7}/>
+                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.9}/>
+                  <stop offset="95%" stopColor="#10B981" stopOpacity={0.6}/>
                 </linearGradient>
               </defs>
               <CartesianGrid 
-                strokeDasharray="3 3" 
-                stroke="#e5e7eb" 
+                strokeDasharray="5 5" 
+                stroke="var(--horizon-border)" 
                 vertical={false}
-                strokeOpacity={0.5}
+                strokeOpacity={0.3}
               />
               <XAxis 
                 dataKey="name" 
                 tick={{ 
-                  fill: '#374151', 
-                  fontSize: 14, 
+                  fill: 'var(--horizon-text)', 
+                  fontSize: 13, 
                   fontWeight: 600,
                   fontFamily: 'Heebo, sans-serif'
                 }}
                 tickLine={false}
-                axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
-                angle={0}
-                height={60}
+                axisLine={{ stroke: 'var(--horizon-border)', strokeWidth: 2 }}
               />
               <YAxis 
                 tick={{ 
-                  fill: '#374151', 
-                  fontSize: 13, 
+                  fill: 'var(--horizon-text)', 
+                  fontSize: 12, 
                   fontWeight: 600,
                   fontFamily: 'Heebo, sans-serif'
                 }}
                 tickFormatter={(value) => `₪${(value / 1000).toFixed(0)}K`}
                 tickLine={false}
-                axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
-                width={90}
+                axisLine={{ stroke: 'var(--horizon-border)', strokeWidth: 2 }}
+                width={80}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(50, 172, 193, 0.1)' }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }} />
               <Legend 
                 wrapperStyle={{ 
                   paddingTop: '20px',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  fontFamily: 'Heebo, sans-serif'
+                  color: 'var(--horizon-text)'
                 }}
                 iconType="circle"
-                iconSize={12}
+                iconSize={10}
               />
               <Bar 
                 dataKey="תכנון מכירות" 
                 fill="url(#planGradient)" 
-                radius={[8, 8, 0, 0]}
-                maxBarSize={80}
+                radius={[6, 6, 0, 0]}
+                maxBarSize={60}
+                label={{ 
+                  position: 'top', 
+                  fill: '#3b82f6',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  formatter: (value) => value > 0 ? `₪${(value/1000).toFixed(0)}K` : ''
+                }}
               />
               <Bar 
                 dataKey="ביצוע מכירות" 
                 fill="url(#actualGradient)" 
-                radius={[8, 8, 0, 0]}
-                maxBarSize={80}
+                radius={[6, 6, 0, 0]}
+                maxBarSize={60}
+                label={{ 
+                  position: 'top', 
+                  fill: '#10B981',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  formatter: (value) => value > 0 ? `₪${(value/1000).toFixed(0)}K` : ''
+                }}
               />
             </BarChart>
           </ResponsiveContainer>
@@ -261,7 +271,7 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
 
       {/* גרף תכנון מול ביצוע - הוצאות */}
       <Card className="card-horizon overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b-2 border-purple-100">
+        <CardHeader className="bg-horizon-card/50 border-b-2 border-horizon">
           <div className="flex justify-between items-center flex-wrap gap-4">
             <div className="flex-1 space-y-2">
               <CardTitle className="text-horizon-text flex items-center gap-3">
@@ -295,77 +305,87 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-8 pb-6 bg-gradient-to-br from-white to-gray-50">
+        <CardContent className="pt-8 pb-6 bg-horizon-dark/20">
           <ResponsiveContainer width="100%" height={450}>
             <BarChart 
               data={getFilteredExpensesData()} 
-              margin={{ top: 30, right: 30, left: 30, bottom: 70 }}
-              barGap={10}
-              barCategoryGap="25%"
+              margin={{ top: 30, right: 40, left: 40, bottom: 20 }}
+              barGap={12}
+              barCategoryGap="20%"
             >
               <defs>
                 <linearGradient id="expensePlanGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#A855F7" stopOpacity={0.95}/>
-                  <stop offset="95%" stopColor="#A855F7" stopOpacity={0.7}/>
+                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.9}/>
+                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.6}/>
                 </linearGradient>
                 <linearGradient id="expenseActualGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#EC4899" stopOpacity={0.95}/>
-                  <stop offset="95%" stopColor="#EC4899" stopOpacity={0.7}/>
+                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.9}/>
+                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0.6}/>
                 </linearGradient>
               </defs>
               <CartesianGrid 
-                strokeDasharray="3 3" 
-                stroke="#e5e7eb" 
+                strokeDasharray="5 5" 
+                stroke="var(--horizon-border)" 
                 vertical={false}
-                strokeOpacity={0.5}
+                strokeOpacity={0.3}
               />
               <XAxis 
                 dataKey="name" 
                 tick={{ 
-                  fill: '#374151', 
-                  fontSize: 14, 
+                  fill: 'var(--horizon-text)', 
+                  fontSize: 13, 
                   fontWeight: 600,
                   fontFamily: 'Heebo, sans-serif'
                 }}
                 tickLine={false}
-                axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
-                angle={0}
-                height={60}
+                axisLine={{ stroke: 'var(--horizon-border)', strokeWidth: 2 }}
               />
               <YAxis 
                 tick={{ 
-                  fill: '#374151', 
-                  fontSize: 13, 
+                  fill: 'var(--horizon-text)', 
+                  fontSize: 12, 
                   fontWeight: 600,
                   fontFamily: 'Heebo, sans-serif'
                 }}
                 tickFormatter={(value) => `₪${(value / 1000).toFixed(0)}K`}
                 tickLine={false}
-                axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
-                width={90}
+                axisLine={{ stroke: 'var(--horizon-border)', strokeWidth: 2 }}
+                width={80}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(168, 85, 247, 0.1)' }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(245, 158, 11, 0.1)' }} />
               <Legend 
                 wrapperStyle={{ 
                   paddingTop: '20px',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  fontFamily: 'Heebo, sans-serif'
+                  color: 'var(--horizon-text)'
                 }}
                 iconType="circle"
-                iconSize={12}
+                iconSize={10}
               />
               <Bar 
                 dataKey="תכנון" 
                 fill="url(#expensePlanGradient)" 
-                radius={[8, 8, 0, 0]}
-                maxBarSize={80}
+                radius={[6, 6, 0, 0]}
+                maxBarSize={60}
+                label={{ 
+                  position: 'top', 
+                  fill: '#f59e0b',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  formatter: (value) => value > 0 ? `₪${(value/1000).toFixed(0)}K` : ''
+                }}
               />
               <Bar 
                 dataKey="ביצוע" 
                 fill="url(#expenseActualGradient)" 
-                radius={[8, 8, 0, 0]}
-                maxBarSize={80}
+                radius={[6, 6, 0, 0]}
+                maxBarSize={60}
+                label={{ 
+                  position: 'top', 
+                  fill: '#ef4444',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  formatter: (value) => value > 0 ? `₪${(value/1000).toFixed(0)}K` : ''
+                }}
               />
             </BarChart>
           </ResponsiveContainer>
@@ -374,7 +394,7 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
 
       {/* גרף הכנסות, עלות מכר ורווח גולמי */}
       <Card className="card-horizon overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b-2 border-green-100">
+        <CardHeader className="bg-horizon-card/50 border-b-2 border-horizon">
           <div className="space-y-2">
             <CardTitle className="text-horizon-text flex items-center gap-3">
               <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg">
@@ -389,87 +409,104 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
             </p>
           </div>
         </CardHeader>
-        <CardContent className="pt-8 pb-6 bg-gradient-to-br from-white to-gray-50">
-          <ResponsiveContainer width="100%" height={460}>
+        <CardContent className="pt-8 pb-6 bg-horizon-dark/20">
+          <ResponsiveContainer width="100%" height={400}>
             <BarChart 
               data={chartData} 
-              margin={{ top: 30, right: 30, left: 30, bottom: 70 }}
-              barGap={8}
-              barCategoryGap="20%"
+              margin={{ top: 40, right: 40, left: 40, bottom: 20 }}
+              barGap={6}
+              barCategoryGap="15%"
             >
               <defs>
                 <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#32acc1" stopOpacity={0.95}/>
-                  <stop offset="95%" stopColor="#32acc1" stopOpacity={0.7}/>
+                  <stop offset="95%" stopColor="#32acc1" stopOpacity={0.65}/>
                 </linearGradient>
                 <linearGradient id="cogsGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#fb7185" stopOpacity={0.95}/>
-                  <stop offset="95%" stopColor="#fb7185" stopOpacity={0.7}/>
+                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.95}/>
+                  <stop offset="95%" stopColor="#f97316" stopOpacity={0.65}/>
                 </linearGradient>
                 <linearGradient id="grossProfitGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#34d399" stopOpacity={0.95}/>
-                  <stop offset="95%" stopColor="#34d399" stopOpacity={0.7}/>
+                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.95}/>
+                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0.65}/>
                 </linearGradient>
               </defs>
               <CartesianGrid 
-                strokeDasharray="3 3" 
-                stroke="#e5e7eb" 
+                strokeDasharray="5 5" 
+                stroke="var(--horizon-border)" 
                 vertical={false}
-                strokeOpacity={0.5}
+                strokeOpacity={0.3}
               />
               <XAxis 
                 dataKey="name" 
                 tick={{ 
-                  fill: '#374151', 
-                  fontSize: 14, 
+                  fill: 'var(--horizon-text)', 
+                  fontSize: 13, 
                   fontWeight: 600,
                   fontFamily: 'Heebo, sans-serif'
                 }}
                 tickLine={false}
-                axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
-                angle={0}
-                height={60}
+                axisLine={{ stroke: 'var(--horizon-border)', strokeWidth: 2 }}
               />
               <YAxis 
                 tick={{ 
-                  fill: '#374151', 
-                  fontSize: 13, 
+                  fill: 'var(--horizon-text)', 
+                  fontSize: 12, 
                   fontWeight: 600,
                   fontFamily: 'Heebo, sans-serif'
                 }}
                 tickFormatter={(value) => `₪${(value / 1000).toFixed(0)}K`}
                 tickLine={false}
-                axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
-                width={90}
+                axisLine={{ stroke: 'var(--horizon-border)', strokeWidth: 2 }}
+                width={80}
               />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(50, 172, 193, 0.08)' }} />
               <Legend 
                 wrapperStyle={{ 
-                  paddingTop: '20px',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  fontFamily: 'Heebo, sans-serif'
+                  paddingTop: '25px',
+                  color: 'var(--horizon-text)'
                 }}
                 iconType="circle"
-                iconSize={12}
+                iconSize={10}
               />
               <Bar 
                 dataKey="הכנסות" 
                 fill="url(#revenueGradient)" 
-                radius={[8, 8, 0, 0]}
-                maxBarSize={70}
+                radius={[6, 6, 0, 0]}
+                maxBarSize={50}
+                label={{ 
+                  position: 'top', 
+                  fill: '#32acc1',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  formatter: (value) => value > 0 ? `₪${(value/1000).toFixed(0)}K` : ''
+                }}
               />
               <Bar 
                 dataKey="עלות מכר" 
                 fill="url(#cogsGradient)" 
-                radius={[8, 8, 0, 0]}
-                maxBarSize={70}
+                radius={[6, 6, 0, 0]}
+                maxBarSize={50}
+                label={{ 
+                  position: 'top', 
+                  fill: '#f97316',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  formatter: (value) => value > 0 ? `₪${(value/1000).toFixed(0)}K` : ''
+                }}
               />
               <Bar 
                 dataKey="רווח גולמי" 
                 fill="url(#grossProfitGradient)" 
-                radius={[8, 8, 0, 0]}
-                maxBarSize={70}
+                radius={[6, 6, 0, 0]}
+                maxBarSize={50}
+                label={{ 
+                  position: 'top', 
+                  fill: '#22c55e',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  formatter: (value) => value > 0 ? `₪${(value/1000).toFixed(0)}K` : ''
+                }}
               />
             </BarChart>
           </ResponsiveContainer>
@@ -478,7 +515,7 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
 
       {/* גרף מגמת רווחיות - עם הוצאות מימון */}
       <Card className="card-horizon overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b-2 border-indigo-100">
+        <CardHeader className="bg-horizon-card/50 border-b-2 border-horizon">
           <div className="space-y-2">
             <CardTitle className="text-horizon-text flex items-center gap-3">
               <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
@@ -493,110 +530,105 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
             </p>
           </div>
         </CardHeader>
-        <CardContent className="pt-8 pb-6 bg-gradient-to-br from-white to-gray-50">
-          <ResponsiveContainer width="100%" height={480}>
-            <AreaChart 
+        <CardContent className="pt-8 pb-6 bg-horizon-dark/20">
+          <ResponsiveContainer width="100%" height={400}>
+            <LineChart 
               data={chartData} 
-              margin={{ top: 30, right: 30, left: 30, bottom: 70 }}
+              margin={{ top: 40, right: 40, left: 40, bottom: 20 }}
             >
               <defs>
-                <linearGradient id="colorOperating" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#32acc1" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#32acc1" stopOpacity={0.05}/>
-                </linearGradient>
-                <linearGradient id="colorFinancing" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0.05}/>
-                </linearGradient>
-                <linearGradient id="colorBeforeTax" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#a855f7" stopOpacity={0.05}/>
-                </linearGradient>
-                <linearGradient id="colorNet" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#10B981" stopOpacity={0.05}/>
-                </linearGradient>
+                <filter id="glow">
+                  <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                  <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
               </defs>
               <CartesianGrid 
-                strokeDasharray="3 3" 
-                stroke="#e5e7eb" 
+                strokeDasharray="5 5" 
+                stroke="var(--horizon-border)" 
                 vertical={false}
-                strokeOpacity={0.5}
+                strokeOpacity={0.3}
               />
               <XAxis 
                 dataKey="name" 
                 tick={{ 
-                  fill: '#374151', 
-                  fontSize: 14, 
+                  fill: 'var(--horizon-text)', 
+                  fontSize: 13, 
                   fontWeight: 600,
                   fontFamily: 'Heebo, sans-serif'
                 }}
                 tickLine={false}
-                axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
-                angle={0}
-                height={60}
+                axisLine={{ stroke: 'var(--horizon-border)', strokeWidth: 2 }}
               />
               <YAxis 
                 tick={{ 
-                  fill: '#374151', 
-                  fontSize: 13, 
+                  fill: 'var(--horizon-text)', 
+                  fontSize: 12, 
                   fontWeight: 600,
                   fontFamily: 'Heebo, sans-serif'
                 }}
                 tickFormatter={(value) => `₪${(value / 1000).toFixed(0)}K`}
                 tickLine={false}
-                axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
-                width={90}
+                axisLine={{ stroke: 'var(--horizon-border)', strokeWidth: 2 }}
+                width={80}
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend 
                 wrapperStyle={{ 
-                  paddingTop: '20px',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  fontFamily: 'Heebo, sans-serif'
+                  paddingTop: '25px',
+                  color: 'var(--horizon-text)'
                 }}
-                iconType="circle"
-                iconSize={12}
+                iconType="line"
+                iconSize={20}
               />
-              <Area 
+              <Line 
+                type="monotone" 
+                dataKey="רווח גולמי" 
+                stroke="#22c55e" 
+                strokeWidth={4}
+                dot={{ fill: '#22c55e', r: 6, strokeWidth: 3, stroke: 'var(--horizon-card)' }}
+                activeDot={{ r: 8, strokeWidth: 4, filter: 'url(#glow)' }}
+                label={{ 
+                  position: 'top', 
+                  fill: '#22c55e',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  formatter: (value) => value !== 0 ? `₪${(value/1000).toFixed(0)}K` : ''
+                }}
+              />
+              <Line 
                 type="monotone" 
                 dataKey="רווח תפעולי" 
-                stroke="#32acc1" 
-                strokeWidth={3}
-                fill="url(#colorOperating)" 
-                dot={{ fill: '#32acc1', r: 5, strokeWidth: 2, stroke: '#fff' }}
-                activeDot={{ r: 7, strokeWidth: 3 }}
+                stroke="#3b82f6" 
+                strokeWidth={4}
+                dot={{ fill: '#3b82f6', r: 6, strokeWidth: 3, stroke: 'var(--horizon-card)' }}
+                activeDot={{ r: 8, strokeWidth: 4, filter: 'url(#glow)' }}
+                label={{ 
+                  position: 'top', 
+                  fill: '#3b82f6',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  formatter: (value) => value !== 0 ? `₪${(value/1000).toFixed(0)}K` : ''
+                }}
               />
-              <Area 
-                type="monotone" 
-                dataKey="הוצאות מימון" 
-                stroke="#ef4444" 
-                strokeWidth={2.5}
-                strokeDasharray="5 5"
-                fill="url(#colorFinancing)" 
-                dot={{ fill: '#ef4444', r: 4, strokeWidth: 2, stroke: '#fff' }}
-                activeDot={{ r: 6, strokeWidth: 2.5 }}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="רווח לפני מס" 
-                stroke="#a855f7" 
-                strokeWidth={3}
-                fill="url(#colorBeforeTax)" 
-                dot={{ fill: '#a855f7', r: 5, strokeWidth: 2, stroke: '#fff' }}
-                activeDot={{ r: 7, strokeWidth: 3 }}
-              />
-              <Area 
+              <Line 
                 type="monotone" 
                 dataKey="רווח נקי" 
                 stroke="#10B981" 
-                strokeWidth={4}
-                fill="url(#colorNet)" 
-                dot={{ fill: '#10B981', r: 6, strokeWidth: 2.5, stroke: '#fff' }}
-                activeDot={{ r: 8, strokeWidth: 3.5 }}
+                strokeWidth={5}
+                dot={{ fill: '#10B981', r: 7, strokeWidth: 3, stroke: 'var(--horizon-card)' }}
+                activeDot={{ r: 9, strokeWidth: 4, filter: 'url(#glow)' }}
+                label={{ 
+                  position: 'top', 
+                  fill: '#10B981',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  formatter: (value) => value !== 0 ? `₪${(value/1000).toFixed(0)}K` : ''
+                }}
               />
-            </AreaChart>
+            </LineChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>

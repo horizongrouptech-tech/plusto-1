@@ -14,8 +14,12 @@ import { base44 } from "@/api/base44Client";
 import ServiceCategoryGroup from './ServiceCategoryGroup';
 import AggregatePlanning from './AggregatePlanning';
 import FutureRevenueUploader from './FutureRevenueUploader';
+import { Progress } from "@/components/ui/progress";
 
 export default function Step3SalesForecast({ forecastData, onUpdateForecast, onNext, onBack, customer, sanitizeAllForecastData, setForecastData }) {
+  const [isImportingZReport, setIsImportingZReport] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  
   // ✅ תיקון: טוען נתונים קיימים מיד בהתחלה, לא אפסים!
   const [salesForecast, setSalesForecast] = useState(() => {
     return (forecastData.services || []).map((service) => {
@@ -122,8 +126,12 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   const handleMappingComplete = async (mapping) => {
     if (!pendingZData) return;
 
+    setIsImportingZReport(true);
+    setImportProgress(5);
+
     try {
       // ✅ שלב 1: וידוא שיש ID לתחזית - אם לא, יוצר אותה!
+      setImportProgress(15);
       console.log('🔍 Checking if forecast exists...');
       let forecastId = forecastData.id;
       
@@ -154,15 +162,13 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       }
 
       // ✅ שלב 2: עדכון נתוני המכירות
+      setImportProgress(30);
       const monthIndex = pendingZData.month - 1;
       const updated = [...salesForecast];
       let productsUpdated = 0;
 
       console.log('🗺️ Z-Report Mapping:', mapping);
       console.log('📦 Products from Z-Report:', pendingZData.products);
-
-      // ✅ עדכון אופטימיסטי - הצג את השינויים מיד
-      setSalesForecast(updated);
 
       // שמירת פרטי המוצרים למיפוי
       const detailedProducts = [];
@@ -210,6 +216,8 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
 
       console.log('✅ ZReportDetails created:', zReportDetail.id);
 
+      setImportProgress(70);
+
       // ✅ שלב 4: עדכון התחזית עם reference בלבד (ללא detailed_products!)
       const uploadRecord = {
         file_name: pendingZData.file_name,
@@ -239,22 +247,40 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
         z_reports: updatedReports.length
       });
 
+      setImportProgress(85);
+
       // עדכון state מקומי
       if (onUpdateForecast) {
         onUpdateForecast(completeUpdates);
       }
 
+      // ✅ עדכון מיידי של salesForecast בUI
+      setSalesForecast(updated);
+
+      setImportProgress(95);
+
       // שמירה ל-DB
       await base44.entities.ManualForecast.update(forecastId, completeUpdates);
       console.log('✅ Z-report data saved successfully');
 
+      setImportProgress(100);
+
       setShowProductMapper(false);
       setPendingZData(null);
-      alert(`✓ דוח Z יובא בהצלחה!\n${productsUpdated} מוצרים עודכנו בחודש ${monthNames[monthIndex]}`);
+      
+      // הצגת הודעת הצלחה רק אחרי שהכל הושלם
+      setTimeout(() => {
+        alert(`✓ דוח Z יובא בהצלחה!\n${productsUpdated} מוצרים עודכנו בחודש ${monthNames[monthIndex]}`);
+      }, 200);
 
     } catch (error) {
       console.error('❌ Error in handleMappingComplete:', error);
       alert('שגיאה בייבוא דוח Z: ' + error.message);
+    } finally {
+      setTimeout(() => {
+        setIsImportingZReport(false);
+        setImportProgress(0);
+      }, 500);
     }
   };
 
@@ -708,6 +734,21 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
           }}
         />
       )}
-    </div>
-  );
-}
+
+      {/* Loading Overlay לייבוא דוח Z */}
+      {isImportingZReport && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center backdrop-blur-sm">
+          <Card className="card-horizon p-8 max-w-md mx-4">
+            <CardContent className="text-center space-y-4 p-6">
+              <Loader2 className="w-16 h-16 animate-spin mx-auto text-horizon-primary" />
+              <h3 className="text-2xl font-bold text-horizon-text">מייבא דוח Z...</h3>
+              <Progress value={importProgress} className="h-3" />
+              <p className="text-lg font-semibold text-horizon-primary">{importProgress}% הושלם</p>
+              <p className="text-sm text-horizon-accent">אנא המתן, התהליך עשוי לקחת מספר שניות</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      </div>
+      );
+      }
