@@ -141,7 +141,7 @@ export default function ZReportEditor({
       // ✅ עדכון התחזית עצמה (דרך callback)
       const updatedReport = {
         ...zReport,
-        z_report_detail_id: zReport.z_report_detail_id,  // שמירת ה-reference
+        z_report_detail_id: zReport.z_report_detail_id,
         products_count: productsToSave.length,
         total_revenue: summary.total_revenue_with_vat,
         last_edited_date: new Date().toISOString()
