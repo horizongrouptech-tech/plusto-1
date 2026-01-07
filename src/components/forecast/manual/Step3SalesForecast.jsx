@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ChevronRight, ChevronLeft, GripVertical, Eye, EyeOff, TrendingUp, Calendar, Upload, FileSpreadsheet, CheckCircle2, Package, BarChart3, Calculator } from "lucide-react";
+import { ChevronRight, ChevronLeft, GripVertical, Eye, EyeOff, TrendingUp, Calendar, Upload, FileSpreadsheet, CheckCircle2, Package, BarChart3, Calculator, Loader2 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { formatCurrency, formatNumber } from './utils/numberFormatter';
 import ZReportUploader from './ZReportUploader';
@@ -19,6 +19,8 @@ import { Progress } from "@/components/ui/progress";
 export default function Step3SalesForecast({ forecastData, onUpdateForecast, onNext, onBack, customer, sanitizeAllForecastData, setForecastData }) {
   const [isImportingZReport, setIsImportingZReport] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
+  const [importStatusText, setImportStatusText] = useState('');
+  const [retryAttempt, setRetryAttempt] = useState(0);
   
   // ✅ תיקון: טוען נתונים קיימים מיד בהתחלה, לא אפסים!
   const [salesForecast, setSalesForecast] = useState(() => {
@@ -128,18 +130,19 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
 
     setIsImportingZReport(true);
     setImportProgress(5);
+    setImportStatusText('מתחיל תהליך ייבוא...');
 
     try {
       // ✅ שלב 1: וידוא שיש ID לתחזית - אם לא, יוצר אותה!
-      setImportProgress(15);
+      setImportProgress(10);
+      setImportStatusText('בודק תחזית קיימת...');
       console.log('🔍 Checking if forecast exists...');
       let forecastId = forecastData.id;
       
       if (!forecastId) {
         console.log('⚠️ No forecast ID - creating forecast first...');
-        alert('יוצר תחזית חדשה לפני ייבוא דוח Z...');
+        setImportStatusText('יוצר תחזית חדשה...');
         
-        // יצירת תחזית עם שם אוטומטי אם אין
         const forecastName = forecastData.forecast_name?.trim() || `תחזית ${forecastData.forecast_year || new Date().getFullYear()}`;
         
         const newForecastData = {
@@ -149,76 +152,139 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
         };
         
         const sanitizedData = sanitizeAllForecastData ? sanitizeAllForecastData(newForecastData) : newForecastData;
-        const createdForecast = await base44.entities.ManualForecast.create(sanitizedData);
+        
+        // Timeout protection
+        const createdForecast = await Promise.race([
+          base44.entities.ManualForecast.create(sanitizedData),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('יצירת תחזית לקחה יותר מדי זמן')), 30000)
+          )
+        ]);
         
         forecastId = createdForecast.id;
         console.log('✅ Forecast created successfully:', forecastId);
         
-        // עדכון state מיידי
         setForecastData(prev => ({ ...prev, id: forecastId }));
         if (onUpdateForecast) {
           onUpdateForecast({ id: forecastId });
         }
       }
 
-      // ✅ שלב 2: עדכון נתוני המכירות
-      setImportProgress(30);
+      // ✅ שלב 2: עיבוד המוצרים ב-chunks (למניעת UI freeze)
+      setImportProgress(15);
+      setImportStatusText(`מעבד ${pendingZData.products.length.toLocaleString('he-IL')} מוצרים...`);
+      
       const monthIndex = pendingZData.month - 1;
       const updated = [...salesForecast];
       let productsUpdated = 0;
-
-      console.log('🗺️ Z-Report Mapping:', mapping);
-      console.log('📦 Products from Z-Report:', pendingZData.products);
-
-      // שמירת פרטי המוצרים למיפוי
       const detailedProducts = [];
 
-      pendingZData.products.forEach(zProduct => {
-        const mappedServiceName = mapping[zProduct.product_name];
-        if (!mappedServiceName) return;
+      console.log('🗺️ Z-Report Mapping:', Object.keys(mapping).length, 'products mapped');
+      console.log('📦 Products from Z-Report:', pendingZData.products.length);
 
-        const serviceIndex = updated.findIndex(s => s.service_name === mappedServiceName);
-        if (serviceIndex === -1) return;
+      // עיבוד ב-chunks כדי לא לחסום UI
+      const CHUNK_SIZE = 500;
+      const totalProducts = pendingZData.products.length;
+      
+      for (let i = 0; i < totalProducts; i += CHUNK_SIZE) {
+        const chunk = pendingZData.products.slice(i, i + CHUNK_SIZE);
+        const chunkProgress = 15 + ((i / totalProducts) * 30); // 15% -> 45%
+        setImportProgress(Math.floor(chunkProgress));
+        setImportStatusText(`מעבד מוצרים ${i + chunk.length}/${totalProducts}...`);
+        
+        // תן לדפדפן לנשום
+        await new Promise(resolve => setTimeout(resolve, 0));
+        
+        chunk.forEach(zProduct => {
+          const mappedServiceName = mapping[zProduct.product_name];
+          if (!mappedServiceName) return;
 
-        updated[serviceIndex].actual_monthly_quantities[monthIndex] = zProduct.quantity_sold;
-        const realRevenue = zProduct.revenue_with_vat || 0;
-        updated[serviceIndex].actual_monthly_revenue[monthIndex] = realRevenue;
+          const serviceIndex = updated.findIndex(s => s.service_name === mappedServiceName);
+          if (serviceIndex === -1) return;
 
-        detailedProducts.push({
-          product_name: zProduct.product_name,
-          barcode: zProduct.barcode || '',
-          quantity_sold: zProduct.quantity_sold,
-          unit_price: zProduct.quantity_sold > 0 ? realRevenue / zProduct.quantity_sold : 0,
-          revenue_with_vat: realRevenue,
-          mapped_service: mappedServiceName
+          updated[serviceIndex].actual_monthly_quantities[monthIndex] = zProduct.quantity_sold;
+          const realRevenue = zProduct.revenue_with_vat || 0;
+          updated[serviceIndex].actual_monthly_revenue[monthIndex] = realRevenue;
+
+          detailedProducts.push({
+            product_name: zProduct.product_name,
+            barcode: zProduct.barcode || '',
+            quantity_sold: zProduct.quantity_sold,
+            unit_price: zProduct.quantity_sold > 0 ? realRevenue / zProduct.quantity_sold : 0,
+            revenue_with_vat: realRevenue,
+            mapped_service: mappedServiceName
+          });
+
+          productsUpdated++;
         });
+      }
 
-        console.log(`✅ Updated "${mappedServiceName}": ${zProduct.quantity_sold} units, ₪${realRevenue}`);
-        productsUpdated++;
-      });
+      console.log(`✅ Processed ${productsUpdated} products successfully`);
 
-      // ✅ עדכון מיידי של salesForecast בUI
+      // ✅ עדכון UI
       setSalesForecast(updated);
 
-      // ✅ שלב 3: יצירת ZReportDetails entity נפרד
+      // ✅ שלב 3: שמירת המוצרים לקובץ JSON נפרד (למניעת overload ב-DB)
+      setImportProgress(50);
+      setImportStatusText('שומר פרטי מוצרים לענן...');
+      console.log('☁️ Uploading detailed products to cloud storage...');
+      
+      const productsJsonBlob = new Blob(
+        [JSON.stringify(detailedProducts, null, 2)], 
+        { type: 'application/json' }
+      );
+      
+      const productsFile = new File(
+        [productsJsonBlob], 
+        `z_report_products_${forecastId}_month_${pendingZData.month}.json`,
+        { type: 'application/json' }
+      );
+      
+      const { file_url: productsFileUrl } = await Promise.race([
+        base44.integrations.Core.UploadFile({ file: productsFile }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('העלאת קובץ מוצרים לקחה יותר מדי זמן')), 45000)
+        )
+      ]);
+      
+      console.log('✅ Products file uploaded:', productsFileUrl);
+
+      // ✅ שלב 4: יצירת ZReportDetails entity (ללא detailed_products!)
+      setImportProgress(60);
+      setImportStatusText('יוצר רשומת דוח Z...');
       console.log('💾 Creating ZReportDetails entity...');
-      const zReportDetail = await base44.entities.ZReportDetails.create({
-        forecast_id: forecastId,
-        customer_email: customer?.email || forecastData.customer_email,
-        month_assigned: pendingZData.month,
-        file_name: pendingZData.file_name,
-        file_url: pendingZData.file_url,
-        upload_date: new Date().toISOString(),
-        products_count: detailedProducts.length,
-        total_revenue: pendingZData.summary.total_revenue_with_vat,
-        detailed_products: detailedProducts
-      });
+      
+      const zReportDetail = await Promise.race([
+        base44.entities.ZReportDetails.create({
+          forecast_id: forecastId,
+          customer_email: customer?.email || forecastData.customer_email,
+          month_assigned: pendingZData.month,
+          file_name: pendingZData.file_name,
+          file_url: pendingZData.file_url,
+          upload_date: new Date().toISOString(),
+          products_count: detailedProducts.length,
+          total_revenue: pendingZData.summary.total_revenue_with_vat,
+          detailed_products: []  // ✅ ריק - המוצרים בקובץ נפרד!
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('יצירת ZReportDetails לקחה יותר מדי זמן')), 30000)
+        )
+      ]);
 
       console.log('✅ ZReportDetails created:', zReportDetail.id);
 
+      // ✅ שלב 5: עדכון ה-entity עם קישור לקובץ המוצרים
       setImportProgress(70);
+      await base44.entities.ZReportDetails.update(zReportDetail.id, {
+        detailed_products_file_url: productsFileUrl
+      });
+      
+      console.log('✅ Products file URL saved to ZReportDetails');
 
-      // ✅ שלב 4: עדכון התחזית עם reference בלבד (ללא detailed_products!)
+      // ✅ שלב 6: עדכון התחזית עם reference בלבד
+      setImportProgress(80);
+      setImportStatusText('מעדכן תחזית...');
+      
       const uploadRecord = {
         file_name: pendingZData.file_name,
         upload_date: new Date().toISOString(),
@@ -226,7 +292,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
         products_updated: productsUpdated,
         total_revenue: pendingZData.summary.total_revenue_with_vat,
         file_url: pendingZData.file_url,
-        z_report_detail_id: zReportDetail.id  // ✅ רק reference, לא כל הנתונים!
+        z_report_detail_id: zReportDetail.id  // ✅ רק reference!
       };
 
       const existingReports = forecastData.z_reports_uploaded || [];
@@ -241,45 +307,75 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
         }
       };
 
-      console.log('💾 Saving to ManualForecast (with reference only):', {
+      console.log('💾 Saving to ManualForecast:', {
         forecast_id: forecastId,
         sales_items: updated.length,
         z_reports: updatedReports.length
       });
 
-      setImportProgress(85);
+      setImportProgress(90);
+      setImportStatusText('שומר למסד נתונים...');
 
       // עדכון state מקומי
       if (onUpdateForecast) {
         onUpdateForecast(completeUpdates);
       }
 
-      // ✅ עדכון מיידי של salesForecast בUI
-      setSalesForecast(updated);
-
-      setImportProgress(95);
-
-      // שמירה ל-DB
-      await base44.entities.ManualForecast.update(forecastId, completeUpdates);
+      // שמירה ל-DB עם timeout protection
+      await Promise.race([
+        base44.entities.ManualForecast.update(forecastId, completeUpdates),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('שמירת תחזית לקחה יותר מדי זמן')), 45000)
+        )
+      ]);
+      
       console.log('✅ Z-report data saved successfully');
 
       setImportProgress(100);
+      setImportStatusText('הושלם בהצלחה!');
 
       setShowProductMapper(false);
       setPendingZData(null);
+      setRetryAttempt(0);
       
-      // הצגת הודעת הצלחה רק אחרי שהכל הושלם
       setTimeout(() => {
-        alert(`✓ דוח Z יובא בהצלחה!\n${productsUpdated} מוצרים עודכנו בחודש ${monthNames[monthIndex]}`);
+        alert(`✓ דוח Z יובא בהצלחה!\n${productsUpdated.toLocaleString('he-IL')} מוצרים עודכנו בחודש ${monthNames[monthIndex]}`);
       }, 200);
 
     } catch (error) {
       console.error('❌ Error in handleMappingComplete:', error);
-      alert('שגיאה בייבוא דוח Z: ' + error.message);
+      setImportProgress(0);
+      setImportStatusText('');
+      
+      // שמירת נתונים חלקיים במקרה של כשלון
+      if (forecastData.id) {
+        try {
+          await base44.entities.ManualForecast.update(forecastData.id, {
+            z_import_failed: true,
+            z_import_error: error.message,
+            z_import_timestamp: new Date().toISOString()
+          });
+        } catch (saveError) {
+          console.error('❌ Failed to save error state:', saveError);
+        }
+      }
+      
+      // Retry mechanism
+      if (retryAttempt < 2) {
+        if (confirm(`❌ הייבוא נכשל: ${error.message}\n\nניסיון ${retryAttempt + 1} מתוך 3.\n\nהאם לנסות שוב?`)) {
+          setRetryAttempt(prev => prev + 1);
+          handleMappingComplete(mapping);
+          return;
+        }
+      } else {
+        alert(`❌ הייבוא נכשל אחרי 3 ניסיונות: ${error.message}\n\nנא לנסות שוב מאוחר יותר או ליצור קשר עם התמיכה.`);
+      }
+      
     } finally {
       setTimeout(() => {
         setIsImportingZReport(false);
         setImportProgress(0);
+        setImportStatusText('');
       }, 500);
     }
   };
@@ -743,8 +839,24 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
               <Loader2 className="w-16 h-16 animate-spin mx-auto text-horizon-primary" />
               <h3 className="text-2xl font-bold text-horizon-text">מייבא דוח Z...</h3>
               <Progress value={importProgress} className="h-3" />
-              <p className="text-lg font-semibold text-horizon-primary">{importProgress}% הושלם</p>
-              <p className="text-sm text-horizon-accent">אנא המתן, התהליך עשוי לקחת מספר שניות</p>
+              <div className="space-y-1">
+                <p className="text-lg font-semibold text-horizon-primary">{importProgress}% הושלם</p>
+                {importStatusText && (
+                  <p className="text-sm text-horizon-accent animate-pulse">{importStatusText}</p>
+                )}
+              </div>
+              <p className="text-xs text-horizon-accent">
+                {importProgress < 20 && '⏱️ יוצר תחזית...'}
+                {importProgress >= 20 && importProgress < 50 && '🔄 מעבד מוצרים...'}
+                {importProgress >= 50 && importProgress < 80 && '☁️ שומר נתונים לענן...'}
+                {importProgress >= 80 && importProgress < 95 && '💾 מעדכן תחזית...'}
+                {importProgress >= 95 && '✅ מסיים...'}
+              </p>
+              {retryAttempt > 0 && (
+                <Badge variant="outline" className="border-yellow-500 text-yellow-400">
+                  ניסיון {retryAttempt + 1} מתוך 3
+                </Badge>
+              )}
             </CardContent>
           </Card>
         </div>

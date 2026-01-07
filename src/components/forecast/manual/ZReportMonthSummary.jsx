@@ -118,8 +118,32 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
         
         const zReportDetail = await base44.entities.ZReportDetails.get(zReport.z_report_detail_id);
         
-        if (zReportDetail && zReportDetail.detailed_products) {
-          console.log('✅ Loaded detailed products from entity:', zReportDetail.detailed_products.length);
+        // ✅ טעינה מקובץ נפרד אם קיים
+        if (zReportDetail && zReportDetail.detailed_products_file_url) {
+          console.log('☁️ Loading detailed products from cloud file:', zReportDetail.detailed_products_file_url);
+          
+          try {
+            const productsResponse = await fetch(zReportDetail.detailed_products_file_url);
+            const detailedProducts = await productsResponse.json();
+            
+            console.log('✅ Loaded', detailedProducts.length, 'products from cloud file');
+            
+            setEditingMonth({
+              ...zReport,
+              detailed_products: detailedProducts,
+              monthIndex: monthIdx
+            });
+            
+            setIsReconstructing(false);
+            return;
+          } catch (fileError) {
+            console.error('❌ Failed to load from cloud file, trying entity fallback:', fileError);
+          }
+        }
+        
+        // Fallback: טעינה ישירות מה-entity
+        if (zReportDetail && zReportDetail.detailed_products && zReportDetail.detailed_products.length > 0) {
+          console.log('✅ Loaded detailed products from entity (legacy):', zReportDetail.detailed_products.length);
           
           setEditingMonth({
             ...zReport,
