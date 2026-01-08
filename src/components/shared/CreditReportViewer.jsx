@@ -21,8 +21,34 @@ const RiskScore = ({ score }) => {
 export default function CreditReportViewer({ isOpen, onClose, reportData }) {
     if (!reportData) return null;
 
-    // Handle both old format (direct object) and new format (from ai_insights)
-    const data = reportData.reportMeta ? reportData : reportData;
+    // Handle multiple formats: ai_insights (new), parsed_data (stringified), or direct object (legacy)
+    let data;
+    if (reportData.ai_insights) {
+        data = reportData.ai_insights;
+    } else if (reportData.parsed_data) {
+        // Parse stringified data
+        data = {
+            reportMeta: typeof reportData.parsed_data.reportMeta === 'string' 
+                ? JSON.parse(reportData.parsed_data.reportMeta) 
+                : reportData.parsed_data.reportMeta,
+            summary: typeof reportData.parsed_data.summary === 'string'
+                ? JSON.parse(reportData.parsed_data.summary)
+                : reportData.parsed_data.summary,
+            currentAccounts: typeof reportData.parsed_data.currentAccounts === 'string'
+                ? JSON.parse(reportData.parsed_data.currentAccounts)
+                : (reportData.parsed_data.currentAccounts || []),
+            loans: typeof reportData.parsed_data.loans === 'string'
+                ? JSON.parse(reportData.parsed_data.loans)
+                : (reportData.parsed_data.loans || []),
+            mortgages: typeof reportData.parsed_data.mortgages === 'string'
+                ? JSON.parse(reportData.parsed_data.mortgages)
+                : (reportData.parsed_data.mortgages || []),
+            analysis: reportData.ai_insights?.analysis || {}
+        };
+    } else {
+        data = reportData;
+    }
+
     const { reportMeta, summary, currentAccounts, loans, mortgages, analysis } = data;
 
     return (

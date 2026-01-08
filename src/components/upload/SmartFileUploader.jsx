@@ -1312,8 +1312,13 @@ The report language is Hebrew.
         };
 
       } else if (category === 'credit_report') {
-        dataToSaveInParsedData = { ...parseResult };
-        delete dataToSaveInParsedData.analysis;
+        dataToSaveInParsedData = {
+          summary: JSON.stringify(parseResult.summary || {}),
+          reportMeta: JSON.stringify(parseResult.reportMeta || {}),
+          currentAccounts: JSON.stringify(parseResult.currentAccounts || []),
+          loans: JSON.stringify(parseResult.loans || []),
+          mortgages: JSON.stringify(parseResult.mortgages || [])
+        };
 
       } else if (category === 'credit_card_report' && parseResult.card_summary) {
         dataToSaveInParsedData = {
