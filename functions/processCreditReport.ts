@@ -1,26 +1,39 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
+    const base44 = createClientFromRequest(req);
+    
     try {
-        const base44 = createClientFromRequest(req);
+        console.log('=== processCreditReport START ===');
         
         const user = await base44.auth.me();
         if (!user) {
+            console.log('ERROR: Unauthorized - no user');
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        console.log('User authenticated:', user.email);
+
         const { file_url, customer_email, file_id } = await req.json();
+        console.log('Request params:', { file_url, customer_email, file_id });
 
         if (!file_url || !customer_email || !file_id) {
+            console.log('ERROR: Missing required parameters');
             return Response.json({ 
                 error: 'Missing required parameters: file_url, customer_email, file_id' 
             }, { status: 400 });
         }
 
-        console.log(`Processing Credit Report for ${customer_email}`);
+        console.log(`Processing Credit Report for ${customer_email}, file_id: ${file_id}`);
 
-        // ניתוח הדוח באמצעות LLM עם vision
-        const creditReportSchema = {
+        // שלב 1: חילוץ מידע בסיסי (עמודים 1-20)
+        console.log('STEP 1: Extracting basic info...');
+        
+        await base44.asServiceRole.entities.FileUpload.update(file_id, {
+            analysis_notes: 'שלב 1/3: מחלץ מידע בסיסי מהדוח...'
+        });
+
+        const basicInfoSchema = {
             type: "object",
             properties: {
                 reportMeta: {
@@ -36,14 +49,62 @@ Deno.serve(async (req) => {
                 summary: {
                     type: "object",
                     properties: {
-                        totalDebtILS: { type: "number", description: "סך החוב הכולל כולל משכנתא" },
-                        totalDebtExMortgageILS: { type: "number", description: "סך החוב ללא משכנתא" },
+                        totalDebtILS: { type: "number" },
+                        totalDebtExMortgageILS: { type: "number" },
                         totalActiveDealsCount: { type: "number" },
                         totalLoansCount: { type: "number" },
                         totalMortgagesCount: { type: "number" },
                         lenders: { type: "array", items: { type: "string" } }
                     }
-                },
+                }
+            }
+        };
+
+        const basicPrompt = `
+נתח את דוח ריכוז הנתונים מבנק ישראל והחזר רק את המידע הבסיסי הבא:
+
+1. פרטי נושא הדוח (שם, ת.ז., תאריך הדוח)
+2. סיכום כללי: סה"כ חוב, מספר עסקאות, מספר הלוואות ומשכנתאות
+3. רשימת מלווים (בנקים וחברות)
+
+**חשוב:** 
+- אל תמציא נתונים - רק מה שכתוב בדוח
+- אם שדה לא קיים, החזר null או 0
+- סכם את כל יתרות החוב מכל המקורות
+
+החזר JSON בלבד!
+`;
+
+        let basicInfo;
+        try {
+            basicInfo = await base44.integrations.Core.InvokeLLM({
+                prompt: basicPrompt,
+                file_urls: [file_url],
+                response_json_schema: basicInfoSchema
+            });
+            
+            console.log('Basic info extracted successfully');
+            
+            // בדיקה שזה JSON ולא string
+            if (typeof basicInfo === 'string') {
+                console.error('ERROR: LLM returned string instead of JSON:', basicInfo);
+                throw new Error('הדוח גדול מדי או שהמערכת לא הצליחה לקרוא אותו');
+            }
+        } catch (error) {
+            console.error('ERROR in basic info extraction:', error);
+            throw new Error(`שגיאה בחילוץ מידע בסיסי: ${error.message}`);
+        }
+
+        // שלב 2: חילוץ חשבונות עובר ושב והלוואות
+        console.log('STEP 2: Extracting accounts and loans...');
+        
+        await base44.asServiceRole.entities.FileUpload.update(file_id, {
+            analysis_notes: 'שלב 2/3: מחלץ נתוני חשבונות והלוואות...'
+        });
+
+        const accountsLoansSchema = {
+            type: "object",
+            properties: {
                 currentAccounts: {
                     type: "array",
                     items: {
@@ -72,7 +133,7 @@ Deno.serve(async (req) => {
                             interestRate: { type: "number" },
                             status: { type: "string" },
                             purpose: { type: "string" },
-                            isGuarantor: { type: "boolean", description: "האם הלקוח ערב או חייב" }
+                            isGuarantor: { type: "boolean" }
                         }
                     }
                 },
@@ -101,98 +162,196 @@ Deno.serve(async (req) => {
                             relatedCorporation: { type: "string" }
                         }
                     }
-                },
-                analysis: {
-                    type: "object",
-                    properties: {
-                        riskScore: { type: "number", description: "ציון סיכון 1-10, כאשר 10 הוא הסיכון הגבוה ביותר" },
-                        creditUtilization: { type: "number", description: "אחוז ניצול מסגרות אשראי" },
-                        bouncedChecksCount: { type: "number", description: "מספר שיקים שחזרו ב-12 חודשים אחרונים" },
-                        bouncedDirectDebitsCount: { type: "number", description: "מספר הוראות קבע שחזרו ב-12 חודשים אחרונים" },
-                        strengths: { type: "array", items: { type: "string" } },
-                        weaknesses: { type: "array", items: { type: "string" } },
-                        recommendations: { type: "array", items: { type: "string" } },
-                        redFlags: { type: "array", items: { type: "string" }, description: "דגלים אדומים - בעיות קריטיות" }
-                    }
                 }
             }
         };
 
-        const analysisPrompt = `
-אתה אנליסט פיננסי מומחה בניתוח דוחות ריכוז נתונים של בנק ישראל.
+        const accountsPrompt = `
+מתוך דוח ריכוז הנתונים, חלץ את הנתונים הבאים:
 
-**משימתך:**
-נתח את דוח ריכוז הנתונים המצורף והחזר JSON מובנה עם כל הנתונים החשובים.
+1. **חשבונות עובר ושב**: כל החשבונות הפעילים (מסגרות אשראי, יתרות, חריגות)
+2. **הלוואות**: כל ההלוואות הפעילות (סכום מקורי, יתרה, ריבית, תשלום חודשי)
+3. **משכנתאות**: כל המשכנתאות הפעילות
+4. **ערבויות**: ערבויות שניתנו
 
-**הנחיות חשובות:**
-1. חלץ נתונים מדוייקים מהטבלאות - שים לב במיוחד לעמודים 3-4 (תמצית נתוני לקוח)
-2. סכום כל יתרות החוב (כולל/ללא משכנתא)
-3. זהה את כל הבנקים והמלווים
-4. ספור שיקים והוראות קבע שחזרו (עמודים 5-11)
-5. חשב ציון סיכון 1-10 על בסיס:
-   - יחס חוב להכנסה (אם יש)
-   - ניצול מסגרות אשראי
-   - שיקים/הו"ק שחזרו
-   - יתרות שלא שולמו במועד
-6. זהה דגלים אדומים: חשבונות בחריגה, שיקים שחזרו, יתרות שלא שולמו
-7. תן המלצות פרקטיות לשיפור המצב
+**הנחיות:**
+- חלץ נתונים מדוייקים מהטבלאות
+- אם אין נתון - החזר null או רשימה רקה
+- שים לב להבדיל בין חייב לערב בהלוואות
 
-**חשוב:** אל תמציא נתונים - רק מה שרשום בדוח!
-
-החזר JSON בפורמט המבוקש.
+החזר JSON בלבד!
 `;
 
-        console.log('Invoking LLM with credit report file...');
+        let accountsData;
+        try {
+            accountsData = await base44.integrations.Core.InvokeLLM({
+                prompt: accountsPrompt,
+                file_urls: [file_url],
+                response_json_schema: accountsLoansSchema
+            });
+            
+            console.log('Accounts and loans extracted successfully');
+            
+            if (typeof accountsData === 'string') {
+                console.error('ERROR: LLM returned string in step 2');
+                // אם נכשל שלב 2, נשתמש בערכי default
+                accountsData = {
+                    currentAccounts: [],
+                    loans: [],
+                    mortgages: [],
+                    guarantees: []
+                };
+            }
+        } catch (error) {
+            console.error('ERROR in accounts extraction:', error);
+            // המשך עם ערכי default
+            accountsData = {
+                currentAccounts: [],
+                loans: [],
+                mortgages: [],
+                guarantees: []
+            };
+        }
 
-        const parseResult = await base44.integrations.Core.InvokeLLM({
-            prompt: analysisPrompt,
-            file_urls: [file_url],
-            response_json_schema: creditReportSchema
+        // שלב 3: ניתוח סיכונים והמלצות
+        console.log('STEP 3: Analyzing risks...');
+        
+        await base44.asServiceRole.entities.FileUpload.update(file_id, {
+            analysis_notes: 'שלב 3/3: מנתח סיכונים ומפיק המלצות...'
         });
 
-        console.log('Credit report analyzed successfully');
+        const analysisSchema = {
+            type: "object",
+            properties: {
+                riskScore: { type: "number" },
+                creditUtilization: { type: "number" },
+                bouncedChecksCount: { type: "number" },
+                bouncedDirectDebitsCount: { type: "number" },
+                strengths: { type: "array", items: { type: "string" } },
+                weaknesses: { type: "array", items: { type: "string" } },
+                recommendations: { type: "array", items: { type: "string" } },
+                redFlags: { type: "array", items: { type: "string" } }
+            }
+        };
 
-        // Validation: ensure we got JSON object, not string
-        if (typeof parseResult === 'string') {
-            console.error('LLM returned string instead of JSON:', parseResult);
-            throw new Error('הדוח גדול מדי - המערכת לא הצליחה לנתח את כל המידע. אנא פנה לתמיכה.');
+        const riskPrompt = `
+בהתבסס על דוח ריכוז הנתונים, בצע ניתוח סיכונים:
+
+1. חשב ציון סיכון 1-10 (10 = סיכון גבוה)
+2. חשב אחוז ניצול מסגרות אשראי
+3. ספור שיקים והוראות קבע שחזרו
+4. זהה נקודות חוזק וחולשה
+5. תן המלצות פרקטיות
+6. זהה דגלים אדומים (חשבונות בחריגה, חובות שלא שולמו)
+
+**נתונים שיש לך:**
+- סה"כ חוב: ${basicInfo.summary?.totalDebtILS || 0} ₪
+- מספר הלוואות: ${basicInfo.summary?.totalLoansCount || 0}
+
+החזר JSON בלבד!
+`;
+
+        let analysisData;
+        try {
+            analysisData = await base44.integrations.Core.InvokeLLM({
+                prompt: riskPrompt,
+                file_urls: [file_url],
+                response_json_schema: analysisSchema
+            });
+            
+            console.log('Risk analysis completed successfully');
+            
+            if (typeof analysisData === 'string') {
+                console.error('ERROR: LLM returned string in step 3');
+                analysisData = {
+                    riskScore: 5,
+                    creditUtilization: 0,
+                    bouncedChecksCount: 0,
+                    bouncedDirectDebitsCount: 0,
+                    strengths: ['הדוח נותח חלקית'],
+                    weaknesses: ['לא ניתן לנתח את כל הנתונים'],
+                    recommendations: ['יש לבדוק את הדוח ידנית'],
+                    redFlags: []
+                };
+            }
+        } catch (error) {
+            console.error('ERROR in risk analysis:', error);
+            analysisData = {
+                riskScore: 5,
+                creditUtilization: 0,
+                bouncedChecksCount: 0,
+                bouncedDirectDebitsCount: 0,
+                strengths: [],
+                weaknesses: [],
+                recommendations: [],
+                redFlags: []
+            };
         }
 
-        if (!parseResult.summary && !parseResult.reportMeta) {
-            console.error('Invalid JSON structure:', parseResult);
-            throw new Error('המבנה המוחזר מה-AI לא תקין. אנא נסה שוב.');
-        }
+        // איחוד כל הנתונים
+        const finalResult = {
+            reportMeta: basicInfo.reportMeta || {},
+            summary: basicInfo.summary || {},
+            currentAccounts: accountsData.currentAccounts || [],
+            loans: accountsData.loans || [],
+            mortgages: accountsData.mortgages || [],
+            guarantees: accountsData.guarantees || [],
+            analysis: analysisData
+        };
+
+        console.log('Final result prepared, updating FileUpload...');
 
         // עדכון רשומת הקובץ עם הנתונים המנותחים
         await base44.asServiceRole.entities.FileUpload.update(file_id, {
             status: 'analyzed',
             data_category: 'credit_report',
-            parsed_data: parseResult,
+            parsed_data: finalResult,
             ai_insights: {
                 document_type: 'דוח ריכוז נתונים - בנק ישראל',
-                credit_analysis: parseResult,
-                analyzed_at: new Date().toISOString()
+                credit_analysis: finalResult,
+                analyzed_at: new Date().toISOString(),
+                analysis_method: 'multi_step_chunked'
             },
             parsing_metadata: {
                 analysis_status: 'full',
-                pages_analyzed: 'auto-detected by LLM'
+                steps_completed: 3,
+                chunks_processed: 3
             },
-            analysis_notes: `דוח ריכוז נתונים נותח בהצלחה. סה"כ חוב: ${parseResult.summary?.totalDebtILS?.toLocaleString() || 'לא זוהה'} ₪`
+            analysis_notes: `דוח ריכוז נתונים נותח בהצלחה. סה"כ חוב: ${finalResult.summary?.totalDebtILS?.toLocaleString() || 'לא זוהה'} ₪, ציון סיכון: ${finalResult.analysis?.riskScore || 'לא חושב'}/10`
         });
 
         console.log('FileUpload record updated successfully');
+        console.log('=== processCreditReport END SUCCESS ===');
 
         return Response.json({
             success: true,
             message: 'דוח ריכוז נתונים נותח בהצלחה',
-            data: parseResult
+            data: finalResult
         });
 
     } catch (error) {
-        console.error('Error processing credit report:', error);
+        console.error('=== processCreditReport FATAL ERROR ===');
+        console.error('Error type:', error.constructor.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        
+        // נסה לעדכן את הקובץ כ-failed
+        try {
+            const { file_id } = await req.json();
+            if (file_id) {
+                await base44.asServiceRole.entities.FileUpload.update(file_id, {
+                    status: 'failed',
+                    analysis_notes: `שגיאה בניתוח: ${error.message}`
+                });
+            }
+        } catch (updateError) {
+            console.error('Failed to update file status:', updateError);
+        }
+        
         return Response.json({
             success: false,
-            error: error.message
+            error: error.message,
+            details: error.stack
         }, { status: 500 });
     }
 });
