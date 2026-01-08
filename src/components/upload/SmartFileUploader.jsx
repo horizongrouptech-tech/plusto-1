@@ -531,32 +531,133 @@ const creditReportSchema = {
         "subjectFullName": { "type": "string" },
         "nationalId": { "type": "string" },
         "customerType": { "type": "string" },
-        "dataCollectionStartDate": { "type": "string", "format": "date" },
-        "reportIssueDate": { "type": "string", "format": "date" },
+        "dataCollectionStartDate": { "type": "string" },
+        "reportIssueDate": { "type": "string" },
         "sourceSystem": { "type": "string", "default": "BankOfIsraelCreditData" }
       },
       "required": ["subjectFullName", "nationalId", "reportIssueDate"]
     },
     "summary": {
+      "type": "object",
+      "properties": {
+        "totalDebtILS": {"type": "number"},
+        "totalDebtExMortgageILS": {"type": "number"},
+        "totalLoansCount": {"type": "integer"},
+        "totalActiveDealsCount": {"type": "integer"},
+        "totalGuaranteeDealsCount": {"type": "integer"},
+        "totalGuaranteeExposureILS": {"type": "number"},
+        "lenders": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "currentAccounts": {
+      "type": "array",
+      "items": {
         "type": "object",
         "properties": {
-            "totalDebtILS": {"type": "number"},
-            "totalDebtExMortgageILS": {"type": "number"},
-            "totalLoansCount": {"type": "integer"},
-            "totalActiveDealsCount": {"type": "integer"},
-            "lenders": {"type": "array", "items": {"type": "string"}}
+          "bankName": {"type": "string"},
+          "dealId": {"type": "string"},
+          "branchNumber": {"type": "string"},
+          "accountType": {"type": "string"},
+          "isGuarantor": {"type": "boolean"},
+          "creditLimit": {"type": "number"},
+          "currentBalance": {"type": "number"},
+          "notPaidOnTime": {"type": "number"},
+          "status": {"type": "string"},
+          "currency": {"type": "string"},
+          "lastUpdateDate": {"type": "string"},
+          "interestRates": {"type": "array", "items": {"type": "object"}},
+          "checksReturned": {"type": "object"},
+          "directDebitReturned": {"type": "object"}
         }
+      }
     },
-    "currentAccounts": { "type": "array", "items": { "type": "object" } },
-    "loans": { "type": "array", "items": { "type": "object" } },
-    "mortgages": { "type": "array", "items": { "type": "object" } },
+    "loans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "bankName": {"type": "string"},
+          "dealId": {"type": "string"},
+          "branchNumber": {"type": "string"},
+          "loanType": {"type": "string"},
+          "isGuarantor": {"type": "boolean"},
+          "guarantorLevel": {"type": "string"},
+          "originalPrincipal": {"type": "number"},
+          "currentBalance": {"type": "number"},
+          "monthlyPayment": {"type": "number"},
+          "paymentType": {"type": "string"},
+          "status": {"type": "string"},
+          "purpose": {"type": "string"},
+          "currency": {"type": "string"},
+          "startDate": {"type": "string"},
+          "plannedEndDate": {"type": "string"},
+          "lastPaymentDate": {"type": "string"},
+          "lastUpdateDate": {"type": "string"},
+          "interestTracks": {"type": "array", "items": {"type": "object"}},
+          "collateral": {"type": "array", "items": {"type": "object"}}
+        }
+      }
+    },
+    "mortgages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "bankName": {"type": "string"},
+          "dealId": {"type": "string"},
+          "branchNumber": {"type": "string"},
+          "originalPrincipal": {"type": "number"},
+          "currentBalance": {"type": "number"},
+          "monthlyPayment": {"type": "number"},
+          "paymentType": {"type": "string"},
+          "status": {"type": "string"},
+          "purpose": {"type": "string"},
+          "startDate": {"type": "string"},
+          "plannedEndDate": {"type": "string"},
+          "lastUpdateDate": {"type": "string"},
+          "interestTracks": {"type": "array", "items": {"type": "object"}},
+          "collateral": {"type": "array", "items": {"type": "object"}}
+        }
+      }
+    },
+    "guarantees": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "bankName": {"type": "string"},
+          "dealId": {"type": "string"},
+          "guaranteeAmount": {"type": "number"},
+          "status": {"type": "string"},
+          "startDate": {"type": "string"},
+          "endDate": {"type": "string"},
+          "relatedCorporation": {"type": "string"}
+        }
+      }
+    },
+    "creditInquiries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "inquiryDate": {"type": "string"},
+          "inquirer": {"type": "string"},
+          "purpose": {"type": "string"}
+        }
+      }
+    },
     "analysis": {
       "type": "object",
       "properties": {
         "riskScore": { "type": "integer", "minimum": 1, "maximum": 10 },
-        "strengths": { "type": "array", "items": { "type": "string" }, "maxItems": 3 },
-        "weaknesses": { "type": "array", "items": { "type": "string" }, "maxItems": 3 },
-        "recommendations": { "type": "array", "items": { "type": "string" } }
+        "creditUtilization": {"type": "number"},
+        "totalChecksReturned": {"type": "integer"},
+        "totalDirectDebitReturned": {"type": "integer"},
+        "guarantorExposure": {"type": "number"},
+        "strengths": { "type": "array", "items": { "type": "string" } },
+        "weaknesses": { "type": "array", "items": { "type": "string" } },
+        "recommendations": { "type": "array", "items": { "type": "string" } },
+        "redFlags": {"type": "array", "items": {"type": "string"}}
       },
       "required": ["riskScore", "strengths", "weaknesses", "recommendations"]
     }
@@ -1095,11 +1196,60 @@ All text fields MUST be in Hebrew.
         } else if (category === 'credit_report') {
           targetSchema = creditReportSchema;
           prompt = `
-אתה Extractor & Analyst פיננסי מומחה. קבל קובץ PDF בעברית של "דוח ריכוז נתונים" מבנק ישראל ומשימתך היא למצות את כל הנתונים הפיננסיים הרלוונטיים ולהפיק ניתוח ותובנות. החזר אובייקט JSON תקני התואם במדויק לסכימה שסופקה.
-**כל התובנות וטקסט חופשי אחר שתפיק חייבים להיות בעברית בלבד.**
+אתה מומחה בניתוח דוחות ריכוז נתונים מבנק ישראל. משימתך: חילוץ **מלא ומקיף** של כל הנתונים מהדוח.
+
+📍 **סעיפים לחילוץ:**
+
+**1. מטא-דטה (עמ' 1-2):**
+- שם נושא הדוח, ת.ז., תאריך הפקה, תאריך תחילת איסוף
+
+**2. סיכום (עמ' 3-4):**
+- סה"כ חוב כולל ללא משכנתא
+- מספר עסקאות פעילות (חייב + ערב)
+- מספר הלוואות, משכנתאות
+- רשימת מלווים
+
+**3. חשבונות עו"ש (עמ' 5-11) - קריטי:**
+חלץ **כל** חשבון (גם כחייב וגם כערב):
+- פרטי חשבון (בנק, מזהה, סניף, מסגרת, יתרה)
+- האם זה כערב? (isGuarantor: true/false)
+- מסלולי ריבית מפורטים
+- **החזרות שיקים והוראות קבע** - ספור לפי חודש!
+
+**4. הלוואות (עמ' 12-27):**
+חלץ **כל** הלוואה - חייב או ערב:
+- זהה ערבות לפי: "מספר הלקוחות הערבים בעסקה" > 0
+- סכום מקורי, יתרה, תשלום חודשי
+- מסלולי ריבית, בטחונות
+- פרטי תאגיד קשור (אם יש)
+
+**5. משכנתאות (עמ' 14-16):**
+- כל המשכנתאות עם מסלולי ריבית מלאים
+- בטחונות מקרקעין
+
+**6. ערבויות (עמ' 22-24):**
+- כל הערבויות שניתנו לטובת הלקוח
+
+**7. פניות לשכות אשראי (עמ' 67):**
+- כל הפניות ב-3 שנים אחרונות
+
+**8. ניתוח מעמיק:**
+- ציון סיכון 1-10 (שקלל: החזרות, ניצול מסגרות, חשיפה כערב)
+- ספור סה"כ החזרות הוראות קבע ב-12 חודשים
+- חשב אחוז ניצול מסגרות
+- חשב חשיפה כערב
+- זהה דגלים אדומים
+
+⚠️ **חשוב מאוד:**
+- אל תדלג על עסקאות כערב!
+- חלץ את כל ההחזרות מהטבלאות
+- כל הטקסט בעברית
+- נתונים מדויקים בלבד
+
+החזר JSON תקני בלבד!
           `;
-          finalMetadata = { analysis_status: 'full' };
-          analysisNotes = 'Successfully analyzed Bank of Israel Credit Report PDF.';
+          finalMetadata = { analysis_status: 'full', comprehensive: true };
+          analysisNotes = 'Successfully analyzed Bank of Israel Credit Report PDF with full extraction.';
 
         } else if (category === 'balance_sheet') {
           targetSchema = detailedBalanceSheetSchema;
