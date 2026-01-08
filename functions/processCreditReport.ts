@@ -152,6 +152,17 @@ Deno.serve(async (req) => {
 
         console.log('Credit report analyzed successfully');
 
+        // Validation: ensure we got JSON object, not string
+        if (typeof parseResult === 'string') {
+            console.error('LLM returned string instead of JSON:', parseResult);
+            throw new Error('הדוח גדול מדי - המערכת לא הצליחה לנתח את כל המידע. אנא פנה לתמיכה.');
+        }
+
+        if (!parseResult.summary && !parseResult.reportMeta) {
+            console.error('Invalid JSON structure:', parseResult);
+            throw new Error('המבנה המוחזר מה-AI לא תקין. אנא נסה שוב.');
+        }
+
         // עדכון רשומת הקובץ עם הנתונים המנותחים
         await base44.asServiceRole.entities.FileUpload.update(file_id, {
             status: 'analyzed',

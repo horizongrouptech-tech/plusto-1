@@ -1,8 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { 
   Upload, 
   RefreshCw, 
@@ -16,9 +19,28 @@ import {
   BarChart3,
   Gift,
   ReceiptText,
-  FileQuestion
+  FileQuestion,
+  FileText,
+  Eye,
+  Download,
+  Trash2,
+  Sparkles,
+  CheckCircle2,
+  Loader2,
+  AlertTriangle,
+  Filter
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import { format } from "date-fns";
+import { he } from "date-fns/locale";
+import FileDataViewer from "@/components/shared/FileDataViewer";
+import CreditReportViewer from "@/components/shared/CreditReportViewer";
+import FinancialReportViewer from "@/components/shared/FinancialReportViewer";
+import InventoryReportViewer from "@/components/shared/InventoryReportViewer";
+import SalesReportViewer from "@/components/shared/SalesReportViewer";
+import PromotionsReportViewer from "@/components/shared/PromotionsReportViewer";
+import ESNAReportViewer from "@/components/shared/ESNAReportViewer";
+import DeeperInsightsModal from "@/components/shared/DeeperInsightsModal";
 
 const FILE_CATEGORIES = [
   { value: 'inventory_report', label: 'דוח מלאי', icon: Package },
@@ -42,6 +64,114 @@ export default function UnifiedFileUploader({ customerEmail, onUploadComplete })
   const [processingStatus, setProcessingStatus] = useState('');
   const [finalStatus, setFinalStatus] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Files list state
+  const [files, setFiles] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  
+  // Viewer states
+  const [showDataViewer, setShowDataViewer] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [showFinancialReportViewer, setShowFinancialReportViewer] = useState(false);
+  const [financialReportData, setFinancialReportData] = useState(null);
+  const [showCreditReportViewer, setShowCreditReportViewer] = useState(false);
+  const [creditReportData, setCreditReportData] = useState(null);
+  const [showInventoryReportViewer, setShowInventoryReportViewer] = useState(false);
+  const [inventoryReportData, setInventoryReportData] = useState(null);
+  const [showSalesReportViewer, setShowSalesReportViewer] = useState(false);
+  const [salesReportData, setSalesReportData] = useState(null);
+  const [showPromotionsReportViewer, setShowPromotionsReportViewer] = useState(false);
+  const [promotionsReportData, setPromotionsReportData] = useState(null);
+  const [fileViewerOpen, setFileViewerOpen] = useState(false);
+  const [selectedFileForViewing, setSelectedFileForViewing] = useState(null);
+  const [fileViewerType, setFileViewerType] = useState('');
+  const [showDeeperInsightsModal, setShowDeeperInsightsModal] = useState(false);
+  const [fileToAnalyzeDeeper, setFileToAnalyzeDeeper] = useState(null);
+
+  // Load files on mount
+  useEffect(() => {
+    loadFiles();
+  }, [customerEmail]);
+
+  const loadFiles = async () => {
+    setIsLoading(true);
+    const uploadedFiles = await base44.entities.FileUpload.filter(
+      { customer_email: customerEmail },
+      '-created_date',
+      100
+    );
+    setFiles(uploadedFiles);
+    setIsLoading(false);
+  };
+
+  const getCategoryBadge = (category) => {
+    const config = {
+      inventory_report: { label: 'מלאי', color: 'bg-purple-100 text-purple-800' },
+      sales_report: { label: 'מכירות', color: 'bg-blue-100 text-blue-800' },
+      profit_loss_statement: { label: 'רווח והפסד', color: 'bg-green-100 text-green-800' },
+      balance_sheet: { label: 'מאזן', color: 'bg-indigo-100 text-indigo-800' },
+      bank_statement: { label: 'בנק', color: 'bg-teal-100 text-teal-800' },
+      credit_card_report: { label: 'כרטיס אשראי', color: 'bg-pink-100 text-pink-800' },
+      promotions_report: { label: 'מבצעים', color: 'bg-yellow-100 text-yellow-800' },
+      credit_report: { label: 'דוח אשראי', color: 'bg-red-100 text-red-800' },
+      esna_report: { label: 'מע"מ', color: 'bg-orange-100 text-orange-800' },
+      purchase_document: { label: 'רכש', color: 'bg-cyan-100 text-cyan-800' },
+      auto_detect: { label: 'אוטומטי', color: 'bg-gray-100 text-gray-800' },
+      mixed_business_data: { label: 'כללי', color: 'bg-slate-100 text-slate-800' }
+    };
+    const cat = config[category] || { label: category, color: 'bg-gray-100 text-gray-800' };
+    return <Badge className={cat.color}>{cat.label}</Badge>;
+  };
+
+  const handleViewFile = (file) => {
+    if (file.data_category === 'credit_report' && file.parsed_data) {
+      setCreditReportData(file.parsed_data);
+      setShowCreditReportViewer(true);
+    } else if ((file.data_category === 'balance_sheet' || file.data_category === 'profit_loss_statement') && file.parsed_data) {
+      setFinancialReportData(file.parsed_data);
+      setShowFinancialReportViewer(true);
+    } else if (file.data_category === 'inventory_report' && file.ai_insights) {
+      setInventoryReportData(file.ai_insights);
+      setShowInventoryReportViewer(true);
+    } else if (file.data_category === 'sales_report' && file.ai_insights) {
+      setSalesReportData(file.ai_insights);
+      setShowSalesReportViewer(true);
+    } else if (file.data_category === 'promotions_report' && file.ai_insights) {
+      setPromotionsReportData(file.ai_insights);
+      setShowPromotionsReportViewer(true);
+    } else if (file.data_category === 'esna_report') {
+      setSelectedFileForViewing(file);
+      setFileViewerType('esna');
+      setFileViewerOpen(true);
+    } else {
+      setSelectedFile(file);
+      setShowDataViewer(true);
+    }
+  };
+
+  const handleDownloadFile = (file) => {
+    window.open(file.file_url, '_blank');
+  };
+
+  const handleDeleteFile = async (fileId) => {
+    if (!confirm('האם אתה בטוח שברצונך למחוק קובץ זה?')) return;
+    await base44.entities.FileUpload.delete(fileId);
+    await loadFiles();
+  };
+
+  const handleShowDeeperInsights = (file) => {
+    setFileToAnalyzeDeeper(file);
+    setShowDeeperInsightsModal(true);
+  };
+
+  const handleDeeperInsightsUpdated = () => {
+    loadFiles();
+  };
+
+  const filteredFiles = categoryFilter === 'all' 
+    ? files 
+    : files.filter(f => f.data_category === categoryFilter);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -111,8 +241,6 @@ export default function UnifiedFileUploader({ customerEmail, onUploadComplete })
         setProcessingStatus(`מעבד ${FILE_CATEGORIES.find(c => c.value === category)?.label}...`);
         
         let parseResult;
-        let finalMetadata = {};
-        let analysisNotes = '';
 
         if (['xls', 'xlsx', 'csv'].includes(fileType)) {
           if (category === 'inventory_report') {
@@ -353,6 +481,33 @@ ${rawDataForPrompt}
               file_id: fileRecordId,
               supplier_id: null
             });
+          } else if (category === 'credit_report') {
+            // Credit Report - use dedicated function
+            setProcessingStatus('מנתח דוח ריכוז נתונים...');
+            
+            await base44.functions.invoke('processCreditReport', {
+              file_url: file_url,
+              customer_email: customerEmail,
+              file_id: fileRecordId
+            });
+
+            setUploadProgress(100);
+            setProcessingStatus('דוח ריכוז נתונים נותח בהצלחה!');
+            setFinalStatus('success');
+            
+            if (onUploadComplete) {
+              onUploadComplete();
+            }
+
+            await loadFiles();
+
+            setTimeout(() => {
+              setSelectedCategory('');
+              setCustomFileName('');
+            }, 2000);
+
+            return; // Exit early
+            
           } else {
             // Use InvokeLLM for PDF analysis based on category
             let targetSchema = {};
@@ -381,32 +536,6 @@ ${rawDataForPrompt}
                 }
               };
               prompt = 'נתח דוח כרטיס אשראי PDF';
-            } else if (category === 'credit_report') {
-              // Credit Report - use dedicated function
-              setProcessingStatus('מנתח דוח ריכוז נתונים...');
-              
-              await base44.functions.invoke('processCreditReport', {
-                file_url: file_url,
-                customer_email: customerEmail,
-                file_id: fileRecordId
-              });
-
-              // Skip generic InvokeLLM - function handles everything
-              setUploadProgress(100);
-              setProcessingStatus('דוח ריכוז נתונים נותח בהצלחה!');
-              setFinalStatus('success');
-              
-              if (onUploadComplete) {
-                onUploadComplete();
-              }
-
-              setTimeout(() => {
-                setSelectedCategory('');
-                setCustomFileName('');
-              }, 2000);
-
-              return; // Exit early - don't continue to generic processing
-              
             } else if (category === 'balance_sheet' || category === 'profit_loss_statement') {
               targetSchema = {
                 type: "object",
@@ -445,6 +574,8 @@ ${rawDataForPrompt}
         onUploadComplete();
       }
 
+      await loadFiles();
+
       // Reset form
       setTimeout(() => {
         setSelectedCategory('');
@@ -482,402 +613,402 @@ ${rawDataForPrompt}
   const SelectedIcon = selectedCategoryObj?.icon || Upload;
 
   return (
-    <Card className="card-horizon border-2 border-horizon-primary/30 bg-gradient-to-br from-horizon-primary/5 to-horizon-secondary/5">
-      <CardHeader>
-        <CardTitle className="text-2xl text-horizon-text flex items-center gap-3">
-          <div className="p-2 bg-horizon-primary/20 rounded-lg">
-            <SelectedIcon className="w-6 h-6 text-horizon-primary" />
-          </div>
-          העלאת מסמך חכמה
-        </CardTitle>
-        <p className="text-horizon-accent">
-          בחר סוג מסמך והעלה - המערכת תנתח אוטומטית
-        </p>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        {/* Category Selection */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-horizon-text">סוג המסמך</label>
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
-              <SelectValue placeholder="בחר סוג מסמך..." />
-            </SelectTrigger>
-            <SelectContent className="bg-horizon-card border-horizon" dir="rtl">
-              {FILE_CATEGORIES.map(cat => {
-                const Icon = cat.icon;
-                return (
-                  <SelectItem 
-                    key={cat.value} 
-                    value={cat.value}
-                    className="text-horizon-text hover:bg-horizon-primary/20 cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Icon className="w-4 h-4" />
-                      {cat.label}
-                    </div>
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Custom Name Input (for "other" category) */}
-        {selectedCategory === 'other' && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-horizon-text">שם/תיאור המסמך</label>
-            <Input
-              value={customFileName}
-              onChange={(e) => setCustomFileName(e.target.value)}
-              placeholder='לדוגמה: "דוח רכש מספק XYZ" או "תדפיס חשבון בנק"'
-              className="bg-horizon-card border-horizon text-horizon-text"
-            />
-            <p className="text-xs text-horizon-accent">
-              המערכת תחפש באינטרנט מידע על המסמך ותנתח אותו בהתאם
-            </p>
-          </div>
-        )}
-
-        {/* Upload Button */}
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileUpload}
-          accept=".xls,.xlsx,.csv,.pdf,.jpg,.jpeg,.png"
-          className="hidden"
-          disabled={isUploading || !selectedCategory}
-        />
-        
-        <Button
-          onClick={triggerFileSelect}
-          disabled={isUploading || !selectedCategory || (selectedCategory === 'other' && !customFileName.trim())}
-          className="btn-horizon-primary w-full h-12"
-        >
-          {isUploading && !finalStatus ? (
-            <>
-              <RefreshCw className="w-5 h-5 ml-2 animate-spin" />
-              מעלה...
-            </>
-          ) : (
-            <>
-              <Upload className="w-5 h-5 ml-2" />
-              העלה קובץ
-            </>
-          )}
-        </Button>
-
-        {/* Progress Bar */}
-        {isUploading && uploadProgress > 0 && (
-          <div className="space-y-2">
-            <div className="w-full bg-horizon-card rounded-full h-2">
-              <div
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  finalStatus === 'error' ? 'bg-red-500' :
-                  finalStatus === 'success' ? 'bg-green-500' : 'bg-horizon-primary'
-                }`}
-                style={{ width: `${uploadProgress}%` }}
-              />
+    <div className="space-y-6">
+      <Card className="card-horizon border-2 border-horizon-primary/30 bg-gradient-to-br from-horizon-primary/5 to-horizon-secondary/5">
+        <CardHeader>
+          <CardTitle className="text-2xl text-horizon-text flex items-center gap-3">
+            <div className="p-2 bg-horizon-primary/20 rounded-lg">
+              <SelectedIcon className="w-6 h-6 text-horizon-primary" />
             </div>
-            <p className="text-sm text-horizon-accent text-center">{processingStatus}</p>
-          </div>
-        )}
-
-        {/* Status Messages */}
-        {finalStatus === 'success' && (
-          <div className="flex items-center gap-2 text-green-400 text-sm justify-center">
-            <CheckCircle className="w-4 h-4" />
-            {processingStatus}
-          </div>
-        )}
-        
-        {finalStatus === 'error' && (
-          <div className="flex items-center gap-2 text-red-400 text-sm justify-center">
-            <XCircle className="w-4 h-4" />
-            {processingStatus}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-
-    {/* Files List Section - moved below upload */}
-    <Card className="card-horizon">
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-horizon-text flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            קבצים שהועלו ({filteredFiles.length})
+            העלאת מסמך חכמה
           </CardTitle>
-          <div className="flex items-center gap-3">
-            {/* Category Filter */}
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-horizon-accent" />
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-48 bg-horizon-card border-horizon text-horizon-text">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-horizon-card border-horizon" dir="rtl">
-                  <SelectItem value="all" className="text-horizon-text hover:bg-horizon-primary/20 cursor-pointer">
-                    כל הסוגים ({files.length})
-                  </SelectItem>
-                  {[...new Set(files.map(f => f.data_category))].filter(Boolean).map(cat => {
-                    const count = files.filter(f => f.data_category === cat).count;
-                    const config = {
-                      inventory_report: 'דוח מלאי',
-                      sales_report: 'דוח מכירות',
-                      profit_loss_statement: 'רווח והפסד',
-                      balance_sheet: 'מאזן',
-                      bank_statement: 'תדפיס בנק',
-                      credit_card_report: 'כרטיס אשראי',
-                      promotions_report: 'מבצעים',
-                      credit_report: 'דוח אשראי',
-                      esna_report: 'מע"מ',
-                      purchase_document: 'רכש',
-                      auto_detect: 'זיהוי אוטומטי',
-                      mixed_business_data: 'כללי'
-                    };
-                    return (
-                      <SelectItem 
-                        key={cat} 
-                        value={cat}
-                        className="text-horizon-text hover:bg-horizon-primary/20 cursor-pointer"
-                      >
-                        {config[cat] || cat} ({files.filter(f => f.data_category === cat).length})
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
+          <p className="text-horizon-accent">
+            בחר סוג מסמך והעלה - המערכת תנתח אוטומטית
+          </p>
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          {/* Category Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-horizon-text">סוג המסמך</label>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
+                <SelectValue placeholder="בחר סוג מסמך..." />
+              </SelectTrigger>
+              <SelectContent className="bg-horizon-card border-horizon" dir="rtl">
+                {FILE_CATEGORIES.map(cat => {
+                  const Icon = cat.icon;
+                  return (
+                    <SelectItem 
+                      key={cat.value} 
+                      value={cat.value}
+                      className="text-horizon-text hover:bg-horizon-primary/20 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Icon className="w-4 h-4" />
+                        {cat.label}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <Button
-              onClick={loadFiles}
-              variant="outline"
-              size="sm"
-              className="border-horizon text-horizon-text hover:bg-horizon-card"
-            >
-              <RefreshCw className="w-4 h-4 ml-2" />
-              רענן
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        {isLoading && files.length === 0 ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="flex items-center gap-4 p-4 bg-horizon-card rounded-lg">
-                <Skeleton className="h-12 w-12 rounded-lg bg-horizon-primary/20" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-3/4 bg-horizon-primary/20" />
-                  <Skeleton className="h-3 w-1/2 bg-horizon-primary/20" />
-                </div>
-                <Skeleton className="h-6 w-20 bg-horizon-primary/20" />
+          {/* Custom Name Input (for "other" category) */}
+          {selectedCategory === 'other' && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-horizon-text">שם/תיאור המסמך</label>
+              <Input
+                value={customFileName}
+                onChange={(e) => setCustomFileName(e.target.value)}
+                placeholder='לדוגמה: "דוח רכש מספק XYZ" או "תדפיס חשבון בנק"'
+                className="bg-horizon-card border-horizon text-horizon-text"
+              />
+              <p className="text-xs text-horizon-accent">
+                המערכת תחפש באינטרנט מידע על המסמך ותנתח אותו בהתאם
+              </p>
+            </div>
+          )}
+
+          {/* Upload Button */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".xls,.xlsx,.csv,.pdf,.jpg,.jpeg,.png"
+            className="hidden"
+            disabled={isUploading || !selectedCategory}
+          />
+          
+          <Button
+            onClick={triggerFileSelect}
+            disabled={isUploading || !selectedCategory || (selectedCategory === 'other' && !customFileName.trim())}
+            className="btn-horizon-primary w-full h-12"
+          >
+            {isUploading && !finalStatus ? (
+              <>
+                <RefreshCw className="w-5 h-5 ml-2 animate-spin" />
+                מעלה...
+              </>
+            ) : (
+              <>
+                <Upload className="w-5 h-5 ml-2" />
+                העלה קובץ
+              </>
+            )}
+          </Button>
+
+          {/* Progress Bar */}
+          {isUploading && uploadProgress > 0 && (
+            <div className="space-y-2">
+              <div className="w-full bg-horizon-card rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    finalStatus === 'error' ? 'bg-red-500' :
+                    finalStatus === 'success' ? 'bg-green-500' : 'bg-horizon-primary'
+                  }`}
+                  style={{ width: `${uploadProgress}%` }}
+                />
               </div>
-            ))}
-          </div>
-        ) : filteredFiles.length === 0 ? (
-          <div className="text-center py-12 text-horizon-accent">
-            <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
-            <h3 className="text-lg font-medium mb-2 text-horizon-text">
-              {files.length === 0 ? 'לא הועלו קבצים עדיין' : 'לא נמצאו קבצים מסוננים'}
-            </h3>
-            <p>{files.length === 0 ? 'העלה קבצים כדי להתחיל לנתח את הנתונים העסקיים שלך' : 'נסה לשנות את הסינון'}</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {filteredFiles.map((file) => (
-              <div 
-                key={file.id} 
-                className="group relative bg-horizon-card rounded-xl border-2 border-horizon hover:border-horizon-primary/50 transition-all p-4 hover:shadow-lg"
+              <p className="text-sm text-horizon-accent text-center">{processingStatus}</p>
+            </div>
+          )}
+
+          {/* Status Messages */}
+          {finalStatus === 'success' && (
+            <div className="flex items-center gap-2 text-green-400 text-sm justify-center">
+              <CheckCircle className="w-4 h-4" />
+              {processingStatus}
+            </div>
+          )}
+          
+          {finalStatus === 'error' && (
+            <div className="flex items-center gap-2 text-red-400 text-sm justify-center">
+              <XCircle className="w-4 h-4" />
+              {processingStatus}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Files List Section */}
+      <Card className="card-horizon">
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <CardTitle className="text-horizon-text flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              קבצים שהועלו ({filteredFiles.length})
+            </CardTitle>
+            <div className="flex items-center gap-3">
+              {/* Category Filter */}
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-horizon-accent" />
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-48 bg-horizon-card border-horizon text-horizon-text">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-horizon-card border-horizon" dir="rtl">
+                    <SelectItem value="all" className="text-horizon-text hover:bg-horizon-primary/20 cursor-pointer">
+                      כל הסוגים ({files.length})
+                    </SelectItem>
+                    {[...new Set(files.map(f => f.data_category))].filter(Boolean).map(cat => {
+                      const config = {
+                        inventory_report: 'דוח מלאי',
+                        sales_report: 'דוח מכירות',
+                        profit_loss_statement: 'רווח והפסד',
+                        balance_sheet: 'מאזן',
+                        bank_statement: 'תדפיס בנק',
+                        credit_card_report: 'כרטיס אשראי',
+                        promotions_report: 'מבצעים',
+                        credit_report: 'דוח אשראי',
+                        esna_report: 'מע"מ',
+                        purchase_document: 'רכש',
+                        auto_detect: 'זיהוי אוטומטי',
+                        mixed_business_data: 'כללי'
+                      };
+                      return (
+                        <SelectItem 
+                          key={cat} 
+                          value={cat}
+                          className="text-horizon-text hover:bg-horizon-primary/20 cursor-pointer"
+                        >
+                          {config[cat] || cat} ({files.filter(f => f.data_category === cat).length})
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button
+                onClick={loadFiles}
+                variant="outline"
+                size="sm"
+                className="border-horizon text-horizon-text hover:bg-horizon-card"
               >
-                {/* File Icon & Status */}
-                <div className="flex items-start gap-3 mb-3">
-                  <div className="p-2 bg-horizon-primary/10 rounded-lg">
-                    {file.status === 'analyzed' ? (
-                      <CheckCircle2 className="w-4 h-4 text-green-400" />
-                    ) : file.status === 'processing' ? (
-                      <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
-                    ) : file.status === 'failed' ? (
-                      <AlertTriangle className="w-4 h-4 text-red-400" />
-                    ) : (
-                      <FileText className="w-4 h-4 text-horizon-accent" />
-                    )}
+                <RefreshCw className="w-4 h-4 ml-2" />
+                רענן
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        
+        <CardContent>
+          {isLoading && files.length === 0 ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="flex items-center gap-4 p-4 bg-horizon-card rounded-lg">
+                  <Skeleton className="h-12 w-12 rounded-lg bg-horizon-primary/20" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4 bg-horizon-primary/20" />
+                    <Skeleton className="h-3 w-1/2 bg-horizon-primary/20" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-horizon-text truncate mb-1">
-                      {file.filename}
-                    </h4>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {getCategoryBadge(file.data_category)}
-                      <span className="text-xs text-horizon-accent">
-                        {format(new Date(file.created_date), "dd/MM/yyyy HH:mm", { locale: he })}
-                      </span>
+                  <Skeleton className="h-6 w-20 bg-horizon-primary/20" />
+                </div>
+              ))}
+            </div>
+          ) : filteredFiles.length === 0 ? (
+            <div className="text-center py-12 text-horizon-accent">
+              <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-2 text-horizon-text">
+                {files.length === 0 ? 'לא הועלו קבצים עדיין' : 'לא נמצאו קבצים מסוננים'}
+              </h3>
+              <p>{files.length === 0 ? 'העלה קבצים כדי להתחיל לנתח את הנתונים העסקיים שלך' : 'נסה לשנות את הסינון'}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {filteredFiles.map((file) => (
+                <div 
+                  key={file.id} 
+                  className="group relative bg-horizon-card rounded-xl border-2 border-horizon hover:border-horizon-primary/50 transition-all p-4 hover:shadow-lg"
+                >
+                  {/* File Icon & Status */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="p-2 bg-horizon-primary/10 rounded-lg">
+                      {file.status === 'analyzed' ? (
+                        <CheckCircle2 className="w-4 h-4 text-green-400" />
+                      ) : file.status === 'processing' ? (
+                        <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+                      ) : file.status === 'failed' ? (
+                        <AlertTriangle className="w-4 h-4 text-red-400" />
+                      ) : (
+                        <FileText className="w-4 h-4 text-horizon-accent" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-horizon-text truncate mb-1">
+                        {file.filename}
+                      </h4>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {getCategoryBadge(file.data_category)}
+                        <span className="text-xs text-horizon-accent">
+                          {format(new Date(file.created_date), "dd/MM/yyyy HH:mm", { locale: he })}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* File Details */}
-                {file.products_count && (
-                  <div className="text-sm text-horizon-accent mb-3">
-                    📦 {file.products_count} מוצרים
-                  </div>
-                )}
+                  {/* File Details */}
+                  {file.products_count && (
+                    <div className="text-sm text-horizon-accent mb-3">
+                      📦 {file.products_count} מוצרים
+                    </div>
+                  )}
 
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleViewFile(file)}
-                    className="text-horizon-primary hover:bg-horizon-primary/20 flex-1"
-                  >
-                    <Eye className="w-4 h-4 ml-1" />
-                    צפה
-                  </Button>
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDownloadFile(file)}
-                    className="text-green-400 hover:bg-green-500/20 flex-1"
-                    title="הורד קובץ"
-                  >
-                    <Download className="w-4 h-4 ml-1" />
-                    הורד
-                  </Button>
-                  
-                  {file.status === 'analyzed' && file.ai_insights && (
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleShowDeeperInsights(file)}
-                      className="text-yellow-400 hover:bg-yellow-500/20"
-                      title="תובנות נוספות"
+                      onClick={() => handleViewFile(file)}
+                      className="text-horizon-primary hover:bg-horizon-primary/20 flex-1"
                     >
-                      <Sparkles className="w-4 h-4" />
+                      <Eye className="w-4 h-4 ml-1" />
+                      צפה
                     </Button>
-                  )}
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteFile(file.id)}
-                    className="text-red-400 hover:bg-red-500/20"
-                    title="מחק"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDownloadFile(file)}
+                      className="text-green-400 hover:bg-green-500/20 flex-1"
+                      title="הורד קובץ"
+                    >
+                      <Download className="w-4 h-4 ml-1" />
+                      הורד
+                    </Button>
+                    
+                    {file.status === 'analyzed' && file.ai_insights && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleShowDeeperInsights(file)}
+                        className="text-yellow-400 hover:bg-yellow-500/20"
+                        title="תובנות נוספות"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                      </Button>
+                    )}
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteFile(file.id)}
+                      className="text-red-400 hover:bg-red-500/20"
+                      title="מחק"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-    {/* All Viewers - Retained unchanged */}
-    {showDataViewer && selectedFile && (
-      <FileDataViewer
-        file={selectedFile}
-        isOpen={showDataViewer}
-        onClose={() => {
-          setShowDataViewer(false);
-          setSelectedFile(null);
-        }}
-        onAnalysisComplete={loadFiles}
-      />
-    )}
+      {/* All Viewers */}
+      {showDataViewer && selectedFile && (
+        <FileDataViewer
+          file={selectedFile}
+          isOpen={showDataViewer}
+          onClose={() => {
+            setShowDataViewer(false);
+            setSelectedFile(null);
+          }}
+          onAnalysisComplete={loadFiles}
+        />
+      )}
 
-    {showFinancialReportViewer && financialReportData && (
-      <FinancialReportViewer
-        reportData={financialReportData}
-        isOpen={showFinancialReportViewer}
-        onClose={() => {
-          setShowFinancialReportViewer(false);
-          setFinancialReportData(null);
-        }}
-      />
-    )}
+      {showFinancialReportViewer && financialReportData && (
+        <FinancialReportViewer
+          reportData={financialReportData}
+          isOpen={showFinancialReportViewer}
+          onClose={() => {
+            setShowFinancialReportViewer(false);
+            setFinancialReportData(null);
+          }}
+        />
+      )}
 
-    {showCreditReportViewer && creditReportData && (
-      <CreditReportViewer
-        reportData={creditReportData}
-        isOpen={showCreditReportViewer}
-        onClose={() => {
-          setShowCreditReportViewer(false);
-          setCreditReportData(null);
-        }}
-      />
-    )}
+      {showCreditReportViewer && creditReportData && (
+        <CreditReportViewer
+          reportData={creditReportData}
+          isOpen={showCreditReportViewer}
+          onClose={() => {
+            setShowCreditReportViewer(false);
+            setCreditReportData(null);
+          }}
+        />
+      )}
 
-    {showInventoryReportViewer && inventoryReportData && (
-      <InventoryReportViewer
-        reportData={inventoryReportData}
-        isOpen={showInventoryReportViewer}
-        onClose={() => {
-          setShowInventoryReportViewer(false);
-          setInventoryReportData(null);
-        }}
-      />
-    )}
+      {showInventoryReportViewer && inventoryReportData && (
+        <InventoryReportViewer
+          reportData={inventoryReportData}
+          isOpen={showInventoryReportViewer}
+          onClose={() => {
+            setShowInventoryReportViewer(false);
+            setInventoryReportData(null);
+          }}
+        />
+      )}
 
-    {showSalesReportViewer && salesReportData && (
-      <SalesReportViewer
-        reportData={salesReportData}
-        isOpen={showSalesReportViewer}
-        onClose={() => {
-          setShowSalesReportViewer(false);
-          setSalesReportData(null);
-        }}
-      />
-    )}
+      {showSalesReportViewer && salesReportData && (
+        <SalesReportViewer
+          reportData={salesReportData}
+          isOpen={showSalesReportViewer}
+          onClose={() => {
+            setShowSalesReportViewer(false);
+            setSalesReportData(null);
+          }}
+        />
+      )}
 
-    {showPromotionsReportViewer && promotionsReportData && (
-      <PromotionsReportViewer
-        reportData={promotionsReportData}
-        isOpen={showPromotionsReportViewer}
-        onClose={() => {
-          setShowPromotionsReportViewer(false);
-          setPromotionsReportData(null);
-        }}
-      />
-    )}
+      {showPromotionsReportViewer && promotionsReportData && (
+        <PromotionsReportViewer
+          reportData={promotionsReportData}
+          isOpen={showPromotionsReportViewer}
+          onClose={() => {
+            setShowPromotionsReportViewer(false);
+            setPromotionsReportData(null);
+          }}
+        />
+      )}
 
-    {fileViewerOpen && selectedFileForViewing && (
-      <Dialog open={fileViewerOpen} onOpenChange={setFileViewerOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-horizon-dark text-horizon-text border-horizon" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-horizon-text">
-              {fileViewerType === 'esna' ? 'דוח מע"מ (ESNA)' : 'צפייה בקובץ'}
-            </DialogTitle>
-            <DialogDescription className="text-horizon-accent">
-              {selectedFileForViewing.filename}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            {fileViewerType === 'esna' && (
-              <ESNAReportViewer fileData={selectedFileForViewing} />
-            )}
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setFileViewerOpen(false)} className="btn-horizon-primary">
-              סגור
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    )}
+      {fileViewerOpen && selectedFileForViewing && (
+        <Dialog open={fileViewerOpen} onOpenChange={setFileViewerOpen}>
+          <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-horizon-dark text-horizon-text border-horizon" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-horizon-text">
+                {fileViewerType === 'esna' ? 'דוח מע"מ (ESNA)' : 'צפייה בקובץ'}
+              </DialogTitle>
+              <DialogDescription className="text-horizon-accent">
+                {selectedFileForViewing.filename}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              {fileViewerType === 'esna' && (
+                <ESNAReportViewer fileData={selectedFileForViewing} />
+              )}
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setFileViewerOpen(false)} className="btn-horizon-primary">
+                סגור
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
-    {showDeeperInsightsModal && fileToAnalyzeDeeper && (
-      <DeeperInsightsModal
-        isOpen={showDeeperInsightsModal}
-        onClose={() => setShowDeeperInsightsModal(false)}
-        fileData={fileToAnalyzeDeeper}
-        onInsightsUpdated={handleDeeperInsightsUpdated}
-      />
-    )}
-  </div>
+      {showDeeperInsightsModal && fileToAnalyzeDeeper && (
+        <DeeperInsightsModal
+          isOpen={showDeeperInsightsModal}
+          onClose={() => setShowDeeperInsightsModal(false)}
+          fileData={fileToAnalyzeDeeper}
+          onInsightsUpdated={handleDeeperInsightsUpdated}
+        />
+      )}
+    </div>
   );
 }
