@@ -382,18 +382,31 @@ ${rawDataForPrompt}
               };
               prompt = 'נתח דוח כרטיס אשראי PDF';
             } else if (category === 'credit_report') {
-              targetSchema = {
-                type: "object",
-                properties: {
-                  reportMeta: { type: "object" },
-                  summary: { type: "object" },
-                  currentAccounts: { type: "array" },
-                  loans: { type: "array" },
-                  mortgages: { type: "array" },
-                  analysis: { type: "object" }
-                }
-              };
-              prompt = 'נתח דוח ריכוז נתונים מבנק ישראל';
+              // Credit Report - use dedicated function
+              setProcessingStatus('מנתח דוח ריכוז נתונים...');
+              
+              await base44.functions.invoke('processCreditReport', {
+                file_url: file_url,
+                customer_email: customerEmail,
+                file_id: fileRecordId
+              });
+
+              // Skip generic InvokeLLM - function handles everything
+              setUploadProgress(100);
+              setProcessingStatus('דוח ריכוז נתונים נותח בהצלחה!');
+              setFinalStatus('success');
+              
+              if (onUploadComplete) {
+                onUploadComplete();
+              }
+
+              setTimeout(() => {
+                setSelectedCategory('');
+                setCustomFileName('');
+              }, 2000);
+
+              return; // Exit early - don't continue to generic processing
+              
             } else if (category === 'balance_sheet' || category === 'profit_loss_statement') {
               targetSchema = {
                 type: "object",
