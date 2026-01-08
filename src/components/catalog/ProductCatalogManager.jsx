@@ -45,6 +45,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import ProductAddForm from "./ProductAddForm";
+import CatalogAnalyticsDashboard from "../analytics/CatalogAnalyticsDashboard";
 
 const CatalogCreationFormModal = ({ isOpen, onClose, onSubmit }) => {
   const [catalogName, setCatalogName] = useState('');
@@ -985,7 +986,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
           </Card>
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-horizon-card">
+          <TabsList className="grid w-full grid-cols-5 bg-horizon-card">
             <TabsTrigger value="catalog" className="data-[state=active]:bg-[#32acc1] data-[state=active]:text-white transition-all" disabled={noCatalogSelected}>
               <Package className="w-4 h-4 ml-2" />
               קטלוג קיים
@@ -1001,6 +1002,9 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
             <TabsTrigger value="manual" className="data-[state=active]:bg-[#32acc1] data-[state=active]:text-white transition-all" disabled={disableAllActions || noCatalogSelected}>
               <Edit3 className="w-4 h-4 ml-2" />
               ניהול ידני
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="data-[state=active]:bg-[#32acc1] data-[state=active]:text-white transition-all" disabled={noCatalogSelected}>
+              📊 ניתוח ותובנות
             </TabsTrigger>
           </TabsList>
 
@@ -1158,6 +1162,14 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
               customer={customer}
               selectedCatalogId={selectedCatalogId}
               disabled={disableAllActions}
+            />
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <CatalogAnalyticsDashboard
+              products={products}
+              customer={customer}
+              selectedCatalogId={selectedCatalogId}
             />
           </TabsContent>
         </Tabs>
