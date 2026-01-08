@@ -163,11 +163,23 @@ export default function OrganizationChartBuilder({ customer }) {
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [isFirstLoad, setIsFirstLoad] = React.useState(true);
 
   React.useEffect(() => {
-    setNodes(initialNodes);
-    setEdges(initialEdges);
-  }, [initialNodes, initialEdges, setNodes, setEdges]);
+    if (isFirstLoad) {
+      setNodes(initialNodes);
+      setEdges(initialEdges);
+      setIsFirstLoad(false);
+    } else {
+      // עדכון רק nodes חדשים או שהשתנו, לא כל המיקומים
+      const existingIds = new Set(nodes.map(n => n.id));
+      const newNodes = initialNodes.filter(n => !existingIds.has(n.id));
+      if (newNodes.length > 0) {
+        setNodes(prev => [...prev, ...newNodes]);
+      }
+      setEdges(initialEdges);
+    }
+  }, [initialNodes, initialEdges]);
 
   const onConnect = useCallback(
     async (params) => {
@@ -271,10 +283,19 @@ export default function OrganizationChartBuilder({ customer }) {
 
     setIsSaving(true);
     try {
-      const updatedNodes = [...orgChart.nodes];
+      // שמירת מיקומים נוכחיים מה-ReactFlow state
+      const currentPositions = {};
+      nodes.forEach(node => {
+        currentPositions[node.id] = node.position;
+      });
+      
+      const updatedNodes = orgChart.nodes.map(n => ({
+        ...n,
+        position: currentPositions[n.id] || n.position
+      }));
       
       if (editingNode) {
-        // עדכון node קיים
+        // עדכון node קיים - שמירת המיקום הנוכחי
         const index = updatedNodes.findIndex(n => n.id === editingNode.id);
         updatedNodes[index] = {
           ...updatedNodes[index],
@@ -282,15 +303,15 @@ export default function OrganizationChartBuilder({ customer }) {
           salary: formData.salary ? parseFloat(formData.salary) : null
         };
       } else {
-        // הוספת node חדש
+        // הוספת node חדש - מיקום חכם במרכז
         const newNode = {
           id: `node-${Date.now()}`,
           ...formData,
           salary: formData.salary ? parseFloat(formData.salary) : null,
-          parent_id: null, // ניתן לחבר מאוחר יותר
+          parent_id: null,
           position: { 
-            x: 100 + (orgChart.nodes.length * 200), 
-            y: 100 
+            x: 250 + (Math.random() * 100 - 50), 
+            y: 200 + (updatedNodes.length * 120)
           }
         };
         updatedNodes.push(newNode);
@@ -330,11 +351,16 @@ export default function OrganizationChartBuilder({ customer }) {
   const handleNodeDragStop = useCallback(
     async (event, node) => {
       try {
-        const updatedNodes = orgChart.nodes.map(n => 
-          n.id === node.id 
-            ? { ...n, position: node.position }
-            : n
-        );
+        // שמירת כל המיקומים הנוכחיים
+        const currentPositions = {};
+        nodes.forEach(n => {
+          currentPositions[n.id] = n.position;
+        });
+        
+        const updatedNodes = orgChart.nodes.map(n => ({
+          ...n,
+          position: currentPositions[n.id] || n.position
+        }));
         
         await base44.entities.OrganizationChart.update(orgChart.id, {
           nodes: updatedNodes
@@ -343,7 +369,7 @@ export default function OrganizationChartBuilder({ customer }) {
         console.error('Error saving position:', error);
       }
     },
-    [orgChart, queryClient, customer]
+    [orgChart, nodes]
   );
 
   if (isLoading) {
@@ -380,7 +406,8 @@ export default function OrganizationChartBuilder({ customer }) {
               onConnect={onConnect}
               onNodeDragStop={handleNodeDragStop}
               nodeTypes={nodeTypes}
-              fitView
+              fitView={isFirstLoad}
+              fitViewOptions={{ padding: 0.2, includeHiddenNodes: false }}
               style={{ direction: 'ltr' }}
               connectionMode="loose"
               connectionLineStyle={{ 
