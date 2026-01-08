@@ -125,8 +125,8 @@ export default function UnifiedFileUploader({ customerEmail, onUploadComplete })
   };
 
   const handleViewFile = (file) => {
-    if (file.data_category === 'credit_report' && file.parsed_data) {
-      setCreditReportData(file.parsed_data);
+    if (file.data_category === 'credit_report' && file.ai_insights) {
+      setCreditReportData(file.ai_insights);
       setShowCreditReportViewer(true);
     } else if ((file.data_category === 'balance_sheet' || file.data_category === 'profit_loss_statement') && file.parsed_data) {
       setFinancialReportData(file.parsed_data);

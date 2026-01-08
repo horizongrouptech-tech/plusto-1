@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +21,9 @@ const RiskScore = ({ score }) => {
 export default function CreditReportViewer({ isOpen, onClose, reportData }) {
     if (!reportData) return null;
 
-    const { reportMeta, summary, currentAccounts, loans, mortgages, analysis } = reportData;
+    // Handle both old format (direct object) and new format (from ai_insights)
+    const data = reportData.reportMeta ? reportData : reportData;
+    const { reportMeta, summary, currentAccounts, loans, mortgages, analysis } = data;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>

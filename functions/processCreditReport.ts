@@ -305,13 +305,12 @@ Deno.serve(async (req) => {
         await base44.asServiceRole.entities.FileUpload.update(file_id, {
             status: 'analyzed',
             data_category: 'credit_report',
-            parsed_data: finalResult,
-            ai_insights: {
-                document_type: 'דוח ריכוז נתונים - בנק ישראל',
-                credit_analysis: finalResult,
-                analyzed_at: new Date().toISOString(),
-                analysis_method: 'multi_step_chunked'
+            parsed_data: {
+                summary: JSON.stringify(finalResult.summary || {}),
+                reportMeta: JSON.stringify(finalResult.reportMeta || {}),
+                fullData: JSON.stringify(finalResult)
             },
+            ai_insights: finalResult,
             parsing_metadata: {
                 analysis_status: 'full',
                 steps_completed: 3,
