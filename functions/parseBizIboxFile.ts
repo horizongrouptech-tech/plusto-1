@@ -18,12 +18,22 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
-    // זיהוי סוג הקובץ
-    const isPdf = fileUrl.toLowerCase().endsWith('.pdf');
+    // זיהוי סוג הקובץ - בדיקה משופרת
+    const urlLower = fileUrl.toLowerCase();
+    const isPdf = urlLower.endsWith('.pdf') || urlLower.includes('.pdf?');
+    const isExcel = urlLower.endsWith('.xlsx') || urlLower.endsWith('.xls') || 
+                   urlLower.includes('.xlsx?') || urlLower.includes('.xls?') ||
+                   urlLower.includes('xlsx') || urlLower.includes('xls');
+    
+    console.log('=== FILE TYPE DETECTION ===');
+    console.log('File URL:', fileUrl);
+    console.log('Detected as PDF:', isPdf);
+    console.log('Detected as Excel:', isExcel);
+    console.log('=== END FILE TYPE ===');
     
     let rows = [];
 
-    if (isPdf) {
+    if (isPdf && !isExcel) {
       // ניתוח PDF באמצעות InvokeLLM עם Vision
       console.log('Starting PDF analysis for BiziBox file...');
       
@@ -116,27 +126,112 @@ Deno.serve(async (req) => {
       }
 
     } else {
-      // ניתוח Excel
+      // ניתוח Excel - נסה קודם כ-Excel
+      console.log('Attempting Excel parsing...');
       const fileResponse = await fetch(fileUrl);
       const fileBuffer = await fileResponse.arrayBuffer();
 
       const XLSX = await import('npm:xlsx@0.18.5');
-      const workbook = XLSX.read(fileBuffer, { type: 'array' });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      rows = XLSX.utils.sheet_to_json(firstSheet);
       
-      // דיבאג - זיהוי שמות העמודות
-      console.log('=== EXCEL COLUMNS DEBUG ===');
-      console.log('Sheet names:', workbook.SheetNames);
-      console.log('Total rows found:', rows.length);
-      if (rows[0]) {
-        console.log('First row keys:', Object.keys(rows[0]));
-        console.log('First row full:', JSON.stringify(rows[0], null, 2));
+      try {
+        const workbook = XLSX.read(fileBuffer, { type: 'array' });
+        
+        // דיבאג - זיהוי שמות העמודות
+        console.log('=== EXCEL COLUMNS DEBUG ===');
+        console.log('Sheet names:', workbook.SheetNames);
+        
+        // נסה כל גיליון עד שנמצא נתונים
+        for (const sheetName of workbook.SheetNames) {
+          console.log(`Trying sheet: ${sheetName}`);
+          const sheet = workbook.Sheets[sheetName];
+          
+          // נסה עם header row שונים
+          let testRows = XLSX.utils.sheet_to_json(sheet);
+          console.log(`Sheet ${sheetName} - rows with default header:`, testRows.length);
+          
+          if (testRows.length > 0) {
+            console.log('First row keys:', Object.keys(testRows[0]));
+            console.log('First row full:', JSON.stringify(testRows[0], null, 2));
+            
+            // בדוק אם יש עמודות מוכרות
+            const keys = Object.keys(testRows[0]);
+            const hasRecognizedColumn = keys.some(k => 
+              k.includes('תאריך') || k.includes('קטגוריה') || k.includes('חובה') || 
+              k.includes('זכות') || k.includes('יתרה') || k.includes('תיאור')
+            );
+            
+            if (hasRecognizedColumn) {
+              console.log('Found recognized columns in sheet:', sheetName);
+              rows = testRows;
+              break;
+            }
+          }
+          
+          // אם לא מצאנו עמודות מוכרות, נסה לדלג על שורות header
+          if (rows.length === 0) {
+            // נסה לקרוא את ה-raw data ולמצוא את שורת הכותרות
+            const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            console.log('Raw data rows:', rawData.length);
+            console.log('First 5 raw rows:', JSON.stringify(rawData.slice(0, 5), null, 2));
+            
+            // חפש שורה שמכילה "תאריך" או "קטגוריה"
+            for (let i = 0; i < Math.min(10, rawData.length); i++) {
+              const rowValues = rawData[i];
+              if (rowValues && Array.isArray(rowValues)) {
+                const rowText = rowValues.join(' ');
+                if (rowText.includes('תאריך') || rowText.includes('קטגוריה')) {
+                  console.log(`Found header row at index ${i}:`, rowValues);
+                  // קרא מחדש עם header מהשורה הזו
+                  rows = XLSX.utils.sheet_to_json(sheet, { range: i });
+                  console.log('Rows after setting header:', rows.length);
+                  if (rows.length > 0) {
+                    console.log('New first row keys:', Object.keys(rows[0]));
+                    console.log('New first row:', JSON.stringify(rows[0], null, 2));
+                  }
+                  break;
+                }
+              }
+            }
+          }
+          
+          if (rows.length > 0) break;
+        }
+        
+        console.log('=== END EXCEL DEBUG ===');
+        
+      } catch (xlsxError) {
+        console.error('Excel parsing failed:', xlsxError.message);
+        // אם נכשל, נסה כ-PDF
+        console.log('Falling back to PDF/AI analysis...');
+        
+        const result = await base44.integrations.Core.InvokeLLM({
+          prompt: `חלץ את כל התנועות הבנקאיות מהקובץ הזה. זהו דוח תזרים מ-BiziBox.
+עבור כל תנועה החזר: date (YYYY-MM-DD), description, category, debit (מספר), credit (מספר), balance (מספר).
+חובה שלכל שורה יהיה date וגם category.`,
+          file_urls: [fileUrl],
+          response_json_schema: {
+            type: "object",
+            properties: {
+              transactions: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    date: { type: "string" },
+                    description: { type: "string" },
+                    category: { type: "string" },
+                    debit: { type: "number" },
+                    credit: { type: "number" },
+                    balance: { type: "number" }
+                  },
+                  required: ["date", "category"]
+                }
+              }
+            }
+          }
+        });
+        rows = result?.transactions || [];
       }
-      if (rows[1]) {
-        console.log('Second row full:', JSON.stringify(rows[1], null, 2));
-      }
-      console.log('=== END EXCEL DEBUG ===');
     }
 
     console.log(`Total rows to process: ${rows.length}`);
