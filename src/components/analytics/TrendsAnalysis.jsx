@@ -26,7 +26,7 @@ export default function TrendsAnalysis({ products, zReports, services, customer,
     if (analysisMode === 'product' && selectedProduct) {
       loadProductTrend();
     }
-  }, [selectedProduct, analysisMode]);
+  }, [selectedProduct, analysisMode, selectedInterval]);
 
   useEffect(() => {
     if (analysisMode === 'period' && selectedMonth) {
