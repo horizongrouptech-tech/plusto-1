@@ -64,19 +64,8 @@ export default function CatalogAnalyticsDashboard({ products, customer, selected
     );
   }
 
-  if (!zReports || zReports.length === 0) {
-    return (
-      <Card className="card-horizon">
-        <CardContent className="p-8 text-center">
-          <Activity className="w-16 h-16 mx-auto mb-4 text-horizon-accent opacity-50" />
-          <h3 className="text-xl font-semibold text-horizon-text mb-2">אין נתוני מכירות</h3>
-          <p className="text-horizon-accent">
-            העלה דוחות Z מהקופה כדי לראות ניתוח גרפי מפורט
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const hasZReports = zReports && zReports.length > 0;
+  const hasProducts = products && products.length > 0;
 
   return (
     <div className="space-y-6">
@@ -89,6 +78,14 @@ export default function CatalogAnalyticsDashboard({ products, customer, selected
           <p className="text-sm text-horizon-accent mt-2">
             ניתוח מעמיק של ביצועי המוצרים, מגמות ורווחיות
           </p>
+          {!hasZReports && (
+            <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+              <p className="text-yellow-400 text-sm flex items-center gap-2">
+                <Activity className="w-4 h-4" />
+                💡 העלה דוחות Z לניתוח מכירות מלא - כרגע מוצגים נתוני קטלוג בלבד
+              </p>
+            </div>
+          )}
         </CardHeader>
       </Card>
 
@@ -109,12 +106,16 @@ export default function CatalogAnalyticsDashboard({ products, customer, selected
           <PopularityAnalysis 
             top10={popularityData.top10}
             bottom10={popularityData.bottom10}
+            products={products}
+            hasZReports={hasZReports}
           />
         </TabsContent>
 
         <TabsContent value="profitability" className="mt-6">
           <ProfitabilityAnalysis 
             categorizedProducts={profitabilityData}
+            products={products}
+            hasZReports={hasZReports}
           />
         </TabsContent>
 
@@ -124,6 +125,7 @@ export default function CatalogAnalyticsDashboard({ products, customer, selected
             zReports={zReports}
             services={services}
             customer={customer}
+            hasZReports={hasZReports}
           />
         </TabsContent>
       </Tabs>

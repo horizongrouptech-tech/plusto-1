@@ -161,25 +161,49 @@ export default function OrganizationChartBuilder({ customer }) {
     return { nodes, edges };
   }, [orgChart]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [isFirstLoad, setIsFirstLoad] = React.useState(true);
+  const positionsRef = React.useRef({});
 
   React.useEffect(() => {
+    if (!initialNodes.length) return;
+    
     if (isFirstLoad) {
+      // טעינה ראשונית - השתמש במיקומים מה-DB
       setNodes(initialNodes);
       setEdges(initialEdges);
+      // שמור מיקומים ב-ref
+      initialNodes.forEach(n => {
+        positionsRef.current[n.id] = n.position;
+      });
       setIsFirstLoad(false);
     } else {
-      // עדכון רק nodes חדשים או שהשתנו, לא כל המיקומים
-      const existingIds = new Set(nodes.map(n => n.id));
-      const newNodes = initialNodes.filter(n => !existingIds.has(n.id));
-      if (newNodes.length > 0) {
-        setNodes(prev => [...prev, ...newNodes]);
-      }
+      // עדכון - שמור מיקומים קיימים ורק הוסף חדשים
+      setNodes(prevNodes => {
+        const existingIds = new Set(prevNodes.map(n => n.id));
+        const newNodesFromDB = initialNodes.filter(n => !existingIds.has(n.id));
+        
+        // עדכן data של nodes קיימים (למקרה של עריכה)
+        const updatedNodes = prevNodes.map(prevNode => {
+          const dbNode = initialNodes.find(n => n.id === prevNode.id);
+          if (dbNode) {
+            return {
+              ...prevNode,
+              data: dbNode.data,
+              // שמור מיקום נוכחי, לא מה-DB
+              position: positionsRef.current[prevNode.id] || prevNode.position
+            };
+          }
+          return prevNode;
+        });
+        
+        // הוסף nodes חדשים
+        return [...updatedNodes, ...newNodesFromDB];
+      });
       setEdges(initialEdges);
     }
-  }, [initialNodes, initialEdges]);
+  }, [initialNodes, initialEdges, isFirstLoad]);
 
   const onConnect = useCallback(
     async (params) => {
@@ -351,10 +375,13 @@ export default function OrganizationChartBuilder({ customer }) {
   const handleNodeDragStop = useCallback(
     async (event, node) => {
       try {
+        // שמור מיקום ב-ref מיד
+        positionsRef.current[node.id] = node.position;
+        
         // שמירת כל המיקומים הנוכחיים
         const currentPositions = {};
         nodes.forEach(n => {
-          currentPositions[n.id] = n.position;
+          currentPositions[n.id] = positionsRef.current[n.id] || n.position;
         });
         
         const updatedNodes = orgChart.nodes.map(n => ({

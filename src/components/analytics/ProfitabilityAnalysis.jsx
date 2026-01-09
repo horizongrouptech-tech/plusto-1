@@ -4,14 +4,14 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Ba
 import { DollarSign, TrendingUp, AlertTriangle } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 
-export default function ProfitabilityAnalysis({ categorizedProducts }) {
+export default function ProfitabilityAnalysis({ categorizedProducts, products = [], hasZReports = true }) {
   const { profitable, controversial, unprofitable, unknown } = categorizedProducts;
 
   const pieData = [
     { name: 'רווחיים (>25%)', value: profitable.length, color: '#48BB78' },
-    { name: 'בינוניים (15-25%)', value: controversial.length, color: '#fc9f67' },
+    { name: 'שנויים במחלוקת (15-25%)', value: controversial.length, color: '#fc9f67' },
     { name: 'לא רווחיים (<15%)', value: unprofitable.length, color: '#FC8181' },
-    { name: 'לא ידוע', value: unknown.length, color: '#718096' }
+    { name: 'חסרים נתונים', value: unknown.length, color: '#718096' }
   ];
 
   const formatCurrency = (value) => {
@@ -38,7 +38,7 @@ export default function ProfitabilityAnalysis({ categorizedProducts }) {
         <Card className="bg-yellow-500/10 border-yellow-500/30">
           <CardContent className="p-4 text-center">
             <div className="text-3xl font-bold text-yellow-400">{controversial.length}</div>
-            <div className="text-sm text-yellow-300 mt-1">בינוניים</div>
+            <div className="text-sm text-yellow-300 mt-1">שנויים במחלוקת</div>
             <div className="text-xs text-horizon-accent mt-2">רווח 15-25%</div>
           </CardContent>
         </Card>
@@ -54,8 +54,8 @@ export default function ProfitabilityAnalysis({ categorizedProducts }) {
         <Card className="bg-gray-500/10 border-gray-500/30">
           <CardContent className="p-4 text-center">
             <div className="text-3xl font-bold text-gray-400">{unknown.length}</div>
-            <div className="text-sm text-gray-300 mt-1">לא ידוע</div>
-            <div className="text-xs text-horizon-accent mt-2">חסרים נתונים</div>
+            <div className="text-sm text-gray-300 mt-1">חסרים נתונים</div>
+            <div className="text-xs text-horizon-accent mt-2">נדרש עדכון מחירים</div>
           </CardContent>
         </Card>
       </div>

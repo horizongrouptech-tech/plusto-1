@@ -3,11 +3,73 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
-export default function PopularityAnalysis({ top10, bottom10, chartType = 'bar' }) {
+export default function PopularityAnalysis({ top10, bottom10, products = [], hasZReports = true }) {
   const formatNumber = (value) => {
     if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
     return Math.round(value).toLocaleString();
   };
+
+  // אם אין דוחות Z, הצג מידע מהקטלוג
+  if (!hasZReports && products.length > 0) {
+    const sortedByPrice = [...products].sort((a, b) => (b.selling_price || 0) - (a.selling_price || 0));
+    const topByPrice = sortedByPrice.slice(0, 10).map(p => ({
+      name: p.product_name,
+      totalQuantity: p.monthly_sales || p.inventory || 0,
+      price: p.selling_price || 0
+    }));
+    const bottomByPrice = sortedByPrice.slice(-10).reverse().map(p => ({
+      name: p.product_name,
+      totalQuantity: p.monthly_sales || p.inventory || 0,
+      price: p.selling_price || 0
+    }));
+
+    return (
+      <div className="space-y-6">
+        <Card className="card-horizon border-r-4 border-r-yellow-500">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="w-5 h-5 text-yellow-400" />
+              <span className="text-yellow-400 font-semibold">נתוני קטלוג (ללא דוחות Z)</span>
+            </div>
+            <p className="text-horizon-accent text-sm mb-4">
+              העלה דוחות Z כדי לראות ניתוח מכירות מלא. כרגע מוצגים נתוני מחירים ומלאי מהקטלוג.
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-horizon-text font-semibold mb-2">מוצרים יקרים</h4>
+                {topByPrice.slice(0, 5).map((p, idx) => (
+                  <div key={idx} className="flex justify-between p-2 bg-horizon-surface rounded mb-1">
+                    <span className="text-sm text-horizon-text">{p.name}</span>
+                    <span className="text-sm text-horizon-primary">₪{p.price.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <h4 className="text-horizon-text font-semibold mb-2">מוצרים זולים</h4>
+                {bottomByPrice.slice(0, 5).map((p, idx) => (
+                  <div key={idx} className="flex justify-between p-2 bg-horizon-surface rounded mb-1">
+                    <span className="text-sm text-horizon-text">{p.name}</span>
+                    <span className="text-sm text-horizon-accent">₪{p.price.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if ((!top10 || top10.length === 0) && (!bottom10 || bottom10.length === 0)) {
+    return (
+      <Card className="card-horizon">
+        <CardContent className="p-8 text-center">
+          <TrendingUp className="w-12 h-12 mx-auto mb-4 text-horizon-accent opacity-50" />
+          <p className="text-horizon-accent">אין מספיק נתונים לניתוח פופולאריות</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

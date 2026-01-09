@@ -6,14 +6,21 @@ import { TrendingUp, Calendar } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getProductTrend, getProductsForPeriod } from './productAnalyticsEngine';
 
-export default function TrendsAnalysis({ products, zReports, services, customer }) {
+export default function TrendsAnalysis({ products, zReports, services, customer, hasZReports = true }) {
   const [analysisMode, setAnalysisMode] = useState('product'); // product / period
   const [selectedProduct, setSelectedProduct] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedInterval, setSelectedInterval] = useState('monthly'); // weekly / monthly / quarterly / yearly
   const [productTrendData, setProductTrendData] = useState([]);
   const [periodProductsData, setPeriodProductsData] = useState([]);
 
   const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+  const intervalOptions = [
+    { value: 'weekly', label: 'שבועי' },
+    { value: 'monthly', label: 'חודשי' },
+    { value: 'quarterly', label: 'רבעוני' },
+    { value: 'yearly', label: 'שנתי' }
+  ];
 
   useEffect(() => {
     if (analysisMode === 'product' && selectedProduct) {
@@ -37,6 +44,31 @@ export default function TrendsAnalysis({ products, zReports, services, customer 
     setPeriodProductsData(data.sort((a, b) => b.totalRevenue - a.totalRevenue).slice(0, 15));
   };
 
+  // אם אין דוחות Z
+  if (!hasZReports) {
+    return (
+      <Card className="card-horizon">
+        <CardContent className="p-8 text-center">
+          <TrendingUp className="w-12 h-12 mx-auto mb-4 text-yellow-400 opacity-70" />
+          <h3 className="text-xl font-semibold text-horizon-text mb-2">נדרשים דוחות Z לניתוח מגמות</h3>
+          <p className="text-horizon-accent">
+            העלה דוחות Z מהקופה הרושמת כדי לראות מגמות מכירות לאורך זמן
+          </p>
+          <div className="mt-4 p-4 bg-horizon-surface rounded-lg">
+            <p className="text-sm text-horizon-accent">
+              📊 לאחר העלאת דוחות Z תוכל לראות:
+            </p>
+            <ul className="text-sm text-horizon-text mt-2 space-y-1 text-right">
+              <li>• מגמת מכירות של מוצר ספציפי לאורך זמן</li>
+              <li>• השוואת מוצרים לפי תקופה</li>
+              <li>• גרפים של הכנסות ורווח</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Tabs value={analysisMode} onValueChange={setAnalysisMode}>
@@ -53,19 +85,37 @@ export default function TrendsAnalysis({ products, zReports, services, customer 
                 <TrendingUp className="w-5 h-5 text-horizon-primary" />
                 מגמת מוצר לאורך זמן
               </CardTitle>
-              <div className="mt-4">
-                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger className="w-full bg-horizon-card border-horizon text-horizon-text">
-                    <SelectValue placeholder="בחר מוצר לניתוח..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products.map(p => (
-                      <SelectItem key={p.id} value={p.product_name}>
-                        {p.product_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-horizon-accent mb-1 block">בחר מוצר</label>
+                  <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                    <SelectTrigger className="w-full bg-horizon-card border-horizon text-horizon-text">
+                      <SelectValue placeholder="בחר מוצר לניתוח..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map(p => (
+                        <SelectItem key={p.id} value={p.product_name}>
+                          {p.product_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm text-horizon-accent mb-1 block">אינטרוול זמן</label>
+                  <Select value={selectedInterval} onValueChange={setSelectedInterval}>
+                    <SelectTrigger className="w-full bg-horizon-card border-horizon text-horizon-text">
+                      <SelectValue placeholder="בחר אינטרוול..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {intervalOptions.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
