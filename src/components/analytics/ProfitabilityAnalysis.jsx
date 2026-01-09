@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { DollarSign, TrendingUp, AlertTriangle } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
+import NoZReportsPlaceholder from './NoZReportsPlaceholder';
 
 export default function ProfitabilityAnalysis({ categorizedProducts, products = [], hasZReports = true }) {
   const { profitable, controversial, unprofitable, unknown } = categorizedProducts;
@@ -22,6 +23,11 @@ export default function ProfitabilityAnalysis({ categorizedProducts, products = 
   const topUnprofitable = unprofitable
     .sort((a, b) => (b.monthly_sales || 0) - (a.monthly_sales || 0))
     .slice(0, 10);
+
+  // אם אין דוחות Z ורוב המוצרים ללא נתוני רווח
+  if (!hasZReports && (profitable.length + controversial.length + unprofitable.length) < products.length * 0.3) {
+    return <NoZReportsPlaceholder products={products} />;
+  }
 
   return (
     <div className="space-y-6">

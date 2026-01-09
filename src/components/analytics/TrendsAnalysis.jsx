@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { TrendingUp, Calendar } from 'lucide-react';
+import { TrendingUp, Calendar, AlertCircle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getProductTrend, getProductsForPeriod } from './productAnalyticsEngine';
+import NoZReportsPlaceholder from './NoZReportsPlaceholder';
 
 export default function TrendsAnalysis({ products, zReports, services, customer, hasZReports = true }) {
   const [analysisMode, setAnalysisMode] = useState('product'); // product / period
@@ -46,27 +47,7 @@ export default function TrendsAnalysis({ products, zReports, services, customer,
 
   // אם אין דוחות Z
   if (!hasZReports) {
-    return (
-      <Card className="card-horizon">
-        <CardContent className="p-8 text-center">
-          <TrendingUp className="w-12 h-12 mx-auto mb-4 text-yellow-400 opacity-70" />
-          <h3 className="text-xl font-semibold text-horizon-text mb-2">נדרשים דוחות Z לניתוח מגמות</h3>
-          <p className="text-horizon-accent">
-            העלה דוחות Z מהקופה הרושמת כדי לראות מגמות מכירות לאורך זמן
-          </p>
-          <div className="mt-4 p-4 bg-horizon-surface rounded-lg">
-            <p className="text-sm text-horizon-accent">
-              📊 לאחר העלאת דוחות Z תוכל לראות:
-            </p>
-            <ul className="text-sm text-horizon-text mt-2 space-y-1 text-right">
-              <li>• מגמת מכירות של מוצר ספציפי לאורך זמן</li>
-              <li>• השוואת מוצרים לפי תקופה</li>
-              <li>• גרפים של הכנסות ורווח</li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <NoZReportsPlaceholder products={products} />;
   }
 
   return (
@@ -119,6 +100,17 @@ export default function TrendsAnalysis({ products, zReports, services, customer,
               </div>
             </CardHeader>
             <CardContent>
+              {!selectedProduct && (
+                <div className="p-6 bg-horizon-surface rounded-lg border border-horizon mb-4">
+                  <div className="flex items-center gap-2 text-horizon-accent mb-2">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">בחר מוצר ואינטרוול לניתוח</span>
+                  </div>
+                  <p className="text-xs text-horizon-accent">
+                    המערכת תציג גרף של כמות המכירות ואחוז הרווח לאורך זמן
+                  </p>
+                </div>
+              )}
               {selectedProduct && productTrendData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={400}>
                   <LineChart data={productTrendData}>

@@ -5,6 +5,7 @@ import { BarChart3, PieChart as PieChartIcon, Activity } from 'lucide-react';
 import PopularityAnalysis from './PopularityAnalysis';
 import ProfitabilityAnalysis from './ProfitabilityAnalysis';
 import TrendsAnalysis from './TrendsAnalysis';
+import InventoryRecommendationsWidget from './InventoryRecommendationsWidget';
 import { calculateProductPopularity, categorizeByProfitability } from './productAnalyticsEngine';
 import { base44 } from '@/api/base44Client';
 
@@ -69,6 +70,9 @@ export default function CatalogAnalyticsDashboard({ products, customer, selected
 
   return (
     <div className="space-y-6">
+      {/* Widget המלצות מלאי */}
+      <InventoryRecommendationsWidget products={products} zReports={zReports} />
+
       <Card className="card-horizon">
         <CardHeader>
           <CardTitle className="text-2xl text-horizon-text flex items-center gap-2">
