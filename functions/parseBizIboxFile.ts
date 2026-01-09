@@ -124,6 +124,19 @@ Deno.serve(async (req) => {
       const workbook = XLSX.read(fileBuffer, { type: 'array' });
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       rows = XLSX.utils.sheet_to_json(firstSheet);
+      
+      // דיבאג - זיהוי שמות העמודות
+      console.log('=== EXCEL COLUMNS DEBUG ===');
+      console.log('Sheet names:', workbook.SheetNames);
+      console.log('Total rows found:', rows.length);
+      if (rows[0]) {
+        console.log('First row keys:', Object.keys(rows[0]));
+        console.log('First row full:', JSON.stringify(rows[0], null, 2));
+      }
+      if (rows[1]) {
+        console.log('Second row full:', JSON.stringify(rows[1], null, 2));
+      }
+      console.log('=== END EXCEL DEBUG ===');
     }
 
     console.log(`Total rows to process: ${rows.length}`);
@@ -138,18 +151,75 @@ Deno.serve(async (req) => {
     const cashFlowEntries = [];
     const categorySums = {};
 
+    // פונקציה לזיהוי עמודה לפי מילות מפתח
+    const findColumnValue = (row, possibleNames) => {
+      // קודם בדיקה מדויקת
+      for (const name of possibleNames) {
+        if (row[name] !== undefined && row[name] !== null && row[name] !== '') {
+          return row[name];
+        }
+      }
+      // בדיקה חלקית - אם שם העמודה מכיל את הטקסט
+      const keys = Object.keys(row);
+      for (const name of possibleNames) {
+        const matchingKey = keys.find(k => k.includes(name) || name.includes(k));
+        if (matchingKey && row[matchingKey] !== undefined && row[matchingKey] !== null && row[matchingKey] !== '') {
+          return row[matchingKey];
+        }
+      }
+      return undefined;
+    };
+
     for (const row of rows) {
-      // מיפוי עמודות גמיש - תמיכה בשמות שונים (אנגלית קודמת למקרה של AI)
-      const date = row.date || row['date'] || row['תאריך'] || row['Date'];
-      const description = row.description || row['description'] || row['תיאור'] || row['Description'] || '';
-      const source = row.source || row['source'] || row['מאת'] || row['Source'] || description;
-      const accountType = row.account_type || row['account_type'] || row['סוג חשבון'] || row['Account Type'] || '';
-      const paymentType = row.payment_type || row['payment_type'] || row['סוג תשלום'] || row['Payment Type'] || '';
-      const category = row.category || row['category'] || row['קטגוריה'] || row['Category'] || '';
-      const creditRaw = row.credit || row['credit'] || row['זכות'] || row['Credit'] || 0;
-      const debitRaw = row.debit || row['debit'] || row['חובה'] || row['Debit'] || 0;
-      const reference = row.reference || row['reference'] || row['אסמכתא'] || row['Reference'] || '';
-      const balance = row.balance || row['balance'] || row['יתרה'] || row['Balance'] || 0;
+      // מיפוי עמודות גמיש - תמיכה בשמות שונים מ-BiziBox
+      const date = findColumnValue(row, [
+        'date', 'תאריך', 'Date', 'תאריך עבר', 'תנועות עבר', 
+        'תאריך ערך', 'תאריך תנועה', 'transaction_date'
+      ]);
+      
+      const description = findColumnValue(row, [
+        'description', 'תיאור', 'Description', 'פרטים', 'תאור', 
+        'תיאור התנועה', 'פירוט', 'details'
+      ]) || '';
+      
+      const source = findColumnValue(row, [
+        'source', 'מאת', 'Source', 'מקור', 'חשבון', 'מספר חשבון'
+      ]) || description;
+      
+      const accountType = findColumnValue(row, [
+        'account_type', 'סוג חשבון', 'Account Type', 'חשבון', 
+        'סוג', 'type', 'מאשר'
+      ]) || '';
+      
+      const paymentType = findColumnValue(row, [
+        'payment_type', 'סוג תשלום', 'Payment Type', 'אמצעי תשלום',
+        'סוג התשלום', 'תשלום', 'payment'
+      ]) || '';
+      
+      const category = findColumnValue(row, [
+        'category', 'קטגוריה', 'Category', 'קטגוריות', 
+        'סיווג', 'classification', 'סוג הוצאה'
+      ]) || '';
+      
+      const creditRaw = findColumnValue(row, [
+        'credit', 'זכות', 'Credit', 'הכנסה', 'income', 
+        'זכות (הכנסה)', 'כניסה', 'הפקדה'
+      ]) || 0;
+      
+      const debitRaw = findColumnValue(row, [
+        'debit', 'חובה', 'Debit', 'הוצאה', 'expense', 
+        'חובה (הוצאה)', 'יציאה', 'משיכה'
+      ]) || 0;
+      
+      const reference = findColumnValue(row, [
+        'reference', 'אסמכתא', 'Reference', 'מספר אסמכתא', 
+        'אסמכתה', 'ref', 'מספר ייחוס', 'reference_number'
+      ]) || '';
+      
+      const balance = findColumnValue(row, [
+        'balance', 'יתרה', 'Balance', 'יתרה נוכחית', 
+        'יתרה (כולל גררות)', 'total_balance'
+      ]) || 0;
 
       console.log(`Processing row - date: ${date}, category: ${category}, debit: ${debitRaw}, credit: ${creditRaw}`);
 
