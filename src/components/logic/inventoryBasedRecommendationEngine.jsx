@@ -1,4 +1,3 @@
-
 import { Recommendation } from "@/entities/Recommendation";
 import { Product } from "@/entities/Product";
 import { Supplier } from "@/entities/Supplier";
@@ -187,7 +186,7 @@ const calculateAccurateProfitData = (products) => {
 
 // יצירת המלצות עם חישובי רווח מדויקים
 const generateAccurateProfitRecommendations = async (data, count) => {
-    const { customer, profitAnalysis, customerName } = data;
+    const { customer, profitAnalysis, customerName, products } = data;
     const { validProducts, incompleteDataProducts } = profitAnalysis;
     
     const recommendations = [];
@@ -196,6 +195,12 @@ const generateAccurateProfitRecommendations = async (data, count) => {
     if (validProducts.length > 0) {
         const profitRecommendations = await generateValidProfitRecommendations(validProducts, customerName, customer);
         recommendations.push(...profitRecommendations);
+    }
+    
+    // המלצות על מלאי (עודפים/חסרים)
+    if (products && products.length > 0) {
+        const inventoryAlertRecs = await generateInventoryAlertRecommendations(data, customerName);
+        recommendations.push(...inventoryAlertRecs);
     }
     
     // המלצות כלליות למוצרים עם נתונים חסרים
@@ -329,6 +334,131 @@ const generateGeneralRecommendations = async (incompleteProducts, customerName, 
         });
     });
     
+    return recommendations;
+};
+
+// יצירת המלצות על מוצרים חסרים או עודפים
+const generateInventoryAlertRecommendations = async (data, customerName) => {
+    const { products, catalogProducts } = data;
+    const recommendations = [];
+    
+    // 1. זיהוי מוצרים עם מלאי גבוה מדי (עודפים)
+    const overStockedProducts = products.filter(p => {
+        const inventory = p.inventory || 0;
+        const monthlySales = p.monthly_sales || p.monthly_revenue / (p.selling_price || 1) || 0;
+        // אם יש מלאי ליותר מ-6 חודשי מכירות
+        return inventory > 0 && monthlySales > 0 && (inventory / monthlySales) > 6;
+    });
+
+    if (overStockedProducts.length > 0) {
+        const topOverstocked = overStockedProducts.slice(0, 3);
+        recommendations.push({
+            title: `⚠️ ${topOverstocked.length} מוצרים עם עודף מלאי משמעותי`,
+            description: `היי ${customerName}, זיהיתי מוצרים עם מלאי גבוה מדי ביחס למכירות:
+
+${topOverstocked.map(p => `• ${p.name || p.product_name}: ${p.inventory} יח' במלאי (מספיק ל-${Math.round((p.inventory / (p.monthly_sales || 1)))} חודשים)`).join('\n')}
+
+מומלץ לשקול:
+1. מבצעים או הנחות לפינוי מלאי
+2. שילוב בחבילות מוצרים
+3. הפחתת הזמנות עתידיות
+
+מלאי עודף תופס מקום, מקפיא הון חוזר ועלול להתיישן.`,
+            category: 'inventory',
+            expected_profit: 0,
+            priority: 'high',
+            action_steps: [
+                'בדוק את המוצרים העודפים ברשימה',
+                'שקול מבצע "2+1" או הנחה של 15-25%',
+                'צור חבילות עם מוצרים משלימים',
+                'עדכן הזמנות עתידיות בהתאם'
+            ],
+            related_data: {
+                overstocked_products: topOverstocked.map(p => p.name || p.product_name),
+                alert_type: 'overstock',
+                calculation_based_on_real_data: true
+            }
+        });
+    }
+
+    // 2. זיהוי מוצרים עם מלאי נמוך מדי (חסרים)
+    const lowStockProducts = products.filter(p => {
+        const inventory = p.inventory || 0;
+        const monthlySales = p.monthly_sales || 1;
+        // אם יש מלאי לפחות מ-2 שבועות
+        return monthlySales > 0 && inventory > 0 && inventory < (monthlySales / 2);
+    });
+
+    if (lowStockProducts.length > 0) {
+        const topLowStock = lowStockProducts.slice(0, 5);
+        recommendations.push({
+            title: `🔴 ${topLowStock.length} מוצרים בסכנת חוסר במלאי`,
+            description: `היי ${customerName}, המוצרים הבאים עומדים להיגמר:
+
+${topLowStock.map(p => `• ${p.name || p.product_name}: רק ${p.inventory} יח' נותרו (מספיק ל-${Math.round((p.inventory / (p.monthly_sales || 1)) * 30)} ימים)`).join('\n')}
+
+פעולות מומלצות:
+1. הזמן מהספק בהקדם
+2. שקול להעלות מחיר זמנית
+3. הסר ממבצעים/קידומים
+
+חוסר במלאי = לקוחות מאוכזבים = הפסד מכירות!`,
+            category: 'inventory',
+            expected_profit: 0,
+            priority: 'high',
+            action_steps: [
+                'הזמן מיידית מהספק',
+                'בדוק חלופות אצל ספקים אחרים',
+                'עדכן את הלקוחות על זמינות מוגבלת',
+                'הגדר התראת מלאי אוטומטית למניעה עתידית'
+            ],
+            related_data: {
+                low_stock_products: topLowStock.map(p => p.name || p.product_name),
+                alert_type: 'low_stock',
+                calculation_based_on_real_data: true
+            }
+        });
+    }
+
+    // 3. זיהוי מוצרים שלא נמכרו כלל (מתים)
+    const deadStockProducts = products.filter(p => {
+        const inventory = p.inventory || 0;
+        const monthlySales = p.monthly_sales || 0;
+        return inventory > 5 && monthlySales === 0;
+    });
+
+    if (deadStockProducts.length > 0) {
+        const topDeadStock = deadStockProducts.slice(0, 5);
+        recommendations.push({
+            title: `💀 ${topDeadStock.length} מוצרים "מתים" - אין מכירות`,
+            description: `היי ${customerName}, המוצרים הבאים לא נמכרו בכלל:
+
+${topDeadStock.map(p => `• ${p.name || p.product_name}: ${p.inventory} יח' במלאי`).join('\n')}
+
+אפשרויות לשקול:
+1. מבצע חיסול (50%+ הנחה)
+2. מתנה בקנייה מעל סכום
+3. החזרה לספק (אם אפשרי)
+4. תרומה לעמותה (הטבת מס)
+
+מוצר שלא נמכר = כסף שנעול במלאי.`,
+            category: 'inventory',
+            expected_profit: 0,
+            priority: 'medium',
+            action_steps: [
+                'בדוק למה המוצרים לא נמכרים (מחיר? מיקום? ביקוש?)',
+                'שקול מבצע חיסול משמעותי',
+                'נסה לשלב כמתנה בחבילות',
+                'אם אין תקווה - פנה מלאי ולמד לעתיד'
+            ],
+            related_data: {
+                dead_stock_products: topDeadStock.map(p => p.name || p.product_name),
+                alert_type: 'dead_stock',
+                calculation_based_on_real_data: true
+            }
+        });
+    }
+
     return recommendations;
 };
 
