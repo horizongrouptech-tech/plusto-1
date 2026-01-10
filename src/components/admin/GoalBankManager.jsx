@@ -40,6 +40,16 @@ export default function GoalBankManager({ currentUser }) {
     other: 'אחר'
   };
 
+  const categoryColors = {
+    financial: 'bg-green-500/20 text-green-400 border-green-500/40',
+    operational: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
+    marketing: 'bg-purple-500/20 text-purple-400 border-purple-500/40',
+    sales: 'bg-orange-500/20 text-orange-400 border-orange-500/40',
+    hr: 'bg-pink-500/20 text-pink-400 border-pink-500/40',
+    strategic: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/40',
+    other: 'bg-gray-500/20 text-gray-400 border-gray-500/40'
+  };
+
   const canCreate = currentUser && 
     (currentUser.role === 'admin' || 
      ['ofek@horizon.org.il', 'omer@horizon.org.il', 'shneaper@horizon.org.il'].includes(currentUser.email));
@@ -180,55 +190,64 @@ export default function GoalBankManager({ currentUser }) {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {templates.map(template => (
-                <Card key={template.id} className="bg-horizon-card border-horizon">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-3">
+                <Card 
+                  key={template.id} 
+                  className="bg-white dark:bg-horizon-card border-2 border-horizon hover:border-horizon-primary hover:shadow-xl transition-all duration-300"
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between gap-3 mb-4">
                       <div className="flex-1">
-                        <h3 className="font-bold text-horizon-text">{template.name}</h3>
-                        <Badge className="text-xs bg-horizon-primary/20 text-horizon-primary mt-2">
+                        <h3 className="text-xl font-bold text-horizon-text mb-3 leading-tight">
+                          {template.name}
+                        </h3>
+                        <Badge className={`text-sm px-3 py-1.5 font-semibold border ${categoryColors[template.category]}`}>
                           {categoryLabels[template.category]}
                         </Badge>
                       </div>
-                      <Badge variant="outline" className="text-xs">
-                        {template.usage_count || 0} שימושים
-                      </Badge>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-horizon-primary">{template.usage_count || 0}</div>
+                        <div className="text-xs text-horizon-accent">שימושים</div>
+                      </div>
                     </div>
 
                     {template.description && (
-                      <p className="text-sm text-horizon-accent mb-3 line-clamp-2">
+                      <p className="text-sm text-horizon-accent leading-relaxed mb-4 border-r-2 border-horizon-primary/30 pr-3">
                         {template.description}
                       </p>
                     )}
 
-                    <div className="text-xs text-horizon-accent/70 mb-3">
-                      משך משוער: {template.estimated_duration_days || 30} ימים
+                    <div className="bg-horizon-primary/10 rounded-lg px-3 py-2 mb-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-horizon-text">משך משוער:</span>
+                        <span className="text-lg font-bold text-horizon-primary">
+                          {template.estimated_duration_days || 30} ימים
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex gap-2">
-                      {canCreate && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(template)}
-                            className="flex-1 text-horizon-primary hover:bg-horizon-primary/10"
-                          >
-                            <Edit3 className="w-3 h-3 ml-1" />
-                            ערוך
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(template.id)}
-                            className="text-red-400 hover:bg-red-500/10"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
+                    {canCreate && (
+                      <div className="flex gap-2 pt-3 border-t border-horizon">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(template)}
+                          className="flex-1 text-horizon-primary hover:bg-horizon-primary/10 font-medium"
+                        >
+                          <Edit3 className="w-4 h-4 ml-1" />
+                          ערוך
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(template.id)}
+                          className="text-red-400 hover:bg-red-500/10 font-medium"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
