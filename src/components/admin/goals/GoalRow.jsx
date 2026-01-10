@@ -414,61 +414,6 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                             placeholder="הוסף הערות..."
                         />
                     </div>
-
-                    <div className="md:col-span-2">
-                        <label className="text-sm text-horizon-accent mb-2 block">תלוי ביעדים</label>
-                        <Select
-                            value=""
-                            onValueChange={async (goalId) => {
-                                const currentDeps = goal.depends_on_goal_ids || [];
-                                if (!currentDeps.includes(goalId)) {
-                                    await base44.entities.CustomerGoal.update(goal.id, {
-                                        depends_on_goal_ids: [...currentDeps, goalId]
-                                    });
-                                    refreshData();
-                                }
-                            }}
-                        >
-                            <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
-                                <SelectValue placeholder="הוסף תלות ביעד אחר..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {allGoals
-                                    .filter(g => g.id !== goal.id && !g.parent_id && !(goal.depends_on_goal_ids || []).includes(g.id))
-                                    .map(g => (
-                                        <SelectItem key={g.id} value={g.id}>
-                                            {g.name}
-                                        </SelectItem>
-                                    ))
-                                }
-                            </SelectContent>
-                        </Select>
-                        {(goal.depends_on_goal_ids || []).length > 0 && (
-                            <div className="mt-2 space-y-1">
-                                {goal.depends_on_goal_ids.map(depId => {
-                                    const depGoal = allGoals.find(g => g.id === depId);
-                                    return depGoal ? (
-                                        <div key={depId} className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
-                                            <span className="text-xs text-horizon-text">{depGoal.name}</span>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={async () => {
-                                                    await base44.entities.CustomerGoal.update(goal.id, {
-                                                        depends_on_goal_ids: goal.depends_on_goal_ids.filter(id => id !== depId)
-                                                    });
-                                                    refreshData();
-                                                }}
-                                                className="h-5 w-5 p-0 text-red-400"
-                                            >
-                                                <X className="w-3 h-3" />
-                                            </Button>
-                                        </div>
-                                    ) : null;
-                                })}
-                            </div>
-                        )}
-                    </div>
                 </div>
 
                 <div className="flex justify-end gap-2">
@@ -560,13 +505,12 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                                     <div className="flex items-center gap-1">
                                         {goal.assigned_users.slice(0, 2).map(email => {
                                             const user = users.find(u => u.email === email);
-                                            const displayName = user?.full_name || email.split('@')[0] || 'משתמש';
-                                            return <span key={email} className="text-xs text-horizon-text">{displayName}</span>;
+                                            return <span key={email} className="text-xs text-horizon-text">{user?.full_name || 'משתמש'}</span>;
                                         })}
                                         {goal.assigned_users.length > 2 && <span className="text-xs">+{goal.assigned_users.length - 2}</span>}
                                     </div>
                                 ) : goal.assignee_email ? (
-                                    <span className="text-horizon-text">{users.find(u => u.email === goal.assignee_email)?.full_name || goal.assignee_email.split('@')[0] || 'משתמש'}</span>
+                                    <span className="text-horizon-text">{users.find(u => u.email === goal.assignee_email)?.full_name || 'משתמש'}</span>
                                 ) : (
                                     <span className="text-gray-400">ללא אחראי</span>
                                 )}
