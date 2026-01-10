@@ -246,8 +246,9 @@ Deno.serve(async (req) => {
     const cashFlowEntries = [];
     const categorySums = {};
 
-    // פונקציה לזיהוי עמודה לפי מילות מפתח
+    // פונקציה לזיהוי עמודה לפי מילות מפתח - הוגדר מחוץ ללולאה
     const findColumnValue = (row, possibleNames) => {
+      if (!row) return undefined;
       // קודם בדיקה מדויקת
       for (const name of possibleNames) {
         if (row[name] !== undefined && row[name] !== null && row[name] !== '') {
@@ -269,7 +270,8 @@ Deno.serve(async (req) => {
       // מיפוי עמודות גמיש - תמיכה בשמות שונים מ-BiziBox
       const date = findColumnValue(row, [
         'date', 'תאריך', 'Date', 'תאריך עבר', 'תנועות עבר', 
-        'תאריך ערך', 'תאריך תנועה', 'transaction_date'
+        'תאריך ערך', 'תאריך תנועה', 'transaction_date', 'תאריך התנועה',
+        'ת.ערך', 'ת.תנועה', 'תאריך ביצוע'
       ]);
       
       const description = findColumnValue(row, [
@@ -293,17 +295,20 @@ Deno.serve(async (req) => {
       
       const category = findColumnValue(row, [
         'category', 'קטגוריה', 'Category', 'קטגוריות', 
-        'סיווג', 'classification', 'סוג הוצאה'
+        'סיווג', 'classification', 'סוג הוצאה', 'קטגוריה ראשית',
+        'סיווג ראשי', 'קט\'', 'קטג', 'סוג'
       ]) || '';
       
       const creditRaw = findColumnValue(row, [
         'credit', 'זכות', 'Credit', 'הכנסה', 'income', 
-        'זכות (הכנסה)', 'כניסה', 'הפקדה'
+        'זכות (הכנסה)', 'כניסה', 'הפקדה', 'זכ\'', 'זכ',
+        'זיכוי', 'הכנסות'
       ]) || 0;
       
       const debitRaw = findColumnValue(row, [
         'debit', 'חובה', 'Debit', 'הוצאה', 'expense', 
-        'חובה (הוצאה)', 'יציאה', 'משיכה'
+        'חובה (הוצאה)', 'יציאה', 'משיכה', 'חו\'', 'חו',
+        'חיוב', 'הוצאות'
       ]) || 0;
       
       const reference = findColumnValue(row, [

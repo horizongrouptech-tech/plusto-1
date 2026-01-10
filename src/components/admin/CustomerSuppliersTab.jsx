@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,7 +38,26 @@ const getCategoryBadgeStyle = (category) => {
   return styles[category] || styles.default;
 };
 
-export default function CustomerSuppliersTab({ customer, currentUser }) {
+export default function CustomerSuppliersTab({ customer, currentUser: propCurrentUser }) {
+  const [localCurrentUser, setLocalCurrentUser] = React.useState(propCurrentUser);
+
+  React.useEffect(() => {
+    const loadUser = async () => {
+      if (!propCurrentUser) {
+        try {
+          const user = await base44.auth.me();
+          setLocalCurrentUser(user);
+        } catch (error) {
+          console.error('Error loading user:', error);
+        }
+      } else {
+        setLocalCurrentUser(propCurrentUser);
+      }
+    };
+    loadUser();
+  }, [propCurrentUser]);
+
+  const currentUser = localCurrentUser;
   const [suppliers, setSuppliers] = useState([]);
   const [suggestedSuppliers, setSuggestedSuppliers] = useState([]);
   const [activeTab, setActiveTab] = useState("customer-suppliers");
