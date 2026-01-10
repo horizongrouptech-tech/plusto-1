@@ -370,7 +370,7 @@ export default function ServiceContactsTab({ customer }) {
                   variant="outline"
                   onClick={() => setFormData({
                     ...formData,
-                    login_credentials: [...formData.login_credentials, { system_name: '', username: '', password: '', url: '' }]
+                    login_credentials: [...(formData.login_credentials || []), { system_name: '', username: '', password: '', url: '' }]
                   })}
                   className="border-horizon text-horizon-primary"
                 >
@@ -379,13 +379,13 @@ export default function ServiceContactsTab({ customer }) {
                 </Button>
               </div>
               
-              {formData.login_credentials.map((cred, idx) => (
+              {(formData.login_credentials || []).map((cred, idx) => (
                 <div key={idx} className="bg-horizon-card/50 p-3 rounded-lg mb-2 space-y-2">
                   <div className="flex justify-between items-center">
                     <Input
                       value={cred.system_name}
                       onChange={(e) => {
-                        const newCreds = [...formData.login_credentials];
+                        const newCreds = [...(formData.login_credentials || [])];
                         newCreds[idx].system_name = e.target.value;
                         setFormData({ ...formData, login_credentials: newCreds });
                       }}
@@ -398,7 +398,7 @@ export default function ServiceContactsTab({ customer }) {
                       variant="ghost"
                       onClick={() => setFormData({
                         ...formData,
-                        login_credentials: formData.login_credentials.filter((_, i) => i !== idx)
+                        login_credentials: (formData.login_credentials || []).filter((_, i) => i !== idx)
                       })}
                       className="text-red-400"
                     >
@@ -408,7 +408,7 @@ export default function ServiceContactsTab({ customer }) {
                   <Input
                     value={cred.username}
                     onChange={(e) => {
-                      const newCreds = [...formData.login_credentials];
+                      const newCreds = [...(formData.login_credentials || [])];
                       newCreds[idx].username = e.target.value;
                       setFormData({ ...formData, login_credentials: newCreds });
                     }}
@@ -420,7 +420,7 @@ export default function ServiceContactsTab({ customer }) {
                       type={showPasswords[idx] ? 'text' : 'password'}
                       value={cred.password}
                       onChange={(e) => {
-                        const newCreds = [...formData.login_credentials];
+                        const newCreds = [...(formData.login_credentials || [])];
                         newCreds[idx].password = e.target.value;
                         setFormData({ ...formData, login_credentials: newCreds });
                       }}
@@ -440,7 +440,7 @@ export default function ServiceContactsTab({ customer }) {
                   <Input
                     value={cred.url}
                     onChange={(e) => {
-                      const newCreds = [...formData.login_credentials];
+                      const newCreds = [...(formData.login_credentials || [])];
                       newCreds[idx].url = e.target.value;
                       setFormData({ ...formData, login_credentials: newCreds });
                     }}
