@@ -10,9 +10,11 @@ import {
   Users,
   Loader2,
   Eye,
-  UserCog
+  UserCog,
+  ListChecks
 } from 'lucide-react';
 import ManagerAssignmentModal from '@/components/admin/ManagerAssignmentModal';
+import Ofek360Modal from '@/components/admin/Ofek360Modal';
 
 export default function CustomerListPanel({
   customers,
@@ -28,6 +30,7 @@ export default function CustomerListPanel({
 }) {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [showManagerModal, setShowManagerModal] = React.useState(false);
+  const [ofek360Customer, setOfek360Customer] = React.useState(null);
 
   const filteredCustomers = React.useMemo(() => {
     if (!searchTerm) return customers;
@@ -184,6 +187,18 @@ export default function CustomerListPanel({
                         {customer.full_name}
                       </p>
                       <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOfek360Customer(customer);
+                          }}
+                          className="h-7 w-7 text-white bg-gradient-to-r from-horizon-primary to-horizon-secondary hover:opacity-80 rounded-full shadow-lg transition-all hover:scale-110"
+                          title="צ'ק ליסט יומי - אופק 360"
+                        >
+                          <ListChecks className="w-4 h-4" />
+                        </Button>
                         {customer.phone && (
                           <Button
                             variant="ghost"
@@ -235,6 +250,14 @@ export default function CustomerListPanel({
         onClose={() => setShowManagerModal(false)}
         currentUser={currentUser}
       />
+
+      {ofek360Customer && (
+        <Ofek360Modal
+          customer={ofek360Customer}
+          isOpen={!!ofek360Customer}
+          onClose={() => setOfek360Customer(null)}
+        />
+      )}
     </>
   );
 }

@@ -22,10 +22,12 @@ import {
   Phone,
   Mail,
   MessageSquare,
-  AlertCircle
+  AlertCircle,
+  BookOpen
 } from 'lucide-react';
 import { formatCurrency } from '@/components/forecast/manual/utils/numberFormatter';
 import Ofek360Modal from '@/components/admin/Ofek360Modal';
+import GoalBankManager from '@/components/admin/GoalBankManager';
 
 export default function CustomerOverviewModal({ 
   customer, 
@@ -36,6 +38,19 @@ export default function CustomerOverviewModal({
   onArchive
 }) {
   const [ofek360Open, setOfek360Open] = useState(false);
+  const [goalBankOpen, setGoalBankOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // טעינת המשתמש הנוכחי
+  useQuery({
+    queryKey: ['currentUser'],
+    queryFn: async () => {
+      const user = await base44.auth.me();
+      setCurrentUser(user);
+      return user;
+    },
+    enabled: isOpen,
+  });
   // טעינת המלצות
   const { data: recommendations = [] } = useQuery({
     queryKey: ['customerRecommendations', customer?.email],
@@ -124,14 +139,22 @@ export default function CustomerOverviewModal({
           </DialogHeader>
 
         <div className="space-y-6">
-          {/* כפתור עליון */}
-          <div className="flex justify-center">
+          {/* כפתורים עליונים */}
+          <div className="flex justify-center gap-3">
             <Button
               onClick={() => setOfek360Open(true)}
-              className="bg-gradient-to-r from-horizon-primary to-horizon-secondary hover:from-horizon-primary/90 hover:to-horizon-secondary/90 text-white h-12 w-full max-w-md"
+              className="bg-gradient-to-r from-horizon-primary to-horizon-secondary hover:from-horizon-primary/90 hover:to-horizon-secondary/90 text-white h-12 flex-1 max-w-xs"
             >
               <Target className="w-5 h-5 ml-2" />
-              הצ'ק ליסט - אופק 360
+              צ'ק ליסט יומי - אופק 360
+            </Button>
+            <Button
+              onClick={() => setGoalBankOpen(true)}
+              variant="outline"
+              className="border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10 h-12 flex-1 max-w-xs"
+            >
+              <BookOpen className="w-5 h-5 ml-2" />
+              בנק יעדים
             </Button>
           </div>
 
@@ -305,6 +328,19 @@ export default function CustomerOverviewModal({
           onClose={() => setOfek360Open(false)}
         />
       )}
+
+      {/* מודל בנק יעדים */}
+      <Dialog open={goalBankOpen} onOpenChange={setGoalBankOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-horizon-dark text-horizon-text border-horizon" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-horizon-text flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-horizon-primary" />
+              בנק יעדים
+            </DialogTitle>
+          </DialogHeader>
+          <GoalBankManager currentUser={currentUser} />
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
