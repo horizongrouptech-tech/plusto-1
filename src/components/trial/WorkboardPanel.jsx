@@ -14,7 +14,6 @@ import {
   Users
 } from 'lucide-react';
 import { ReactFlowProvider } from 'reactflow';
-import { Dialog } from '@/components/ui/dialog';
 
 // ייבוא קומפוננטות קיימות
 import CustomerFileUploadManager from '@/components/admin/CustomerFileUploadManager';
@@ -71,8 +70,7 @@ export default function WorkboardPanel({
   onCreateGoalOriented,
   onCreateManual,
   isGenerating,
-  currentUser,
-  onOpenGoalBank
+  currentUser
 }) {
   const [goalsView, setGoalsView] = React.useState('table');
   if (!customer) {
@@ -141,25 +139,13 @@ export default function WorkboardPanel({
         
         {activeTab === 'recommendations' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <CreateRecommendationButtons
-                onCreateSystemRecommendations={onCreateSystemRec}
-                onCreateTargeted={onCreateTargeted}
-                onCreateGoalOriented={onCreateGoalOriented}
-                onCreateManual={onCreateManual}
-                isGenerating={isGenerating}
-              />
-              {onOpenGoalBank && (
-                <Button
-                  onClick={onOpenGoalBank}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                  size="sm"
-                >
-                  <Lightbulb className="w-4 h-4 ml-2" />
-                  בנק יעדים
-                </Button>
-              )}
-            </div>
+            <CreateRecommendationButtons
+              onCreateSystemRecommendations={onCreateSystemRec}
+              onCreateTargeted={onCreateTargeted}
+              onCreateGoalOriented={onCreateGoalOriented}
+              onCreateManual={onCreateManual}
+              isGenerating={isGenerating}
+            />
 
             <RecommendationFilters
               categoryFilter={categoryFilter}

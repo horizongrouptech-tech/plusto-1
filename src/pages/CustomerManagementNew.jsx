@@ -22,8 +22,6 @@ import ManualRecommendationModal from '@/components/admin/ManualRecommendationMo
 import RecommendationViewModal from '@/components/admin/RecommendationViewModal';
 import RecommendationEditModal from '@/components/admin/RecommendationEditModal';
 import RecommendationUpgradeModal from '@/components/admin/RecommendationUpgradeModal';
-import Daily360ChecklistModal from '@/components/admin/Daily360ChecklistModal';
-import GoalBankManager from '@/components/admin/GoalBankManager';
 
 export default function CustomerManagementNew() {
   const navigate = useNavigate();
@@ -44,8 +42,6 @@ export default function CustomerManagementNew() {
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
-  const [show360Checklist, setShow360Checklist] = useState(false);
-  const [showGoalBank, setShowGoalBank] = useState(false);
 
   // Recommendation modal states
   const [systemRecModalOpen, setSystemRecModalOpen] = useState(false);
@@ -234,10 +230,6 @@ export default function CustomerManagementNew() {
             onCollapse={() => setCustomerListCollapsed(true)}
             isLoading={isLoadingCustomers}
             currentUser={user}
-            onOpen360Checklist={(customer) => {
-              setSelectedCustomer(customer);
-              setShow360Checklist(true);
-            }}
           />
         </div>
       )}
@@ -270,7 +262,6 @@ export default function CustomerManagementNew() {
         onArchiveRecommendation={handleArchiveRecommendation}
         onSendRecommendation={handleSendRecommendation}
         isAdmin={user?.role === 'admin'}
-        onOpenGoalBank={() => setShowGoalBank(true)}
         categoryFilter={categoryFilter}
         setCategoryFilter={setCategoryFilter}
         statusFilter={statusFilter}
@@ -480,20 +471,6 @@ export default function CustomerManagementNew() {
             setUpgradeRecModalOpen(false);
           }}
         />
-      )}
-
-      {show360Checklist && selectedCustomer && (
-        <Daily360ChecklistModal
-          customer={selectedCustomer}
-          isOpen={show360Checklist}
-          onClose={() => setShow360Checklist(false)}
-        />
-      )}
-
-      {showGoalBank && (
-        <Dialog open={showGoalBank} onOpenChange={setShowGoalBank}>
-          <GoalBankManager currentUser={user} />
-        </Dialog>
       )}
     </div>
   );

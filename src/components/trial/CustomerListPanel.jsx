@@ -10,8 +10,7 @@ import {
   Users,
   Loader2,
   Eye,
-  UserCog,
-  ListChecks
+  UserCog
 } from 'lucide-react';
 import ManagerAssignmentModal from '@/components/admin/ManagerAssignmentModal';
 
@@ -25,8 +24,7 @@ export default function CustomerListPanel({
   onOpenOverview,
   onCollapse,
   isLoading,
-  currentUser,
-  onOpen360Checklist
+  currentUser
 }) {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [showManagerModal, setShowManagerModal] = React.useState(false);
@@ -164,25 +162,11 @@ export default function CustomerListPanel({
                   onClick={() => onSelectCustomer(customer)}
                 >
                   <div className="space-y-2" dir="rtl">
-                    {/* שורה ראשונה: שם העסק + כפתור 360 + Badge */}
+                    {/* שורה ראשונה: שם העסק + Badge */}
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-bold text-horizon-text text-base flex-1">
                        {customer.business_name || 'ללא שם עסק'}
                       </p>
-                      {selectedCustomer?.id === customer.id && onOpen360Checklist && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpen360Checklist(customer);
-                          }}
-                          className="h-7 w-7 text-white bg-purple-600 hover:bg-purple-700 rounded-full shadow-lg transition-all hover:scale-110"
-                          title="צ'קליסט יומי - אופק 360"
-                        >
-                          <ListChecks className="w-4 h-4" />
-                        </Button>
-                      )}
                       {customer.is_archived ? (
                        <Badge className="text-xs flex-shrink-0 bg-orange-500/20 text-orange-400 border-orange-500/30">
                          ארכיון
