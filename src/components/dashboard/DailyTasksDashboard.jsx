@@ -24,7 +24,8 @@ import {
   CheckSquare,
   XCircle,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  BookOpen
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -42,6 +43,7 @@ import { he } from 'date-fns/locale';
 import KanbanColumn from './kanban/KanbanColumn';
 import TaskCard from './kanban/TaskCard';
 import CompletedTasksModal from './kanban/CompletedTasksModal';
+import GoalBankManager from '../admin/GoalBankManager';
 
 
 // פונקציה לקבלת קבוצת העבודה היומית
@@ -83,6 +85,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const [customerFilter, setCustomerFilter] = useState('all');
   const [showCompletedModal, setShowCompletedModal] = useState(false);
   const [isClientsExpanded, setIsClientsExpanded] = useState(true);
+  const [showGoalBankModal, setShowGoalBankModal] = useState(false);
 
   const todayWorkGroup = getTodayWorkGroup();
   const queryClient = useQueryClient();
@@ -441,15 +444,22 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       {/* כותרת וכפתורים */}
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-horizon-text flex items-center gap-2">לוח משימות 
-
-
-          </h2>
+          <h2 className="text-2xl font-bold text-horizon-text flex items-center gap-2">לוח משימות</h2>
           <p className="text-horizon-accent mt-1">
             ניהול משימות בסגנון Trello - גרור ושחרר לעדכון סטטוס
           </p>
         </div>
         <div className="flex gap-2">
+          {(isAdmin || currentUser?.user_type === 'financial_manager') && (
+            <Button
+              onClick={() => setShowGoalBankModal(true)}
+              variant="outline"
+              className="border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10"
+            >
+              <BookOpen className="w-4 h-4 ml-2" />
+              בנק יעדים
+            </Button>
+          )}
           <Button
             onClick={() => setShowCompletedModal(true)}
             className="bg-green-600 hover:bg-green-700 text-white">
@@ -810,6 +820,19 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         allGoals={goals}
         onRestoreTask={handleRestoreTask} />
 
+
+      {/* מודל בנק יעדים */}
+      <Dialog open={showGoalBankModal} onOpenChange={setShowGoalBankModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-horizon-dark text-horizon-text border-horizon" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-horizon-text flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-horizon-primary" />
+              בנק יעדים
+            </DialogTitle>
+          </DialogHeader>
+          <GoalBankManager currentUser={currentUser} />
+        </DialogContent>
+      </Dialog>
 
       {/* מודאל עריכת משימה */}
       {selectedTask &&

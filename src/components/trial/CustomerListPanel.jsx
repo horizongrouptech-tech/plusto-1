@@ -14,7 +14,7 @@ import {
   ListChecks
 } from 'lucide-react';
 import ManagerAssignmentModal from '@/components/admin/ManagerAssignmentModal';
-import Ofek360Modal from '@/components/admin/Ofek360Modal';
+import DailyOfek360Checklist from '@/components/admin/DailyOfek360Checklist';
 
 export default function CustomerListPanel({
   customers,
@@ -194,7 +194,7 @@ export default function CustomerListPanel({
                             e.stopPropagation();
                             setOfek360Customer(customer);
                           }}
-                          className="h-7 w-7 text-white bg-gradient-to-r from-horizon-primary to-horizon-secondary hover:opacity-80 rounded-full shadow-lg transition-all hover:scale-110"
+                          className="h-7 w-7 text-white bg-[#32acc1] hover:bg-[#2a8fa3] rounded-full shadow-lg transition-all hover:scale-110"
                           title="צ'ק ליסט יומי - אופק 360"
                         >
                           <ListChecks className="w-4 h-4" />
@@ -252,7 +252,7 @@ export default function CustomerListPanel({
       />
 
       {ofek360Customer && (
-        <Ofek360Modal
+        <DailyOfek360Checklist
           customer={ofek360Customer}
           isOpen={!!ofek360Customer}
           onClose={() => setOfek360Customer(null)}

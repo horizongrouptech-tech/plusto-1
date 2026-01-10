@@ -149,28 +149,34 @@ export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoal
                                 <p className="text-horizon-accent">אין תבניות זמינות</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto">
+                            <div className="grid grid-cols-1 gap-3 max-h-[500px] overflow-y-auto">
                                 {filteredTemplates.map(template => (
                                     <Card 
                                         key={template.id} 
-                                        className="bg-horizon-card border-horizon hover:border-horizon-primary cursor-pointer transition-all"
+                                        className="bg-horizon-card border-2 border-horizon hover:border-horizon-primary cursor-pointer transition-all hover:shadow-lg"
                                         onClick={() => handleSelectTemplate(template)}
                                     >
-                                        <CardContent className="p-4">
-                                            <div className="flex items-start justify-between mb-2">
-                                                <h3 className="font-bold text-horizon-text flex-1">{template.name}</h3>
-                                                <Badge className="text-xs bg-horizon-primary/20 text-horizon-primary">
-                                                    {categoryLabels[template.category]}
-                                                </Badge>
+                                        <CardContent className="p-5">
+                                            <div className="flex items-start justify-between gap-3 mb-3">
+                                                <div className="flex-1">
+                                                    <h3 className="text-lg font-bold text-horizon-text mb-2">{template.name}</h3>
+                                                    <Badge className="text-xs bg-horizon-primary/20 text-horizon-primary border border-horizon-primary/30 font-medium px-3 py-1">
+                                                        {categoryLabels[template.category]}
+                                                    </Badge>
+                                                </div>
+                                                <div className="text-left">
+                                                    <div className="text-xs text-horizon-accent/70">שימושים</div>
+                                                    <div className="text-xl font-bold text-horizon-primary">{template.usage_count || 0}</div>
+                                                </div>
                                             </div>
                                             {template.description && (
-                                                <p className="text-sm text-horizon-accent mb-2 line-clamp-2">
+                                                <p className="text-sm text-horizon-accent leading-relaxed mb-3 border-r-2 border-horizon-primary/30 pr-3">
                                                     {template.description}
                                                 </p>
                                             )}
-                                            <div className="flex items-center justify-between text-xs text-horizon-accent/70">
-                                                <span>{template.estimated_duration_days || 30} ימים</span>
-                                                <span>{template.usage_count || 0} שימושים</span>
+                                            <div className="flex items-center gap-2 text-sm text-horizon-accent/70 bg-horizon-primary/5 px-3 py-2 rounded-lg">
+                                                <span className="font-medium">משך משוער:</span>
+                                                <span className="font-bold text-horizon-primary">{template.estimated_duration_days || 30} ימים</span>
                                             </div>
                                         </CardContent>
                                     </Card>
