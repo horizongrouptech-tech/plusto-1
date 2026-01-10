@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Plus, Edit3, Trash2, Phone, Mail, Building2, Loader2, MessageSquare } from 'lucide-react';
+import { Users, Plus, Edit3, Trash2, Phone, Mail, Building2, Loader2, MessageSquare, Eye, EyeOff } from 'lucide-react';
 
 export default function ServiceContactsTab({ customer }) {
   const queryClient = useQueryClient();
@@ -24,8 +24,10 @@ export default function ServiceContactsTab({ customer }) {
     phone: '',
     email: '',
     address: '',
-    notes: ''
+    notes: '',
+    login_credentials: []
   });
+  const [showPasswords, setShowPasswords] = useState({});
 
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ['serviceContacts', customer?.email],
@@ -81,7 +83,8 @@ export default function ServiceContactsTab({ customer }) {
       phone: contact.phone || '',
       email: contact.email || '',
       address: contact.address || '',
-      notes: contact.notes || ''
+      notes: contact.notes || '',
+      login_credentials: contact.login_credentials || []
     });
     setShowModal(true);
   };
@@ -236,6 +239,15 @@ export default function ServiceContactsTab({ customer }) {
                       </p>
                     )}
 
+                    {contact.login_credentials && contact.login_credentials.length > 0 && (
+                      <div className="mb-3 p-2 bg-blue-500/10 border border-blue-500/30 rounded">
+                        <p className="text-xs text-blue-400 flex items-center gap-1">
+                          <Building2 className="w-3 h-3" />
+                          {contact.login_credentials.length} מערכות מחוברות
+                        </p>
+                      </div>
+                    )}
+
                     <div className="flex gap-2">
                       <Button
                         variant="ghost"
@@ -347,6 +359,96 @@ export default function ServiceContactsTab({ customer }) {
                 rows={3}
                 placeholder="הערות נוספות על איש הקשר"
               />
+            </div>
+
+            <div className="border-t border-horizon pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-horizon-accent">פרטי התחברות (קופות, מערכות)</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setFormData({
+                    ...formData,
+                    login_credentials: [...formData.login_credentials, { system_name: '', username: '', password: '', url: '' }]
+                  })}
+                  className="border-horizon text-horizon-primary"
+                >
+                  <Plus className="w-3 h-3 ml-1" />
+                  הוסף מערכת
+                </Button>
+              </div>
+              
+              {formData.login_credentials.map((cred, idx) => (
+                <div key={idx} className="bg-horizon-card/50 p-3 rounded-lg mb-2 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <Input
+                      value={cred.system_name}
+                      onChange={(e) => {
+                        const newCreds = [...formData.login_credentials];
+                        newCreds[idx].system_name = e.target.value;
+                        setFormData({ ...formData, login_credentials: newCreds });
+                      }}
+                      placeholder="שם המערכת (למשל: קופה, BiziBox)"
+                      className="bg-horizon-card border-horizon text-horizon-text flex-1 ml-2"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setFormData({
+                        ...formData,
+                        login_credentials: formData.login_credentials.filter((_, i) => i !== idx)
+                      })}
+                      className="text-red-400"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <Input
+                    value={cred.username}
+                    onChange={(e) => {
+                      const newCreds = [...formData.login_credentials];
+                      newCreds[idx].username = e.target.value;
+                      setFormData({ ...formData, login_credentials: newCreds });
+                    }}
+                    placeholder="שם משתמש"
+                    className="bg-horizon-card border-horizon text-horizon-text"
+                  />
+                  <div className="flex gap-2">
+                    <Input
+                      type={showPasswords[idx] ? 'text' : 'password'}
+                      value={cred.password}
+                      onChange={(e) => {
+                        const newCreds = [...formData.login_credentials];
+                        newCreds[idx].password = e.target.value;
+                        setFormData({ ...formData, login_credentials: newCreds });
+                      }}
+                      placeholder="סיסמה"
+                      className="bg-horizon-card border-horizon text-horizon-text flex-1"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setShowPasswords({ ...showPasswords, [idx]: !showPasswords[idx] })}
+                      className="text-horizon-accent"
+                    >
+                      {showPasswords[idx] ? '🙈' : '👁️'}
+                    </Button>
+                  </div>
+                  <Input
+                    value={cred.url}
+                    onChange={(e) => {
+                      const newCreds = [...formData.login_credentials];
+                      newCreds[idx].url = e.target.value;
+                      setFormData({ ...formData, login_credentials: newCreds });
+                    }}
+                    placeholder="כתובת URL (אופציונלי)"
+                    className="bg-horizon-card border-horizon text-horizon-text"
+                  />
+                </div>
+              ))}
             </div>
           </div>
 

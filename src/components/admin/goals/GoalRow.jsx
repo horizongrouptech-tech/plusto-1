@@ -505,12 +505,13 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                                     <div className="flex items-center gap-1">
                                         {goal.assigned_users.slice(0, 2).map(email => {
                                             const user = users.find(u => u.email === email);
-                                            return <span key={email} className="text-xs text-horizon-text">{user?.full_name || 'משתמש'}</span>;
+                                            const displayName = user?.full_name || email.split('@')[0] || 'משתמש';
+                                            return <span key={email} className="text-xs text-horizon-text">{displayName}</span>;
                                         })}
                                         {goal.assigned_users.length > 2 && <span className="text-xs">+{goal.assigned_users.length - 2}</span>}
                                     </div>
                                 ) : goal.assignee_email ? (
-                                    <span className="text-horizon-text">{users.find(u => u.email === goal.assignee_email)?.full_name || 'משתמש'}</span>
+                                    <span className="text-horizon-text">{users.find(u => u.email === goal.assignee_email)?.full_name || goal.assignee_email.split('@')[0] || 'משתמש'}</span>
                                 ) : (
                                     <span className="text-gray-400">ללא אחראי</span>
                                 )}

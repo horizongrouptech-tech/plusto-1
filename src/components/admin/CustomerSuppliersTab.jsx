@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -222,12 +221,10 @@ export default function CustomerSuppliersTab({ customer, currentUser }) {
             <Truck className="w-6 h-6 text-horizon-primary" />
             <span>ניהול ספקים עבור: <span className="text-horizon-primary">{customer.business_name || customer.full_name}</span></span>
           </CardTitle>
-          {canAddSupplier &&
           <Button onClick={() => setShowAddModal(true)} className="btn-horizon-primary">
-              <Plus className="w-4 h-4 ml-2" />
-              הוסף ספק חדש
-            </Button>
-          }
+            <Plus className="w-4 h-4 ml-2" />
+            הוסף ספק חדש
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -301,14 +298,12 @@ export default function CustomerSuppliersTab({ customer, currentUser }) {
                         </TableCell>
                         <TableCell className="text-right">{renderStarRating(supplier.rating)}</TableCell>
                         <TableCell className="text-center">
-                          {canAddSupplier &&
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleRemoveSupplier(supplier)}>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleRemoveSupplier(supplier)}>
                               הסר שיוך
-                            </Button>
-                      }
+                          </Button>
                         </TableCell>
                       </TableRow>
                   )}
@@ -367,14 +362,12 @@ export default function CustomerSuppliersTab({ customer, currentUser }) {
                         </TableCell>
                         <TableCell className="text-right">{renderStarRating(supplier.rating)}</TableCell>
                         <TableCell className="text-center">
-                          {canAddSupplier &&
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleAssignSupplier(supplier)}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleAssignSupplier(supplier)}>
                               שייך ללקוח
-                            </Button>
-                      }
+                          </Button>
                         </TableCell>
                       </TableRow>
                   )}
