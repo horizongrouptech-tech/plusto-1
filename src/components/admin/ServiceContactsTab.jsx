@@ -274,7 +274,7 @@ export default function ServiceContactsTab({ customer }) {
       </Card>
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="bg-horizon-dark border-horizon max-w-lg" dir="rtl">
+        <DialogContent className="bg-horizon-dark border-horizon max-w-2xl max-h-[85vh] overflow-y-auto" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-horizon-text">
               {editingContact ? 'עריכת איש קשר' : 'איש קשר חדש'}
