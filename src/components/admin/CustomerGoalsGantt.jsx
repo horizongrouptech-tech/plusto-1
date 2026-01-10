@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Plus, Loader2, Target, Download } from 'lucide-react';
+import { Plus, Loader2, Target, Download, BookOpen } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import GoalGroup from './goals/GoalGroup';
 import GoalsSummaryDashboard from './goals/GoalsSummaryDashboard';
 import { useQuery } from '@tanstack/react-query';
 import { generateGoalsHTML } from '../shared/generateGoalsHTML';
 import { openPrintWindow } from '../shared/printUtils';
+import GoalTemplateSelector from '../trial/GoalTemplateSelector';
 
 export default function CustomerGoalsGantt({ customer }) {
     const [goals, setGoals] = useState([]);
@@ -17,6 +18,7 @@ export default function CustomerGoalsGantt({ customer }) {
         const initial = {};
         return initial;
     });
+    const [showTemplateSelector, setShowTemplateSelector] = useState(false);
 
     const fetchData = useCallback(async (showLoadingSpinner = true) => {
         if (!customer?.email) {
@@ -246,7 +248,7 @@ export default function CustomerGoalsGantt({ customer }) {
                     <Target className="text-horizon-primary" />
                     גאנט יעדים
                 </h2>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                     <Button
                         onClick={() => toggleAllGoals(!Object.values(collapsedGoals).every(v => v))}
                         variant="outline"
@@ -262,6 +264,14 @@ export default function CustomerGoalsGantt({ customer }) {
                     >
                         <Download className="w-4 h-4 ml-2" />
                         ייצא ל-PDF
+                    </Button>
+                    <Button
+                        onClick={() => setShowTemplateSelector(true)}
+                        variant="outline"
+                        className="border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10 h-11"
+                    >
+                        <BookOpen className="w-4 h-4 ml-2" />
+                        בנק יעדים
                     </Button>
                     <Button onClick={handleAddGoal} className="btn-horizon-primary h-11">
                         <Plus className="w-4 h-4 ml-2" />
@@ -325,6 +335,15 @@ export default function CustomerGoalsGantt({ customer }) {
                     )}
                 </Droppable>
             </DragDropContext>
+
+            {showTemplateSelector && (
+                <GoalTemplateSelector
+                    customer={customer}
+                    isOpen={showTemplateSelector}
+                    onClose={() => setShowTemplateSelector(false)}
+                    onGoalCreated={() => fetchData(false)}
+                />
+            )}
         </div>
     );
 }
