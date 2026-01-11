@@ -146,6 +146,20 @@ function extractZReportData(rows, headerRowIndex) {
       revenueIndex = index;
       console.log(`✅ Found English revenue column at index ${index}: "${h}"`);
     }
+    
+    // ✅ NEW: גמישות נוספת - זיהוי עמודות מכירות כולל מע"מ
+    if (revenueIndex === -1 && normalized.includes('מכירות') && normalized.includes('כולל')) {
+      revenueIndex = index;
+      console.log(`✅ Found "מכירות כולל מע"מ" revenue column at index ${index}: "${h}"`);
+    }
+    
+    // ✅ NEW: זיהוי עמודות סה"כ / total
+    if (revenueIndex === -1 && (normalizedTrimmed === 'סה"כ' || normalizedTrimmed === 'סהכ' || 
+        normalizedTrimmed === 'total' || normalized.includes('סה״כ מכירות') ||
+        normalized.includes('מחזור') || normalized.includes('תקבולים'))) {
+      revenueIndex = index;
+      console.log(`✅ Found total/מחזור revenue column at index ${index}: "${h}"`);
+    }
   });
   
   // If product name not found but barcode is found, use the column AFTER barcode
