@@ -86,20 +86,52 @@ export default function CatalogDeletionModal({
     let totalDeleted = 0;
     let hasMore = true;
     let batchNumber = 0;
-    const maxBatches = 200; // הגנה מפני לולאה אינסופית
+    let consecutiveErrors = 0;
+    const maxBatches = 500; // הגנה מפני לולאה אינסופית
+    const maxRetries = 3;
 
     try {
       // לולאת מחיקה
       while (hasMore && !abortRef.current && batchNumber < maxBatches) {
         batchNumber++;
         
-        const { data, error } = await deleteEntireCatalog({
-          customer_email: customerEmail,
-          catalog_id: catalogId
-        });
-
-        if (error || !data?.success) {
-          throw new Error(data?.error || error?.message || 'שגיאה במחיקת מוצרים');
+        let data = null;
+        let lastError = null;
+        
+        // ניסיון עם retries
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            const result = await deleteEntireCatalog({
+              customer_email: customerEmail,
+              catalog_id: catalogId
+            });
+            
+            if (result.error) {
+              throw new Error(result.error?.message || 'שגיאה במחיקה');
+            }
+            
+            data = result.data;
+            consecutiveErrors = 0;
+            break;
+          } catch (err) {
+            lastError = err;
+            console.warn(`Attempt ${attempt}/${maxRetries} failed:`, err.message);
+            
+            if (attempt < maxRetries) {
+              // המתנה לפני ניסיון נוסף (עולה עם כל ניסיון)
+              await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+            }
+          }
+        }
+        
+        if (!data || !data.success) {
+          consecutiveErrors++;
+          if (consecutiveErrors >= 3) {
+            throw new Error(lastError?.message || 'שגיאה במחיקת מוצרים אחרי מספר ניסיונות');
+          }
+          // ממשיכים לנסות
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          continue;
         }
 
         totalDeleted += data.deleted_count || 0;
@@ -109,9 +141,9 @@ export default function CatalogDeletionModal({
         setRemainingCount(data.remaining_count || 0);
         calculateEstimatedTime(data.deleted_count, data.remaining_count || 0);
 
-        // הפסקה קצרה בין קריאות
+        // הפסקה בין קריאות למניעת עומס
         if (hasMore) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
 
@@ -164,9 +196,9 @@ export default function CatalogDeletionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] dir-rtl bg-horizon-dark border-horizon">
+      <DialogContent className="sm:max-w-[500px] bg-horizon-dark border-horizon" dir="rtl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-horizon-text">
+          <DialogTitle className="flex items-center gap-2 text-horizon-text text-right">
             {stage === 'completed' ? (
               <CheckCircle className="w-6 h-6 text-green-500" />
             ) : stage === 'error' ? (
@@ -306,11 +338,11 @@ export default function CatalogDeletionModal({
               נמחקו {deletedCount.toLocaleString()} מוצרים לפני השגיאה
             </p>
             <div className="flex justify-center gap-3 mt-4">
-              <Button onClick={handleClose} variant="outline">
-                סגור
-              </Button>
               <Button onClick={startDeletion} variant="destructive">
                 נסה שוב
+              </Button>
+              <Button onClick={handleClose} variant="outline">
+                סגור
               </Button>
             </div>
           </div>

@@ -18,7 +18,7 @@ async function deleteWithRetry(base44, productId, maxRetries = 3) {
 }
 
 // מחיקה ב-chunks קטנים יותר למניעת timeout
-async function deleteInChunks(base44, products, chunkSize = 100) {
+async function deleteInChunks(base44, products, chunkSize = 30) {
   let deletedCount = 0;
   
   for (let i = 0; i < products.length; i += chunkSize) {
@@ -27,6 +27,11 @@ async function deleteInChunks(base44, products, chunkSize = 100) {
       chunk.map(p => deleteWithRetry(base44, p.id))
     );
     deletedCount += results.filter(Boolean).length;
+    
+    // הפסקה בין chunks למניעת עומס
+    if (i + chunkSize < products.length) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
   }
   
   return deletedCount;
@@ -35,7 +40,7 @@ async function deleteInChunks(base44, products, chunkSize = 100) {
 // מחיקת batch אחד - מחזיר מצב עם has_more
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
-  const BATCH_SIZE = 500; // מוחק 500 בכל קריאה
+  const BATCH_SIZE = 200; // מוחק 200 בכל קריאה למניעת timeout
 
   try {
     const { customer_email, catalog_id, delete_catalog_entity } = await req.json();
@@ -101,7 +106,7 @@ Deno.serve(async (req) => {
     console.log(`📦 Deleting ${productsToDelete.length} products...`);
 
     // מחיקת המוצרים
-    const deletedCount = await deleteInChunks(base44, productsToDelete, 100);
+    const deletedCount = await deleteInChunks(base44, productsToDelete, 30);
 
     console.log(`✅ Deleted ${deletedCount} products`);
 
