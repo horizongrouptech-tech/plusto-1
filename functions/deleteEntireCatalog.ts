@@ -1,9 +1,9 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.5.0';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-// This function now deletes a single batch of products from a catalog.
+// מחיקה מלאה ולצמיתות של קטלוג - כולל כל המוצרים והקטלוג עצמו
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
-  const BATCH_SIZE = 50; // Number of products to delete per call
+  const BATCH_SIZE = 500; // מחיקה ב-batches גדולים יותר
 
   try {
     const { customer_email, catalog_id } = await req.json();
@@ -18,68 +18,70 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Find a batch of active products to delete
-    const productsToDelete = await base44.asServiceRole.entities.ProductCatalog.filter({
-      customer_email: customer_email,
-      catalog_id: catalog_id,
-      is_active: true
-    }, null, BATCH_SIZE);
+    console.log(`🗑️ Starting PERMANENT deletion of catalog ${catalog_id} for ${customer_email}`);
 
-    if (productsToDelete.length === 0) {
-      // No more products to delete, finalize the process
-      await base44.asServiceRole.entities.Catalog.update(catalog_id, {
-        status: 'draft',
-        product_count: 0
-      });
-      return new Response(JSON.stringify({
-        success: true,
-        deleted_count: 0,
-        is_finished: true,
-        message: 'Catalog has been fully cleared.'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    let totalDeleted = 0;
+    let batchNumber = 0;
+
+    // לולאה שמוחקת את כל המוצרים עד שלא נשאר כלום
+    while (true) {
+      batchNumber++;
+      
+      // מביא מוצרים - גם פעילים וגם לא פעילים (מוחק הכל!)
+      const productsToDelete = await base44.asServiceRole.entities.ProductCatalog.filter({
+        customer_email: customer_email,
+        catalog_id: catalog_id
+      }, null, BATCH_SIZE);
+
+      if (productsToDelete.length === 0) {
+        console.log(`✅ No more products to delete. Total deleted: ${totalDeleted}`);
+        break;
+      }
+
+      console.log(`📦 Batch ${batchNumber}: Deleting ${productsToDelete.length} products...`);
+
+      // מחיקה אמיתית ולצמיתות - לא רק is_active: false!
+      const deletePromises = productsToDelete.map(product => 
+        base44.asServiceRole.entities.ProductCatalog.delete(product.id)
+      );
+      
+      await Promise.all(deletePromises);
+      totalDeleted += productsToDelete.length;
+
+      console.log(`✅ Batch ${batchNumber} completed. Total deleted so far: ${totalDeleted}`);
+
+      // הפסקה קצרה בין batches למניעת עומס
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
-    // Process the batch: set is_active to false for each product
-    for (const product of productsToDelete) {
-      await base44.asServiceRole.entities.ProductCatalog.update(product.id, {
-        is_active: false
-      });
+    // מחיקת הקטלוג עצמו לצמיתות
+    console.log(`🗑️ Deleting the Catalog entity itself: ${catalog_id}`);
+    try {
+      await base44.asServiceRole.entities.Catalog.delete(catalog_id);
+      console.log(`✅ Catalog entity deleted successfully`);
+    } catch (catalogDeleteError) {
+      console.error(`⚠️ Could not delete Catalog entity (may already be deleted):`, catalogDeleteError.message);
     }
 
-    // Check if there are more products remaining after this batch
-    const remainingProducts = await base44.asServiceRole.entities.ProductCatalog.filter({
-      customer_email: customer_email,
-      catalog_id: catalog_id,
-      is_active: true
-    }, null, 1);
-
-    const isFinished = remainingProducts.length === 0;
-
-    if (isFinished) {
-        // This was the last batch, finalize catalog status
-        await base44.asServiceRole.entities.Catalog.update(catalog_id, {
-            status: 'draft',
-            product_count: 0
-        });
-    }
+    console.log(`🎉 Catalog deletion completed. Total products deleted: ${totalDeleted}`);
 
     return new Response(JSON.stringify({
       success: true,
-      deleted_count: productsToDelete.length,
-      is_finished: isFinished,
+      deleted_count: totalDeleted,
+      batches_processed: batchNumber,
+      is_finished: true,
+      is_fully_deleted: true,
+      message: `הקטלוג נמחק לצמיתות - ${totalDeleted} מוצרים הוסרו`
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('Error in deleteEntireCatalog batch:', error);
+    console.error('❌ Error in deleteEntireCatalog:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Error processing deletion batch'
+      error: error.message || 'Error deleting catalog'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
