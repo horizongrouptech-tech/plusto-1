@@ -169,13 +169,30 @@ Deno.serve(async (req) => {
 
     await updateProcessStatus(base44, process.id, 30, 'running', `מעבד ${records.length} שורות...`);
 
-    // שליפת מוצרים קיימים לבדיקת כפילויות
+    // שליפת מוצרים קיימים לבדיקת כפילויות - עם pagination לעקיפת מגבלת 5000
     let existingProducts = [];
     if (duplicate_action === 'skip' || duplicate_action === 'update') {
-      existingProducts = await base44.asServiceRole.entities.ProductCatalog.filter({
-        catalog_id,
-        is_active: true
-      });
+      let skip = 0;
+      const limit = 1000;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const batch = await base44.asServiceRole.entities.ProductCatalog.filter(
+          { catalog_id, is_active: true },
+          '-created_date',
+          limit,
+          skip
+        );
+        
+        if (batch.length > 0) {
+          existingProducts = existingProducts.concat(batch);
+          skip += limit;
+          console.log(`Fetched ${existingProducts.length} existing products so far...`);
+        }
+        
+        hasMore = batch.length === limit;
+      }
+      console.log(`Total existing products fetched: ${existingProducts.length}`);
     }
 
     // יצירת מפה של מוצרים קיימים לפי עמודת המזהה
@@ -298,42 +315,79 @@ Deno.serve(async (req) => {
 
     await updateProcessStatus(base44, process.id, 60, 'running', 'שומר מוצרים חדשים...');
 
-    // יצירת מוצרים חדשים - batches קטנים למניעת חסימת מגבלת 5000 של Base44
+    // יצירת מוצרים חדשים - יצירה בודדת לעקיפת מגבלת 5000 של Base44
     let createdCount = 0;
-    if (productsToCreate.length > 0) {
-      // Base44 מגביל ל-5000 רשומות, נשתמש ב-batch של 200 עם הפסקות
-      const batchSize = 200;
-      const totalBatches = Math.ceil(productsToCreate.length / batchSize);
+    const totalToCreate = productsToCreate.length;
+    
+    if (totalToCreate > 0) {
+      console.log(`Starting to create ${totalToCreate} products...`);
       
-      for (let i = 0; i < productsToCreate.length; i += batchSize) {
-        const batch = productsToCreate.slice(i, i + batchSize);
-        const currentBatch = Math.floor(i / batchSize) + 1;
-        
-        try {
-          await base44.asServiceRole.entities.ProductCatalog.bulkCreate(batch);
-          createdCount += batch.length;
-        } catch (batchError) {
-          console.error(`שגיאה ב-batch ${currentBatch}:`, batchError);
-          // ניסיון ליצור אחד-אחד במקרה של שגיאה
-          for (const product of batch) {
-            try {
-              await base44.asServiceRole.entities.ProductCatalog.create(product);
-              createdCount++;
-            } catch (singleError) {
-              console.error('שגיאה ביצירת מוצר בודד:', singleError);
+      // עבור קטלוגים קטנים (עד 3000) - נשתמש ב-bulkCreate
+      // עבור קטלוגים גדולים - נשתמש ב-create בודד
+      const useBulkCreate = totalToCreate <= 3000;
+      
+      if (useBulkCreate) {
+        // Bulk create בקבוצות קטנות
+        const batchSize = 100;
+        for (let i = 0; i < totalToCreate; i += batchSize) {
+          const batch = productsToCreate.slice(i, i + batchSize);
+          
+          try {
+            await base44.asServiceRole.entities.ProductCatalog.bulkCreate(batch);
+            createdCount += batch.length;
+          } catch (batchError) {
+            console.error(`Bulk create failed at ${i}, falling back to single create:`, batchError.message);
+            for (const product of batch) {
+              try {
+                await base44.asServiceRole.entities.ProductCatalog.create(product);
+                createdCount++;
+              } catch (e) {
+                console.error('Single create error:', e.message);
+              }
             }
           }
+          
+          const progress = 60 + Math.round((createdCount / totalToCreate) * 25);
+          await updateProcessStatus(base44, process.id, progress, 'running', 
+            `נוצרו ${createdCount.toLocaleString('he-IL')} מתוך ${totalToCreate.toLocaleString('he-IL')} מוצרים...`);
+          
+          if (i + batchSize < totalToCreate) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
         }
+      } else {
+        // יצירה בודדת לקטלוגים גדולים - עוקף את מגבלת 5000
+        console.log(`Large catalog detected (${totalToCreate}), using single create method...`);
         
-        const progress = 60 + Math.round((createdCount / productsToCreate.length) * 25);
-        await updateProcessStatus(base44, process.id, progress, 'running', 
-          `נוצרו ${createdCount.toLocaleString('he-IL')} מתוך ${productsToCreate.length.toLocaleString('he-IL')} מוצרים (batch ${currentBatch}/${totalBatches})...`);
-        
-        // הפסקה בין batches למניעת עומס על השרת
-        if (i + batchSize < productsToCreate.length) {
-          await new Promise(resolve => setTimeout(resolve, 150));
+        for (let i = 0; i < totalToCreate; i++) {
+          try {
+            await base44.asServiceRole.entities.ProductCatalog.create(productsToCreate[i]);
+            createdCount++;
+          } catch (createError) {
+            console.error(`Error creating product ${i + 1}:`, createError.message);
+          }
+          
+          // עדכון התקדמות כל 100 מוצרים
+          if (createdCount % 100 === 0 || i === totalToCreate - 1) {
+            const progress = 60 + Math.round((createdCount / totalToCreate) * 25);
+            await updateProcessStatus(base44, process.id, progress, 'running', 
+              `נוצרו ${createdCount.toLocaleString('he-IL')} מתוך ${totalToCreate.toLocaleString('he-IL')} מוצרים...`);
+          }
+          
+          // הפסקה קצרה כל 50 מוצרים למניעת עומס
+          if ((i + 1) % 50 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 30));
+          }
+          
+          // הפסקה ארוכה יותר כל 500 מוצרים
+          if ((i + 1) % 500 === 0) {
+            console.log(`Created ${createdCount} products, pausing...`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
         }
       }
+      
+      console.log(`Finished creating products. Total created: ${createdCount}`);
     }
 
     await updateProcessStatus(base44, process.id, 85, 'running', 'מעדכן מוצרים קיימים...');
