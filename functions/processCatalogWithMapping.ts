@@ -22,18 +22,26 @@ function cleanValue(value, type) {
   return strValue.replace(/[\uFEFF\u200E\u200F\u202A-\u202E]/g, '').trim();
 }
 
-// הגדרת סוגי שדות
+// הגדרת סוגי שדות - מורחב לתמיכה בקטלוגים מגוונים
 const FIELD_TYPES = {
   product_name: 'text',
   barcode: 'text',
   cost_price: 'number',
+  cost_price_no_vat: 'number',
   selling_price: 'number',
+  store_price: 'number',
+  store_price_alt: 'number',
   category: 'text',
+  secondary_category: 'text',
   supplier: 'text',
   supplier_item_code: 'text',
   inventory: 'number',
   monthly_sales: 'number',
-  secondary_category: 'text'
+  color: 'text',
+  size: 'text',
+  creation_date: 'text',
+  profit_percentage: 'number',
+  no_vat_item: 'text'
 };
 
 // עדכון סטטוס תהליך
@@ -222,20 +230,30 @@ Deno.serve(async (req) => {
         }
       }
 
-      // חישוב רווח
-      const costPrice = product.cost_price || 0;
-      const sellingPrice = product.selling_price || 0;
-      product.gross_profit = Math.max(0, sellingPrice - costPrice);
-      product.profit_percentage = costPrice > 0 ? Math.round(((sellingPrice - costPrice) / costPrice) * 100) : 0;
-
-      // קביעת איכות נתונים
-      if (!costPrice) {
-        missingFields.push('מחיר עלות');
-        validationErrors.push('מחיר עלות חסר או 0');
+      // חישוב רווח - גמיש לפי העמודות שזמינות
+      const costPrice = product.cost_price || product.cost_price_no_vat || 0;
+      const sellingPrice = product.selling_price || product.store_price || product.store_price_alt || 0;
+      
+      // שמירת מחיר עלות ומכירה מנורמלים
+      if (!product.cost_price && product.cost_price_no_vat) {
+        product.cost_price = product.cost_price_no_vat;
       }
-      if (!sellingPrice) {
+      if (!product.selling_price && product.store_price) {
+        product.selling_price = product.store_price;
+      }
+      
+      product.gross_profit = Math.max(0, sellingPrice - costPrice);
+      // אם יש אחוז רווחיות בקובץ - נשתמש בו, אחרת נחשב
+      if (!product.profit_percentage || product.profit_percentage === 0) {
+        product.profit_percentage = costPrice > 0 ? Math.round(((sellingPrice - costPrice) / costPrice) * 100) : 0;
+      }
+
+      // קביעת איכות נתונים - גמיש יותר
+      if (!costPrice && !product.cost_price_no_vat) {
+        missingFields.push('מחיר עלות');
+      }
+      if (!sellingPrice && !product.store_price && !product.store_price_alt) {
         missingFields.push('מחיר מכירה');
-        validationErrors.push('מחיר מכירה חסר או 0');
       }
       
       product.missing_fields = missingFields;
@@ -280,10 +298,10 @@ Deno.serve(async (req) => {
 
     await updateProcessStatus(base44, process.id, 60, 'running', 'שומר מוצרים חדשים...');
 
-    // יצירת מוצרים חדשים
+    // יצירת מוצרים חדשים - batch גדול יותר לביצועים טובים
     let createdCount = 0;
     if (productsToCreate.length > 0) {
-      const batchSize = 50;
+      const batchSize = 500; // הגדלה משמעותית לקטלוגים גדולים
       for (let i = 0; i < productsToCreate.length; i += batchSize) {
         const batch = productsToCreate.slice(i, i + batchSize);
         await base44.asServiceRole.entities.ProductCatalog.bulkCreate(batch);
@@ -291,7 +309,12 @@ Deno.serve(async (req) => {
         
         const progress = 60 + Math.round((i / productsToCreate.length) * 20);
         await updateProcessStatus(base44, process.id, progress, 'running', 
-          `נוצרו ${createdCount} מוצרים...`);
+          `נוצרו ${createdCount.toLocaleString('he-IL')} מתוך ${productsToCreate.length.toLocaleString('he-IL')} מוצרים...`);
+        
+        // הפסקה קצרה בין batches למניעת עומס
+        if (i + batchSize < productsToCreate.length) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
       }
     }
 

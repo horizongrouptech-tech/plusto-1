@@ -22,32 +22,94 @@ import {
 } from "lucide-react";
 import { base44 } from '@/api/base44Client';
 
-// שדות המערכת הנדרשים
+// שדות המערכת הנדרשים - מורחב לתמיכה בקטלוגים מגוונים
 const SYSTEM_FIELDS = [
   { key: 'product_name', label: 'שם מוצר', required: true, type: 'text' },
   { key: 'barcode', label: 'ברקוד / מק"ט', required: false, type: 'text' },
-  { key: 'cost_price', label: 'מחיר עלות', required: true, type: 'number' },
-  { key: 'selling_price', label: 'מחיר מכירה', required: true, type: 'number' },
-  { key: 'category', label: 'קטגוריה', required: false, type: 'text' },
+  { key: 'cost_price', label: 'מחיר עלות', required: false, type: 'number' },
+  { key: 'cost_price_no_vat', label: 'מחיר עלות ללא מע"מ', required: false, type: 'number' },
+  { key: 'selling_price', label: 'מחיר לצרכן', required: false, type: 'number' },
+  { key: 'store_price', label: 'מחיר בחנות', required: false, type: 'number' },
+  { key: 'store_price_alt', label: 'מחיר בחנות (נוסף)', required: false, type: 'number' },
+  { key: 'category', label: 'קטגוריה ראשית', required: false, type: 'text' },
+  { key: 'secondary_category', label: 'קטגוריה משנית', required: false, type: 'text' },
   { key: 'supplier', label: 'ספק', required: false, type: 'text' },
-  { key: 'supplier_item_code', label: 'מק"ט ספק', required: false, type: 'text' },
+  { key: 'supplier_item_code', label: 'קוד פריט ספק', required: false, type: 'text' },
+  { key: 'color', label: 'צבע', required: false, type: 'text' },
+  { key: 'size', label: 'מידה', required: false, type: 'text' },
+  { key: 'creation_date', label: 'תאריך יצירה', required: false, type: 'text' },
+  { key: 'profit_percentage', label: 'אחוז רווחיות', required: false, type: 'number' },
+  { key: 'no_vat_item', label: 'פריט ללא מע"מ', required: false, type: 'text' },
   { key: 'inventory', label: 'מלאי', required: false, type: 'number' },
   { key: 'monthly_sales', label: 'מכירות חודשיות', required: false, type: 'number' },
-  { key: 'secondary_category', label: 'קטגוריה משנית', required: false, type: 'text' },
 ];
 
-// מילון התאמות אוטומטיות
+// מילון התאמות אוטומטיות - מורחב לתמיכה בקטלוגים מגוונים (טמבור, כללי וכו')
 const AUTO_MATCH_DICTIONARY = {
-  'product_name': ['שם מוצר', 'שם פריט', 'שם המוצר', 'תיאור', 'תאור', 'מוצר', 'description', 'product_name', 'name', 'item name', 'פריט', 'תחמור'],
-  'barcode': ['ברקוד', 'מק"ט', 'קוד פריט', 'מקט', 'barcode', 'sku', 'item_code', 'code', 'קוד', 'ברקוד / מק"ט'],
-  'cost_price': ['מחיר עלות', 'מחיר קניה', 'עלות', 'מחיר קנייה', 'cost_price', 'cost', 'purchase price', 'מחיר עלות ללא מעמ', 'מחיר גלם'],
-  'selling_price': ['מחיר מכירה', 'מחיר', 'מחיר לצרכן', 'מחיר בחנות', 'selling_price', 'price', 'retail price', 'sale price', 'מחיר יחידה'],
-  'category': ['קטגוריה', 'קטגוריה ראשית', 'קבוצה', 'קבוצה ראשית', 'category', 'main category', 'סוג', 'תמחורים', 'מתחורים'],
-  'supplier': ['ספק', 'שם ספק', 'supplier', 'vendor'],
-  'supplier_item_code': ['מק"ט ספק', 'מק"ט-ספק', 'קוד פריט ספק', 'supplier_sku', 'קוד ספק'],
-  'inventory': ['מלאי', 'כמות במלאי', 'כמות', 'inventory', 'stock', 'quantity', 'כמה נמכר'],
-  'monthly_sales': ['מכירות חודשיות', 'מכירות', 'monthly_sales', 'sales', 'סה"כ מכירות', 'סהכ מכירות'],
-  'secondary_category': ['קטגוריה משנית', 'תת קטגוריה', 'sub category', 'secondary_category', 'תפריט - מקטע', 'תפריטים - מקטעים'],
+  'product_name': [
+    'שם מוצר', 'שם פריט', 'שם המוצר', 'תיאור', 'תאור', 'מוצר', 
+    'description', 'product_name', 'name', 'item name', 'פריט', 'תחמור'
+  ],
+  'barcode': [
+    'ברקוד', 'מק"ט', 'קוד פריט', 'מקט', 'barcode', 'sku', 'item_code', 
+    'code', 'קוד', 'ברקוד / מק"ט'
+  ],
+  'cost_price': [
+    'מחיר עלות', 'מחיר קניה', 'עלות', 'מחיר קנייה', 'cost_price', 
+    'cost', 'purchase price', 'מחיר גלם'
+  ],
+  'cost_price_no_vat': [
+    'מחיר עלות ללא מעמ', 'מחיר עלות ללא מע"מ', 'עלות ללא מעמ', 
+    'cost without vat', 'cost no vat'
+  ],
+  'selling_price': [
+    'מחיר מכירה', 'מחיר', 'מחיר לצרכן', 'selling_price', 'price', 
+    'retail price', 'sale price', 'מחיר יחידה'
+  ],
+  'store_price': [
+    'מחיר בחנות', 'מחיר בחנות טמבור אקספרס', 'מחיר בחנות טמבור אקס', 
+    'store price', 'shop price'
+  ],
+  'store_price_alt': [
+    'מחיר בחנות טמבור אקספרס אקליפטוס', 'מחיר חנות נוסף', 'store price alt'
+  ],
+  'category': [
+    'קטגוריה', 'קטגוריה ראשית', 'קבוצה', 'קבוצה ראשית', 'category', 
+    'main category', 'סוג', 'תמחורים', 'מתחורים'
+  ],
+  'secondary_category': [
+    'קטגוריה משנית', 'תת קטגוריה', 'sub category', 'secondary_category', 
+    'תפריט - מקטע', 'תפריטים - מקטעים'
+  ],
+  'supplier': [
+    'ספק', 'שם ספק', 'supplier', 'vendor'
+  ],
+  'supplier_item_code': [
+    'מק"ט ספק', 'מק"ט-ספק', 'קוד פריט ספק', 'supplier_sku', 'קוד ספק'
+  ],
+  'color': [
+    'צבע', 'color', 'colour'
+  ],
+  'size': [
+    'מידה', 'size', 'גודל'
+  ],
+  'creation_date': [
+    'תאריך יצירה', 'תאריך', 'creation date', 'created', 'date'
+  ],
+  'profit_percentage': [
+    'אחוז רווחיות', 'אחוז רווח', 'רווחיות', 'profit percentage', 
+    'margin', 'profit margin'
+  ],
+  'no_vat_item': [
+    'פריט ללא מעמ', 'פריט ללא מע"מ', 'ללא מעמ', 'no vat', 'vat exempt'
+  ],
+  'inventory': [
+    'מלאי', 'כמות במלאי', 'כמות', 'inventory', 'stock', 'quantity', 'כמה נמכר'
+  ],
+  'monthly_sales': [
+    'מכירות חודשיות', 'מכירות', 'monthly_sales', 'sales', 
+    'סה"כ מכירות', 'סהכ מכירות'
+  ],
 };
 
 // ניקוי ערכים
@@ -203,10 +265,14 @@ export default function ColumnMappingWizard({
     }
   }, [step, mapping, rawData]);
 
-  // בדיקה אם המיפוי תקין
+  // בדיקה אם המיפוי תקין - רק שם מוצר הוא חובה
   const isMappingValid = useMemo(() => {
-    const requiredFields = SYSTEM_FIELDS.filter(f => f.required);
-    return requiredFields.every(field => mapping[field.key]);
+    // מינימום: שם מוצר חייב להיות ממופה
+    const hasProductName = !!mapping['product_name'];
+    // רצוי: לפחות מחיר אחד (עלות או מכירה)
+    const hasAnyPrice = mapping['cost_price'] || mapping['cost_price_no_vat'] || 
+                        mapping['selling_price'] || mapping['store_price'];
+    return hasProductName;
   }, [mapping]);
 
   // שמירת הפרופיל
