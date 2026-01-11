@@ -18,7 +18,7 @@ async function deleteWithRetry(base44, productId, maxRetries = 3) {
 }
 
 // מחיקה ב-chunks קטנים יותר למניעת timeout
-async function deleteInChunks(base44, products, chunkSize = 50) {
+async function deleteInChunks(base44, products, chunkSize = 100) {
   let deletedCount = 0;
   
   for (let i = 0; i < products.length; i += chunkSize) {
@@ -27,24 +27,18 @@ async function deleteInChunks(base44, products, chunkSize = 50) {
       chunk.map(p => deleteWithRetry(base44, p.id))
     );
     deletedCount += results.filter(Boolean).length;
-    
-    // הפסקה קצרה בין chunks
-    if (i + chunkSize < products.length) {
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
   }
   
   return deletedCount;
 }
 
-// מחיקה מלאה ולצמיתות של קטלוג - כולל כל המוצרים והקטלוג עצמו
+// מחיקת batch אחד - מחזיר מצב עם has_more
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
-  const BATCH_SIZE = 200; // batch קטן יותר לשליפה
-  const CHUNK_SIZE = 50;  // מחיקה ב-chunks קטנים
+  const BATCH_SIZE = 500; // מוחק 500 בכל קריאה
 
   try {
-    const { customer_email, catalog_id } = await req.json();
+    const { customer_email, catalog_id, delete_catalog_entity } = await req.json();
     
     if (!customer_email || !catalog_id) {
       return new Response(JSON.stringify({
@@ -56,65 +50,89 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`🗑️ Starting PERMANENT deletion of catalog ${catalog_id} for ${customer_email}`);
-
-    let totalDeleted = 0;
-    let batchNumber = 0;
-    const maxBatches = 100; // הגבלה למניעת לולאה אינסופית
-
-    // לולאה שמוחקת את כל המוצרים עד שלא נשאר כלום
-    while (batchNumber < maxBatches) {
-      batchNumber++;
-      
-      let productsToDelete = [];
-      
+    // אם זו קריאה למחיקת הקטלוג עצמו (אחרי שכל המוצרים נמחקו)
+    if (delete_catalog_entity) {
+      console.log(`🗑️ Deleting the Catalog entity itself: ${catalog_id}`);
       try {
-        // מביא מוצרים - גם פעילים וגם לא פעילים (מוחק הכל!)
-        productsToDelete = await base44.asServiceRole.entities.ProductCatalog.filter({
+        await base44.asServiceRole.entities.Catalog.delete(catalog_id);
+        console.log(`✅ Catalog entity deleted successfully`);
+        return new Response(JSON.stringify({
+          success: true,
+          catalog_deleted: true,
+          message: 'הקטלוג נמחק בהצלחה'
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (catalogDeleteError) {
+        console.error(`⚠️ Could not delete Catalog entity:`, catalogDeleteError.message);
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'שגיאה במחיקת הקטלוג: ' + catalogDeleteError.message
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // שליפת מוצרים למחיקה
+    console.log(`🗑️ Fetching products for catalog ${catalog_id}...`);
+    
+    const productsToDelete = await base44.asServiceRole.entities.ProductCatalog.filter({
+      catalog_id: catalog_id
+    }, null, BATCH_SIZE);
+
+    // אם אין יותר מוצרים - סיימנו
+    if (!productsToDelete || productsToDelete.length === 0) {
+      console.log(`✅ No more products to delete for catalog ${catalog_id}`);
+      return new Response(JSON.stringify({
+        success: true,
+        deleted_count: 0,
+        has_more: false,
+        remaining_count: 0,
+        message: 'אין יותר מוצרים למחיקה'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log(`📦 Deleting ${productsToDelete.length} products...`);
+
+    // מחיקת המוצרים
+    const deletedCount = await deleteInChunks(base44, productsToDelete, 100);
+
+    console.log(`✅ Deleted ${deletedCount} products`);
+
+    // בדיקה אם יש עוד מוצרים
+    const remainingProducts = await base44.asServiceRole.entities.ProductCatalog.filter({
+      catalog_id: catalog_id
+    }, null, 1);
+
+    const hasMore = remainingProducts && remainingProducts.length > 0;
+
+    // אם יש עוד - נספור כמה
+    let remainingCount = 0;
+    if (hasMore) {
+      try {
+        const allRemaining = await base44.asServiceRole.entities.ProductCatalog.filter({
           catalog_id: catalog_id
-        }, null, BATCH_SIZE);
-      } catch (fetchError) {
-        console.error(`Error fetching products in batch ${batchNumber}:`, fetchError.message);
-        // אם שגיאה בשליפה - ננסה שוב אחרי הפסקה
-        await new Promise(resolve => setTimeout(resolve, 500));
-        continue;
+        }, null, 10000);
+        remainingCount = allRemaining?.length || 0;
+      } catch (e) {
+        remainingCount = -1; // לא ידוע
       }
-
-      if (!productsToDelete || productsToDelete.length === 0) {
-        console.log(`✅ No more products to delete. Total deleted: ${totalDeleted}`);
-        break;
-      }
-
-      console.log(`📦 Batch ${batchNumber}: Deleting ${productsToDelete.length} products...`);
-
-      // מחיקה ב-chunks קטנים עם retry
-      const deletedInBatch = await deleteInChunks(base44, productsToDelete, CHUNK_SIZE);
-      totalDeleted += deletedInBatch;
-
-      console.log(`✅ Batch ${batchNumber} completed. Deleted: ${deletedInBatch}. Total so far: ${totalDeleted}`);
-
-      // הפסקה בין batches למניעת עומס על DB
-      await new Promise(resolve => setTimeout(resolve, 300));
     }
-
-    // מחיקת הקטלוג עצמו לצמיתות
-    console.log(`🗑️ Deleting the Catalog entity itself: ${catalog_id}`);
-    try {
-      await base44.asServiceRole.entities.Catalog.delete(catalog_id);
-      console.log(`✅ Catalog entity deleted successfully`);
-    } catch (catalogDeleteError) {
-      console.error(`⚠️ Could not delete Catalog entity (may already be deleted):`, catalogDeleteError.message);
-    }
-
-    console.log(`🎉 Catalog deletion completed. Total products deleted: ${totalDeleted}`);
 
     return new Response(JSON.stringify({
       success: true,
-      deleted_count: totalDeleted,
-      batches_processed: batchNumber,
-      is_finished: true,
-      is_fully_deleted: true,
-      message: `הקטלוג נמחק לצמיתות - ${totalDeleted} מוצרים הוסרו`
+      deleted_count: deletedCount,
+      has_more: hasMore,
+      remaining_count: remainingCount,
+      message: hasMore 
+        ? `נמחקו ${deletedCount} מוצרים, נותרו עוד ${remainingCount}` 
+        : `נמחקו ${deletedCount} מוצרים - סיום`
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
