@@ -235,6 +235,14 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Total rows to process: ${rows.length}`);
+    
+    // לוג מפורט של העמודות שזוהו
+    if (rows.length > 0) {
+      console.log('=== COLUMN DETECTION SUMMARY ===');
+      console.log('Available columns in first row:', Object.keys(rows[0]));
+      console.log('Sample values:', JSON.stringify(rows[0], null, 2));
+      console.log('=== END SUMMARY ===');
+    }
 
     if (!rows || rows.length === 0) {
       return Response.json({ 
@@ -293,22 +301,36 @@ Deno.serve(async (req) => {
         'סוג התשלום', 'תשלום', 'payment'
       ]) || '';
       
-      const category = findColumnValue(row, [
+      let category = findColumnValue(row, [
         'category', 'קטגוריה', 'Category', 'קטגוריות', 
         'סיווג', 'classification', 'סוג הוצאה', 'קטגוריה ראשית',
-        'סיווג ראשי', 'קט\'', 'קטג', 'סוג'
+        'סיווג ראשי', 'קט\'', 'קטג', 'סוג', 'type', 'סוג תנועה'
       ]) || '';
+      
+      // אם אין קטגוריה, נסה לזהות לפי סוג התנועה
+      if (!category) {
+        if (creditRaw && parseFloat(String(creditRaw).replace(/[^\d.-]/g, '')) > 0) {
+          category = 'הכנסות';
+        } else if (debitRaw && parseFloat(String(debitRaw).replace(/[^\d.-]/g, '')) > 0) {
+          category = 'הוצאות';
+        } else {
+          category = 'לא מסווג';
+        }
+      }
       
       const creditRaw = findColumnValue(row, [
         'credit', 'זכות', 'Credit', 'הכנסה', 'income', 
         'זכות (הכנסה)', 'כניסה', 'הפקדה', 'זכ\'', 'זכ',
-        'זיכוי', 'הכנסות'
+        'זיכוי', 'הכנסות', 'מכירות', 'מחזור', 'מחזור מכירות',
+        'תקבולים', 'תקבול', 'סה"כ זכות', 'סכום זכות',
+        'Sales', 'Revenue', 'Total Credit', 'סה״כ'
       ]) || 0;
       
       const debitRaw = findColumnValue(row, [
         'debit', 'חובה', 'Debit', 'הוצאה', 'expense', 
         'חובה (הוצאה)', 'יציאה', 'משיכה', 'חו\'', 'חו',
-        'חיוב', 'הוצאות'
+        'חיוב', 'הוצאות', 'תשלומים', 'תשלום', 'סה"כ חובה',
+        'סכום חובה', 'Expense', 'Payment', 'Total Debit'
       ]) || 0;
       
       const reference = findColumnValue(row, [
@@ -323,8 +345,17 @@ Deno.serve(async (req) => {
 
       console.log(`Processing row - date: ${date}, category: ${category}, debit: ${debitRaw}, credit: ${creditRaw}`);
 
-      if (!date || !category) {
-        console.log(`Skipping row - missing date (${!!date}) or category (${!!category})`);
+      // דילוג רק אם אין תאריך - קטגוריה כבר ממולאה אוטומטית
+      if (!date) {
+        console.log(`Skipping row - missing date`);
+        continue;
+      }
+      
+      // אם אין סכומים בשורה, דלג
+      const tempCredit = parseFloat(String(creditRaw).replace(/[^\d.-]/g, '')) || 0;
+      const tempDebit = parseFloat(String(debitRaw).replace(/[^\d.-]/g, '')) || 0;
+      if (tempCredit === 0 && tempDebit === 0) {
+        console.log(`Skipping row - no amounts (credit: ${creditRaw}, debit: ${debitRaw})`);
         continue;
       }
 
@@ -414,6 +445,15 @@ Deno.serve(async (req) => {
 
     console.log(`Valid cash flow entries: ${cashFlowEntries.length}`);
     console.log(`Categories found: ${Object.keys(categorySums).length}`);
+    
+    // סיכום סכומים לבדיקה
+    const totalCreditSum = cashFlowEntries.reduce((sum, e) => sum + (e.credit || 0), 0);
+    const totalDebitSum = cashFlowEntries.reduce((sum, e) => sum + (e.debit || 0), 0);
+    console.log(`=== TOTALS SUMMARY ===`);
+    console.log(`Total Credit (הכנסות): ${totalCreditSum.toLocaleString()}`);
+    console.log(`Total Debit (הוצאות): ${totalDebitSum.toLocaleString()}`);
+    console.log(`Rows processed: ${cashFlowEntries.length} out of ${rows.length}`);
+    console.log(`=== END TOTALS ===`);
 
     if (cashFlowEntries.length === 0) {
       return Response.json({ 
