@@ -298,22 +298,40 @@ Deno.serve(async (req) => {
 
     await updateProcessStatus(base44, process.id, 60, 'running', 'שומר מוצרים חדשים...');
 
-    // יצירת מוצרים חדשים - batch גדול יותר לביצועים טובים
+    // יצירת מוצרים חדשים - batches קטנים למניעת חסימת מגבלת 5000 של Base44
     let createdCount = 0;
     if (productsToCreate.length > 0) {
-      const batchSize = 500; // הגדלה משמעותית לקטלוגים גדולים
+      // Base44 מגביל ל-5000 רשומות, נשתמש ב-batch של 200 עם הפסקות
+      const batchSize = 200;
+      const totalBatches = Math.ceil(productsToCreate.length / batchSize);
+      
       for (let i = 0; i < productsToCreate.length; i += batchSize) {
         const batch = productsToCreate.slice(i, i + batchSize);
-        await base44.asServiceRole.entities.ProductCatalog.bulkCreate(batch);
-        createdCount += batch.length;
+        const currentBatch = Math.floor(i / batchSize) + 1;
         
-        const progress = 60 + Math.round((i / productsToCreate.length) * 20);
+        try {
+          await base44.asServiceRole.entities.ProductCatalog.bulkCreate(batch);
+          createdCount += batch.length;
+        } catch (batchError) {
+          console.error(`שגיאה ב-batch ${currentBatch}:`, batchError);
+          // ניסיון ליצור אחד-אחד במקרה של שגיאה
+          for (const product of batch) {
+            try {
+              await base44.asServiceRole.entities.ProductCatalog.create(product);
+              createdCount++;
+            } catch (singleError) {
+              console.error('שגיאה ביצירת מוצר בודד:', singleError);
+            }
+          }
+        }
+        
+        const progress = 60 + Math.round((createdCount / productsToCreate.length) * 25);
         await updateProcessStatus(base44, process.id, progress, 'running', 
-          `נוצרו ${createdCount.toLocaleString('he-IL')} מתוך ${productsToCreate.length.toLocaleString('he-IL')} מוצרים...`);
+          `נוצרו ${createdCount.toLocaleString('he-IL')} מתוך ${productsToCreate.length.toLocaleString('he-IL')} מוצרים (batch ${currentBatch}/${totalBatches})...`);
         
-        // הפסקה קצרה בין batches למניעת עומס
+        // הפסקה בין batches למניעת עומס על השרת
         if (i + batchSize < productsToCreate.length) {
-          await new Promise(resolve => setTimeout(resolve, 50));
+          await new Promise(resolve => setTimeout(resolve, 150));
         }
       }
     }
