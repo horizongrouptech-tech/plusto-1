@@ -66,10 +66,19 @@ Deno.serve(async (req) => {
     while (batchNumber < maxBatches) {
       batchNumber++;
       
-      // מביא מוצרים - גם פעילים וגם לא פעילים (מוחק הכל!)
-      const productsToDelete = await base44.asServiceRole.entities.ProductCatalog.filter({
-        catalog_id: catalog_id
-      }, null, BATCH_SIZE);
+      let productsToDelete = [];
+      
+      try {
+        // מביא מוצרים - גם פעילים וגם לא פעילים (מוחק הכל!)
+        productsToDelete = await base44.asServiceRole.entities.ProductCatalog.filter({
+          catalog_id: catalog_id
+        }, null, BATCH_SIZE);
+      } catch (fetchError) {
+        console.error(`Error fetching products in batch ${batchNumber}:`, fetchError.message);
+        // אם שגיאה בשליפה - ננסה שוב אחרי הפסקה
+        await new Promise(resolve => setTimeout(resolve, 500));
+        continue;
+      }
 
       if (!productsToDelete || productsToDelete.length === 0) {
         console.log(`✅ No more products to delete. Total deleted: ${totalDeleted}`);
@@ -84,8 +93,8 @@ Deno.serve(async (req) => {
 
       console.log(`✅ Batch ${batchNumber} completed. Deleted: ${deletedInBatch}. Total so far: ${totalDeleted}`);
 
-      // הפסקה בין batches
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // הפסקה בין batches למניעת עומס על DB
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
 
     // מחיקת הקטלוג עצמו לצמיתות

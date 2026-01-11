@@ -827,11 +827,17 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                     </SelectTrigger>
                     <SelectContent>
                         {catalogs.length > 0 ? (
-                            catalogs.map(catalog => (
-                                <SelectItem key={catalog.id} value={catalog.id}>
-                                    {catalog.catalog_name} ({catalog.product_count || 0} מוצרים)
-                                </SelectItem>
-                            ))
+                            catalogs.map(catalog => {
+                                // הצגת מספר מוצרים מהקטלוג הנטען או מישות Catalog
+                                const displayCount = catalog.id === selectedCatalogId 
+                                    ? catalogStats.total 
+                                    : (catalog.product_count || 0);
+                                return (
+                                    <SelectItem key={catalog.id} value={catalog.id}>
+                                        {catalog.catalog_name} ({displayCount.toLocaleString()} מוצרים)
+                                    </SelectItem>
+                                );
+                            })
                         ) : (
                             <SelectItem value="no-catalogs" disabled>
                                 אין קטלוגים...
