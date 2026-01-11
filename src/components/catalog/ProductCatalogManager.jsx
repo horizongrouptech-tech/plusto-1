@@ -25,11 +25,11 @@ import ProductCatalogTable from "./ProductCatalogTable";
 import ProductCatalogAutoGenerator from "./ProductCatalogAutoGenerator";
 import ManualProductManagement from "./ManualProductManagement";
 import ProductEditModal from "./ProductEditModal";
+import CatalogDeletionModal from "./CatalogDeletionModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { cleanCatalogSmartly } from "@/functions/cleanCatalogSmartly";
 import { processCatalogUpload } from "@/functions/processCatalogUpload";
-import { deleteEntireCatalog } from "@/functions/deleteEntireCatalog";
 import { cancelCatalogGeneration } from "@/functions/cancelCatalogGeneration";
 import { UploadFile } from "@/integrations/Core";
 import { ProcessStatus } from '@/entities/ProcessStatus';
@@ -126,7 +126,6 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
   const [cleaningResults, setCleaningResults] = useState(null);
   const [isCleanResultsOpen, setIsCleanResultsOpen] = useState(false);
   
-  const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
   const [processCheckInterval, setProcessCheckInterval] = useState(null);
@@ -651,58 +650,15 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     }
   };
 
-  const handleDeleteEntireCatalog = async () => {
-    if (!selectedCatalogId) {
-        alert("יש לבחור קטלוג למחיקה.");
-        return;
-    }
+  const handleDeletionComplete = async (totalDeleted) => {
+    trackActivity(customer.email, 'catalog_deleted', { 
+      catalog_id: selectedCatalogId,
+      products_count: totalDeleted,
+      deletion_date: new Date().toISOString()
+    });
     
-    setIsDeleting(true);
     setShowDeleteConfirmation(false);
-
-    try {
-      console.log(`Starting removal process for catalog ID: ${selectedCatalogId}`);
-      
-      const { data: result, error } = await deleteEntireCatalog({ 
-        customer_email: customer.email,
-        catalog_id: selectedCatalogId
-      });
-
-      console.log('Catalog removal result:', result);
-
-      if (error || !result.success) {
-        throw new Error(result.error || 'הסרת הקטלוג נכשלה');
-      }
-
-      trackActivity(customer.email, 'catalog_deleted', { 
-        catalog_id: selectedCatalogId,
-        products_count: result.deleted_count,
-        remaining_count: result.remaining_count || 0,
-        batches_processed: result.batches_processed || 1,
-        is_fully_deleted: result.is_fully_deleted,
-        deletion_date: new Date().toISOString()
-      });
-      
-      if (result.is_fully_deleted) {
-        alert(`הקטלוג הנוכחי הוסר בהצלחה! ${result.deleted_count} מוצרים הוסרו מהמערכת.`);
-      } else {
-        alert(`הסרה חלקית הושלמה. ${result.deleted_count} מוצרים הוסרו. ${result.remaining_count > 0 ? `נותרו ${result.remaining_count} מוצרים פעילים.` : 'יתכן שנותרו מוצרים נוספים.'} חזור על הפעולה להשלמת ההסרה.`);
-      }
-
-      await loadCatalogs();
-
-    } catch (error) {
-      console.error("Error removing catalog:", error);
-      alert("שגיאה בהסרת הקטלוג: " + error.message + ". אנא נסה שוב.");
-      
-      try {
-        await loadCatalog();
-      } catch (reloadError) {
-        console.error('Error reloading catalog after failed removal:', reloadError);
-      }
-    } finally {
-      setIsDeleting(false);
-    }
+    await loadCatalogs();
   };
 
   const refreshCatalogGenerationStatus = async () => {
@@ -883,20 +839,11 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                   onClick={() => setShowDeleteConfirmation(true)}
                   variant="destructive"
                   size="sm"
-                  disabled={isDeleting || disableAllActions || noCatalogSelected}
+                  disabled={disableAllActions || noCatalogSelected}
                   className="bg-red-600 hover:bg-red-700 text-white"
                 >
-                  {isDeleting ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 ml-2 animate-spin" />
-                      מבצע פעולה...
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="w-4 h-4 ml-2" />
-                      מחק קטלוג
-                    </>
-                  )}
+                  <Trash2 className="w-4 h-4 ml-2" />
+                  מחק קטלוג
                 </Button>
               )}
             </div>
@@ -1202,63 +1149,15 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
       )}
 
       {showDeleteConfirmation && selectedCatalogId && (
-        <Dialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
-          <DialogContent className="sm:max-w-[425px] dir-rtl bg-horizon-dark border-horizon">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-horizon-text">
-                <AlertTriangle className="w-6 h-6 text-red-500" />
-                מחיקת קטלוג מלא
-              </DialogTitle>
-              <DialogDescription className="text-horizon-accent text-right mt-4">
-                פעולה זו תמחוק לצמיתות את כל המוצרים בקטלוג הנבחר.
-                <br />
-                <strong className="text-red-400">לא ניתן לבטל פעולה זו!</strong>
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mt-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-                <div className="text-right">
-                  <h4 className="font-semibold text-red-400 mb-2">מה יקרה:</h4>
-                  <ul className="text-sm text-horizon-accent space-y-1 pr-5 list-disc">
-                    <li>הקטלוג <span className="font-bold text-red-300">{catalogs.find(c => c.id === selectedCatalogId)?.catalog_name}</span> יימחק</li>
-                    <li>כל {products.length} המוצרים המשויכים אליו יימחקו לצמיתות</li>
-                    <li>לא ניתן יהיה לשחזר את הנתונים</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 mt-6">
-              <Button 
-                onClick={() => setShowDeleteConfirmation(false)}
-                variant="outline"
-                className="border-horizon text-horizon-text"
-              >
-                ביטול
-              </Button>
-              <Button
-                onClick={handleDeleteEntireCatalog}
-                variant="destructive"
-                disabled={isDeleting || disableAllActions}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                {isDeleting ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 ml-2 animate-spin" />
-                    מוחק...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-4 h-4 ml-2" />
-                    מחק קטלוג
-                  </>
-                )}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <CatalogDeletionModal
+          isOpen={showDeleteConfirmation}
+          onClose={() => setShowDeleteConfirmation(false)}
+          catalogId={selectedCatalogId}
+          catalogName={catalogs.find(c => c.id === selectedCatalogId)?.catalog_name || 'קטלוג'}
+          customerEmail={customer.email}
+          initialProductCount={catalogStats.total}
+          onDeletionComplete={handleDeletionComplete}
+        />
       )}
 
       {isCleanResultsOpen && cleaningResults && (
