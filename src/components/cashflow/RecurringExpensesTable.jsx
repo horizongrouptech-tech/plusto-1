@@ -109,6 +109,18 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
 
   const monthsInRange = getMonthsInRange();
 
+  // Pagination
+  const totalPages = Math.ceil(recurringExpenses.length / ITEMS_PER_PAGE);
+  const paginatedExpenses = React.useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return recurringExpenses.slice(start, start + ITEMS_PER_PAGE);
+  }, [recurringExpenses, currentPage]);
+
+  // Reset page when data changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [customer?.email]);
+
   if (isLoading) {
     return (
       <div className="flex justify-center p-8">
