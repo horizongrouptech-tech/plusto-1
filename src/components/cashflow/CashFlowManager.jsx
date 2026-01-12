@@ -16,10 +16,13 @@ import {
   TrendingDown,
   Loader2,
   FileSpreadsheet,
-  Filter
+  Filter,
+  AlertTriangle,
+  Edit
 } from 'lucide-react';
 import { format } from 'date-fns';
 import RecurringExpensesTable from './RecurringExpensesTable';
+import FailedRowsEditor from './FailedRowsEditor';
 
 export default function CashFlowManager({ customer }) {
   const [dateRange, setDateRange] = useState({
