@@ -283,9 +283,7 @@ export default function ProductCatalogUpload({
         file_url: uploadedFileUrl,
         catalog_id: selectedCatalogId,
         mapping: mappingConfig.mapping,
-        identifier_column: mappingConfig.identifierColumn,
-        duplicate_action: mappingConfig.duplicateAction,
-        import_with_errors: mappingConfig.importWithErrors // NEW: העברת הגדרת ייבוא עם שגיאות
+        import_with_errors: mappingConfig.importWithErrors
       });
 
       if (!result?.success) {
@@ -294,7 +292,7 @@ export default function ProductCatalogUpload({
 
       setLocalProgress(100);
       const errorsMsg = result.products_with_errors > 0 ? `, ${result.products_with_errors} דורשים עריכה` : '';
-      setLocalStatus(`הושלם! נוצרו ${result.created_count} מוצרים, עודכנו ${result.updated_count}${errorsMsg}`);
+      setLocalStatus(`הושלם! נוצרו ${result.created_count} מוצרים${errorsMsg}`);
 
       setTimeout(() => {
         setLocalProcessing(false);

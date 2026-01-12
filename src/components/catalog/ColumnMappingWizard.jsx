@@ -167,15 +167,13 @@ export default function ColumnMappingWizard({
 }) {
   const [step, setStep] = useState(1);
   const [mapping, setMapping] = useState({});
-  const [identifierColumn, setIdentifierColumn] = useState('barcode');
   const [profileName, setProfileName] = useState('');
   const [saveProfile, setSaveProfile] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState(null);
-  const [duplicateAction, setDuplicateAction] = useState('skip'); // skip, update, ask
   const [previewData, setPreviewData] = useState([]);
   const [validationResults, setValidationResults] = useState({ valid: [], invalid: [] });
   const [isProcessing, setIsProcessing] = useState(false);
-  const [importWithErrors, setImportWithErrors] = useState(true); // NEW: אפשר ייבוא עם שגיאות
+  const [importWithErrors, setImportWithErrors] = useState(true);
 
   // התאמה אוטומטית של עמודות
   const autoMatchColumns = () => {
@@ -224,7 +222,6 @@ export default function ColumnMappingWizard({
   const loadProfile = (profile) => {
     if (profile?.mapping_configuration) {
       setMapping(profile.mapping_configuration);
-      setIdentifierColumn(profile.identifier_column || 'barcode');
       setSelectedProfile(profile);
     }
   };
@@ -311,11 +308,9 @@ export default function ColumnMappingWizard({
       
       onMappingComplete({
         mapping,
-        identifierColumn,
-        duplicateAction,
         validRows: validationResults.valid.length,
         invalidRows: validationResults.invalid.length,
-        importWithErrors // NEW: העברת הגדרת ייבוא עם שגיאות
+        importWithErrors
       });
       
     } catch (error) {
@@ -574,59 +569,6 @@ export default function ColumnMappingWizard({
         {/* שלב 3: הגדרות נוספות */}
         {step === 3 && (
           <div className="space-y-6 py-4">
-            {/* בחירת עמודה מזהה */}
-            <div>
-              <Label className="text-horizon-text mb-2 block">עמודה מזהה (לזיהוי כפילויות)</Label>
-              <Select value={identifierColumn} onValueChange={setIdentifierColumn}>
-                <SelectTrigger className="w-full bg-horizon-card border-horizon text-horizon-text">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-horizon-dark border-horizon">
-                  <SelectItem value="barcode">ברקוד / מק"ט</SelectItem>
-                  <SelectItem value="product_name">שם מוצר</SelectItem>
-                  <SelectItem value="supplier_item_code">מק"ט ספק</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-horizon-accent mt-1">
-                המערכת תשתמש בעמודה זו לזיהוי מוצרים כפולים
-              </p>
-            </div>
-
-            {/* טיפול בכפילויות */}
-            <div>
-              <Label className="text-horizon-text mb-2 block">מה לעשות עם מוצרים כפולים?</Label>
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    id="skip"
-                    name="duplicateAction"
-                    value="skip"
-                    checked={duplicateAction === 'skip'}
-                    onChange={(e) => setDuplicateAction(e.target.value)}
-                    className="accent-horizon-primary"
-                  />
-                  <Label htmlFor="skip" className="text-horizon-text cursor-pointer">
-                    דלג על כפילויות (יבא רק מוצרים חדשים)
-                  </Label>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    id="update"
-                    name="duplicateAction"
-                    value="update"
-                    checked={duplicateAction === 'update'}
-                    onChange={(e) => setDuplicateAction(e.target.value)}
-                    className="accent-horizon-primary"
-                  />
-                  <Label htmlFor="update" className="text-horizon-text cursor-pointer">
-                    עדכן מוצרים קיימים (דרוס נתונים ישנים)
-                  </Label>
-                </div>
-              </div>
-            </div>
-
             {/* שמירת פרופיל */}
             <Card className="bg-horizon-card/30 border-horizon">
               <CardContent className="p-4 space-y-3">
@@ -663,8 +605,7 @@ export default function ColumnMappingWizard({
                   {validationResults.invalid.length > 0 && !importWithErrors && (
                     <li className="text-red-400">• {validationResults.invalid.length} שורות עם שגיאות יידלגו</li>
                   )}
-                  <li>• עמודה מזהה: {identifierColumn === 'barcode' ? 'ברקוד' : identifierColumn === 'product_name' ? 'שם מוצר' : 'מק"ט ספק'}</li>
-                  <li>• טיפול בכפילויות: {duplicateAction === 'skip' ? 'דלג' : 'עדכן'}</li>
+                  <li>• כל המוצרים מהקובץ יתווספו לקטלוג</li>
                 </ul>
               </CardContent>
             </Card>
