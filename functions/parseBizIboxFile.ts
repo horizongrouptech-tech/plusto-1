@@ -429,6 +429,7 @@ Deno.serve(async (req) => {
         description,
         source,
         account_type: accountType,
+        account_number: accountNumber,
         payment_type: paymentType,
         category,
         debit,
