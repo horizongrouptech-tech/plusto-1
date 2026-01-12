@@ -287,12 +287,18 @@ Deno.serve(async (req) => {
         'תיאור התנועה', 'פירוט', 'details'
       ]) || '';
       
+      // חשבון בנק - ח-ן
+      const accountNumber = findColumnValue(row, [
+        'account_number', 'ח-ן', 'חשבון', 'מספר חשבון', 'חשבון בנק',
+        'account', 'bank_account', 'ח.ן', 'חן'
+      ]) || '';
+      
       const source = findColumnValue(row, [
-        'source', 'מאת', 'Source', 'מקור', 'חשבון', 'מספר חשבון'
+        'source', 'מאת', 'Source', 'מקור'
       ]) || description;
       
       const accountType = findColumnValue(row, [
-        'account_type', 'סוג חשבון', 'Account Type', 'חשבון', 
+        'account_type', 'סוג חשבון', 'Account Type',
         'סוג', 'type', 'מאשר'
       ]) || '';
       
@@ -301,23 +307,7 @@ Deno.serve(async (req) => {
         'סוג התשלום', 'תשלום', 'payment'
       ]) || '';
       
-      let category = findColumnValue(row, [
-        'category', 'קטגוריה', 'Category', 'קטגוריות', 
-        'סיווג', 'classification', 'סוג הוצאה', 'קטגוריה ראשית',
-        'סיווג ראשי', 'קט\'', 'קטג', 'סוג', 'type', 'סוג תנועה'
-      ]) || '';
-      
-      // אם אין קטגוריה, נסה לזהות לפי סוג התנועה
-      if (!category) {
-        if (creditRaw && parseFloat(String(creditRaw).replace(/[^\d.-]/g, '')) > 0) {
-          category = 'הכנסות';
-        } else if (debitRaw && parseFloat(String(debitRaw).replace(/[^\d.-]/g, '')) > 0) {
-          category = 'הוצאות';
-        } else {
-          category = 'לא מסווג';
-        }
-      }
-      
+      // קריאת ערכי זכות וחובה קודם - לפני בדיקת הקטגוריה
       const creditRaw = findColumnValue(row, [
         'credit', 'זכות', 'Credit', 'הכנסה', 'income', 
         'זכות (הכנסה)', 'כניסה', 'הפקדה', 'זכ\'', 'זכ',
@@ -332,6 +322,23 @@ Deno.serve(async (req) => {
         'חיוב', 'הוצאות', 'תשלומים', 'תשלום', 'סה"כ חובה',
         'סכום חובה', 'Expense', 'Payment', 'Total Debit'
       ]) || 0;
+      
+      let category = findColumnValue(row, [
+        'category', 'קטגוריה', 'Category', 'קטגוריות', 
+        'סיווג', 'classification', 'סוג הוצאה', 'קטגוריה ראשית',
+        'סיווג ראשי', 'קט\'', 'קטג', 'סוג תנועה'
+      ]) || '';
+      
+      // אם אין קטגוריה, נסה לזהות לפי סוג התנועה
+      if (!category) {
+        if (creditRaw && parseFloat(String(creditRaw).replace(/[^\d.-]/g, '')) > 0) {
+          category = 'הכנסות';
+        } else if (debitRaw && parseFloat(String(debitRaw).replace(/[^\d.-]/g, '')) > 0) {
+          category = 'הוצאות';
+        } else {
+          category = 'לא מסווג';
+        }
+      }
       
       const reference = findColumnValue(row, [
         'reference', 'אסמכתא', 'Reference', 'מספר אסמכתא', 
