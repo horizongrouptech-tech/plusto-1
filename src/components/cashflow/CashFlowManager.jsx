@@ -80,14 +80,54 @@ export default function CashFlowManager({ customer }) {
         queryClient.invalidateQueries(['cashFlow', customer.email]);
         queryClient.invalidateQueries(['recurringExpenses', customer.email]);
         
-        const summary = `הקובץ נותח בהצלחה!\n\n` +
-          `📊 נמצאו ${response.data.cashFlowEntries} תנועות\n` +
-          `📁 זוהו ${response.data.categories?.length || 0} קטגוריות\n` +
-          `📈 נוצרו ${response.data.recurringExpenses} הוצאות קבועות\n` +
-          `📅 טווח: ${response.data.dateRange || ''}`;
+        // שמור נתונים על שורות בעייתיות
+        setFailedRowsData({
+          failedRows: response.data.failedRows || [],
+          skippedRows: response.data.skippedSample || []
+        });
         
-        alert(summary);
+        setLastUploadSummary({
+          processed: response.data.processed || response.data.cashFlowEntries,
+          skipped: response.data.skipped || 0,
+          failed: response.data.failed || 0,
+          categories: response.data.categories?.length || 0,
+          recurringExpenses: response.data.recurringExpenses,
+          dateRange: response.data.dateRange,
+          totals: response.data.totals
+        });
+        
+        // הצג התראה עם סיכום
+        const hasIssues = (response.data.failed || 0) > 0 || (response.data.skipped || 0) > 5;
+        
+        if (hasIssues) {
+          const shouldEdit = window.confirm(
+            `הקובץ נותח בהצלחה!\n\n` +
+            `✅ נשמרו: ${response.data.processed || response.data.cashFlowEntries} תנועות\n` +
+            `⚠️ דולגו: ${response.data.skipped || 0} שורות\n` +
+            `❌ נכשלו: ${response.data.failed || 0} שורות\n` +
+            `📁 קטגוריות: ${response.data.categories?.length || 0}\n\n` +
+            `האם לפתוח את עורך השורות הבעייתיות?`
+          );
+          
+          if (shouldEdit) {
+            setShowFailedEditor(true);
+          }
+        } else {
+          alert(
+            `הקובץ נותח בהצלחה!\n\n` +
+            `✅ נשמרו: ${response.data.processed || response.data.cashFlowEntries} תנועות\n` +
+            `📁 קטגוריות: ${response.data.categories?.length || 0}\n` +
+            `📅 טווח: ${response.data.dateRange || ''}`
+          );
+        }
       } else {
+        // אם יש details, שמור אותם להצגה
+        if (response.data.details) {
+          setFailedRowsData({
+            failedRows: response.data.details.failedRows || [],
+            skippedRows: response.data.details.skippedRows || []
+          });
+        }
         throw new Error(response.data.error || 'שגיאה בניתוח הקובץ');
       }
     } catch (error) {
