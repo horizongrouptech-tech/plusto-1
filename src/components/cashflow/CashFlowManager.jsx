@@ -24,6 +24,8 @@ import { format } from 'date-fns';
 import RecurringExpensesTable from './RecurringExpensesTable';
 import FailedRowsEditor from './FailedRowsEditor';
 
+const ITEMS_PER_PAGE = 25;
+
 export default function CashFlowManager({ customer }) {
   const [dateRange, setDateRange] = useState({
     start: format(new Date(new Date().setMonth(new Date().getMonth() - 3)), 'yyyy-MM-dd'),
@@ -34,6 +36,7 @@ export default function CashFlowManager({ customer }) {
   const [showFailedEditor, setShowFailedEditor] = useState(false);
   const [failedRowsData, setFailedRowsData] = useState({ failedRows: [], skippedRows: [] });
   const [lastUploadSummary, setLastUploadSummary] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
   
   const queryClient = useQueryClient();
 
