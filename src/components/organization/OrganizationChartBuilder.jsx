@@ -167,9 +167,7 @@ export default function OrganizationChartBuilder({ customer }) {
   const positionsRef = React.useRef({});
 
   React.useEffect(() => {
-    if (!initialNodes.length) return;
-    
-    if (isFirstLoad) {
+    if (isFirstLoad && initialNodes.length > 0) {
       // טעינה ראשונית - השתמש במיקומים מה-DB
       setNodes(initialNodes);
       setEdges(initialEdges);
@@ -178,7 +176,7 @@ export default function OrganizationChartBuilder({ customer }) {
         positionsRef.current[n.id] = n.position;
       });
       setIsFirstLoad(false);
-    } else {
+    } else if (!isFirstLoad && initialNodes.length > 0) {
       // עדכון - שמור מיקומים קיימים ורק הוסף חדשים
       setNodes(prevNodes => {
         const existingIds = new Set(prevNodes.map(n => n.id));
@@ -198,7 +196,11 @@ export default function OrganizationChartBuilder({ customer }) {
           return prevNode;
         });
         
-        // הוסף nodes חדשים
+        // הוסף nodes חדשים ושמור את המיקומים שלהם ב-ref
+        newNodesFromDB.forEach(n => {
+          positionsRef.current[n.id] = n.position;
+        });
+        
         return [...updatedNodes, ...newNodesFromDB];
       });
       setEdges(initialEdges);
