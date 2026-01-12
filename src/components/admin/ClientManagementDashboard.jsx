@@ -63,10 +63,12 @@ export default function ClientManagementDashboard() {
         base44.entities.User.list()]
         );
       } else if (isFinancialManager) {
-        // RLS יסנן אוטומטית רק את הלקוחות המשויכים למנהל הכספים
-        onboardingRequests = await base44.entities.OnboardingRequest.list();
-        
-        // מנהל כספים לא יכול לגשת ל-User entity - משאירים ריק
+        const allOnboardingRequests = await base44.entities.OnboardingRequest.list();
+        onboardingRequests = allOnboardingRequests.filter((req) =>
+        req.assigned_financial_manager_email === currentUserInQuery.email ||
+        req.additional_assigned_financial_manager_emails?.includes(currentUserInQuery.email)
+        );
+
         users = [];
 
         allUsers = [{

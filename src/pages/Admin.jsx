@@ -605,7 +605,129 @@ function EnhancedRecommendationCard({ recommendation, onUpdate, onEdit, onViewDe
     bundles: "בנדלים", // Corrected typo
     strategic_moves: "מהלכים אסטרטגיים",
   };
-  
+  // NEW: useQuery for Recommendations - loads only when 'recommendations' tab is active
+  // We also enable it for 'overview' because the overview might show recommendation stats.
+  // const { data: recommendationsData, isLoading: isLoadingRecs } = useQuery({ // Replaced by commenting out
+  //   queryKey: ['adminRecommendations'],
+  //   queryFn: () => Recommendation.list('-created_date'),
+  //   enabled: activeTab === 'customers', // רק כשהטאב recommendations פעיל
+  //   staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
+  //   refetchOnWindowFocus: false,
+  // });
+
+  // Update the local 'recommendations' state when 'recommendationsData' changes
+  // useEffect(() => { // Replaced by commenting out
+  //   if (recommendationsData) {
+  //     setRecommendations(recommendationsData.filter(rec => rec.status !== 'archived'));
+  //   }
+  // }, [recommendationsData]); // Dependency array: re-run if recommendationsData changes
+
+
+  // NEW: useQuery for Support Tickets - loads only when 'overview' tab is active (or wherever relevant)
+  // const { data: supportTicketsData, isLoading: isLoadingTickets } = useQuery({ // Replaced by commenting out
+  //   queryKey: ['adminSupportTickets'],
+  //   queryFn: () => SupportTicket.list('-created_date'),
+  //   enabled: activeTab === 'overview', // רק לטאב overview
+  //   staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
+  //   refetchOnWindowFocus: false,
+  // });
+
+  // useEffect(() => { // Replaced by commenting out
+  //   if (supportTicketsData) {
+  //     setSupportTickets(supportTicketsData);
+  //     setPendingSupportTickets(supportTicketsData.filter(t => t.status === 'open' || t.status === 'in_progress'));
+  //   }
+  // }, [supportTicketsData]);
+
+
+  // NEW: useQuery for FileUploads - for overview tab
+  // const { data: fileUploadsData, isLoading: isLoadingFileUploads } = useQuery({ // Replaced by commenting out
+  //   queryKey: ['adminFileUploads'],
+  //   queryFn: () => FileUpload.list(),
+  //   enabled: activeTab === 'overview', // רק לטאב overview
+  //   staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
+  //   refetchOnWindowFocus: false,
+  // });
+
+  // useEffect(() => { // Replaced by commenting out
+  //   if (fileUploadsData) {
+  //     setAllUploads(fileUploadsData);
+  //   }
+  // }, [fileUploadsData]);
+
+  // const { data: businessForecastsData, isLoading: isLoadingBusinessForecasts } = useQuery({
+  // NEW: useQuery for BusinessForecast - for overview tab
+  // const { data: businessForecastsData, isLoading: isLoadingBusinessForecasts } = useQuery({ // Replaced by commenting out
+  //   queryKey: ['adminBusinessForecasts'],
+  //   queryFn: () => BusinessForecast.list(),
+  //   enabled: activeTab === 'overview', // רק לטאב overview
+  //   staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
+  //   refetchOnWindowFocus: false,
+  // });
+
+  // If you have a state for businessForecasts, update it here:
+  // useEffect(() => { if (businessForecastsData) { setBusinessForecasts(businessForecastsData); } }, [businessForecastsData]);
+
+
+  // NEW: useQuery for UserActivity - for overview tab
+  // const { data: userActivitiesData, isLoading: isLoadingUserActivities } = useQuery({ // Replaced by commenting out
+  //   queryKey: ['adminUserActivities'],
+  //   queryFn: () => UserActivity.list('-last_login'),
+  //   enabled: activeTab === 'overview', // רק לטאב overview
+  //   staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
+  //   refetchOnWindowFocus: false,
+  // });
+
+  // useEffect(() => { // Replaced by commenting out
+  //   if(userActivitiesData) {
+  //     setAllUserActivities(userActivitiesData);
+  //   }
+  // }, [userActivitiesData]);
+
+
+  // NEW: useQuery for Leads - for suppliers tab
+  // const { data: leadsData, isLoading: isLoadingLeads } = useQuery({ // Replaced by commenting out
+  //   queryKey: ['adminLeads'],
+  //   queryFn: () => Lead.list(),
+  //   enabled: activeTab === 'suppliers', // This query is currently disabled as leads are not actively used in the AdminPage or Supplier tab.
+  //   staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
+  //   refetchOnWindowFocus: false,
+  // });
+  // If you have a state for leads, update it here:
+  // useEffect(() => { if (leadsData) { setLeads(leadsData); } }, [leadsData]);
+
+
+  // NEW: useQuery for CommunicationThreads - for overview tab (or specific chat tab if exists)
+  // const { data: communicationThreadsData, isLoading: isLoadingThreads } = useQuery({ // Replaced by commenting out
+  //   queryKey: ['adminCommunicationThreads'],
+  //   queryFn: () => CommunicationThread.list('-last_message_timestamp'),
+  //   enabled: activeTab === 'overview', // רק לטאב overview
+  //   staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
+  //   refetchOnWindowFocus: false,
+  // });
+
+  // useEffect(() => { // Replaced by commenting out
+  //   if (communicationThreadsData) {
+  //     setCommunicationThreads(communicationThreadsData);
+  //   }
+  // }, [communicationThreadsData]);
+
+
+  // NEW: useQuery for Suppliers - for suppliers tab
+  // const { data: suppliersData, isLoading: isLoadingSuppliers } = useQuery({ // Replaced by commenting out
+  //   queryKey: ['adminSuppliers'],
+  //   queryFn: () => Supplier.list(),
+  //   enabled: activeTab === 'suppliers', // רק לטאב suppliers
+  //   staleTime: 10 * 60 * 1000, // 10 דקות במקום 5
+  //   refetchOnWindowFocus: false,
+  // });
+
+  // useEffect(() => { // Replaced by commenting out
+  //   if (suppliersData) {
+  //     setSuppliers(suppliersData);
+  //   }
+  // }, [suppliersData]);
+
   return (
     <>
       <Card
@@ -993,38 +1115,33 @@ export default function AdminPage() {
       customersList = [...customersList, ...onboardingCustomers];
       
     } else if (currentUser.user_type === 'financial_manager') {
-      // מנהל כספים - טוען מ-OnboardingRequest ישירות
+      // מנהל כספים - טוען מ-OnboardingRequest ו-CustomerContact (כולל מנהלים משניים)
       const allOnboardingRequests = await OnboardingRequest.list();
       const onboardingRequests = allOnboardingRequests.filter(req =>
         req.assigned_financial_manager_email === currentUser.email ||
         req.additional_assigned_financial_manager_emails?.includes(currentUser.email)
       );
       
-      // ממפה את OnboardingRequests ישירות לפורמט customers
-      customersList = onboardingRequests.map(req => ({
-        id: `onboarding_${req.id}`,
-        email: req.email,
-        full_name: req.full_name || '',
-        business_name: req.business_name || '',
-        phone: req.phone || '',
-        business_type: req.business_type || 'other',
-        company_size: req.company_size || '1-10',
-        monthly_revenue: parseFloat(req.monthly_revenue) || 0,
-        address: {
-          city: req.business_city || '',
-          street: ''
-        },
-        main_products: req.main_products_services || '',
-        target_customers: req.target_audience || '',
-        business_goals: req.business_goals || '',
-        website_url: req.website_url || '',
-        onboarding_completed: true,
-        is_active: req.is_active !== false,
-        is_onboarding_record_only: true,
-        assigned_financial_manager_email: req.assigned_financial_manager_email || null,
-        additional_assigned_financial_manager_emails: req.additional_assigned_financial_manager_emails || [],
-        customer_group: req.customer_group,
-        created_date: req.created_date
+      const onboardingEmails = onboardingRequests.map(req => req.email);
+
+      // שלוף רק CustomerContacts שמשויכים ללקוחות שיש להם OnboardingRequest
+      const customerContacts = await CustomerContact.filter({
+          customer_email: { $in: onboardingEmails }
+      });
+      const relevantCustomerContacts = customerContacts.filter(contact => 
+        onboardingEmails.includes(contact.customer_email)
+      );
+      
+      customersList = relevantCustomerContacts.map(cc => ({
+        id: cc.id,
+        email: cc.customer_email,
+        full_name: cc.full_name,
+        business_name: cc.business_name,
+        phone: cc.phone,
+        business_type: cc.business_type,
+        role: 'user',
+        user_type: 'regular',
+        assigned_financial_manager_email: currentUser.email
       }));
       
       managersList = [{
@@ -1668,7 +1785,7 @@ export default function AdminPage() {
         // שליפת אובייקט הלקוח המלא.selectedCustomer  כבר מכיל את הנתונים העדכניים.
         const customerObject = selectedCustomer; 
 
-        // שליפת אובייקט הקלט האסטרטגי המ מלא, אם קיים
+        // שליפת אובייקט הקלט האסטרטגי המלא, אם קיים
         let strategicInputObject = null;
         if (strategicInputId) {
             try {
@@ -1680,9 +1797,9 @@ export default function AdminPage() {
         }
         // --- סוף הקוד שצריך להוסיף ---
         const response = await generateBusinessPlanText({
-         forecast: forecastObj,         // שלח את אובייקט התחזית המ מלא
-         customerData: customerObject,     // שלח את אובייקט הלקוח המ מלא
-         strategicInput: strategicInputObject // שלח את אובייקט התכנון האסטרטגי המ מלא
+         forecast: forecastObj,         // שלח את אובייקט התחזית המלא
+         customerData: customerObject,     // שלח את אובייקט הלקוח המלא
+         strategicInput: strategicInputObject // שלח את אובייקט התכנון האסטרטגי המלא
         });
         
         if (response.success) {
@@ -2101,7 +2218,7 @@ export default function AdminPage() {
         status: 'pending',
         delivery_status: 'not_sent',
         action_steps: validActionSteps.length > 0 ? validActionSteps : [
-          'בחינת המ מצב הקיים והכנת תוכנית מפורטת',
+          'בחינת המצב הקיים והכנת תוכנית מפורטת',
           'גיבוש תוכנית פעולה עם לוחות זמנים',
           'יישום השינויים הנדרשים בשלבים',
           'מדידת תוצאות והתאמות לפי הצורך'
@@ -2199,7 +2316,7 @@ export default function AdminPage() {
     try {
       // מזהה שהלקוח הוא מטיפוס 'onboarding_request'
       if (typeof customerId === 'string' && customerId.startsWith('onboarding_')) {
-        const onboardingRequestId = customer.id.replace('onboarding_', '');
+        const onboardingRequestId = customerId.replace('onboarding_', '');
         await OnboardingRequest.delete(onboardingRequestId);
         alert("לקוח הפילאאוט נמחק בהצלחה!");
       } else {

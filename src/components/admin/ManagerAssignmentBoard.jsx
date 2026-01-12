@@ -62,53 +62,23 @@ export default function ManagerAssignmentBoard({ clients, financialManagers, onA
         }
     };
 
-    // Helper to find first empty secondary slot
-    const findEmptySecondarySlot = (raw) => {
-        if (!raw?.assigned_financial_manager_email_2) return 'assigned_financial_manager_email_2';
-        if (!raw?.assigned_financial_manager_email_3) return 'assigned_financial_manager_email_3';
-        if (!raw?.assigned_financial_manager_email_4) return 'assigned_financial_manager_email_4';
-        if (!raw?.assigned_financial_manager_email_5) return 'assigned_financial_manager_email_5';
-        return null;
-    };
-
-    // Helper to check if manager is already assigned
-    const isManagerAssigned = (raw, managerEmail) => {
-        return raw?.assigned_financial_manager_email === managerEmail ||
-               raw?.assigned_financial_manager_email_2 === managerEmail ||
-               raw?.assigned_financial_manager_email_3 === managerEmail ||
-               raw?.assigned_financial_manager_email_4 === managerEmail ||
-               raw?.assigned_financial_manager_email_5 === managerEmail;
-    };
-
-    // Helper to find which slot has the manager
-    const findManagerSlot = (raw, managerEmail) => {
-        if (raw?.assigned_financial_manager_email_2 === managerEmail) return 'assigned_financial_manager_email_2';
-        if (raw?.assigned_financial_manager_email_3 === managerEmail) return 'assigned_financial_manager_email_3';
-        if (raw?.assigned_financial_manager_email_4 === managerEmail) return 'assigned_financial_manager_email_4';
-        if (raw?.assigned_financial_manager_email_5 === managerEmail) return 'assigned_financial_manager_email_5';
-        return null;
-    };
-
     const handleAddAsSecondary = async (client, managerEmail) => {
         try {
-            if (isManagerAssigned(client.raw, managerEmail)) {
+            const currentAdditional = client.raw?.additional_assigned_financial_manager_emails || [];
+            if (currentAdditional.includes(managerEmail)) {
                 alert('מנהל זה כבר משויך ללקוח');
                 return;
             }
             
-            const slot = findEmptySecondarySlot(client.raw);
-            if (!slot) {
-                alert('אין מקום למנהל נוסף (מקסימום 5 מנהלים)');
-                return;
-            }
+            const updatedAdditional = [...currentAdditional, managerEmail];
             
             if (client.source === 'onboarding') {
                 await base44.entities.OnboardingRequest.update(client.id, { 
-                    [slot]: managerEmail 
+                    additional_assigned_financial_manager_emails: updatedAdditional 
                 });
             } else {
                 await base44.entities.User.update(client.id, { 
-                    [slot]: managerEmail 
+                    additional_assigned_financial_manager_emails: updatedAdditional 
                 });
             }
             onAssignmentChange();
@@ -120,19 +90,16 @@ export default function ManagerAssignmentBoard({ clients, financialManagers, onA
 
     const handleRemoveSecondary = async (client, managerEmail) => {
         try {
-            const slot = findManagerSlot(client.raw, managerEmail);
-            if (!slot) {
-                alert('מנהל לא נמצא');
-                return;
-            }
+            const currentAdditional = client.raw?.additional_assigned_financial_manager_emails || [];
+            const updatedAdditional = currentAdditional.filter(email => email !== managerEmail);
             
             if (client.source === 'onboarding') {
                 await base44.entities.OnboardingRequest.update(client.id, { 
-                    [slot]: null 
+                    additional_assigned_financial_manager_emails: updatedAdditional 
                 });
             } else {
                 await base44.entities.User.update(client.id, { 
-                    [slot]: null 
+                    additional_assigned_financial_manager_emails: updatedAdditional 
                 });
             }
             onAssignmentChange();
@@ -221,13 +188,9 @@ export default function ManagerAssignmentBoard({ clients, financialManagers, onA
                     const primaryClients = clients.filter(c => 
                         c.raw?.assigned_financial_manager_email === manager.email && c.isActive
                     );
-                    const secondaryClients = clients.filter(c => {
-                        if (!c.isActive) return false;
-                        return c.raw?.assigned_financial_manager_email_2 === manager.email ||
-                               c.raw?.assigned_financial_manager_email_3 === manager.email ||
-                               c.raw?.assigned_financial_manager_email_4 === manager.email ||
-                               c.raw?.assigned_financial_manager_email_5 === manager.email;
-                    });
+                    const secondaryClients = clients.filter(c => 
+                        c.raw?.additional_assigned_financial_manager_emails?.includes(manager.email) && c.isActive
+                    );
                     const totalClients = primaryClients.length + secondaryClients.length;
                     const isSelected = selectedManager?.email === manager.email;
 
@@ -408,10 +371,7 @@ export default function ManagerAssignmentBoard({ clients, financialManagers, onA
                             <div className="grid grid-cols-1 gap-2 max-h-[500px] overflow-y-auto">
                                 {filteredExistingClients.map(client => {
                                     const isPrimary = client.raw?.assigned_financial_manager_email === managerForExisting.email;
-                                    const isSecondary = client.raw?.assigned_financial_manager_email_2 === managerForExisting.email ||
-                                                       client.raw?.assigned_financial_manager_email_3 === managerForExisting.email ||
-                                                       client.raw?.assigned_financial_manager_email_4 === managerForExisting.email ||
-                                                       client.raw?.assigned_financial_manager_email_5 === managerForExisting.email;
+                                    const isSecondary = client.raw?.additional_assigned_financial_manager_emails?.includes(managerForExisting.email);
                                     const isAlreadyAssigned = isPrimary || isSecondary;
                                     
                                     return (
