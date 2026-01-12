@@ -214,7 +214,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     } finally {
       setIsLoading(false);
     }
-  }, [customer.email, selectedCatalogId, updateCatalogStats, catalogs]);
+  }, [customer.email, selectedCatalogId, updateCatalogStats, catalogs, setCatalogs]);
 
   const loadCatalogs = useCallback(async () => {
       try {
