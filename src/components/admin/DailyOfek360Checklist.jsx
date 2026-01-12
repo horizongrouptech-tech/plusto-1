@@ -273,7 +273,14 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
 
         {/* פריטי הצ'ק ליסט */}
         <div className="space-y-3">
-          {isEditMode ? (
+          {!checklistData?.checklist_items || checklistData.checklist_items.length === 0 ? (
+            <Card className="bg-horizon-card border-horizon">
+              <CardContent className="p-6 text-center">
+                <Circle className="w-12 h-12 mx-auto text-horizon-accent mb-3" />
+                <p className="text-horizon-accent">טוען משימות...</p>
+              </CardContent>
+            </Card>
+          ) : isEditMode ? (
             <>
               {editedItems.map((item, index) => (
                 <Card key={item.id} className="bg-horizon-card border-horizon">
