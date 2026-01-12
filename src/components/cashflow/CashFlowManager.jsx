@@ -349,7 +349,7 @@ export default function CashFlowManager({ customer }) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {cashFlowData.map((item) => (
+                      {paginatedData.map((item) => (
                         <TableRow key={item.id} className="hover:bg-horizon-dark/20">
                           <TableCell className="text-right text-horizon-text">
                             {format(new Date(item.date), 'dd/MM/yyyy')}
@@ -385,6 +385,56 @@ export default function CashFlowManager({ customer }) {
                     </TableBody>
                   </Table>
                 </div>
+                
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between p-4 border-t border-horizon">
+                    <div className="text-sm text-horizon-accent">
+                      מציג {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, cashFlowData.length)} מתוך {cashFlowData.length}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(1)}
+                        disabled={currentPage === 1}
+                        className="border-horizon"
+                      >
+                        ראשון
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="border-horizon"
+                      >
+                        הקודם
+                      </Button>
+                      <span className="flex items-center px-3 text-horizon-text">
+                        {currentPage} / {totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="border-horizon"
+                      >
+                        הבא
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                        className="border-horizon"
+                      >
+                        אחרון
+                      </Button>
+                    </div>
+                  </div>
+                )}
               )}
             </CardContent>
           </Card>
