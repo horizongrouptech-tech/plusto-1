@@ -333,108 +333,110 @@ export default function CashFlowManager({ customer }) {
                   <p className="text-sm text-horizon-accent">העלה קובץ מ-BiziBox כדי להתחיל</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader className="bg-horizon-dark">
-                      <TableRow>
-                        <TableHead className="text-right text-horizon-text">תאריך</TableHead>
-                        <TableHead className="text-right text-horizon-text">ח-ן</TableHead>
-                        <TableHead className="text-right text-horizon-text">תיאור</TableHead>
-                        <TableHead className="text-right text-horizon-text">סוג תשלום</TableHead>
-                        <TableHead className="text-right text-horizon-text">קטגוריה</TableHead>
-                        <TableHead className="text-right text-horizon-text">אסמכתא</TableHead>
-                        <TableHead className="text-right text-horizon-text">זכות</TableHead>
-                        <TableHead className="text-right text-horizon-text">חובה</TableHead>
-                        <TableHead className="text-right text-horizon-text">יתרה</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {paginatedData.map((item) => (
-                        <TableRow key={item.id} className="hover:bg-horizon-dark/20">
-                          <TableCell className="text-right text-horizon-text">
-                            {format(new Date(item.date), 'dd/MM/yyyy')}
-                          </TableCell>
-                          <TableCell className="text-right text-horizon-accent text-sm">
-                            {item.account_number || '-'}
-                          </TableCell>
-                          <TableCell className="text-right text-horizon-accent">
-                            {item.description || item.source || '-'}
-                          </TableCell>
-                          <TableCell className="text-right text-horizon-accent">
-                            {item.payment_type || '-'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
-                              {item.category}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right text-horizon-accent text-sm">
-                            {item.reference_number || '-'}
-                          </TableCell>
-                          <TableCell className="text-right text-green-400 font-medium">
-                            {item.credit > 0 ? `₪${item.credit.toLocaleString()}` : '-'}
-                          </TableCell>
-                          <TableCell className="text-right text-red-400 font-medium">
-                            {item.debit > 0 ? `₪${item.debit.toLocaleString()}` : '-'}
-                          </TableCell>
-                          <TableCell className="text-right text-blue-400 font-medium">
-                            {item.balance != null ? `₪${item.balance.toLocaleString()}` : '-'}
-                          </TableCell>
+                <>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-horizon-dark">
+                        <TableRow>
+                          <TableHead className="text-right text-horizon-text">תאריך</TableHead>
+                          <TableHead className="text-right text-horizon-text">ח-ן</TableHead>
+                          <TableHead className="text-right text-horizon-text">תיאור</TableHead>
+                          <TableHead className="text-right text-horizon-text">סוג תשלום</TableHead>
+                          <TableHead className="text-right text-horizon-text">קטגוריה</TableHead>
+                          <TableHead className="text-right text-horizon-text">אסמכתא</TableHead>
+                          <TableHead className="text-right text-horizon-text">זכות</TableHead>
+                          <TableHead className="text-right text-horizon-text">חובה</TableHead>
+                          <TableHead className="text-right text-horizon-text">יתרה</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-                
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between p-4 border-t border-horizon">
-                    <div className="text-sm text-horizon-accent">
-                      מציג {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, cashFlowData.length)} מתוך {cashFlowData.length}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(1)}
-                        disabled={currentPage === 1}
-                        className="border-horizon"
-                      >
-                        ראשון
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                        disabled={currentPage === 1}
-                        className="border-horizon"
-                      >
-                        הקודם
-                      </Button>
-                      <span className="flex items-center px-3 text-horizon-text">
-                        {currentPage} / {totalPages}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
-                        className="border-horizon"
-                      >
-                        הבא
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(totalPages)}
-                        disabled={currentPage === totalPages}
-                        className="border-horizon"
-                      >
-                        אחרון
-                      </Button>
-                    </div>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedData.map((item) => (
+                          <TableRow key={item.id} className="hover:bg-horizon-dark/20">
+                            <TableCell className="text-right text-horizon-text">
+                              {format(new Date(item.date), 'dd/MM/yyyy')}
+                            </TableCell>
+                            <TableCell className="text-right text-horizon-accent text-sm">
+                              {item.account_number || '-'}
+                            </TableCell>
+                            <TableCell className="text-right text-horizon-accent">
+                              {item.description || item.source || '-'}
+                            </TableCell>
+                            <TableCell className="text-right text-horizon-accent">
+                              {item.payment_type || '-'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                                {item.category}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right text-horizon-accent text-sm">
+                              {item.reference_number || '-'}
+                            </TableCell>
+                            <TableCell className="text-right text-green-400 font-medium">
+                              {item.credit > 0 ? `₪${item.credit.toLocaleString()}` : '-'}
+                            </TableCell>
+                            <TableCell className="text-right text-red-400 font-medium">
+                              {item.debit > 0 ? `₪${item.debit.toLocaleString()}` : '-'}
+                            </TableCell>
+                            <TableCell className="text-right text-blue-400 font-medium">
+                              {item.balance != null ? `₪${item.balance.toLocaleString()}` : '-'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
-                )}
+                  
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between p-4 border-t border-horizon">
+                      <div className="text-sm text-horizon-accent">
+                        מציג {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, cashFlowData.length)} מתוך {cashFlowData.length}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(1)}
+                          disabled={currentPage === 1}
+                          className="border-horizon"
+                        >
+                          ראשון
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className="border-horizon"
+                        >
+                          הקודם
+                        </Button>
+                        <span className="flex items-center px-3 text-horizon-text">
+                          {currentPage} / {totalPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                          className="border-horizon"
+                        >
+                          הבא
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(totalPages)}
+                          disabled={currentPage === totalPages}
+                          className="border-horizon"
+                        >
+                          אחרון
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
