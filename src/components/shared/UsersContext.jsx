@@ -43,24 +43,23 @@ export const UsersProvider = ({ children }) => {
           return users.filter((u) => u.email && u.full_name);
         } else if (isFinancialManager) {
           // מנהל כספים - טוען דרך OnboardingRequest בלבד
-          const allOnboardings = await base44.entities.OnboardingRequest.filter({ is_active: true });
-          const myOnboardings = allOnboardings.filter(o => 
-            o.assigned_financial_manager_email === currentUser.email ||
-            o.additional_assigned_financial_manager_emails?.includes(currentUser.email)
-          );
+          // RLS יסנן אוטומטית רק את הלקוחות המשויכים למנהל
+          const allOnboardings = await base44.entities.OnboardingRequest.list();
           
           // ממיר ל-user objects
-          const usersFromOnboarding = myOnboardings.map(o => ({
-            id: o.id,
-            email: o.email,
-            full_name: o.full_name || o.business_name,
-            business_name: o.business_name,
-            user_type: 'regular',
-            customer_group: o.customer_group,
-            business_type: o.business_type,
-            assigned_financial_manager_email: o.assigned_financial_manager_email,
-            additional_assigned_financial_manager_emails: o.additional_assigned_financial_manager_emails
-          }));
+          const usersFromOnboarding = allOnboardings
+            .filter(o => o.is_active !== false)
+            .map(o => ({
+              id: o.id,
+              email: o.email,
+              full_name: o.full_name || o.business_name,
+              business_name: o.business_name,
+              user_type: 'regular',
+              customer_group: o.customer_group,
+              business_type: o.business_type,
+              assigned_financial_manager_email: o.assigned_financial_manager_email,
+              additional_assigned_financial_manager_emails: o.additional_assigned_financial_manager_emails
+            }));
 
           return usersFromOnboarding;
         }
