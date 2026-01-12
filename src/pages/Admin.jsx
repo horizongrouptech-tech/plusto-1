@@ -1668,7 +1668,7 @@ export default function AdminPage() {
         // שליפת אובייקט הלקוח המלא.selectedCustomer  כבר מכיל את הנתונים העדכניים.
         const customerObject = selectedCustomer; 
 
-        // שליפת אובייקט הקלט האסטרטגי המלא, אם קיים
+        // שליפת אובייקט הקלט האסטרטגי המ מלא, אם קיים
         let strategicInputObject = null;
         if (strategicInputId) {
             try {
@@ -1680,9 +1680,9 @@ export default function AdminPage() {
         }
         // --- סוף הקוד שצריך להוסיף ---
         const response = await generateBusinessPlanText({
-         forecast: forecastObj,         // שלח את אובייקט התחזית המלא
-         customerData: customerObject,     // שלח את אובייקט הלקוח המלא
-         strategicInput: strategicInputObject // שלח את אובייקט התכנון האסטרטגי המלא
+         forecast: forecastObj,         // שלח את אובייקט התחזית המ מלא
+         customerData: customerObject,     // שלח את אובייקט הלקוח המ מלא
+         strategicInput: strategicInputObject // שלח את אובייקט התכנון האסטרטגי המ מלא
         });
         
         if (response.success) {
@@ -2031,7 +2031,7 @@ export default function AdminPage() {
       ].join(','))
     ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
@@ -2101,7 +2101,7 @@ export default function AdminPage() {
         status: 'pending',
         delivery_status: 'not_sent',
         action_steps: validActionSteps.length > 0 ? validActionSteps : [
-          'בחינת המצב הקיים והכנת תוכנית מפורטת',
+          'בחינת המ מצב הקיים והכנת תוכנית מפורטת',
           'גיבוש תוכנית פעולה עם לוחות זמנים',
           'יישום השינויים הנדרשים בשלבים',
           'מדידת תוצאות והתאמות לפי הצורך'
