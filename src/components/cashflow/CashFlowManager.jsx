@@ -382,6 +382,53 @@ export default function CashFlowManager({ customer }) {
           />
         </TabsContent>
       </Tabs>
+
+      {/* סיכום העלאה אחרונה */}
+      {lastUploadSummary && (lastUploadSummary.failed > 0 || lastUploadSummary.skipped > 5) && (
+        <Card className="card-horizon border-yellow-500/30">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                <div>
+                  <p className="text-horizon-text font-medium">
+                    העלאה אחרונה: {lastUploadSummary.processed} תנועות נשמרו
+                  </p>
+                  <p className="text-sm text-horizon-accent">
+                    {lastUploadSummary.failed > 0 && `${lastUploadSummary.failed} שורות נכשלו • `}
+                    {lastUploadSummary.skipped} שורות דולגו
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFailedEditor(true)}
+                className="border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10"
+              >
+                <Edit className="w-4 h-4 ml-2" />
+                ערוך שורות בעייתיות
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* עורך שורות בעייתיות */}
+      <FailedRowsEditor
+        isOpen={showFailedEditor}
+        onClose={() => setShowFailedEditor(false)}
+        failedRows={failedRowsData.failedRows}
+        skippedRows={failedRowsData.skippedRows}
+        customerEmail={customer.email}
+        onSaveComplete={(count) => {
+          queryClient.invalidateQueries(['cashFlow', customer.email]);
+          setLastUploadSummary(prev => prev ? {
+            ...prev,
+            processed: (prev.processed || 0) + count
+          } : null);
+        }}
+      />
     </div>
   );
 }
