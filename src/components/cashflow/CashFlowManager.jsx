@@ -277,13 +277,14 @@ export default function CashFlowManager({ customer }) {
                     <TableHeader className="bg-horizon-dark">
                       <TableRow>
                         <TableHead className="text-right text-horizon-text">תאריך</TableHead>
+                        <TableHead className="text-right text-horizon-text">ח-ן</TableHead>
                         <TableHead className="text-right text-horizon-text">תיאור</TableHead>
                         <TableHead className="text-right text-horizon-text">סוג תשלום</TableHead>
                         <TableHead className="text-right text-horizon-text">קטגוריה</TableHead>
+                        <TableHead className="text-right text-horizon-text">אסמכתא</TableHead>
                         <TableHead className="text-right text-horizon-text">זכות</TableHead>
                         <TableHead className="text-right text-horizon-text">חובה</TableHead>
                         <TableHead className="text-right text-horizon-text">יתרה</TableHead>
-                        <TableHead className="text-right text-horizon-text">אסמכתא</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
