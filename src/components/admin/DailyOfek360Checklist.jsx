@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Target, Loader2, CheckCircle, Circle, MessageSquare } from 'lucide-react';
+import { Target, Loader2, CheckCircle, Circle, MessageSquare, Edit2, Plus, Trash2, Save, X } from 'lucide-react';
 
 const DAILY_CHECKLIST_ITEMS = [
   {
@@ -63,6 +64,8 @@ const DAILY_CHECKLIST_ITEMS = [
 export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
   const queryClient = useQueryClient();
   const [notes, setNotes] = useState('');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedItems, setEditedItems] = useState([]);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -150,6 +153,53 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
     }
   };
 
+  const handleEditModeToggle = () => {
+    if (!isEditMode) {
+      setEditedItems([...(checklistData?.checklist_items || DAILY_CHECKLIST_ITEMS.map(item => ({ ...item, completed: false, completed_at: null, notes: '' })))]);
+    }
+    setIsEditMode(!isEditMode);
+  };
+
+  const handleAddItem = () => {
+    const newItem = {
+      id: `custom_${Date.now()}`,
+      title: '',
+      description: '',
+      category: 'custom',
+      completed: false,
+      completed_at: null,
+      notes: ''
+    };
+    setEditedItems([...editedItems, newItem]);
+  };
+
+  const handleRemoveItem = (itemId) => {
+    setEditedItems(editedItems.filter(item => item.id !== itemId));
+  };
+
+  const handleItemChange = (itemId, field, value) => {
+    setEditedItems(editedItems.map(item => 
+      item.id === itemId ? { ...item, [field]: value } : item
+    ));
+  };
+
+  const handleSaveEditedChecklist = async () => {
+    if (!checklistData) return;
+
+    try {
+      await base44.entities.CustomerGoal.update(checklistData.id, {
+        checklist_items: editedItems
+      });
+
+      queryClient.invalidateQueries(['dailyChecklist', customer.email, today]);
+      setIsEditMode(false);
+      alert('הצ\'ק ליסט עודכן בהצלחה');
+    } catch (error) {
+      console.error('Error saving checklist:', error);
+      alert('שגיאה בשמירת הצ\'ק ליסט');
+    }
+  };
+
   const completedItems = checklistData?.checklist_items?.filter(i => i.completed).length || 0;
   const totalItems = DAILY_CHECKLIST_ITEMS.length;
   const progressPercentage = Math.round((completedItems / totalItems) * 100);
@@ -171,13 +221,35 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-horizon-dark border-horizon" dir="rtl">
         <DialogHeader>
-          <DialogTitle className="text-2xl text-horizon-text flex items-center gap-3">
-            <Target className="w-6 h-6 text-horizon-primary" />
-            צ'ק ליסט יומי - אופק 360
-          </DialogTitle>
-          <p className="text-sm text-horizon-accent mt-2">
-            {customer?.business_name || customer?.full_name} | {new Date().toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="text-2xl text-horizon-text flex items-center gap-3">
+                <Target className="w-6 h-6 text-horizon-primary" />
+                צ'ק ליסט יומי - אופק 360
+              </DialogTitle>
+              <p className="text-sm text-horizon-accent mt-2">
+                {customer?.business_name || customer?.full_name} | {new Date().toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </p>
+            </div>
+            <Button
+              onClick={handleEditModeToggle}
+              variant="outline"
+              className="border-horizon-primary text-horizon-primary"
+              size="sm"
+            >
+              {isEditMode ? (
+                <>
+                  <X className="w-4 h-4 ml-1" />
+                  ביטול
+                </>
+              ) : (
+                <>
+                  <Edit2 className="w-4 h-4 ml-1" />
+                  עריכה
+                </>
+              )}
+            </Button>
+          </div>
         </DialogHeader>
 
         {/* התקדמות כללית */}
@@ -201,48 +273,100 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
 
         {/* פריטי הצ'ק ליסט */}
         <div className="space-y-3">
-          {checklistData?.checklist_items?.map((item, index) => {
-            const isCompleted = item.completed;
-            
-            return (
-              <Card 
-                key={item.id}
-                className={`${
-                  isCompleted 
-                    ? 'bg-green-500/10 border-green-500/30' 
-                    : 'bg-horizon-card border-horizon'
-                } transition-all hover:border-horizon-primary/50`}
+          {isEditMode ? (
+            <>
+              {editedItems.map((item, index) => (
+                <Card key={item.id} className="bg-horizon-card border-horizon">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="text-horizon-accent font-semibold mt-2">{index + 1}.</span>
+                      <div className="flex-1 space-y-3">
+                        <Input
+                          value={item.title}
+                          onChange={(e) => handleItemChange(item.id, 'title', e.target.value)}
+                          placeholder="כותרת המשימה"
+                          className="bg-horizon-card border-horizon text-horizon-text"
+                        />
+                        <Textarea
+                          value={item.description}
+                          onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
+                          placeholder="תיאור המשימה"
+                          className="bg-horizon-card border-horizon text-horizon-text"
+                          rows={2}
+                        />
+                      </div>
+                      <Button
+                        onClick={() => handleRemoveItem(item.id)}
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              <Button
+                onClick={handleAddItem}
+                variant="outline"
+                className="w-full border-dashed border-horizon-primary text-horizon-primary"
               >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      checked={isCompleted}
-                      onCheckedChange={() => handleToggleItem(item.id)}
-                      className="mt-1 border-horizon-primary data-[state=checked]:bg-horizon-primary"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`font-semibold ${isCompleted ? 'line-through text-horizon-accent' : 'text-horizon-text'}`}>
-                          {index + 1}. {item.title}
-                        </span>
-                        {isCompleted && (
-                          <CheckCircle className="w-4 h-4 text-green-400" />
+                <Plus className="w-4 h-4 ml-2" />
+                הוסף משימה
+              </Button>
+              <Button
+                onClick={handleSaveEditedChecklist}
+                className="btn-horizon-primary w-full"
+              >
+                <Save className="w-4 h-4 ml-2" />
+                שמור שינויים
+              </Button>
+            </>
+          ) : (
+            checklistData?.checklist_items?.map((item, index) => {
+              const isCompleted = item.completed;
+              
+              return (
+                <Card 
+                  key={item.id}
+                  className={`${
+                    isCompleted 
+                      ? 'bg-green-500/10 border-green-500/30' 
+                      : 'bg-horizon-card border-horizon'
+                  } transition-all hover:border-horizon-primary/50`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        checked={isCompleted}
+                        onCheckedChange={() => handleToggleItem(item.id)}
+                        className="mt-1 border-horizon-primary data-[state=checked]:bg-horizon-primary"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`font-semibold ${isCompleted ? 'line-through text-horizon-accent' : 'text-horizon-text'}`}>
+                            {index + 1}. {item.title}
+                          </span>
+                          {isCompleted && (
+                            <CheckCircle className="w-4 h-4 text-green-400" />
+                          )}
+                        </div>
+                        <p className="text-sm text-horizon-accent">
+                          {item.description}
+                        </p>
+                        {item.completed_at && (
+                          <p className="text-xs text-green-400 mt-2">
+                            ✓ הושלם ב-{new Date(item.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
                         )}
                       </div>
-                      <p className="text-sm text-horizon-accent">
-                        {item.description}
-                      </p>
-                      {item.completed_at && (
-                        <p className="text-xs text-green-400 mt-2">
-                          ✓ הושלם ב-{new Date(item.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      )}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
         </div>
 
         {/* הערות יומיות */}
