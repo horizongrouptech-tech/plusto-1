@@ -361,11 +361,20 @@ export default function OrganizationChartBuilder({ customer }) {
     if (!confirm('האם למחוק את התפקיד?')) return;
 
     try {
-      const updatedNodes = orgChart.nodes.filter(n => n.id !== nodeId && n.parent_id !== nodeId);
+      // סנן את הנוד הנמחק, ועדכן ילדים שלו שיהיו ללא הורה
+      const updatedNodes = orgChart.nodes
+        .filter(n => n.id !== nodeId)
+        .map(n => n.parent_id === nodeId ? { ...n, parent_id: null } : n);
       
       await base44.entities.OrganizationChart.update(orgChart.id, {
         nodes: updatedNodes
       });
+
+      // עדכון מיידי של ה-state המקומי
+      setNodes(prevNodes => prevNodes.filter(n => n.id !== nodeId));
+      
+      // מחיקת המיקום מה-ref
+      delete positionsRef.current[nodeId];
 
       queryClient.invalidateQueries(['orgChart', customer.email]);
     } catch (error) {
