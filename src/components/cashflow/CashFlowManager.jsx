@@ -293,6 +293,9 @@ export default function CashFlowManager({ customer }) {
                           <TableCell className="text-right text-horizon-text">
                             {format(new Date(item.date), 'dd/MM/yyyy')}
                           </TableCell>
+                          <TableCell className="text-right text-horizon-accent text-sm">
+                            {item.account_number || '-'}
+                          </TableCell>
                           <TableCell className="text-right text-horizon-accent">
                             {item.description || item.source || '-'}
                           </TableCell>
@@ -304,6 +307,9 @@ export default function CashFlowManager({ customer }) {
                               {item.category}
                             </Badge>
                           </TableCell>
+                          <TableCell className="text-right text-horizon-accent text-sm">
+                            {item.reference_number || '-'}
+                          </TableCell>
                           <TableCell className="text-right text-green-400 font-medium">
                             {item.credit > 0 ? `₪${item.credit.toLocaleString()}` : '-'}
                           </TableCell>
@@ -312,9 +318,6 @@ export default function CashFlowManager({ customer }) {
                           </TableCell>
                           <TableCell className="text-right text-blue-400 font-medium">
                             {item.balance != null ? `₪${item.balance.toLocaleString()}` : '-'}
-                          </TableCell>
-                          <TableCell className="text-right text-horizon-accent text-sm">
-                            {item.reference_number || '-'}
                           </TableCell>
                         </TableRow>
                       ))}
