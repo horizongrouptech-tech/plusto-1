@@ -70,21 +70,26 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
   const today = new Date().toISOString().split('T')[0];
 
   // טעינת צ'ק ליסט יומי
-  const { data: checklistData, isLoading } = useQuery({
+  const { data: checklistData, isLoading, error } = useQuery({
     queryKey: ['dailyChecklist', customer?.email, today],
     queryFn: async () => {
+      console.log('Fetching daily checklist for:', customer.email, today);
+      
       const checklists = await base44.entities.CustomerGoal.filter({
         customer_email: customer.email,
         task_type: 'daily_checklist',
         start_date: today
       });
 
+      console.log('Found checklists:', checklists);
+
       if (checklists && checklists.length > 0) {
+        console.log('Returning existing checklist:', checklists[0]);
         return checklists[0];
       }
 
       // יצירת צ'ק ליסט חדש ליום
-      const currentUser = await base44.auth.me();
+      console.log('Creating new checklist for today');
       const newChecklist = await base44.entities.CustomerGoal.create({
         customer_email: customer.email,
         name: `צ'ק ליסט יומי - ${new Date().toLocaleDateString('he-IL')}`,
@@ -102,9 +107,11 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
         }))
       });
 
+      console.log('New checklist created:', newChecklist);
       return newChecklist;
     },
-    enabled: isOpen && !!customer?.email
+    enabled: isOpen && !!customer?.email,
+    retry: 1
   });
 
   const handleToggleItem = async (itemId) => {
@@ -201,8 +208,8 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
   };
 
   const completedItems = checklistData?.checklist_items?.filter(i => i.completed).length || 0;
-  const totalItems = DAILY_CHECKLIST_ITEMS.length;
-  const progressPercentage = Math.round((completedItems / totalItems) * 100);
+  const totalItems = checklistData?.checklist_items?.length || DAILY_CHECKLIST_ITEMS.length;
+  const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
   if (isLoading) {
     return (
@@ -211,6 +218,21 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
           <div className="flex items-center justify-center p-12">
             <Loader2 className="w-8 h-8 animate-spin text-horizon-primary ml-3" />
             <span className="text-horizon-text">טוען צ'ק ליסט יומי...</span>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (error) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-3xl bg-horizon-dark border-horizon" dir="rtl">
+          <div className="p-6 text-center">
+            <p className="text-red-400 mb-4">שגיאה בטעינת הצ'ק ליסט: {error.message}</p>
+            <Button onClick={() => queryClient.invalidateQueries(['dailyChecklist', customer?.email, today])} className="btn-horizon-primary">
+              נסה שוב
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
