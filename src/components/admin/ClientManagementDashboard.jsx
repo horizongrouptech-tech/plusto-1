@@ -69,7 +69,13 @@ export default function ClientManagementDashboard() {
         req.additional_assigned_financial_manager_emails?.includes(currentUserInQuery.email)
         );
 
-        users = [];
+        // טען גם Users משויכים (אם יש)
+        users = await base44.entities.User.filter({
+          $or: [
+            { assigned_financial_manager_email: currentUserInQuery.email },
+            { additional_assigned_financial_manager_emails: { $contains: currentUserInQuery.email } }
+          ]
+        });
 
         allUsers = [{
           email: currentUserInQuery.email,
