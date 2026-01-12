@@ -25,15 +25,13 @@ Deno.serve(async (req) => {
     }
 
     const onboarding = onboardingRequests[0];
-    const managerEmails = [];
-
-    if (onboarding.assigned_financial_manager_email) {
-      managerEmails.push(onboarding.assigned_financial_manager_email);
-    }
-
-    if (onboarding.additional_assigned_financial_manager_emails) {
-      managerEmails.push(...onboarding.additional_assigned_financial_manager_emails);
-    }
+    
+    // Build manager data from individual fields
+    const managerData = {
+      assigned_manager_email: onboarding.assigned_financial_manager_email || null,
+      assigned_manager_email_2: onboarding.assigned_financial_manager_email_2 || null,
+      assigned_manager_email_3: onboarding.assigned_financial_manager_email_3 || null
+    };
 
     // רשימת הישויות לעדכון
     const entitiesToUpdate = [
@@ -92,11 +90,9 @@ Deno.serve(async (req) => {
         const records = await base44.asServiceRole.entities[entityName].filter(filterQuery);
 
         if (records && records.length > 0) {
-          // עדכון כל רשומה
+          // עדכון כל רשומה עם השדות הנפרדים
           for (const record of records) {
-            await base44.asServiceRole.entities[entityName].update(record.id, {
-              assigned_manager_emails: managerEmails
-            });
+            await base44.asServiceRole.entities[entityName].update(record.id, managerData);
           }
           
           results[entityName] = {
@@ -120,7 +116,7 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       customer_email,
-      managerEmails,
+      managerData,
       results
     });
 
