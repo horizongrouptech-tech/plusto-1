@@ -9,9 +9,12 @@ import { Loader2, Link as LinkIcon, Save, Check } from 'lucide-react';
 
 const MONTH_NAMES = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 
+const ITEMS_PER_PAGE = 15;
+
 export default function RecurringExpensesTable({ customer, dateRange }) {
   const [linkStatus, setLinkStatus] = useState({});
   const [isSaving, setIsSaving] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
   // טעינת הוצאות קבועות
