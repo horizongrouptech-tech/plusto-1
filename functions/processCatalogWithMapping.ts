@@ -288,17 +288,33 @@ Deno.serve(async (req) => {
 
     await updateProcessStatus(base44, process.id, 90, 'running', 'מעדכן ישות קטלוג...');
 
-    // עדכון ישות הקטלוג
+    // עדכון ישות הקטלוג - ספירה מדויקת של כל המוצרים
     try {
-      const existingCatalogs = await base44.asServiceRole.entities.Catalog.filter({ id: catalog_id });
-      if (existingCatalogs.length > 0) {
-        const currentCount = existingCatalogs[0].product_count || 0;
-        await base44.asServiceRole.entities.Catalog.update(catalog_id, {
-          product_count: currentCount + createdCount,
-          last_generated_at: new Date().toISOString(),
-          status: 'ready'
-        });
+      // ספירת כל המוצרים הפעילים בקטלוג
+      let totalCount = 0;
+      let hasMore = true;
+      let skip = 0;
+      const countBatchSize = 5000;
+      
+      while (hasMore) {
+        const batch = await base44.asServiceRole.entities.ProductCatalog.filter(
+          { catalog_id, is_active: true },
+          '-created_date',
+          countBatchSize,
+          skip
+        );
+        totalCount += batch.length;
+        skip += batch.length;
+        if (batch.length < countBatchSize) {
+          hasMore = false;
+        }
       }
+      
+      await base44.asServiceRole.entities.Catalog.update(catalog_id, {
+        product_count: totalCount,
+        last_generated_at: new Date().toISOString(),
+        status: 'ready'
+      });
     } catch (e) {
       console.warn('שגיאה בעדכון קטלוג:', e);
     }

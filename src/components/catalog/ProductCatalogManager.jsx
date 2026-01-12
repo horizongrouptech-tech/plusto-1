@@ -161,21 +161,60 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     try {
       setIsLoading(true);
       
-      const catalogData = await ProductCatalog.filter({
-        customer_email: customer.email,
-        catalog_id: selectedCatalogId,
-        is_active: true
-      });
+      // שליפת כל המוצרים עם pagination - Base44 מגביל ל-5000 בבת אחת
+      let allProducts = [];
+      let hasMore = true;
+      let skip = 0;
+      const batchSize = 5000;
+      
+      while (hasMore) {
+        const batch = await ProductCatalog.filter(
+          {
+            customer_email: customer.email,
+            catalog_id: selectedCatalogId,
+            is_active: true
+          },
+          '-created_date',
+          batchSize,
+          skip
+        );
+        
+        if (batch.length > 0) {
+          allProducts = [...allProducts, ...batch];
+          skip += batch.length;
+          
+          // אם קיבלנו פחות מ-batchSize, סיימנו
+          if (batch.length < batchSize) {
+            hasMore = false;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
 
-      setProducts(catalogData);
-      updateCatalogStats(catalogData);
-      setFilteredProducts(catalogData);
+      setProducts(allProducts);
+      updateCatalogStats(allProducts);
+      setFilteredProducts(allProducts);
+      
+      // עדכון product_count בישות Catalog אם יש הבדל
+      const selectedCatalog = catalogs.find(c => c.id === selectedCatalogId);
+      if (selectedCatalog && selectedCatalog.product_count !== allProducts.length) {
+        try {
+          await Catalog.update(selectedCatalogId, { product_count: allProducts.length });
+          // עדכון מקומי
+          setCatalogs(prev => prev.map(c => 
+            c.id === selectedCatalogId ? { ...c, product_count: allProducts.length } : c
+          ));
+        } catch (e) {
+          console.warn('לא ניתן לעדכן product_count:', e);
+        }
+      }
     } catch (error) {
       console.error("Error loading catalog:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [customer.email, selectedCatalogId, updateCatalogStats, setProducts, setIsLoading]);
+  }, [customer.email, selectedCatalogId, updateCatalogStats, catalogs]);
 
   const loadCatalogs = useCallback(async () => {
       try {

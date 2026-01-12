@@ -14,7 +14,7 @@ export default function ProductCatalogTable({
   disableActions = false
 }) {
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 50;
+  const itemsPerPage = 100; // הגדלנו ל-100 לתצוגה טובה יותר
 
   // חישוב עמודים
   const totalPages = Math.ceil(products.length / itemsPerPage);
@@ -77,7 +77,7 @@ export default function ProductCatalogTable({
               קטלוג מוצרים
             </div>
             <div className="text-sm text-horizon-accent">
-              מציג {currentProducts.length} מתוך {products.length} מוצרים (עמוד {currentPage} מתוך {totalPages})
+              מציג {startIndex + 1}-{Math.min(endIndex, products.length)} מתוך {products.length.toLocaleString()} מוצרים (עמוד {currentPage} מתוך {totalPages})
             </div>
           </CardTitle>
         </CardHeader>
