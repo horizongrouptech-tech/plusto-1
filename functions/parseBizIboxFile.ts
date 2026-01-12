@@ -32,6 +32,7 @@ Deno.serve(async (req) => {
     console.log('=== END FILE TYPE ===');
     
     let rows = [];
+    let detectedColumns = [];
 
     if (isPdf && !isExcel) {
       // ניתוח PDF באמצעות InvokeLLM עם Vision
@@ -94,19 +95,7 @@ Deno.serve(async (req) => {
           }
         });
 
-        console.log('=== AI RESPONSE DEBUG ===');
-        console.log('Full result type:', typeof result);
-        console.log('Result is array?', Array.isArray(result));
-        console.log('Result keys:', Object.keys(result || {}));
-        console.log('Transactions exists?', !!result?.transactions);
-        console.log('Transactions length:', result?.transactions?.length);
-        console.log('First row full object:', JSON.stringify(result?.transactions?.[0], null, 2));
-        console.log('Second row full object:', JSON.stringify(result?.transactions?.[1], null, 2));
-        console.log('Third row full object:', JSON.stringify(result?.transactions?.[2], null, 2));
-        console.log('=== END DEBUG ===');
-
         rows = result?.transactions || [];
-        
         console.log(`Found ${rows.length} transactions in PDF`);
 
         if (rows.length === 0) {
@@ -126,7 +115,7 @@ Deno.serve(async (req) => {
       }
 
     } else {
-      // ניתוח Excel - נסה קודם כ-Excel
+      // ניתוח Excel
       console.log('Attempting Excel parsing...');
       const fileResponse = await fetch(fileUrl);
       const fileBuffer = await fileResponse.arrayBuffer();
@@ -136,7 +125,6 @@ Deno.serve(async (req) => {
       try {
         const workbook = XLSX.read(fileBuffer, { type: 'array' });
         
-        // דיבאג - זיהוי שמות העמודות
         console.log('=== EXCEL COLUMNS DEBUG ===');
         console.log('Sheet names:', workbook.SheetNames);
         
@@ -145,105 +133,68 @@ Deno.serve(async (req) => {
           console.log(`Trying sheet: ${sheetName}`);
           const sheet = workbook.Sheets[sheetName];
           
-          // נסה עם header row שונים
-          let testRows = XLSX.utils.sheet_to_json(sheet);
-          console.log(`Sheet ${sheetName} - rows with default header:`, testRows.length);
+          // קרא את ה-raw data ומצא את שורת הכותרות
+          const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          console.log('Raw data rows:', rawData.length);
           
-          if (testRows.length > 0) {
-            console.log('First row keys:', Object.keys(testRows[0]));
-            console.log('First row full:', JSON.stringify(testRows[0], null, 2));
-            
-            // בדוק אם יש עמודות מוכרות
-            const keys = Object.keys(testRows[0]);
-            const hasRecognizedColumn = keys.some(k => 
-              k.includes('תאריך') || k.includes('קטגוריה') || k.includes('חובה') || 
-              k.includes('זכות') || k.includes('יתרה') || k.includes('תיאור')
-            );
-            
-            if (hasRecognizedColumn) {
-              console.log('Found recognized columns in sheet:', sheetName);
-              rows = testRows;
-              break;
-            }
-          }
-          
-          // אם לא מצאנו עמודות מוכרות, נסה לדלג על שורות header
-          if (rows.length === 0) {
-            // נסה לקרוא את ה-raw data ולמצוא את שורת הכותרות
-            const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-            console.log('Raw data rows:', rawData.length);
-            console.log('First 5 raw rows:', JSON.stringify(rawData.slice(0, 5), null, 2));
-            
-            // חפש שורה שמכילה "תאריך" או "קטגוריה"
-            for (let i = 0; i < Math.min(10, rawData.length); i++) {
-              const rowValues = rawData[i];
-              if (rowValues && Array.isArray(rowValues)) {
-                const rowText = rowValues.join(' ');
-                if (rowText.includes('תאריך') || rowText.includes('קטגוריה')) {
-                  console.log(`Found header row at index ${i}:`, rowValues);
-                  // קרא מחדש עם header מהשורה הזו
-                  rows = XLSX.utils.sheet_to_json(sheet, { range: i });
-                  console.log('Rows after setting header:', rows.length);
-                  if (rows.length > 0) {
-                    console.log('New first row keys:', Object.keys(rows[0]));
-                    console.log('New first row:', JSON.stringify(rows[0], null, 2));
-                  }
-                  break;
-                }
+          // חפש שורה שמכילה "תאריך" או "קטגוריה"
+          let headerRowIndex = -1;
+          for (let i = 0; i < Math.min(15, rawData.length); i++) {
+            const rowValues = rawData[i];
+            if (rowValues && Array.isArray(rowValues)) {
+              const rowText = rowValues.join(' ');
+              if (rowText.includes('תאריך') && (rowText.includes('קטגוריה') || rowText.includes('זכות') || rowText.includes('חובה'))) {
+                console.log(`Found header row at index ${i}:`, rowValues);
+                headerRowIndex = i;
+                detectedColumns = rowValues.filter(v => v); // שמור את העמודות שזוהו
+                break;
               }
             }
           }
           
-          if (rows.length > 0) break;
+          if (headerRowIndex >= 0) {
+            rows = XLSX.utils.sheet_to_json(sheet, { range: headerRowIndex });
+            console.log('Rows after setting header:', rows.length);
+            if (rows.length > 0) {
+              console.log('First row keys:', Object.keys(rows[0]));
+              console.log('First row:', JSON.stringify(rows[0], null, 2));
+            }
+            break;
+          }
+          
+          // אם לא מצאנו header, נסה default
+          if (rows.length === 0) {
+            let testRows = XLSX.utils.sheet_to_json(sheet);
+            if (testRows.length > 0) {
+              const keys = Object.keys(testRows[0]);
+              const hasRecognizedColumn = keys.some(k => 
+                k.includes('תאריך') || k.includes('קטגוריה') || k.includes('חובה') || 
+                k.includes('זכות') || k.includes('יתרה') || k.includes('תיאור')
+              );
+              
+              if (hasRecognizedColumn) {
+                console.log('Found recognized columns in sheet:', sheetName);
+                rows = testRows;
+                detectedColumns = keys;
+                break;
+              }
+            }
+          }
         }
         
         console.log('=== END EXCEL DEBUG ===');
         
       } catch (xlsxError) {
         console.error('Excel parsing failed:', xlsxError.message);
-        // אם נכשל, נסה כ-PDF
-        console.log('Falling back to PDF/AI analysis...');
-        
-        const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `חלץ את כל התנועות הבנקאיות מהקובץ הזה. זהו דוח תזרים מ-BiziBox.
-עבור כל תנועה החזר: date (YYYY-MM-DD), description, category, debit (מספר), credit (מספר), balance (מספר).
-חובה שלכל שורה יהיה date וגם category.`,
-          file_urls: [fileUrl],
-          response_json_schema: {
-            type: "object",
-            properties: {
-              transactions: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    date: { type: "string" },
-                    description: { type: "string" },
-                    category: { type: "string" },
-                    debit: { type: "number" },
-                    credit: { type: "number" },
-                    balance: { type: "number" }
-                  },
-                  required: ["date", "category"]
-                }
-              }
-            }
-          }
+        return Response.json({ 
+          success: false, 
+          error: 'שגיאה בקריאת קובץ Excel: ' + xlsxError.message 
         });
-        rows = result?.transactions || [];
       }
     }
 
     console.log(`Total rows to process: ${rows.length}`);
     
-    // לוג מפורט של העמודות שזוהו
-    if (rows.length > 0) {
-      console.log('=== COLUMN DETECTION SUMMARY ===');
-      console.log('Available columns in first row:', Object.keys(rows[0]));
-      console.log('Sample values:', JSON.stringify(rows[0], null, 2));
-      console.log('=== END SUMMARY ===');
-    }
-
     if (!rows || rows.length === 0) {
       return Response.json({ 
         success: false, 
@@ -251,10 +202,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const cashFlowEntries = [];
-    const categorySums = {};
-
-    // פונקציה לזיהוי עמודה לפי מילות מפתח - הוגדר מחוץ ללולאה
+    // פונקציה לזיהוי עמודה לפי מילות מפתח
     const findColumnValue = (row, possibleNames) => {
       if (!row) return undefined;
       // קודם בדיקה מדויקת
@@ -274,20 +222,150 @@ Deno.serve(async (req) => {
       return undefined;
     };
 
+    // פונקציה לבדיקה אם ערך הוא תאריך תקין
+    const isValidDateValue = (value) => {
+      if (!value) return false;
+      
+      // אם זה מספר (Excel serial) - תקין
+      if (typeof value === 'number') return true;
+      
+      // אם זה string - בדוק אם נראה כמו תאריך
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        
+        // פורמט DD/MM/YY או DD/MM/YYYY
+        if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(trimmed)) return true;
+        
+        // פורמט YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return true;
+        
+        // אם הטקסט ארוך מ-15 תווים, כנראה לא תאריך (זה כותרת או סיכום)
+        if (trimmed.length > 15) return false;
+        
+        return false;
+      }
+      
+      return false;
+    };
+
+    // פונקציה לניקוי ערך מספרי
+    const cleanNumericValue = (value) => {
+      if (value === undefined || value === null || value === '') return 0;
+      if (typeof value === 'number') return value;
+      if (typeof value === 'string') {
+        // בדוק אם זה לא מספר (למשל "סליקה", "העברה בנקאית")
+        const cleaned = value.replace(/[^\d.-]/g, '');
+        if (cleaned === '' || cleaned === '-') return 0;
+        return parseFloat(cleaned) || 0;
+      }
+      return 0;
+    };
+
+    // פונקציה להמרת תאריך
+    const parseDate = async (dateValue) => {
+      if (!dateValue) return null;
+      
+      let parsedDate;
+      
+      if (typeof dateValue === 'number') {
+        // Excel date serial
+        const XLSX = await import('npm:xlsx@0.18.5');
+        const parsed = XLSX.SSF.parse_date_code(dateValue);
+        parsedDate = new Date(parsed.y, parsed.m - 1, parsed.d);
+      } else if (typeof dateValue === 'string') {
+        const trimmed = dateValue.trim();
+        
+        // פורמט YYYY-MM-DD
+        if (trimmed.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          parsedDate = new Date(trimmed);
+        }
+        // פורמט DD/MM/YYYY או DD/MM/YY
+        else if (trimmed.includes('/')) {
+          const parts = trimmed.split('/');
+          if (parts.length === 3) {
+            let year = parseInt(parts[2]);
+            // תמיכה בשנה עם 2 ספרות
+            if (year < 100) {
+              year = year < 50 ? 2000 + year : 1900 + year;
+            }
+            parsedDate = new Date(year, parseInt(parts[1]) - 1, parseInt(parts[0]));
+          }
+        } else {
+          parsedDate = new Date(trimmed);
+        }
+      } else {
+        parsedDate = new Date(dateValue);
+      }
+      
+      // בדוק אם התאריך תקין
+      if (!parsedDate || isNaN(parsedDate.getTime())) {
+        return null;
+      }
+      
+      return parsedDate;
+    };
+
+    const cashFlowEntries = [];
+    const categorySums = {};
+    const failedRows = [];
+    const skippedRows = [];
+    let rowIndex = 0;
+
     for (const row of rows) {
-      // מיפוי עמודות גמיש - תמיכה בשמות שונים מ-BiziBox
-      const date = findColumnValue(row, [
+      rowIndex++;
+      
+      // מיפוי עמודות גמיש
+      const dateRaw = findColumnValue(row, [
         'date', 'תאריך', 'Date', 'תאריך עבר', 'תנועות עבר', 
         'תאריך ערך', 'תאריך תנועה', 'transaction_date', 'תאריך התנועה',
         'ת.ערך', 'ת.תנועה', 'תאריך ביצוע'
       ]);
       
+      // בדיקה ראשונית - האם התאריך נראה תקין
+      if (!isValidDateValue(dateRaw)) {
+        const reason = !dateRaw ? 'חסר תאריך' : `תאריך לא תקין: "${String(dateRaw).substring(0, 30)}"`;
+        skippedRows.push({
+          row: rowIndex,
+          reason,
+          data: JSON.stringify(row).substring(0, 200)
+        });
+        console.log(`Skipping row ${rowIndex} - ${reason}`);
+        continue;
+      }
+      
+      // קריאת ערכי זכות וחובה - חיפוש מפורש יותר
+      const creditRaw = findColumnValue(row, [
+        'זכות', 'credit', 'Credit', 'הכנסה', 'income', 
+        'זכות (הכנסה)', 'כניסה', 'הפקדה', 'זכ\'', 'זכ',
+        'זיכוי', 'הכנסות', 'תקבולים', 'תקבול'
+      ]);
+      
+      const debitRaw = findColumnValue(row, [
+        'חובה', 'debit', 'Debit', 'הוצאה', 'expense', 
+        'חובה (הוצאה)', 'יציאה', 'משיכה', 'חו\'', 'חו',
+        'חיוב', 'הוצאות', 'תשלומים'
+      ]);
+      
+      // נקה ערכים מספריים
+      const credit = cleanNumericValue(creditRaw);
+      const debit = cleanNumericValue(debitRaw);
+      
+      // דילוג על שורות ללא סכומים
+      if (credit === 0 && debit === 0) {
+        skippedRows.push({
+          row: rowIndex,
+          reason: 'אין סכומים (זכות וחובה = 0)',
+          data: JSON.stringify(row).substring(0, 200)
+        });
+        continue;
+      }
+      
+      // שאר השדות
       const description = findColumnValue(row, [
         'description', 'תיאור', 'Description', 'פרטים', 'תאור', 
         'תיאור התנועה', 'פירוט', 'details'
       ]) || '';
       
-      // חשבון בנק - ח-ן
       const accountNumber = findColumnValue(row, [
         'account_number', 'ח-ן', 'חשבון', 'מספר חשבון', 'חשבון בנק',
         'account', 'bank_account', 'ח.ן', 'חן'
@@ -298,8 +376,7 @@ Deno.serve(async (req) => {
       ]) || description;
       
       const accountType = findColumnValue(row, [
-        'account_type', 'סוג חשבון', 'Account Type',
-        'סוג', 'type', 'מאשר'
+        'account_type', 'סוג חשבון', 'Account Type', 'סוג', 'type'
       ]) || '';
       
       const paymentType = findColumnValue(row, [
@@ -307,33 +384,16 @@ Deno.serve(async (req) => {
         'סוג התשלום', 'תשלום', 'payment'
       ]) || '';
       
-      // קריאת ערכי זכות וחובה קודם - לפני בדיקת הקטגוריה
-      const creditRaw = findColumnValue(row, [
-        'credit', 'זכות', 'Credit', 'הכנסה', 'income', 
-        'זכות (הכנסה)', 'כניסה', 'הפקדה', 'זכ\'', 'זכ',
-        'זיכוי', 'הכנסות', 'מכירות', 'מחזור', 'מחזור מכירות',
-        'תקבולים', 'תקבול', 'סה"כ זכות', 'סכום זכות',
-        'Sales', 'Revenue', 'Total Credit', 'סה״כ'
-      ]) || 0;
-      
-      const debitRaw = findColumnValue(row, [
-        'debit', 'חובה', 'Debit', 'הוצאה', 'expense', 
-        'חובה (הוצאה)', 'יציאה', 'משיכה', 'חו\'', 'חו',
-        'חיוב', 'הוצאות', 'תשלומים', 'תשלום', 'סה"כ חובה',
-        'סכום חובה', 'Expense', 'Payment', 'Total Debit'
-      ]) || 0;
-      
       let category = findColumnValue(row, [
         'category', 'קטגוריה', 'Category', 'קטגוריות', 
-        'סיווג', 'classification', 'סוג הוצאה', 'קטגוריה ראשית',
-        'סיווג ראשי', 'קט\'', 'קטג', 'סוג תנועה'
+        'סיווג', 'classification', 'סוג הוצאה', 'קטגוריה ראשית'
       ]) || '';
       
       // אם אין קטגוריה, נסה לזהות לפי סוג התנועה
       if (!category) {
-        if (creditRaw && parseFloat(String(creditRaw).replace(/[^\d.-]/g, '')) > 0) {
+        if (credit > 0) {
           category = 'הכנסות';
-        } else if (debitRaw && parseFloat(String(debitRaw).replace(/[^\d.-]/g, '')) > 0) {
+        } else if (debit > 0) {
           category = 'הוצאות';
         } else {
           category = 'לא מסווג';
@@ -348,79 +408,41 @@ Deno.serve(async (req) => {
       const balance = findColumnValue(row, [
         'balance', 'יתרה', 'Balance', 'יתרה נוכחית', 
         'יתרה (כולל גררות)', 'total_balance'
-      ]) || 0;
-
-      console.log(`Processing row - date: ${date}, category: ${category}, debit: ${debitRaw}, credit: ${creditRaw}`);
-
-      // דילוג רק אם אין תאריך - קטגוריה כבר ממולאה אוטומטית
-      if (!date) {
-        console.log(`Skipping row - missing date`);
-        continue;
-      }
-      
-      // אם אין סכומים בשורה, דלג
-      const tempCredit = parseFloat(String(creditRaw).replace(/[^\d.-]/g, '')) || 0;
-      const tempDebit = parseFloat(String(debitRaw).replace(/[^\d.-]/g, '')) || 0;
-      if (tempCredit === 0 && tempDebit === 0) {
-        console.log(`Skipping row - no amounts (credit: ${creditRaw}, debit: ${debitRaw})`);
-        continue;
-      }
+      ]);
+      const balanceNum = cleanNumericValue(balance);
 
       // המרת תאריך
-      let parsedDate;
-      if (typeof date === 'number') {
-        // Excel date serial
-        const XLSX = await import('npm:xlsx@0.18.5');
-        parsedDate = XLSX.SSF.parse_date_code(date);
-        parsedDate = new Date(parsedDate.y, parsedDate.m - 1, parsedDate.d);
-      } else if (typeof date === 'string') {
-        // תמיכה בפורמט YYYY-MM-DD (מה-AI)
-        if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          parsedDate = new Date(date);
-        }
-        // תמיכה בפורמט DD/MM/YYYY או DD/MM/YY
-        else if (date.includes('/')) {
-          const parts = date.split('/');
-          if (parts.length === 3) {
-            let year = parseInt(parts[2]);
-            // תמיכה בשנה עם 2 ספרות (למשל 25 -> 2025)
-            if (year < 100) {
-              year = year < 50 ? 2000 + year : 1900 + year;
-            }
-            parsedDate = new Date(year, parseInt(parts[1]) - 1, parseInt(parts[0]));
-          }
-        } 
-        // תמיכה בכל פורמט אחר
-        else {
-          parsedDate = new Date(date);
-        }
-      } else {
-        parsedDate = new Date(date);
-      }
-
-      if (isNaN(parsedDate.getTime())) {
-        console.log(`Invalid date format: ${date}`);
+      const parsedDate = await parseDate(dateRaw);
+      
+      if (!parsedDate) {
+        failedRows.push({
+          row: rowIndex,
+          reason: `לא ניתן להמיר תאריך: "${dateRaw}"`,
+          data: { date: dateRaw, description, category, credit, debit },
+          rawData: row
+        });
         continue;
       }
 
       const dateString = parsedDate.toISOString().split('T')[0];
 
       // סינון לפי טווח תאריכים
-      if (dateRangeStart && dateString < dateRangeStart) continue;
-      if (dateRangeEnd && dateString > dateRangeEnd) continue;
-
-      // ניקוי ערכים מספריים
-      const credit = typeof creditRaw === 'string' 
-        ? parseFloat(creditRaw.replace(/[^\d.-]/g, '')) || 0
-        : parseFloat(creditRaw) || 0;
-      
-      const debit = typeof debitRaw === 'string' 
-        ? parseFloat(debitRaw.replace(/[^\d.-]/g, '')) || 0
-        : parseFloat(debitRaw) || 0;
-
-      const balanceNum = typeof balance === 'string' 
-        ? parseFloat(balance.replace(/[^\d.-]/g, '')) || 0
-        : parseFloat(balance) || 0;
+      if (dateRangeStart && dateString < dateRangeStart) {
+        skippedRows.push({
+          row: rowIndex,
+          reason: `תאריך ${dateString} מחוץ לטווח (לפני ${dateRangeStart})`,
+          data: { date: dateString, description }
+        });
+        continue;
+      }
+      if (dateRangeEnd && dateString > dateRangeEnd) {
+        skippedRows.push({
+          row: rowIndex,
+          reason: `תאריך ${dateString} מחוץ לטווח (אחרי ${dateRangeEnd})`,
+          data: { date: dateString, description }
+        });
+        continue;
+      }
 
       // שמירת רשומה
       cashFlowEntries.push({
@@ -429,13 +451,13 @@ Deno.serve(async (req) => {
         description,
         source,
         account_type: accountType,
-        account_number: accountNumber,
+        account_number: String(accountNumber),
         payment_type: paymentType,
         category,
         debit,
         credit,
         balance: balanceNum,
-        reference_number: reference,
+        reference_number: String(reference),
         imported_from_file_id: fileUrl
       });
 
@@ -455,22 +477,29 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`Valid cash flow entries: ${cashFlowEntries.length}`);
+    console.log(`=== PROCESSING SUMMARY ===`);
+    console.log(`Total rows in file: ${rows.length}`);
+    console.log(`Valid entries: ${cashFlowEntries.length}`);
+    console.log(`Skipped rows: ${skippedRows.length}`);
+    console.log(`Failed rows: ${failedRows.length}`);
     console.log(`Categories found: ${Object.keys(categorySums).length}`);
     
-    // סיכום סכומים לבדיקה
     const totalCreditSum = cashFlowEntries.reduce((sum, e) => sum + (e.credit || 0), 0);
     const totalDebitSum = cashFlowEntries.reduce((sum, e) => sum + (e.debit || 0), 0);
-    console.log(`=== TOTALS SUMMARY ===`);
-    console.log(`Total Credit (הכנסות): ${totalCreditSum.toLocaleString()}`);
-    console.log(`Total Debit (הוצאות): ${totalDebitSum.toLocaleString()}`);
-    console.log(`Rows processed: ${cashFlowEntries.length} out of ${rows.length}`);
-    console.log(`=== END TOTALS ===`);
+    console.log(`Total Credit: ${totalCreditSum.toLocaleString()}`);
+    console.log(`Total Debit: ${totalDebitSum.toLocaleString()}`);
+    console.log(`=== END SUMMARY ===`);
 
     if (cashFlowEntries.length === 0) {
       return Response.json({ 
         success: false, 
-        error: 'לא נמצאו תנועות תקינות בקובץ. טווח שנבחר: ' + dateRangeStart + ' עד ' + dateRangeEnd 
+        error: 'לא נמצאו תנועות תקינות בקובץ',
+        details: {
+          totalRows: rows.length,
+          skippedRows: skippedRows.slice(0, 10),
+          failedRows: failedRows.slice(0, 10),
+          detectedColumns
+        }
       });
     }
 
@@ -533,10 +562,21 @@ Deno.serve(async (req) => {
     
     return Response.json({
       success: true,
+      processed: cashFlowEntries.length,
+      skipped: skippedRows.length,
+      failed: failedRows.length,
       cashFlowEntries: cashFlowEntries.length,
       recurringExpenses: recurringExpenses.length,
       categories: Object.keys(categorySums),
-      dateRange: `${dateRangeStart} - ${dateRangeEnd}`
+      dateRange: `${dateRangeStart} - ${dateRangeEnd}`,
+      totals: {
+        credit: totalCreditSum,
+        debit: totalDebitSum
+      },
+      // מידע לעריכה ידנית
+      failedRows: failedRows.slice(0, 50), // עד 50 שורות בעייתיות
+      skippedSample: skippedRows.slice(0, 20), // דוגמה משורות שדולגו
+      detectedColumns
     });
 
   } catch (error) {
