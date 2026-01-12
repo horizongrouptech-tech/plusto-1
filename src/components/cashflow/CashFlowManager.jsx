@@ -31,6 +31,9 @@ export default function CashFlowManager({ customer }) {
   });
   const [isUploading, setIsUploading] = useState(false);
   const [activeView, setActiveView] = useState('daily');
+  const [showFailedEditor, setShowFailedEditor] = useState(false);
+  const [failedRowsData, setFailedRowsData] = useState({ failedRows: [], skippedRows: [] });
+  const [lastUploadSummary, setLastUploadSummary] = useState(null);
   
   const queryClient = useQueryClient();
 
