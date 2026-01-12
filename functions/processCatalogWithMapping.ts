@@ -107,9 +107,7 @@ Deno.serve(async (req) => {
     file_url, 
     catalog_id, 
     mapping,
-    identifier_column,
-    duplicate_action,
-    import_with_errors = false // NEW: אפשרות לייבא שורות עם שגיאות
+    import_with_errors = false
   } = await req.json();
 
   if (!customer_email || !file_url || !catalog_id || !mapping) {
@@ -169,30 +167,10 @@ Deno.serve(async (req) => {
 
     await updateProcessStatus(base44, process.id, 30, 'running', `מעבד ${records.length} שורות...`);
 
-    // שליפת מוצרים קיימים לבדיקת כפילויות
-    let existingProducts = [];
-    if (duplicate_action === 'skip' || duplicate_action === 'update') {
-      existingProducts = await base44.asServiceRole.entities.ProductCatalog.filter({
-        catalog_id,
-        is_active: true
-      });
-    }
-
-    // יצירת מפה של מוצרים קיימים לפי עמודת המזהה
-    const existingProductsMap = new Map();
-    existingProducts.forEach(p => {
-      const key = identifier_column === 'barcode' ? p.barcode :
-                  identifier_column === 'product_name' ? p.product_name :
-                  p.supplier_item_code;
-      if (key) existingProductsMap.set(key.toLowerCase().trim(), p);
-    });
-
     await updateProcessStatus(base44, process.id, 40, 'running', 'ממיר נתונים לפי המיפוי...');
 
     // עיבוד כל רשומה לפי המיפוי
     const productsToCreate = [];
-    const productsToUpdate = [];
-    const skippedDuplicates = [];
     const invalidRows = [];
 
     for (let i = 0; i < records.length; i++) {
@@ -260,38 +238,10 @@ Deno.serve(async (req) => {
       product.data_quality = missingFields.length === 0 ? 'complete' : 
                              missingFields.length <= 1 ? 'partial' : 'incomplete';
       
-      // NEW: סימון מוצרים שיובאו עם שגיאות
+      // סימון מוצרים שיובאו עם שגיאות
       const hasErrors = validationErrors.length > 0;
       product.needs_review = missingFields.length > 0 || hasErrors;
-      product.import_errors = hasErrors ? validationErrors : null; // שמירת השגיאות למעקב
-
-      // בדיקת כפילות
-      const identifierValue = identifier_column === 'barcode' ? product.barcode :
-                              identifier_column === 'product_name' ? product.product_name :
-                              product.supplier_item_code;
-      
-      const identifierKey = identifierValue?.toLowerCase().trim();
-      const existingProduct = identifierKey ? existingProductsMap.get(identifierKey) : null;
-
-      if (existingProduct) {
-        // ✅ חדש: הגנה על מוצרים שנוצרו ידנית
-        if (existingProduct.data_source === 'manual_entry') {
-          skippedDuplicates.push({ 
-            row: i + 1, 
-            identifier: identifierValue, 
-            reason: 'מוצר נוצר ידנית - מוגן מדריסה' 
-          });
-          continue;
-        }
-        
-        if (duplicate_action === 'skip') {
-          skippedDuplicates.push({ row: i + 1, identifier: identifierValue });
-          continue;
-        } else if (duplicate_action === 'update') {
-          productsToUpdate.push({ id: existingProduct.id, data: product });
-          continue;
-        }
-      }
+      product.import_errors = hasErrors ? validationErrors : null;
 
       productsToCreate.push(product);
     }
@@ -336,20 +286,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    await updateProcessStatus(base44, process.id, 85, 'running', 'מעדכן מוצרים קיימים...');
-
-    // עדכון מוצרים קיימים
-    let updatedCount = 0;
-    for (const { id, data } of productsToUpdate) {
-      try {
-        await base44.asServiceRole.entities.ProductCatalog.update(id, data);
-        updatedCount++;
-      } catch (e) {
-        console.error(`שגיאה בעדכון מוצר ${id}:`, e);
-      }
-    }
-
-    await updateProcessStatus(base44, process.id, 95, 'running', 'מעדכן ישות קטלוג...');
+    await updateProcessStatus(base44, process.id, 90, 'running', 'מעדכן ישות קטלוג...');
 
     // עדכון ישות הקטלוג
     try {
@@ -368,17 +305,14 @@ Deno.serve(async (req) => {
 
     const resultData = {
       created_count: createdCount,
-      updated_count: updatedCount,
-      skipped_duplicates: skippedDuplicates.length,
       invalid_rows: invalidRows.length,
       total_processed: records.length,
       catalog_id,
-      products_with_errors: productsToCreate.filter(p => p.import_errors).length + 
-                           productsToUpdate.filter(p => p.data.import_errors).length // NEW: ספירת מוצרים עם שגיאות
+      products_with_errors: productsToCreate.filter(p => p.import_errors).length
     };
 
     await updateProcessStatus(base44, process.id, 100, 'completed', 
-      `הושלם! נוצרו ${createdCount}, עודכנו ${updatedCount}`, resultData);
+      `הושלם! נוצרו ${createdCount} מוצרים`, resultData);
 
     return new Response(JSON.stringify({
       success: true,
