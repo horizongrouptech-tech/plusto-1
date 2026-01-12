@@ -378,12 +378,16 @@ Deno.serve(async (req) => {
         if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
           parsedDate = new Date(date);
         }
-        // תמיכה בפורמט DD/MM/YYYY
+        // תמיכה בפורמט DD/MM/YYYY או DD/MM/YY
         else if (date.includes('/')) {
           const parts = date.split('/');
           if (parts.length === 3) {
-            // DD/MM/YYYY
-            parsedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+            let year = parseInt(parts[2]);
+            // תמיכה בשנה עם 2 ספרות (למשל 25 -> 2025)
+            if (year < 100) {
+              year = year < 50 ? 2000 + year : 1900 + year;
+            }
+            parsedDate = new Date(year, parseInt(parts[1]) - 1, parseInt(parts[0]));
           }
         } 
         // תמיכה בכל פורמט אחר
