@@ -1115,33 +1115,38 @@ export default function AdminPage() {
       customersList = [...customersList, ...onboardingCustomers];
       
     } else if (currentUser.user_type === 'financial_manager') {
-      // מנהל כספים - טוען מ-OnboardingRequest ו-CustomerContact (כולל מנהלים משניים)
+      // מנהל כספים - טוען מ-OnboardingRequest (כולל מנהלים משניים)
       const allOnboardingRequests = await OnboardingRequest.list();
       const onboardingRequests = allOnboardingRequests.filter(req =>
         req.assigned_financial_manager_email === currentUser.email ||
         req.additional_assigned_financial_manager_emails?.includes(currentUser.email)
       );
       
-      const onboardingEmails = onboardingRequests.map(req => req.email);
-
-      // שלוף רק CustomerContacts שמשויכים ללקוחות שיש להם OnboardingRequest
-      const customerContacts = await CustomerContact.filter({
-          customer_email: { $in: onboardingEmails }
-      });
-      const relevantCustomerContacts = customerContacts.filter(contact => 
-        onboardingEmails.includes(contact.customer_email)
-      );
-      
-      customersList = relevantCustomerContacts.map(cc => ({
-        id: cc.id,
-        email: cc.customer_email,
-        full_name: cc.full_name,
-        business_name: cc.business_name,
-        phone: cc.phone,
-        business_type: cc.business_type,
-        role: 'user',
-        user_type: 'regular',
-        assigned_financial_manager_email: currentUser.email
+      // המרת OnboardingRequests ל-customer objects
+      customersList = onboardingRequests.map(req => ({
+        id: `onboarding_${req.id}`,
+        email: req.email,
+        full_name: req.full_name || '',
+        business_name: req.business_name || '',
+        phone: req.phone || '',
+        business_type: req.business_type || 'other',
+        company_size: req.company_size || '1-10',
+        monthly_revenue: parseFloat(req.monthly_revenue) || 0,
+        address: {
+          city: req.business_city || '',
+          street: ''
+        },
+        main_products: req.main_products_services || '',
+        target_customers: req.target_audience || '',
+        business_goals: req.business_goals || '',
+        website_url: req.website_url || '',
+        onboarding_completed: true,
+        is_active: req.is_active !== false,
+        is_onboarding_record_only: true,
+        assigned_financial_manager_email: req.assigned_financial_manager_email || null,
+        additional_assigned_financial_manager_emails: req.additional_assigned_financial_manager_emails || [],
+        customer_group: req.customer_group,
+        created_date: req.created_date
       }));
       
       managersList = [{
@@ -1785,7 +1790,7 @@ export default function AdminPage() {
         // שליפת אובייקט הלקוח המלא.selectedCustomer  כבר מכיל את הנתונים העדכניים.
         const customerObject = selectedCustomer; 
 
-        // שליפת אובייקט הקלט האסטרטגי המלא, אם קיים
+        // שליפת אובייקט הקלט האסטרטגי המ מלא, אם קיים
         let strategicInputObject = null;
         if (strategicInputId) {
             try {
@@ -2415,7 +2420,7 @@ export default function AdminPage() {
     // עדכן את הלקוח הנבחר אם הוא הלקוח שעודכן
     setSelectedCustomer(prevSelected => {
       if (prevSelected && prevSelected.id === updatedCustomer.id) {
-        return updatedCustomer;
+        return updatedUpdatedSelected;
       }
       return prevSelected;
     });
