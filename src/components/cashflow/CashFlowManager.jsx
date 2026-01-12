@@ -190,6 +190,18 @@ export default function CashFlowManager({ customer }) {
     return { totalDebit, totalCredit, balance };
   }, [cashFlowData]);
 
+  // Pagination
+  const totalPages = Math.ceil(cashFlowData.length / ITEMS_PER_PAGE);
+  const paginatedData = React.useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return cashFlowData.slice(start, start + ITEMS_PER_PAGE);
+  }, [cashFlowData, currentPage]);
+
+  // Reset page when data changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [dateRange, customer?.email]);
+
   return (
     <div className="space-y-4" dir="rtl">
       {/* כותרת ופעולות */}
