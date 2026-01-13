@@ -18,8 +18,15 @@ import {
   FileSpreadsheet,
   Filter,
   AlertTriangle,
-  Edit
+  Edit,
+  Trash2,
+  Pencil,
+  X,
+  Check
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from 'date-fns';
 import RecurringExpensesTable from './RecurringExpensesTable';
 import FailedRowsEditor from './FailedRowsEditor';
@@ -37,6 +44,10 @@ export default function CashFlowManager({ customer }) {
   const [failedRowsData, setFailedRowsData] = useState({ failedRows: [], skippedRows: [] });
   const [lastUploadSummary, setLastUploadSummary] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [editingItem, setEditingItem] = useState(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   
   const queryClient = useQueryClient();
 
@@ -202,6 +213,48 @@ export default function CashFlowManager({ customer }) {
     setCurrentPage(1);
   }, [dateRange, customer?.email]);
 
+  // פונקציות עריכה ומחיקה
+  const handleEditClick = (item) => {
+    setEditingItem({ ...item });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingItem) return;
+    setIsSaving(true);
+    try {
+      await base44.entities.CashFlow.update(editingItem.id, {
+        date: editingItem.date,
+        description: editingItem.description,
+        category: editingItem.category,
+        credit: editingItem.credit || 0,
+        debit: editingItem.debit || 0,
+        payment_type: editingItem.payment_type,
+        reference_number: editingItem.reference_number,
+        account_number: editingItem.account_number
+      });
+      queryClient.invalidateQueries(['cashFlow', customer.email]);
+      setIsEditDialogOpen(false);
+      setEditingItem(null);
+    } catch (error) {
+      console.error('Error updating:', error);
+      alert('שגיאה בעדכון: ' + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await base44.entities.CashFlow.delete(id);
+      queryClient.invalidateQueries(['cashFlow', customer.email]);
+      setDeleteConfirmId(null);
+    } catch (error) {
+      console.error('Error deleting:', error);
+      alert('שגיאה במחיקה: ' + error.message);
+    }
+  };
+
   return (
     <div className="space-y-4" dir="rtl">
       {/* כותרת ופעולות */}
@@ -347,6 +400,7 @@ export default function CashFlowManager({ customer }) {
                           <TableHead className="text-right text-horizon-text">זכות</TableHead>
                           <TableHead className="text-right text-horizon-text">חובה</TableHead>
                           <TableHead className="text-right text-horizon-text">יתרה</TableHead>
+                          <TableHead className="text-right text-horizon-text w-24">פעולות</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -380,6 +434,47 @@ export default function CashFlowManager({ customer }) {
                             </TableCell>
                             <TableCell className="text-right text-blue-400 font-medium">
                               {item.balance != null ? `₪${item.balance.toLocaleString()}` : '-'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center gap-1 justify-end">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-horizon-accent hover:text-horizon-primary"
+                                  onClick={() => handleEditClick(item)}
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                {deleteConfirmId === item.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                                      onClick={() => handleDelete(item.id)}
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-horizon-accent hover:text-horizon-text"
+                                      onClick={() => setDeleteConfirmId(null)}
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-horizon-accent hover:text-red-500"
+                                    onClick={() => setDeleteConfirmId(item.id)}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -496,6 +591,100 @@ export default function CashFlowManager({ customer }) {
           } : null);
         }}
       />
+
+      {/* דיאלוג עריכה */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="bg-horizon-card border-horizon text-horizon-text max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>עריכת תנועה</DialogTitle>
+          </DialogHeader>
+          {editingItem && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-horizon-accent">תאריך</Label>
+                  <Input
+                    type="date"
+                    value={editingItem.date?.split('T')[0] || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, date: e.target.value })}
+                    className="bg-horizon-dark border-horizon text-horizon-text"
+                  />
+                </div>
+                <div>
+                  <Label className="text-horizon-accent">קטגוריה</Label>
+                  <Input
+                    value={editingItem.category || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value })}
+                    className="bg-horizon-dark border-horizon text-horizon-text"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-horizon-accent">תיאור</Label>
+                <Input
+                  value={editingItem.description || ''}
+                  onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+                  className="bg-horizon-dark border-horizon text-horizon-text"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-horizon-accent">זכות (הכנסה)</Label>
+                  <Input
+                    type="number"
+                    value={editingItem.credit || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, credit: parseFloat(e.target.value) || 0 })}
+                    className="bg-horizon-dark border-horizon text-horizon-text"
+                  />
+                </div>
+                <div>
+                  <Label className="text-horizon-accent">חובה (הוצאה)</Label>
+                  <Input
+                    type="number"
+                    value={editingItem.debit || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, debit: parseFloat(e.target.value) || 0 })}
+                    className="bg-horizon-dark border-horizon text-horizon-text"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-horizon-accent">סוג תשלום</Label>
+                  <Input
+                    value={editingItem.payment_type || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, payment_type: e.target.value })}
+                    className="bg-horizon-dark border-horizon text-horizon-text"
+                  />
+                </div>
+                <div>
+                  <Label className="text-horizon-accent">אסמכתא</Label>
+                  <Input
+                    value={editingItem.reference_number || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, reference_number: e.target.value })}
+                    className="bg-horizon-dark border-horizon text-horizon-text"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+              className="border-horizon text-horizon-text"
+            >
+              ביטול
+            </Button>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={isSaving}
+              className="btn-horizon-primary"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'שמור'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
