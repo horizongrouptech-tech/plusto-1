@@ -308,56 +308,59 @@ export default function ManualForecastWizard({
     }
   };
 
-  const autoSaveForecast = (dataToSave) => {
+  const autoSaveForecast = async (dataToSave) => {
+    // ביטול timeout קודם אם קיים
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
-    saveTimeoutRef.current = setTimeout(async () => {
-      if (!dataToSave.forecast_name?.trim()) {
-        console.log('Skipping auto-save - missing forecast name');
-        return;
-      }
+    // אם אין שם תחזית, ניצור שם אוטומטי
+    if (!dataToSave.forecast_name?.trim()) {
+      dataToSave.forecast_name = `תחזית ${dataToSave.forecast_year || new Date().getFullYear()}`;
+    }
 
-      if (isSavingInProgress) {
-        console.log('Save already in progress, skipping...');
-        return;
-      }
+    // אם שמירה כבר בתהליך, נדחה את השמירה הבאה
+    if (isSavingInProgress) {
+      console.log('Save in progress, queuing next save...');
+      saveTimeoutRef.current = setTimeout(() => autoSaveForecast(dataToSave), 500);
+      return;
+    }
 
-      setIsSavingInProgress(true);
-      setSaveStatus('saving');
+    setIsSavingInProgress(true);
+    setSaveStatus('saving');
+    
+    try {
+      const sanitizedData = sanitizeAllForecastData(dataToSave);
       
-      try {
-        const sanitizedData = sanitizeAllForecastData(dataToSave);
-        
-        let savedForecast;
-        
-        if (sanitizedData.id) {
-          await base44.entities.ManualForecast.update(sanitizedData.id, sanitizedData);
-          savedForecast = sanitizedData;
-        } else {
-          savedForecast = await base44.entities.ManualForecast.create(sanitizedData);
-          setForecastData(prev => ({ ...prev, id: savedForecast.id }));
-        }
-        
-        setLastSaved(new Date());
-        setSaveStatus('saved');
-        
-        setTimeout(() => {
-          setSaveStatus(null);
-        }, 3000);
+      let savedForecast;
+      
+      if (sanitizedData.id) {
+        await base44.entities.ManualForecast.update(sanitizedData.id, sanitizedData);
+        savedForecast = sanitizedData;
+        console.log('✅ Forecast updated:', sanitizedData.id);
+      } else {
+        savedForecast = await base44.entities.ManualForecast.create(sanitizedData);
+        setForecastData(prev => ({ ...prev, id: savedForecast.id }));
+        console.log('✅ Forecast created:', savedForecast.id);
+      }
+      
+      setLastSaved(new Date());
+      setSaveStatus('saved');
+      
+      setTimeout(() => {
+        setSaveStatus(null);
+      }, 2000);
 
-        } catch (error) {
-        console.error('Error auto-saving forecast:', error);
-        setSaveStatus('error');
+    } catch (error) {
+      console.error('❌ Error auto-saving forecast:', error);
+      setSaveStatus('error');
 
-        setTimeout(() => {
-          setSaveStatus(null);
-        }, 5000);
-        } finally {
-        setIsSavingInProgress(false);
-        }
-        }, 3000);
+      setTimeout(() => {
+        setSaveStatus(null);
+      }, 5000);
+    } finally {
+      setIsSavingInProgress(false);
+    }
   };
 
   const updateForecast = (updates) => {
