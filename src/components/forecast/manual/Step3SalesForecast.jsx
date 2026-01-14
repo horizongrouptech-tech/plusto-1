@@ -484,6 +484,8 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     }
   };
 
+  const [isSavingBeforeContinue, setIsSavingBeforeContinue] = useState(false);
+
   const handleContinue = async () => {
     console.log('💾 Step3 - Saving sales forecast before continue:', salesForecast.length, 'items');
     
@@ -492,18 +494,30 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       working_days_per_month: workingDays
     };
     
+    // עדכון state מקומי קודם
     if (onUpdateForecast) {
       onUpdateForecast(updates);
     }
     
-    // ✅ המתן לשמירה לפני המעבר לשלב הבא
+    // ✅ חובה: המתן לשמירה מלאה לפני המעבר לשלב הבא
     if (forecastData.id) {
+      setIsSavingBeforeContinue(true);
       try {
         console.log('💾 Explicitly saving to DB before moving to next step...');
         await base44.entities.ManualForecast.update(forecastData.id, updates);
         console.log('✅ Save completed successfully');
       } catch (error) {
         console.error('❌ Error saving before continue:', error);
+        setIsSavingBeforeContinue(false);
+        
+        // הצג שגיאה למשתמש ואל תעבור לשלב הבא!
+        const retry = confirm(`❌ שגיאה בשמירת הנתונים: ${error.message}\n\nהאם לנסות שוב?`);
+        if (retry) {
+          return handleContinue(); // ניסיון נוסף
+        }
+        return; // אל תעבור לשלב הבא אם השמירה נכשלה!
+      } finally {
+        setIsSavingBeforeContinue(false);
       }
     }
     
@@ -803,9 +817,22 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
           <ChevronRight className="w-4 h-4 ml-2" />
           חזור
         </Button>
-        <Button onClick={handleContinue} className="btn-horizon-primary">
-          המשך
-          <ChevronLeft className="w-4 h-4 mr-2" />
+        <Button 
+          onClick={handleContinue} 
+          className="btn-horizon-primary"
+          disabled={isSavingBeforeContinue}
+        >
+          {isSavingBeforeContinue ? (
+            <>
+              <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+              שומר נתונים...
+            </>
+          ) : (
+            <>
+              המשך
+              <ChevronLeft className="w-4 h-4 mr-2" />
+            </>
+          )}
         </Button>
       </div>
 

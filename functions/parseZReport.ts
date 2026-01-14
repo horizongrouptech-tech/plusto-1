@@ -215,7 +215,7 @@ function extractZReportData(rows, headerRowIndex) {
     for (let colIdx = headers.length - 1; colIdx >= 0; colIdx--) {
       const headerLower = (headers[colIdx] || '').toLowerCase();
       // דלג על עמודות אחוזים
-      if (headerLower.includes('אחוז') || headerLower.includes('%') || headerLower.includes('percent')) {
+      if (headerLower.includes('אחוז') || headerLower.includes('%') || headerLower.includes('percent') || headerLower.includes('תרומה')) {
         continue;
       }
       // דלג על עמודות שכבר זוהו
@@ -241,13 +241,33 @@ function extractZReportData(rows, headerRowIndex) {
     if (revenueIndex === -1) {
       for (let colIdx = headers.length - 1; colIdx >= 0; colIdx--) {
         const headerLower = (headers[colIdx] || '').toLowerCase();
-        if (!headerLower.includes('אחוז') && !headerLower.includes('%')) {
+        if (!headerLower.includes('אחוז') && !headerLower.includes('%') && !headerLower.includes('תרומה')) {
           revenueIndex = colIdx;
           console.log(`⚠️ Last resort fallback: Using column ${colIdx} ("${headers[colIdx]}") as revenue`);
           break;
         }
       }
     }
+  }
+  
+  // ✅ VALIDATION: בדיקת תקינות זיהוי העמודות
+  console.log('📊 Column Detection Summary:');
+  console.log(`  - Product Name: ${productNameIndex !== -1 ? `✅ Column ${productNameIndex} ("${headers[productNameIndex]}")` : '❌ NOT FOUND'}`);
+  console.log(`  - Revenue: ${revenueIndex !== -1 ? `✅ Column ${revenueIndex} ("${headers[revenueIndex]}")` : '❌ NOT FOUND'}`);
+  console.log(`  - Quantity: ${soldQtyIndex !== -1 ? `✅ Column ${soldQtyIndex} ("${headers[soldQtyIndex]}")` : '⚠️ NOT FOUND (will calculate from revenue/price)'}`);
+  console.log(`  - Barcode: ${barcodeIndex !== -1 ? `✅ Column ${barcodeIndex} ("${headers[barcodeIndex]}")` : 'ℹ️ NOT FOUND (optional)'}`);
+  
+  // בדיקה קריטית - אם לא נמצאה עמודת פדיון, זו בעיה!
+  if (revenueIndex === -1) {
+    console.error('❌ CRITICAL: Could not identify revenue column!');
+    console.error('Available headers:', headers);
+    throw new Error('לא ניתן לזהות עמודת פדיון/מחזור בדוח. וודא שהדוח מכיל עמודה עם סה"כ/פדיון/מכירות.');
+  }
+  
+  if (productNameIndex === -1) {
+    console.error('❌ CRITICAL: Could not identify product name column!');
+    console.error('Available headers:', headers);
+    throw new Error('לא ניתן לזהות עמודת שם מוצר בדוח. וודא שהדוח מכיל עמודה עם תיאור/שם פריט.');
   }
   
   console.log(`📊 Column indices detected:`);
