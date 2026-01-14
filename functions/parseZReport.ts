@@ -122,22 +122,35 @@ function extractZReportData(rows, headerRowIndex) {
       soldQtyIndex = index;
       console.log(`✅ Found English quantity column at index ${index}: "${h}"`);
     }
+    // ✅ NEW: זיהוי "כמות פריטים שנמכרו" ווריאציות נוספות
+    if (soldQtyIndex === -1 && (normalized.includes('כמות') && (normalized.includes('נמכר') || normalized.includes('שנמכר')))) {
+      soldQtyIndex = index;
+      console.log(`✅ Found "כמות פריטים שנמכרו" quantity column at index ${index}: "${h}"`);
+    }
+    if (soldQtyIndex === -1 && normalizedTrimmed === 'כמות') {
+      soldQtyIndex = index;
+      console.log(`✅ Found standalone "כמות" quantity column at index ${index}: "${h}"`);
+    }
     
     // Quantity ordered - for reports with "quantity ordered" column
     if (normalized.includes('quantity ordered') || normalized.includes('כמות שהוזמנה')) {
       orderedQtyIndex = index;
     }
     
-    // Revenue column - פידיון בש"ח or רווח has highest priority (NOT כולל מע"מ!)
-    if ((normalized.includes('פידיון') || normalized.includes('פדיון')) && 
-        normalized.includes('בש') && !normalized.includes('כולל')) {
+    // Revenue column - פדיון has highest priority
+    // ✅ FIXED: זיהוי "פדיון" לבד (ללא דרישה ל"בש"ח")
+    if (normalizedTrimmed === 'פדיון' || normalizedTrimmed === 'פידיון') {
       revenueIndex = index;
-      console.log(`✅✅ Found EXACT "פידיון בש״ח" revenue column at index ${index}: "${h}"`);
+      console.log(`✅✅ Found EXACT "פדיון" revenue column at index ${index}: "${h}"`);
+    } else if (revenueIndex === -1 && (normalized.includes('פידיון') || normalized.includes('פדיון')) && 
+        !normalized.includes('אחוז')) {
+      revenueIndex = index;
+      console.log(`✅✅ Found "פדיון/פידיון" revenue column at index ${index}: "${h}"`);
     } else if (revenueIndex === -1 && normalized.includes('רווח') && 
-               (normalized.includes('ממלאכה') || normalized.includes('בש'))) {
+               (normalized.includes('ממלאכה') || normalized.includes('בש')) && !normalized.includes('אחוז')) {
       revenueIndex = index;
       console.log(`✅✅ Found "רווח" revenue column at index ${index}: "${h}"`);
-    } else if (revenueIndex === -1 && normalized.includes('מכירות') && !normalized.includes('ללא')) {
+    } else if (revenueIndex === -1 && normalized.includes('מכירות') && !normalized.includes('ללא') && !normalized.includes('אחוז')) {
       revenueIndex = index;
       console.log(`✅ Found sales revenue column at index ${index}: "${h}"`);
     } else if (revenueIndex === -1 && 
@@ -147,16 +160,16 @@ function extractZReportData(rows, headerRowIndex) {
       console.log(`✅ Found English revenue column at index ${index}: "${h}"`);
     }
     
-    // ✅ NEW: גמישות נוספת - זיהוי עמודות מכירות כולל מע"מ
-    if (revenueIndex === -1 && normalized.includes('מכירות') && normalized.includes('כולל')) {
+    // ✅ גמישות נוספת - זיהוי עמודות מכירות כולל מע"מ
+    if (revenueIndex === -1 && normalized.includes('מכירות') && normalized.includes('כולל') && !normalized.includes('אחוז')) {
       revenueIndex = index;
       console.log(`✅ Found "מכירות כולל מע"מ" revenue column at index ${index}: "${h}"`);
     }
     
-    // ✅ NEW: זיהוי עמודות סה"כ / total
+    // ✅ זיהוי עמודות סה"כ / total / מחזור
     if (revenueIndex === -1 && (normalizedTrimmed === 'סה"כ' || normalizedTrimmed === 'סהכ' || 
         normalizedTrimmed === 'total' || normalized.includes('סה״כ מכירות') ||
-        normalized.includes('מחזור') || normalized.includes('תקבולים'))) {
+        normalized.includes('מחזור') || normalized.includes('תקבולים')) && !normalized.includes('אחוז')) {
       revenueIndex = index;
       console.log(`✅ Found total/מחזור revenue column at index ${index}: "${h}"`);
     }
@@ -197,11 +210,43 @@ function extractZReportData(rows, headerRowIndex) {
   }
   
   if (revenueIndex === -1) {
-    // Try the last column for revenue
-    if (headers.length >= 4) {
-      revenueIndex = headers.length - 1;
-    } else {
-      revenueIndex = headers.length - 1;
+    // ✅ IMPROVED FALLBACK: חפש עמודה עם מספרים גדולים (לא אחוזים)
+    // נחפש עמודה שהערכים שלה נראים כמו סכומי כסף ולא אחוזים
+    for (let colIdx = headers.length - 1; colIdx >= 0; colIdx--) {
+      const headerLower = (headers[colIdx] || '').toLowerCase();
+      // דלג על עמודות אחוזים
+      if (headerLower.includes('אחוז') || headerLower.includes('%') || headerLower.includes('percent')) {
+        continue;
+      }
+      // דלג על עמודות שכבר זוהו
+      if (colIdx === soldQtyIndex || colIdx === productNameIndex || colIdx === barcodeIndex) {
+        continue;
+      }
+      // בדוק אם זו עמודת מספרים
+      let hasLargeNumbers = false;
+      for (let rowIdx = headerRowIndex + 1; rowIdx < Math.min(headerRowIndex + 6, rows.length); rowIdx++) {
+        const val = parseNumber(rows[rowIdx]?.[colIdx]);
+        if (val > 100) { // מספרים מעל 100 כנראה לא אחוזים
+          hasLargeNumbers = true;
+          break;
+        }
+      }
+      if (hasLargeNumbers) {
+        revenueIndex = colIdx;
+        console.log(`⚠️ Fallback: Using column ${colIdx} ("${headers[colIdx]}") as revenue based on large numbers`);
+        break;
+      }
+    }
+    // אם עדיין לא מצאנו, קח עמודה אחרונה שאינה אחוזים
+    if (revenueIndex === -1) {
+      for (let colIdx = headers.length - 1; colIdx >= 0; colIdx--) {
+        const headerLower = (headers[colIdx] || '').toLowerCase();
+        if (!headerLower.includes('אחוז') && !headerLower.includes('%')) {
+          revenueIndex = colIdx;
+          console.log(`⚠️ Last resort fallback: Using column ${colIdx} ("${headers[colIdx]}") as revenue`);
+          break;
+        }
+      }
     }
   }
   
