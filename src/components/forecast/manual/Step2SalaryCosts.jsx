@@ -732,11 +732,11 @@ export default function Step2SalaryCosts({ forecastData, onUpdateForecast, onNex
                                         </Button>
                                       </div>
                                       <Input
-                                        type="number"
-                                        value={employee.planned_monthly_hours?.[monthIndex] ?? (employee.hours_per_month || '')}
-                                        onChange={(e) => updatePlannedMonthlyHours(empIndex, monthIndex, e.target.value)}
-                                        className="bg-horizon-dark border-horizon text-horizon-text text-xs h-7 mb-2"
-                                        placeholder="שעות תכנון"
+                                       type="number"
+                                       value={employee.planned_monthly_hours?.[monthIndex] ?? ''}
+                                       onChange={(e) => updatePlannedMonthlyHours(empIndex, monthIndex, e.target.value)}
+                                       className="bg-horizon-dark border-horizon text-horizon-text text-xs h-7 mb-2"
+                                       placeholder="שעות תכנון"
                                       />
                                     </div>
 
@@ -760,12 +760,11 @@ export default function Step2SalaryCosts({ forecastData, onUpdateForecast, onNex
                                         </Button>
                                       </div>
                                       <Input
-                                        type="number"
-                                        value={employee.planned_monthly_salary_amounts?.[monthIndex] ?? 
-                                               ((employee.planned_monthly_hours?.[monthIndex] ?? employee.hours_per_month ?? 0) * (employee.hourly_rate ?? 0))}
-                                        onChange={(e) => updatePlannedMonthlySalary(empIndex, monthIndex, e.target.value)}
-                                        className="bg-horizon-dark border-horizon text-horizon-text text-xs h-7 mb-2"
-                                        placeholder="שכר תכנון"
+                                       type="number"
+                                       value={employee.planned_monthly_salary_amounts?.[monthIndex] ?? ''}
+                                       onChange={(e) => updatePlannedMonthlySalary(empIndex, monthIndex, e.target.value)}
+                                       className="bg-horizon-dark border-horizon text-horizon-text text-xs h-7 mb-2"
+                                       placeholder="שכר תכנון"
                                       />
                                     </div>
 
@@ -773,11 +772,11 @@ export default function Step2SalaryCosts({ forecastData, onUpdateForecast, onNex
                                     <div className="mb-2">
                                       <Label className="text-xs text-horizon-accent">ביצוע - שעות</Label>
                                       <Input
-                                        type="number"
-                                        value={employee.actual_monthly_hours?.[monthIndex] ?? (employee.hours_per_month || '')}
-                                        onChange={(e) => updateActualMonthlyHours(empIndex, monthIndex, e.target.value)}
-                                        className="bg-horizon-dark border-horizon text-horizon-text text-xs h-7 mb-2"
-                                        placeholder="שעות ביצוע"
+                                       type="number"
+                                       value={employee.actual_monthly_hours?.[monthIndex] ?? ''}
+                                       onChange={(e) => updateActualMonthlyHours(empIndex, monthIndex, e.target.value)}
+                                       className="bg-horizon-dark border-horizon text-horizon-text text-xs h-7 mb-2"
+                                       placeholder="שעות ביצוע"
                                       />
                                     </div>
 
@@ -785,12 +784,11 @@ export default function Step2SalaryCosts({ forecastData, onUpdateForecast, onNex
                                     <div className="mb-2">
                                       <Label className="text-xs text-horizon-accent">ביצוע - שכר</Label>
                                       <Input
-                                        type="number"
-                                        value={employee.actual_monthly_salary_amounts?.[monthIndex] ?? 
-                                               ((employee.actual_monthly_hours?.[monthIndex] ?? employee.hours_per_month ?? 0) * (employee.hourly_rate ?? 0))}
-                                        onChange={(e) => updateActualMonthlySalary(empIndex, monthIndex, e.target.value)}
-                                        className="bg-horizon-dark border-horizon text-horizon-text text-xs h-7 mb-2"
-                                        placeholder="שכר ביצוע"
+                                       type="number"
+                                       value={employee.actual_monthly_salary_amounts?.[monthIndex] ?? ''}
+                                       onChange={(e) => updateActualMonthlySalary(empIndex, monthIndex, e.target.value)}
+                                       className="bg-horizon-dark border-horizon text-horizon-text text-xs h-7 mb-2"
+                                       placeholder="שכר ביצוע"
                                       />
                                     </div>
                                   </>
