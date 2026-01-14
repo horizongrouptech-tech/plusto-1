@@ -198,7 +198,7 @@ export default function ProductAddForm({
             <div className="space-y-2">
               <Label htmlFor="cost_price" className="text-right text-horizon-text flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-horizon-accent" />
-                מחיר קנייה (ש"ח) <span className="text-red-400">*</span>
+                מחיר קנייה (ש"ח)
               </Label>
               <Input
                 id="cost_price"
@@ -215,7 +215,7 @@ export default function ProductAddForm({
             <div className="space-y-2">
               <Label htmlFor="selling_price" className="text-right text-horizon-text flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-horizon-accent" />
-                מחיר מכירה (ש"ח) <span className="text-red-400">*</span>
+                מחיר מכירה (ש"ח)
               </Label>
               <Input
                 id="selling_price"
