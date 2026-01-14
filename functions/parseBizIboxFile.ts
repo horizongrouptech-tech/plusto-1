@@ -503,20 +503,40 @@ Deno.serve(async (req) => {
       });
     }
 
-    // מחיקת נתונים קיימים באותו טווח תאריכים
-    const existing = await base44.asServiceRole.entities.CashFlow.filter({
-      customer_email: customerEmail,
-      date: { $gte: dateRangeStart, $lte: dateRangeEnd }
+    // טעינת תנועות קיימות למניעת כפילויות
+    const existingEntries = await base44.asServiceRole.entities.CashFlow.filter({
+      customer_email: customerEmail
     });
 
-    for (const item of existing) {
-      await base44.asServiceRole.entities.CashFlow.delete(item.id);
+    console.log(`Found ${existingEntries.length} existing entries for duplicate detection`);
+
+    // מיזוג חכם - זיהוי כפילויות
+    const newEntries = [];
+    const duplicates = [];
+
+    for (const entry of cashFlowEntries) {
+      const isDuplicate = existingEntries.some(existing => 
+        existing.date === entry.date &&
+        existing.description === entry.description &&
+        existing.debit === entry.debit &&
+        existing.credit === entry.credit
+      );
+
+      if (isDuplicate) {
+        duplicates.push(entry);
+      } else {
+        newEntries.push(entry);
+      }
     }
 
-    // שמירה בבסיס הנתונים
-    console.log('Saving cash flow entries to database...');
-    await base44.asServiceRole.entities.CashFlow.bulkCreate(cashFlowEntries);
-    console.log('Cash flow entries saved successfully');
+    console.log(`New entries to add: ${newEntries.length}, Duplicates skipped: ${duplicates.length}`);
+
+    // שמירה בבסיס הנתונים - רק שורות חדשות
+    if (newEntries.length > 0) {
+      console.log('Saving new cash flow entries to database...');
+      await base44.asServiceRole.entities.CashFlow.bulkCreate(newEntries);
+      console.log('Cash flow entries saved successfully');
+    }
 
     // יצירת הוצאות קבועות
     const recurringExpenses = [];
@@ -562,10 +582,11 @@ Deno.serve(async (req) => {
     
     return Response.json({
       success: true,
-      processed: cashFlowEntries.length,
+      processed: newEntries.length,
+      duplicates: duplicates.length,
       skipped: skippedRows.length,
       failed: failedRows.length,
-      cashFlowEntries: cashFlowEntries.length,
+      cashFlowEntries: newEntries.length,
       recurringExpenses: recurringExpenses.length,
       categories: Object.keys(categorySums),
       dateRange: `${dateRangeStart} - ${dateRangeEnd}`,

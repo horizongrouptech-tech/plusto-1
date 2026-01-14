@@ -102,6 +102,7 @@ export default function CashFlowManager({ customer }) {
         
         setLastUploadSummary({
           processed: response.data.processed || response.data.cashFlowEntries,
+          duplicates: response.data.duplicates || 0,
           skipped: response.data.skipped || 0,
           failed: response.data.failed || 0,
           categories: response.data.categories?.length || 0,
@@ -116,7 +117,8 @@ export default function CashFlowManager({ customer }) {
         if (hasIssues) {
           const shouldEdit = window.confirm(
             `הקובץ נותח בהצלחה!\n\n` +
-            `✅ נשמרו: ${response.data.processed || response.data.cashFlowEntries} תנועות\n` +
+            `✅ נוספו: ${response.data.processed || response.data.cashFlowEntries} תנועות חדשות\n` +
+            `🔄 כפילויות: ${response.data.duplicates || 0} שורות (דולגו)\n` +
             `⚠️ דולגו: ${response.data.skipped || 0} שורות\n` +
             `❌ נכשלו: ${response.data.failed || 0} שורות\n` +
             `📁 קטגוריות: ${response.data.categories?.length || 0}\n\n` +
@@ -129,7 +131,8 @@ export default function CashFlowManager({ customer }) {
         } else {
           alert(
             `הקובץ נותח בהצלחה!\n\n` +
-            `✅ נשמרו: ${response.data.processed || response.data.cashFlowEntries} תנועות\n` +
+            `✅ נוספו: ${response.data.processed || response.data.cashFlowEntries} תנועות חדשות\n` +
+            `🔄 כפילויות: ${response.data.duplicates || 0} שורות (דולגו)\n` +
             `📁 קטגוריות: ${response.data.categories?.length || 0}\n` +
             `📅 טווח: ${response.data.dateRange || ''}`
           );
@@ -297,6 +300,33 @@ export default function CashFlowManager({ customer }) {
               >
                 <Download className="w-4 h-4 ml-2" />
                 ייצא לExcel
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!window.confirm('האם אתה בטוח שברצונך למחוק את כל נתוני התזרים? פעולה זו בלתי הפיכה!')) {
+                    return;
+                  }
+                  if (!window.confirm('אישור אחרון: כל הנתונים יימחקו לצמיתות!')) {
+                    return;
+                  }
+                  try {
+                    const allEntries = await base44.entities.CashFlow.filter({
+                      customer_email: customer.email
+                    });
+                    for (const entry of allEntries) {
+                      await base44.entities.CashFlow.delete(entry.id);
+                    }
+                    queryClient.invalidateQueries(['cashFlow', customer.email]);
+                    alert('כל נתוני התזרים נמחקו בהצלחה');
+                  } catch (error) {
+                    alert('שגיאה במחיקה: ' + error.message);
+                  }
+                }}
+                variant="outline"
+                className="border-red-500 text-red-500 hover:bg-red-500/10"
+              >
+                <Trash2 className="w-4 h-4 ml-2" />
+                מחק הכל
               </Button>
             </div>
           </div>
@@ -546,31 +576,38 @@ export default function CashFlowManager({ customer }) {
       </Tabs>
 
       {/* סיכום העלאה אחרונה */}
-      {lastUploadSummary && (lastUploadSummary.failed > 0 || lastUploadSummary.skipped > 5) && (
-        <Card className="card-horizon border-yellow-500/30">
+      {lastUploadSummary && (
+        <Card className={`card-horizon ${(lastUploadSummary.failed > 0 || lastUploadSummary.skipped > 5) ? 'border-yellow-500/30' : 'border-green-500/30'}`}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                {(lastUploadSummary.failed > 0 || lastUploadSummary.skipped > 5) ? (
+                  <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                ) : (
+                  <Check className="w-5 h-5 text-green-500" />
+                )}
                 <div>
                   <p className="text-horizon-text font-medium">
-                    העלאה אחרונה: {lastUploadSummary.processed} תנועות נשמרו
+                    העלאה אחרונה: {lastUploadSummary.processed} תנועות חדשות נוספו
                   </p>
                   <p className="text-sm text-horizon-accent">
+                    {lastUploadSummary.duplicates > 0 && `${lastUploadSummary.duplicates} כפילויות דולגו • `}
                     {lastUploadSummary.failed > 0 && `${lastUploadSummary.failed} שורות נכשלו • `}
-                    {lastUploadSummary.skipped} שורות דולגו
+                    {lastUploadSummary.skipped > 0 && `${lastUploadSummary.skipped} שורות דולגו`}
                   </p>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFailedEditor(true)}
-                className="border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10"
-              >
-                <Edit className="w-4 h-4 ml-2" />
-                ערוך שורות בעייתיות
-              </Button>
+              {(lastUploadSummary.failed > 0 || lastUploadSummary.skipped > 5) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFailedEditor(true)}
+                  className="border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10"
+                >
+                  <Edit className="w-4 h-4 ml-2" />
+                  ערוך שורות בעייתיות
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
