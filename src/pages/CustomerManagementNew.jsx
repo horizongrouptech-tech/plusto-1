@@ -85,8 +85,8 @@ export default function CustomerManagementNew() {
         );
       }
       
-      // סינון - רק לקוחות פעילים שלא בארכיון
-      return filtered.filter(req => req.is_active && !req.is_archived);
+      // החזר את כל הלקוחות (כולל ארכיון) - הסינון יתבצע בממשק
+      return filtered;
     },
     enabled: !!user
   });
