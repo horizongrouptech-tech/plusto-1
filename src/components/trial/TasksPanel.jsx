@@ -11,13 +11,16 @@ import {
   Clock,
   AlertTriangle,
   Target,
-  Loader2
+  Loader2,
+  Lightbulb
 } from 'lucide-react';
 import { format, isToday, isPast, isFuture, parseISO } from 'date-fns';
+import GoalTemplateSelector from '@/components/trial/GoalTemplateSelector';
 
 export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCollapse, onTaskClick, allUsers, currentUser }) {
   const [newTaskName, setNewTaskName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const [showGoalTemplateSelector, setShowGoalTemplateSelector] = useState(false);
 
   // סינון משימות לפי תאריך התחלה - רק משימות שהתאריך שלהן הגיע
   const relevantTasks = useMemo(() => {
@@ -211,7 +214,7 @@ export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCo
         </div>
 
         {/* הוספת משימה מהירה */}
-        <form onSubmit={(e) => handleAddTask(e, currentUser)} className="flex gap-2">
+        <form onSubmit={(e) => handleAddTask(e, currentUser)} className="flex gap-2 mb-3">
           <Input
             placeholder="משימה חדשה..."
             value={newTaskName}
@@ -231,6 +234,17 @@ export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCo
             )}
           </Button>
         </form>
+
+        {/* כפתור בחירה מבנק יעדים */}
+        <Button
+          onClick={() => setShowGoalTemplateSelector(true)}
+          variant="outline"
+          className="w-full border-horizon-primary/50 text-horizon-primary hover:bg-horizon-primary/10 text-sm"
+          size="sm"
+        >
+          <Lightbulb className="w-4 h-4 ml-2" />
+          בחר יעד מבנק היעדים
+        </Button>
       </div>
 
       {/* רשימת משימות */}
@@ -286,6 +300,17 @@ export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCo
           {relevantTasks.length} משימות פעילות
         </p>
       </div>
+
+      {/* מודל בחירת תבנית */}
+      <GoalTemplateSelector
+        customer={customer}
+        isOpen={showGoalTemplateSelector}
+        onClose={() => setShowGoalTemplateSelector(false)}
+        onGoalCreated={() => {
+          setShowGoalTemplateSelector(false);
+          if (onRefresh) onRefresh();
+        }}
+      />
     </div>
   );
 }

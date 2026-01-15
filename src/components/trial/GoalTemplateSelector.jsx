@@ -7,7 +7,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Target, Loader2, Search, Plus, CheckCircle } from 'lucide-react';
+import { Target, Loader2, Search, Plus, CheckCircle, Clock, ListChecks } from 'lucide-react';
+import { CategoryBadge, PopularBadge } from '@/components/goals/GoalTemplateBadges';
+import GoalTemplatePreview from '@/components/goals/GoalTemplatePreview';
 
 export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoalCreated }) {
     const queryClient = useQueryClient();
@@ -27,6 +29,8 @@ export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoal
         enabled: isOpen
     });
 
+    const [selectedCategory, setSelectedCategory] = useState('all');
+
     const categoryLabels = {
         financial: 'פיננסי',
         operational: 'תפעולי',
@@ -37,11 +41,15 @@ export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoal
         other: 'אחר'
     };
 
-    const filteredTemplates = templates.filter(t => 
-        !searchTerm || 
-        t.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredTemplates = templates.filter(t => {
+        const matchesSearch = !searchTerm || 
+            t.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            t.description?.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const matchesCategory = selectedCategory === 'all' || t.category === selectedCategory;
+        
+        return matchesSearch && matchesCategory;
+    });
 
     const handleSelectTemplate = (template) => {
         setSelectedTemplate(template);
@@ -139,6 +147,33 @@ export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoal
                             />
                         </div>
 
+                        {/* סינון קטגוריות */}
+                        <div className="flex flex-wrap gap-2">
+                            <Button
+                                size="sm"
+                                variant={selectedCategory === 'all' ? 'default' : 'outline'}
+                                onClick={() => setSelectedCategory('all')}
+                                className={selectedCategory === 'all' ? 'bg-horizon-primary text-white' : 'border-horizon text-horizon-accent'}
+                            >
+                                הכל ({templates.length})
+                            </Button>
+                            {Object.entries(categoryLabels).map(([key, label]) => {
+                                const count = templates.filter(t => t.category === key).length;
+                                if (count === 0) return null;
+                                return (
+                                    <Button
+                                        key={key}
+                                        size="sm"
+                                        variant={selectedCategory === key ? 'default' : 'outline'}
+                                        onClick={() => setSelectedCategory(key)}
+                                        className={selectedCategory === key ? 'bg-horizon-primary text-white' : 'border-horizon text-horizon-accent'}
+                                    >
+                                        {label} ({count})
+                                    </Button>
+                                );
+                            })}
+                        </div>
+
                         {isLoading ? (
                             <div className="flex justify-center p-8">
                                 <Loader2 className="w-8 h-8 animate-spin text-horizon-primary" />
@@ -153,16 +188,19 @@ export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoal
                                 {filteredTemplates.map(template => (
                                     <Card 
                                         key={template.id} 
-                                        className="bg-horizon-card border-2 border-horizon hover:border-horizon-primary cursor-pointer transition-all hover:shadow-lg"
+                                        className="bg-horizon-card border-2 border-horizon hover:border-horizon-primary cursor-pointer transition-all hover:shadow-lg group"
                                         onClick={() => handleSelectTemplate(template)}
                                     >
                                         <CardContent className="p-5">
                                             <div className="flex items-start justify-between gap-3 mb-3">
                                                 <div className="flex-1">
-                                                    <h3 className="text-lg font-bold text-horizon-text mb-2">{template.name}</h3>
-                                                    <Badge className="text-xs bg-horizon-primary/20 text-horizon-primary border border-horizon-primary/30 font-medium px-3 py-1">
-                                                        {categoryLabels[template.category]}
-                                                    </Badge>
+                                                    <h3 className="text-lg font-bold text-horizon-text mb-2 group-hover:text-horizon-primary transition-colors">
+                                                        {template.name}
+                                                    </h3>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <CategoryBadge category={template.category} showIcon={true} />
+                                                        <PopularBadge usageCount={template.usage_count} />
+                                                    </div>
                                                 </div>
                                                 <div className="text-left">
                                                     <div className="text-xs text-horizon-accent/70">שימושים</div>
@@ -170,13 +208,26 @@ export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoal
                                                 </div>
                                             </div>
                                             {template.description && (
-                                                <p className="text-sm text-horizon-accent leading-relaxed mb-3 border-r-2 border-horizon-primary/30 pr-3">
+                                                <p className="text-sm text-horizon-accent leading-relaxed mb-3 line-clamp-2">
                                                     {template.description}
                                                 </p>
                                             )}
-                                            <div className="flex items-center gap-2 text-sm text-horizon-accent/70 bg-horizon-primary/5 px-3 py-2 rounded-lg">
-                                                <span className="font-medium">משך משוער:</span>
-                                                <span className="font-bold text-horizon-primary">{template.estimated_duration_days || 30} ימים</span>
+                                            
+                                            <div className="space-y-2">
+                                                <div className="flex items-center gap-2 text-sm bg-horizon-primary/5 px-3 py-2 rounded-lg">
+                                                    <Clock className="w-4 h-4 text-horizon-primary" />
+                                                    <span className="font-medium text-horizon-text">משך:</span>
+                                                    <span className="font-bold text-horizon-primary">{template.estimated_duration_days || 30} ימים</span>
+                                                </div>
+                                                
+                                                {template.action_steps && template.action_steps.length > 0 && (
+                                                    <div className="flex items-center gap-2 text-xs bg-horizon-secondary/10 px-3 py-2 rounded-lg">
+                                                        <ListChecks className="w-4 h-4 text-horizon-secondary" />
+                                                        <span className="font-medium text-horizon-text">
+                                                            {template.action_steps.length} שלבי ביצוע
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -186,53 +237,38 @@ export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoal
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        <Card className="bg-horizon-card border-horizon">
-                            <CardContent className="p-4">
-                                <h3 className="font-bold text-horizon-text mb-2">{selectedTemplate.name}</h3>
-                                <Badge className="text-xs bg-horizon-primary/20 text-horizon-primary mb-3">
-                                    {categoryLabels[selectedTemplate.category]}
-                                </Badge>
-                                {selectedTemplate.description && (
-                                    <p className="text-sm text-horizon-accent mb-3">{selectedTemplate.description}</p>
-                                )}
-                                {selectedTemplate.action_steps && selectedTemplate.action_steps.length > 0 && (
-                                    <div className="mt-3 pt-3 border-t border-horizon">
-                                        <p className="text-sm font-medium text-horizon-text mb-2">שלבי ביצוע:</p>
-                                        <ul className="text-sm text-horizon-accent space-y-1 pr-5 list-disc">
-                                            {selectedTemplate.action_steps.map((step, idx) => (
-                                                <li key={idx}>{step}</li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                        <GoalTemplatePreview template={selectedTemplate} showUsageCount={false} />
 
-                        <div className="space-y-3 bg-horizon-card/30 p-4 rounded-lg">
-                            <h4 className="font-medium text-horizon-text">התאמה אישית</h4>
+                        <div className="space-y-4 bg-horizon-card/30 p-5 rounded-lg border border-horizon">
+                            <h4 className="font-semibold text-horizon-text flex items-center gap-2">
+                                <Target className="w-4 h-4 text-horizon-primary" />
+                                התאמה אישית
+                            </h4>
                             
                             <div>
-                                <label className="text-sm text-horizon-accent block mb-1">שם היעד</label>
+                                <label className="text-sm text-horizon-accent block mb-2 font-medium">שם היעד *</label>
                                 <Input
                                     value={customization.name}
                                     onChange={(e) => setCustomization({ ...customization, name: e.target.value })}
                                     className="bg-horizon-card border-horizon text-horizon-text"
+                                    placeholder="הזן שם מותאם אישית ליעד"
                                 />
                             </div>
 
                             <div>
-                                <label className="text-sm text-horizon-accent block mb-1">הערות נוספות</label>
+                                <label className="text-sm text-horizon-accent block mb-2 font-medium">הערות נוספות</label>
                                 <Textarea
                                     value={customization.notes}
                                     onChange={(e) => setCustomization({ ...customization, notes: e.target.value })}
                                     className="bg-horizon-card border-horizon text-horizon-text"
                                     rows={3}
+                                    placeholder="הוסף הערות או הנחיות ספציפיות ללקוח"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-sm text-horizon-accent block mb-1">תאריך יעד</label>
+                                    <label className="text-sm text-horizon-accent block mb-2 font-medium">תאריך יעד</label>
                                     <Input
                                         type="date"
                                         value={customization.end_date}
@@ -241,7 +277,7 @@ export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoal
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-sm text-horizon-accent block mb-1">משך (ימים)</label>
+                                    <label className="text-sm text-horizon-accent block mb-2 font-medium">משך (ימים)</label>
                                     <Input
                                         type="number"
                                         value={customization.duration_days}
@@ -259,6 +295,33 @@ export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoal
                                     />
                                 </div>
                             </div>
+
+                            {/* תצוגה מקדימה של תת-משימות */}
+                            {selectedTemplate.action_steps && selectedTemplate.action_steps.length > 0 && (
+                                <div className="bg-horizon-primary/5 rounded-lg p-4 border border-horizon-primary/20">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <ListChecks className="w-4 h-4 text-horizon-secondary" />
+                                        <span className="text-sm font-semibold text-horizon-text">
+                                            תת-משימות שייווצרו ({selectedTemplate.action_steps.length}):
+                                        </span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {selectedTemplate.action_steps.map((step, idx) => {
+                                            const taskDate = new Date();
+                                            taskDate.setDate(taskDate.getDate() + Math.floor((customization.duration_days / selectedTemplate.action_steps.length) * idx));
+                                            
+                                            return (
+                                                <div key={idx} className="flex items-start gap-2 text-xs bg-horizon-dark/30 p-2 rounded">
+                                                    <Badge variant="outline" className="text-xs border-horizon-accent text-horizon-accent">
+                                                        {taskDate.toLocaleDateString('he-IL')}
+                                                    </Badge>
+                                                    <span className="text-horizon-text flex-1">{step}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex gap-2 justify-end">

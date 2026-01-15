@@ -8,7 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Target, Plus, Edit3, Trash2, Copy, Loader2 } from 'lucide-react';
+import { Target, Plus, Edit3, Trash2, Copy, Loader2, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { canEditGoalTemplates } from '@/utils/goalTemplatePermissions';
+import { CategoryBadge, PopularBadge } from '@/components/goals/GoalTemplateBadges';
+import GoalTemplatePreview from '@/components/goals/GoalTemplatePreview';
 
 export default function GoalBankManager({ currentUser }) {
   const queryClient = useQueryClient();
@@ -30,29 +33,8 @@ export default function GoalBankManager({ currentUser }) {
     queryFn: () => base44.entities.GoalTemplate.filter({ is_active: true }, '-usage_count')
   });
 
-  const categoryLabels = {
-    financial: 'פיננסי',
-    operational: 'תפעולי',
-    marketing: 'שיווק',
-    sales: 'מכירות',
-    hr: 'משאבי אנוש',
-    strategic: 'אסטרטגי',
-    other: 'אחר'
-  };
-
-  const categoryColors = {
-    financial: 'bg-green-500/20 text-green-400 border-green-500/40',
-    operational: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
-    marketing: 'bg-purple-500/20 text-purple-400 border-purple-500/40',
-    sales: 'bg-orange-500/20 text-orange-400 border-orange-500/40',
-    hr: 'bg-pink-500/20 text-pink-400 border-pink-500/40',
-    strategic: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/40',
-    other: 'bg-gray-500/20 text-gray-400 border-gray-500/40'
-  };
-
-  const canCreate = currentUser && 
-    (currentUser.role === 'admin' || 
-     ['ofek@horizon.org.il', 'omer@horizon.org.il', 'shneaper@horizon.org.il'].includes(currentUser.email));
+  const canEdit = canEditGoalTemplates(currentUser);
+  const [previewTemplate, setPreviewTemplate] = useState(null);
 
   const handleNew = () => {
     setEditingTemplate(null);
@@ -110,13 +92,45 @@ export default function GoalBankManager({ currentUser }) {
   };
 
   const handleDelete = async (templateId) => {
-    if (!confirm('האם למחוק את התבנית?')) return;
+    if (!canEdit) {
+      alert('אין לך הרשאות למחוק תבניות');
+      return;
+    }
+
+    const template = templates.find(t => t.id === templateId);
+    if (template && template.usage_count > 5) {
+      if (!confirm(`תבנית זו שימשה ${template.usage_count} פעמים. האם אתה בטוח שברצונך למחוק?`)) return;
+    } else if (!confirm('האם למחוק את התבנית?')) {
+      return;
+    }
 
     try {
       await base44.entities.GoalTemplate.update(templateId, { is_active: false });
       queryClient.invalidateQueries(['goalTemplates']);
     } catch (error) {
       alert('שגיאה במחיקה: ' + error.message);
+    }
+  };
+
+  const handleDuplicate = async (template) => {
+    if (!canEdit) {
+      alert('אין לך הרשאות לשכפל תבניות');
+      return;
+    }
+
+    try {
+      await base44.entities.GoalTemplate.create({
+        name: `העתק של ${template.name}`,
+        description: template.description,
+        category: template.category,
+        estimated_duration_days: template.estimated_duration_days,
+        success_metrics: template.success_metrics,
+        action_steps: template.action_steps,
+        created_by_email: currentUser.email
+      });
+      queryClient.invalidateQueries(['goalTemplates']);
+    } catch (error) {
+      alert('שגיאה בשכפול: ' + error.message);
     }
   };
 
@@ -165,11 +179,19 @@ export default function GoalBankManager({ currentUser }) {
       <Card className="card-horizon">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-horizon-text flex items-center gap-2">
-              <Target className="w-5 h-5 text-horizon-primary" />
-              בנק יעדים
-            </CardTitle>
-            {canCreate && (
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-horizon-text flex items-center gap-2">
+                <Target className="w-5 h-5 text-horizon-primary" />
+                בנק יעדים
+              </CardTitle>
+              {!canEdit && (
+                <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/40 text-xs">
+                  <ShieldAlert className="w-3 h-3 ml-1" />
+                  קריאה בלבד
+                </Badge>
+              )}
+            </div>
+            {canEdit && (
               <Button onClick={handleNew} className="btn-horizon-primary">
                 <Plus className="w-4 h-4 ml-2" />
                 הוסף תבנית
@@ -182,7 +204,7 @@ export default function GoalBankManager({ currentUser }) {
             <div className="text-center py-12">
               <Target className="w-12 h-12 mx-auto mb-3 text-horizon-accent opacity-50" />
               <p className="text-horizon-accent">אין תבניות יעדים</p>
-              {canCreate && (
+              {canEdit && (
                 <Button onClick={handleNew} className="btn-horizon-primary mt-4">
                   <Plus className="w-4 h-4 ml-2" />
                   צור תבנית ראשונה
@@ -190,49 +212,67 @@ export default function GoalBankManager({ currentUser }) {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {templates.map(template => (
                 <Card 
                   key={template.id} 
-                  className="bg-white dark:bg-horizon-card border-2 border-horizon hover:border-horizon-primary hover:shadow-xl transition-all duration-300"
+                  className="bg-horizon-card border-2 border-horizon hover:border-horizon-primary hover:shadow-xl transition-all duration-300 cursor-pointer group"
+                  onClick={() => setPreviewTemplate(template)}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between gap-3 mb-4">
                       <div className="flex-1">
-                        <h3 className="text-xl font-bold text-horizon-text mb-3 leading-tight">
+                        <h3 className="text-lg font-bold text-horizon-text mb-3 leading-tight">
                           {template.name}
                         </h3>
-                        <Badge className={`text-sm px-3 py-1.5 font-semibold border ${categoryColors[template.category]}`}>
-                          {categoryLabels[template.category]}
-                        </Badge>
+                        <div className="flex flex-wrap gap-2">
+                          <CategoryBadge category={template.category} showIcon={true} />
+                          <PopularBadge usageCount={template.usage_count} />
+                        </div>
                       </div>
                       <div className="text-center">
+                        <div className="flex items-center gap-1 text-horizon-accent text-xs mb-1">
+                          <Copy className="w-3 h-3" />
+                        </div>
                         <div className="text-2xl font-bold text-horizon-primary">{template.usage_count || 0}</div>
-                        <div className="text-xs text-horizon-accent">שימושים</div>
                       </div>
                     </div>
 
                     {template.description && (
-                      <p className="text-sm text-horizon-accent leading-relaxed mb-4 border-r-2 border-horizon-primary/30 pr-3">
+                      <p className="text-sm text-horizon-accent leading-relaxed mb-4 line-clamp-2">
                         {template.description}
                       </p>
                     )}
 
                     <div className="bg-horizon-primary/10 rounded-lg px-3 py-2 mb-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-horizon-text">משך משוער:</span>
-                        <span className="text-lg font-bold text-horizon-primary">
+                        <span className="text-xs font-medium text-horizon-text">משך משוער:</span>
+                        <span className="text-base font-bold text-horizon-primary">
                           {template.estimated_duration_days || 30} ימים
                         </span>
                       </div>
                     </div>
 
-                    {canCreate && (
+                    {template.action_steps && template.action_steps.length > 0 && (
+                      <div className="mb-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle2 className="w-3 h-3 text-horizon-secondary" />
+                          <span className="text-xs font-medium text-horizon-text">
+                            {template.action_steps.length} שלבי ביצוע
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {canEdit && (
                       <div className="flex gap-2 pt-3 border-t border-horizon">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleEdit(template)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(template);
+                          }}
                           className="flex-1 text-horizon-primary hover:bg-horizon-primary/10 font-medium"
                         >
                           <Edit3 className="w-4 h-4 ml-1" />
@@ -241,7 +281,22 @@ export default function GoalBankManager({ currentUser }) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDelete(template.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDuplicate(template);
+                          }}
+                          className="text-horizon-accent hover:bg-horizon-accent/10 font-medium"
+                          title="שכפל תבנית"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(template.id);
+                          }}
                           className="text-red-400 hover:bg-red-500/10 font-medium"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -256,6 +311,48 @@ export default function GoalBankManager({ currentUser }) {
         </CardContent>
       </Card>
 
+      {/* תצוגה מקדימה */}
+      <Dialog open={!!previewTemplate} onOpenChange={() => setPreviewTemplate(null)}>
+        <DialogContent className="bg-horizon-dark border-horizon max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-horizon-text">תצוגה מקדימה</DialogTitle>
+          </DialogHeader>
+          <GoalTemplatePreview template={previewTemplate} showUsageCount={true} />
+          <div className="flex gap-2 justify-end mt-4">
+            {canEdit && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    handleEdit(previewTemplate);
+                    setPreviewTemplate(null);
+                  }}
+                  className="border-horizon text-horizon-primary"
+                >
+                  <Edit3 className="w-4 h-4 ml-2" />
+                  ערוך
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    handleDuplicate(previewTemplate);
+                    setPreviewTemplate(null);
+                  }}
+                  className="border-horizon text-horizon-accent"
+                >
+                  <Copy className="w-4 h-4 ml-2" />
+                  שכפל
+                </Button>
+              </>
+            )}
+            <Button onClick={() => setPreviewTemplate(null)} className="btn-horizon-primary">
+              סגור
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* מודל עריכה */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="bg-horizon-dark border-horizon max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
           <DialogHeader>

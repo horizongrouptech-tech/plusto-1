@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit3, Trash2, Copy, Lightbulb, Loader2 } from 'lucide-react';
+import { Plus, Edit3, Trash2, Copy, Lightbulb, Loader2, ShieldAlert } from 'lucide-react';
+import { canEditGoalTemplates } from '@/utils/goalTemplatePermissions';
 
 export default function GoalTemplateManager() {
   const queryClient = useQueryClient();
@@ -31,6 +32,13 @@ export default function GoalTemplateManager() {
     queryKey: ['goalTemplates'],
     queryFn: () => base44.entities.GoalTemplate.filter({ is_active: true }, '-usage_count')
   });
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me()
+  });
+
+  const canEdit = canEditGoalTemplates(currentUser);
 
   const handleEdit = (template) => {
     setEditingTemplate(template);
@@ -61,6 +69,11 @@ export default function GoalTemplateManager() {
   };
 
   const handleSave = async () => {
+    if (!canEdit) {
+      alert('אין לך הרשאות לערוך תבניות');
+      return;
+    }
+
     if (!formData.template_name || !formData.goal_title) {
       alert('נא למלא שם תבנית וכותרת יעד');
       return;
@@ -68,10 +81,15 @@ export default function GoalTemplateManager() {
 
     setIsSaving(true);
     try {
+      const dataToSave = {
+        ...formData,
+        created_by_email: currentUser?.email
+      };
+
       if (editingTemplate) {
-        await base44.entities.GoalTemplate.update(editingTemplate.id, formData);
+        await base44.entities.GoalTemplate.update(editingTemplate.id, dataToSave);
       } else {
-        await base44.entities.GoalTemplate.create(formData);
+        await base44.entities.GoalTemplate.create(dataToSave);
       }
       
       queryClient.invalidateQueries(['goalTemplates']);
@@ -84,6 +102,11 @@ export default function GoalTemplateManager() {
   };
 
   const handleDelete = async (templateId) => {
+    if (!canEdit) {
+      alert('אין לך הרשאות למחוק תבניות');
+      return;
+    }
+
     if (!confirm('האם למחוק את התבנית?')) return;
 
     try {
@@ -130,17 +153,29 @@ export default function GoalTemplateManager() {
       <Card className="card-horizon">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-horizon-text flex items-center gap-2">
-              <Lightbulb className="w-5 h-5 text-horizon-primary" />
-              בנק יעדים קבועים
-            </CardTitle>
-            <Button onClick={handleNew} className="btn-horizon-primary">
-              <Plus className="w-4 h-4 ml-2" />
-              תבנית חדשה
-            </Button>
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-horizon-text flex items-center gap-2">
+                <Lightbulb className="w-5 h-5 text-horizon-primary" />
+                בנק יעדים קבועים
+              </CardTitle>
+              {!canEdit && (
+                <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/40 text-xs">
+                  <ShieldAlert className="w-3 h-3 ml-1" />
+                  קריאה בלבד
+                </Badge>
+              )}
+            </div>
+            {canEdit && (
+              <Button onClick={handleNew} className="btn-horizon-primary">
+                <Plus className="w-4 h-4 ml-2" />
+                תבנית חדשה
+              </Button>
+            )}
           </div>
           <p className="text-sm text-horizon-accent mt-2">
-            נהל תבניות של יעדים נפוצים שניתן להוסיף בקלות ללקוחות
+            {canEdit 
+              ? 'נהל תבניות של יעדים נפוצים שניתן להוסיף בקלות ללקוחות'
+              : 'צפה בתבניות יעדים זמינות - עריכה מוגבלת למנהלי מחלקה ואדמין'}
           </p>
         </CardHeader>
         <CardContent>
@@ -155,24 +190,26 @@ export default function GoalTemplateManager() {
                         {template.category}
                       </Badge>
                     </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(template)}
-                        className="h-7 w-7 text-horizon-accent hover:text-horizon-primary"
-                      >
-                        <Edit3 className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(template.id)}
-                        className="h-7 w-7 text-horizon-accent hover:text-red-400"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
+                    {canEdit && (
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(template)}
+                          className="h-7 w-7 text-horizon-accent hover:text-horizon-primary"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(template.id)}
+                          className="h-7 w-7 text-horizon-accent hover:text-red-400"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">
