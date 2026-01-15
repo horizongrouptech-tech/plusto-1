@@ -73,23 +73,26 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
   const { data: checklistData, isLoading, error } = useQuery({
     queryKey: ['dailyChecklist', customer?.email, today],
     queryFn: async () => {
-      console.log('Fetching daily checklist for:', customer.email, today);
-      
       const checklists = await base44.entities.CustomerGoal.filter({
         customer_email: customer.email,
         task_type: 'daily_checklist',
         start_date: today
       });
 
-      console.log('Found checklists:', checklists);
-
       if (checklists && checklists.length > 0) {
-        console.log('Returning existing checklist:', checklists[0]);
         return checklists[0];
       }
 
-      // יצירת צ'ק ליסט חדש ליום
-      console.log('Creating new checklist for today');
+      // אין צ'ק ליסט - נחזיר null ונטפל בזה בנפרד
+      return null;
+    },
+    enabled: isOpen && !!customer?.email,
+    retry: 1
+  });
+
+  // יצירת צ'ק ליסט חדש - נפרד מה-query
+  const createChecklist = async () => {
+    try {
       const newChecklist = await base44.entities.CustomerGoal.create({
         customer_email: customer.email,
         name: `צ'ק ליסט יומי - ${new Date().toLocaleDateString('he-IL')}`,
@@ -106,13 +109,13 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
           notes: ''
         }))
       });
-
-      console.log('New checklist created:', newChecklist);
+      queryClient.invalidateQueries(['dailyChecklist', customer.email, today]);
       return newChecklist;
-    },
-    enabled: isOpen && !!customer?.email,
-    retry: 1
-  });
+    } catch (error) {
+      console.error('Error creating checklist:', error);
+      throw error;
+    }
+  };
 
   const handleToggleItem = async (itemId) => {
     if (!checklistData) return;
