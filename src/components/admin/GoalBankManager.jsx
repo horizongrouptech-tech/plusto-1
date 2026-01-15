@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Target, Plus, Edit3, Trash2, Copy, Loader2, ShieldAlert, CheckCircle2 } from 'lucide-react';
-import { canEditGoalTemplates } from '@/components/utils/goalTemplatePermissions';
+import { canEditGoalTemplates } from '../utils/goalTemplatePermissions';
 import { CategoryBadge, PopularBadge } from '@/components/goals/GoalTemplateBadges';
 import GoalTemplatePreview from '@/components/goals/GoalTemplatePreview';
 
