@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Edit3, Trash2, Copy, Lightbulb, Loader2, ShieldAlert } from 'lucide-react';
-import { canEditGoalTemplates } from '@/utils/goalTemplatePermissions';
+import { canEditGoalTemplates } from '@/components/utils/goalTemplatePermissions';
 
 export default function GoalTemplateManager() {
   const queryClient = useQueryClient();
