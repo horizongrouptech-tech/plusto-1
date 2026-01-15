@@ -145,7 +145,10 @@ export default function ClientManagementDashboard() {
   const filteredClients = useMemo(() => {
     if (!clients) return [];
     return clients.filter((client) => {
-      const matchesActivity = showInactive ? !client.isActive : client.isActive;
+      // סינון ארכיון - אם showInactive=true נציג רק מארכיון, אחרת רק לא מארכיון
+      const isArchived = client.raw?.is_archived === true;
+      const matchesArchiveFilter = showInactive ? isArchived : !isArchived;
+      
       const matchesSearch = searchTerm === '' ||
       client.name && client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -166,7 +169,7 @@ export default function ClientManagementDashboard() {
       managerFilter === 'unassigned' && client.manager === 'לא שויך' ||
       client.raw?.assigned_financial_manager_email === managerFilter;
 
-      return matchesActivity && matchesSearch && matchesBusinessType && matchesRevenue && matchesManager;
+      return matchesArchiveFilter && matchesSearch && matchesBusinessType && matchesRevenue && matchesManager;
     });
   }, [clients, searchTerm, showInactive, businessTypeFilter, revenueFilter, managerFilter]);
 
@@ -177,7 +180,7 @@ export default function ClientManagementDashboard() {
   const analytics = useMemo(() => {
     if (!clients) return null;
 
-    const activeClients = clients.filter((c) => c.isActive);
+    const activeClients = clients.filter((c) => c.isActive && !c.raw?.is_archived);
 
     const byBusinessType = activeClients.reduce((acc, c) => {
       const type = c.raw?.business_type || 'אחר';
