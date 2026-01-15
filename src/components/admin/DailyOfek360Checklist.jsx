@@ -93,6 +93,9 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
   // יצירת צ'ק ליסט חדש - נפרד מה-query
   const createChecklist = async () => {
     try {
+      // קבלת המשתמש הנוכחי כדי לשייך אותו כאחראי
+      const currentUser = await base44.auth.me();
+      
       const newChecklist = await base44.entities.CustomerGoal.create({
         customer_email: customer.email,
         name: `צ'ק ליסט יומי - ${new Date().toLocaleDateString('he-IL')}`,
@@ -102,6 +105,8 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
         status: 'in_progress',
         is_active: true,
         notes: '',
+        assignee_email: currentUser?.email,
+        responsible_users: currentUser?.email ? [currentUser.email] : [],
         checklist_items: DAILY_CHECKLIST_ITEMS.map(item => ({
           ...item,
           completed: false,
