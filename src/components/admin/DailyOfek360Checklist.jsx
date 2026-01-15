@@ -95,8 +95,9 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
     try {
       // קבלת המשתמש הנוכחי כדי לשייך אותו כאחראי
       const currentUser = await base44.auth.me();
+      console.log('Creating checklist, currentUser:', currentUser?.email, 'user_type:', currentUser?.user_type, 'role:', currentUser?.role);
       
-      const newChecklist = await base44.entities.CustomerGoal.create({
+      const checklistData = {
         customer_email: customer.email,
         name: `צ'ק ליסט יומי - ${new Date().toLocaleDateString('he-IL')}`,
         task_type: 'daily_checklist',
@@ -107,17 +108,23 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
         notes: '',
         assignee_email: currentUser?.email,
         responsible_users: currentUser?.email ? [currentUser.email] : [],
+        assigned_users: currentUser?.email ? [currentUser.email] : [],
         checklist_items: DAILY_CHECKLIST_ITEMS.map(item => ({
           ...item,
           completed: false,
           completed_at: null,
           notes: ''
         }))
-      });
+      };
+      
+      console.log('Checklist data to create:', checklistData);
+      
+      const newChecklist = await base44.entities.CustomerGoal.create(checklistData);
       queryClient.invalidateQueries(['dailyChecklist', customer.email, today]);
       return newChecklist;
     } catch (error) {
       console.error('Error creating checklist:', error);
+      console.error('Full error details:', JSON.stringify(error, null, 2));
       throw error;
     }
   };
