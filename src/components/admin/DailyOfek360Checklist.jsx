@@ -242,6 +242,34 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
     );
   }
 
+  // אם אין צ'ק ליסט קיים - הצג כפתור ליצירה
+  if (!isLoading && checklistData === null) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-3xl bg-horizon-dark border-horizon" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl text-horizon-text flex items-center gap-3">
+              <Target className="w-6 h-6 text-horizon-primary" />
+              צ'ק ליסט יומי - אופק 360
+            </DialogTitle>
+            <p className="text-sm text-horizon-accent mt-2">
+              {customer?.business_name || customer?.full_name} | {new Date().toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
+          </DialogHeader>
+          <div className="p-6 text-center">
+            <Target className="w-16 h-16 mx-auto text-horizon-accent mb-4" />
+            <h3 className="text-xl font-semibold text-horizon-text mb-2">אין צ'ק ליסט להיום</h3>
+            <p className="text-horizon-accent mb-6">צור צ'ק ליסט יומי חדש ללקוח זה</p>
+            <Button onClick={createChecklist} className="btn-horizon-primary">
+              <Plus className="w-4 h-4 ml-2" />
+              צור צ'ק ליסט יומי
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-horizon-dark border-horizon" dir="rtl">
