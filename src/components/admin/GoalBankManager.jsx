@@ -36,6 +36,16 @@ export default function GoalBankManager({ currentUser }) {
   const canEdit = canEditGoalTemplates(currentUser);
   const [previewTemplate, setPreviewTemplate] = useState(null);
 
+  const categoryLabels = {
+    financial: 'פיננסי',
+    operational: 'תפעולי',
+    marketing: 'שיווק',
+    sales: 'מכירות',
+    hr: 'משאבי אנוש',
+    strategic: 'אסטרטגי',
+    other: 'אחר'
+  };
+
   const handleNew = () => {
     setEditingTemplate(null);
     setFormData({
