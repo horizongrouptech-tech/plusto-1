@@ -215,14 +215,33 @@ export default function ClientManagementDashboard() {
       alert('לא ניתן לשנות סטטוס ללקוח זה.');
       return;
     }
-    const newStatus = !client.isActive;
-    const action = newStatus ? "להפעיל" : "להעביר לארכיון";
+    
+    const isArchived = client.raw?.is_archived === true;
+    const action = isArchived ? "להוציא מהארכיון" : "להעביר לארכיון";
+    
     if (window.confirm(`האם אתה בטוח שברצונך ${action} את הלקוח "${client.name}"?`)) {
       try {
+        const currentUserForAction = await base44.auth.me();
+        
         if (client.source === 'user') {
-          await base44.functions.invoke('toggleClientStatus', { clientId: client.id, isActive: newStatus });
+          await base44.functions.invoke('toggleClientStatus', { clientId: client.id, isActive: !isArchived });
         } else if (client.source === 'onboarding') {
-          await base44.entities.OnboardingRequest.update(client.id, { is_active: newStatus });
+          const updateData = {
+            is_archived: !isArchived,
+            is_active: isArchived // אם מוציאים מארכיון - מפעילים, אם מכניסים - מכבים
+          };
+          
+          if (!isArchived) {
+            // העברה לארכיון
+            updateData.archived_date = new Date().toISOString();
+            updateData.archived_by = currentUserForAction?.email;
+          } else {
+            // הוצאה מארכיון
+            updateData.archived_date = null;
+            updateData.archived_by = null;
+          }
+          
+          await base44.entities.OnboardingRequest.update(client.id, updateData);
         }
         queryClient.invalidateQueries(['allAdminClientsAndOnboarding']);
       } catch (error) {
