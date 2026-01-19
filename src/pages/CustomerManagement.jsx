@@ -32,6 +32,7 @@ import EditCustomerModal from '@/components/admin/EditCustomerModal';
 import UnifiedForecastManager from '@/components/forecast/UnifiedForecastManager';
 import FloatingAgentChat from '@/components/admin/FloatingAgentChat';
 import Ofek360Modal from '@/components/admin/Ofek360Modal';
+import DailyOfek360Checklist from '@/components/admin/DailyOfek360Checklist';
 import SystemRecommendationsModal from '@/components/admin/SystemRecommendationsModal';
 import GoalOrientedRecommendationModal from '@/components/admin/GoalOrientedRecommendationModal';
 import ClientActivityStatusEditor from '@/components/admin/ClientActivityStatusEditor';
@@ -68,8 +69,20 @@ export default function CustomerManagement() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [isOfekModalOpen, setIsOfekModalOpen] = useState(false);
 
-  // Mock currentUser for admin context, replace with actual auth context
-  const [currentUser, setCurrentUser] = useState({ role: 'admin', email: 'admin@example.com' });
+  // currentUser - get from auth
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      try {
+        const user = await base44.auth.me();
+        setCurrentUser(user);
+      } catch (error) {
+        console.error('Error loading current user:', error);
+      }
+    };
+    loadCurrentUser();
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'forecast' || activeTab === 'manualForecast' || activeTab === 'systemForecast') {
@@ -763,10 +776,11 @@ export default function CustomerManagement() {
         )}
 
         {isOfekModalOpen && customer && (
-          <Ofek360Modal
+          <DailyOfek360Checklist
             customer={customer}
             isOpen={isOfekModalOpen}
             onClose={() => setIsOfekModalOpen(false)}
+            currentUser={currentUser}
           />
         )}
       </div>
