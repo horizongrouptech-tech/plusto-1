@@ -61,11 +61,14 @@ const DAILY_CHECKLIST_ITEMS = [
   }
 ];
 
-export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
+export default function DailyOfek360Checklist({ customer, isOpen, onClose, currentUser }) {
   const queryClient = useQueryClient();
   const [notes, setNotes] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedItems, setEditedItems] = useState([]);
+  
+  // בדיקת הרשאות: רק אדמין ומנהל מחלקה יכולים לערוך
+  const canEdit = currentUser?.role === 'admin' || currentUser?.user_type === 'department_head';
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -176,6 +179,7 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
   };
 
   const handleEditModeToggle = () => {
+    if (!canEdit) return;
     if (!isEditMode) {
       setEditedItems([...(checklistData?.checklist_items || DAILY_CHECKLIST_ITEMS.map(item => ({ ...item, completed: false, completed_at: null, notes: '' })))]);
     }
@@ -183,6 +187,7 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
   };
 
   const handleAddItem = () => {
+    if (!canEdit) return;
     const newItem = {
       id: `custom_${Date.now()}`,
       title: '',
@@ -196,6 +201,7 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
   };
 
   const handleRemoveItem = (itemId) => {
+    if (!canEdit) return;
     setEditedItems(editedItems.filter(item => item.id !== itemId));
   };
 
@@ -206,7 +212,7 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
   };
 
   const handleSaveEditedChecklist = async () => {
-    if (!checklistData) return;
+    if (!checklistData || !canEdit) return;
 
     try {
       await base44.entities.CustomerGoal.update(checklistData.id, {
@@ -296,24 +302,26 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
                 {customer?.business_name || customer?.full_name} | {new Date().toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
             </div>
-            <Button
-              onClick={handleEditModeToggle}
-              variant="outline"
-              className="border-horizon-primary text-horizon-primary"
-              size="sm"
-            >
-              {isEditMode ? (
-                <>
-                  <X className="w-4 h-4 ml-1" />
-                  ביטול
-                </>
-              ) : (
-                <>
-                  <Edit2 className="w-4 h-4 ml-1" />
-                  עריכה
-                </>
-              )}
-            </Button>
+            {canEdit && (
+              <Button
+                onClick={handleEditModeToggle}
+                variant="outline"
+                className="border-horizon-primary text-horizon-primary"
+                size="sm"
+              >
+                {isEditMode ? (
+                  <>
+                    <X className="w-4 h-4 ml-1" />
+                    ביטול
+                  </>
+                ) : (
+                  <>
+                    <Edit2 className="w-4 h-4 ml-1" />
+                    עריכה
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </DialogHeader>
 
@@ -345,56 +353,56 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose }) {
                 <p className="text-horizon-accent">טוען משימות...</p>
               </CardContent>
             </Card>
-          ) : isEditMode ? (
-            <>
-              {editedItems.map((item, index) => (
-                <Card key={item.id} className="bg-horizon-card border-horizon">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <span className="text-horizon-accent font-semibold mt-2">{index + 1}.</span>
-                      <div className="flex-1 space-y-3">
-                        <Input
-                          value={item.title}
-                          onChange={(e) => handleItemChange(item.id, 'title', e.target.value)}
-                          placeholder="כותרת המשימה"
-                          className="bg-horizon-card border-horizon text-horizon-text"
-                        />
-                        <Textarea
-                          value={item.description}
-                          onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
-                          placeholder="תיאור המשימה"
-                          className="bg-horizon-card border-horizon text-horizon-text"
-                          rows={2}
-                        />
-                      </div>
-                      <Button
-                        onClick={() => handleRemoveItem(item.id)}
-                        variant="ghost"
-                        size="icon"
-                        className="text-red-400 hover:text-red-300"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              <Button
-                onClick={handleAddItem}
-                variant="outline"
-                className="w-full border-dashed border-horizon-primary text-horizon-primary"
-              >
-                <Plus className="w-4 h-4 ml-2" />
-                הוסף משימה
-              </Button>
-              <Button
-                onClick={handleSaveEditedChecklist}
-                className="btn-horizon-primary w-full"
-              >
-                <Save className="w-4 h-4 ml-2" />
-                שמור שינויים
-              </Button>
-            </>
+          ) : isEditMode && canEdit ? (
+           <>
+             {editedItems.map((item, index) => (
+               <Card key={item.id} className="bg-horizon-card border-horizon">
+                 <CardContent className="p-4">
+                   <div className="flex items-start gap-3">
+                     <span className="text-horizon-accent font-semibold mt-2">{index + 1}.</span>
+                     <div className="flex-1 space-y-3">
+                       <Input
+                         value={item.title}
+                         onChange={(e) => handleItemChange(item.id, 'title', e.target.value)}
+                         placeholder="כותרת המשימה"
+                         className="bg-horizon-card border-horizon text-horizon-text"
+                       />
+                       <Textarea
+                         value={item.description}
+                         onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
+                         placeholder="תיאור המשימה"
+                         className="bg-horizon-card border-horizon text-horizon-text"
+                         rows={2}
+                       />
+                     </div>
+                     <Button
+                       onClick={() => handleRemoveItem(item.id)}
+                       variant="ghost"
+                       size="icon"
+                       className="text-red-400 hover:text-red-300"
+                     >
+                       <Trash2 className="w-4 h-4" />
+                     </Button>
+                   </div>
+                 </CardContent>
+               </Card>
+             ))}
+             <Button
+               onClick={handleAddItem}
+               variant="outline"
+               className="w-full border-dashed border-horizon-primary text-horizon-primary"
+             >
+               <Plus className="w-4 h-4 ml-2" />
+               הוסף משימה
+             </Button>
+             <Button
+               onClick={handleSaveEditedChecklist}
+               className="btn-horizon-primary w-full"
+             >
+               <Save className="w-4 h-4 ml-2" />
+               שמור שינויים
+             </Button>
+           </>
           ) : (
             checklistData?.checklist_items?.map((item, index) => {
               const isCompleted = item.completed;
