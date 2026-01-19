@@ -22,8 +22,8 @@ import {
   UserPlus,
   FileQuestion
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import FeedbackAnalytics from '../shared/FeedbackAnalytics';
 import LoadingScreen from '../shared/LoadingScreen';
 import { calculateEngagementForAllUsers } from '@/components/logic/userEngagementTracker';
@@ -34,8 +34,9 @@ export default function EngagementDashboard() {
   const [engagementFilter, setEngagementFilter] = useState('all');
   const [riskFilter, setRiskFilter] = useState('all');
   const [isCalculating, setIsCalculating] = useState(false);
-  const [isBackingUp, setIsBackingUp] = useState(false); // New state
-  const [backupResult, setBackupResult] = useState(null); // New state
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [backupResult, setBackupResult] = useState(null);
+  const [showUnknownFilesModal, setShowUnknownFilesModal] = useState(false);
 
   const { data: allEngagements = [], isLoading: isLoadingEngagements, refetch: refetchEngagements } = useQuery({
     queryKey: ['userEngagements'],
@@ -641,7 +642,14 @@ export default function EngagementDashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Link to={createPageUrl('LeadIntakeManagement')}>
+            <a 
+              href={createPageUrl('LeadIntakeManagement')}
+              onClick={(e) => {
+                e.preventDefault();
+                window.location.href = createPageUrl('LeadIntakeManagement');
+              }}
+              className="block"
+            >
               <div className="p-4 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/30 hover:border-blue-400 transition-all cursor-pointer group">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-blue-500/20 rounded-lg group-hover:bg-blue-500/30 transition-all">
@@ -653,11 +661,14 @@ export default function EngagementDashboard() {
                   </div>
                 </div>
               </div>
-            </Link>
+            </a>
             
-            <div className="p-4 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-lg border border-orange-500/30">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-3 bg-orange-500/20 rounded-lg">
+            <div 
+              onClick={() => setShowUnknownFilesModal(true)}
+              className="p-4 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-lg border border-orange-500/30 hover:border-orange-400 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-orange-500/20 rounded-lg group-hover:bg-orange-500/30 transition-all">
                   <FileQuestion className="w-6 h-6 text-orange-400" />
                 </div>
                 <div>
@@ -670,8 +681,20 @@ export default function EngagementDashboard() {
         </CardContent>
       </Card>
 
-      {/* Unknown File Queue Manager */}
-      <UnknownFileQueueManager />
+      {/* Unknown Files Modal */}
+      {showUnknownFilesModal && (
+        <Dialog open={showUnknownFilesModal} onOpenChange={setShowUnknownFilesModal}>
+          <DialogContent className="bg-horizon-card border-horizon text-horizon-text max-w-4xl max-h-[85vh] overflow-y-auto" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="text-xl flex items-center gap-2">
+                <FileQuestion className="w-5 h-5 text-orange-400" />
+                קבצים לא מזוהים
+              </DialogTitle>
+            </DialogHeader>
+            <UnknownFileQueueManager />
+          </DialogContent>
+        </Dialog>
+      )}
 
       {supportTickets && supportTickets.length > 0 && (
         <Card className="card-horizon">
