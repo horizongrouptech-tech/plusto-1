@@ -95,8 +95,11 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     queryKey: ['allCustomers', currentUser.email, isAdmin],
     queryFn: async () => {
       if (isAdmin) {
-        // אדמין רואה את כל OnboardingRequests הפעילים (כמו בניהול לקוחות)
-        const onboardingReqs = await base44.entities.OnboardingRequest.filter({ is_active: true });
+        // אדמין רואה את כל OnboardingRequests הפעילים ושלא בארכיון
+        const onboardingReqs = await base44.entities.OnboardingRequest.filter({ 
+          is_active: true,
+          is_archived: { $ne: true }
+        });
         
         return onboardingReqs.map((req) => ({
           id: req.id,
@@ -109,7 +112,10 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         }));
       } else {
         // ⭐ מנהל כספים - טוען כל OnboardingRequests ומסנן בצד הלקוח (כולל מנהלים משניים!)
-        const allOnboardingReqs = await base44.entities.OnboardingRequest.filter({ is_active: true });
+        const allOnboardingReqs = await base44.entities.OnboardingRequest.filter({ 
+          is_active: true,
+          is_archived: { $ne: true }
+        });
         const onboardingReqs = allOnboardingReqs.filter((req) =>
           req.assigned_financial_manager_email === currentUser.email ||
           req.additional_assigned_financial_manager_emails?.includes(currentUser.email)
