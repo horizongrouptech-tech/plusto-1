@@ -33,13 +33,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify webhook secret (optional security layer)
+    // Verify webhook secret (optional security layer - can be configured later)
     const webhookSecret = req.headers.get('X-Webhook-Secret');
-    const expectedSecret = Deno.env.get('LEAD_WEBHOOK_SECRET');
+    const expectedSecret = Deno.env.get('LEAD_WEBHOOK_SECRET') || '';
     
-    // Only verify if secret is configured - otherwise allow all requests
-    if (expectedSecret && expectedSecret.length > 0 && webhookSecret !== expectedSecret) {
-      console.warn('Invalid webhook secret received - but continuing (optional security)');
+    // Only verify if secret is explicitly configured
+    if (expectedSecret && webhookSecret && webhookSecret !== expectedSecret) {
+      console.warn('Webhook secret mismatch - but continuing');
     }
 
     const base44 = createClientFromRequest(req);
