@@ -82,12 +82,11 @@ export default function CashFlowManager({ customer }) {
       // העלאת הקובץ
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       
-      // קריאה לפונקציה שמנתחת את הקובץ
+      // קריאה לפונקציה שמנתחת את הקובץ - ללא טווח תאריכים (ייבוא הכל)
       const response = await base44.functions.invoke('parseBizIboxFile', {
         fileUrl: file_url,
-        customerEmail: customer.email,
-        dateRangeStart: dateRange.start,
-        dateRangeEnd: dateRange.end
+        customerEmail: customer.email
+        // dateRangeStart and dateRangeEnd removed - import all dates
       });
 
       if (response.data.success) {
@@ -332,12 +331,12 @@ export default function CashFlowManager({ customer }) {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* בחירת טווח תאריכים */}
+          {/* סינון טווח תאריכים לתצוגה */}
           <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
             <div className="flex gap-4 items-center">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-blue-400" />
-                <span className="text-sm font-medium text-blue-400">בחר טווח תאריכים לפני העלאת הקובץ:</span>
+                <Filter className="w-4 h-4 text-blue-400" />
+                <span className="text-sm font-medium text-blue-400">סנן לפי טווח תאריכים:</span>
               </div>
               <Input
                 type="date"
@@ -354,7 +353,7 @@ export default function CashFlowManager({ customer }) {
               />
             </div>
             <p className="text-xs text-blue-300 mt-2">
-              💡 הקובץ שתעלה צריך להכיל תנועות בטווח תאריכים זה
+              💡 העלאת קובץ תייבא את כל התאריכים. השתמש בסינון זה כדי לראות תקופה ספציפית
             </p>
           </div>
 

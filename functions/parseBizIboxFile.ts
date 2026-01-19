@@ -18,6 +18,10 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
+    // אם לא סופקו תאריכים, נשתמש בכל התאריכים שבקובץ
+    const shouldFilterByDate = !!(dateRangeStart && dateRangeEnd);
+    console.log('Date filtering:', shouldFilterByDate ? `${dateRangeStart} to ${dateRangeEnd}` : 'ALL DATES');
+
     // זיהוי סוג הקובץ - בדיקה משופרת
     const urlLower = fileUrl.toLowerCase();
     const isPdf = urlLower.endsWith('.pdf') || urlLower.includes('.pdf?');
@@ -426,22 +430,24 @@ Deno.serve(async (req) => {
 
       const dateString = parsedDate.toISOString().split('T')[0];
 
-      // סינון לפי טווח תאריכים
-      if (dateRangeStart && dateString < dateRangeStart) {
-        skippedRows.push({
-          row: rowIndex,
-          reason: `תאריך ${dateString} מחוץ לטווח (לפני ${dateRangeStart})`,
-          data: { date: dateString, description }
-        });
-        continue;
-      }
-      if (dateRangeEnd && dateString > dateRangeEnd) {
-        skippedRows.push({
-          row: rowIndex,
-          reason: `תאריך ${dateString} מחוץ לטווח (אחרי ${dateRangeEnd})`,
-          data: { date: dateString, description }
-        });
-        continue;
+      // סינון לפי טווח תאריכים - רק אם סופק טווח
+      if (shouldFilterByDate) {
+        if (dateRangeStart && dateString < dateRangeStart) {
+          skippedRows.push({
+            row: rowIndex,
+            reason: `תאריך ${dateString} מחוץ לטווח (לפני ${dateRangeStart})`,
+            data: { date: dateString, description }
+          });
+          continue;
+        }
+        if (dateRangeEnd && dateString > dateRangeEnd) {
+          skippedRows.push({
+            row: rowIndex,
+            reason: `תאריך ${dateString} מחוץ לטווח (אחרי ${dateRangeEnd})`,
+            data: { date: dateString, description }
+          });
+          continue;
+        }
       }
 
       // שמירת רשומה
@@ -578,6 +584,18 @@ Deno.serve(async (req) => {
       }
     }
 
+    // חישוב טווח תאריכים בפועל מהנתונים שנשמרו
+    let actualDateRange = dateRangeStart && dateRangeEnd 
+      ? `${dateRangeStart} - ${dateRangeEnd}` 
+      : 'כל התאריכים';
+    
+    if (newEntries.length > 0) {
+      const dates = newEntries.map(e => e.date).sort();
+      const minDate = dates[0];
+      const maxDate = dates[dates.length - 1];
+      actualDateRange = `${minDate} - ${maxDate}`;
+    }
+
     console.log('Process completed successfully');
     
     return Response.json({
@@ -589,7 +607,9 @@ Deno.serve(async (req) => {
       cashFlowEntries: newEntries.length,
       recurringExpenses: recurringExpenses.length,
       categories: Object.keys(categorySums),
-      dateRange: `${dateRangeStart} - ${dateRangeEnd}`,
+      dateRange: actualDateRange,
+      detectedDateRange: actualDateRange,
+      filterWasApplied: shouldFilterByDate,
       totals: {
         credit: totalCreditSum,
         debit: totalDebitSum
