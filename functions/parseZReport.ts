@@ -29,10 +29,12 @@ function parseCSV(text) {
 function findHeaderRow(rows) {
   // Hebrew and English headers
   const possibleHeaders = [
-    // Hebrew
+    // Hebrew - Z Report common headers
     'פריטים', 'פריט', 'שם', 'מוצר', 'נמכר', 'מכירה', 'מכירות', 'הוכן', 'כולל', 'ברקוד', 'מק"ט', 'קוד',
+    // Hebrew - Sales report headers  
+    'שם מוצר', 'מזהה', 'כמות', 'הכנסה', 'תיאור', 'סכום',
     // English
-    'product', 'title', 'name', 'item', 'sold', 'sales', 'quantity', 'ordered', 'total', 'sku', 'barcode', 'net'
+    'product', 'title', 'name', 'item', 'sold', 'sales', 'quantity', 'ordered', 'total', 'sku', 'barcode', 'net', 'revenue', 'amount'
   ];
   
   for (let i = 0; i < Math.min(10, rows.length); i++) {
@@ -45,7 +47,10 @@ function findHeaderRow(rows) {
       rowText.includes(header.toLowerCase())
     );
     
-    if (matches.length >= 2) {
+    // Also check for exact column header patterns like "שם מוצר" + "כמות" + "הכנסה"
+    const hasSalesReportHeaders = rowText.includes('שם מוצר') && (rowText.includes('כמות') || rowText.includes('הכנסה'));
+    
+    if (matches.length >= 2 || hasSalesReportHeaders) {
       console.log(`Found header row at index ${i}:`, row);
       return i;
     }
@@ -97,6 +102,10 @@ function extractZReportData(rows, headerRowIndex) {
     if (normalized.includes('תאור פריט') || normalized.includes('תיאור פריט')) {
       productNameIndex = index;
       console.log(`✅✅ Found EXACT product description column at index ${index}: "${h}"`);
+    } else if (productNameIndex === -1 && normalizedTrimmed === 'שם מוצר') {
+      // ✅ NEW: זיהוי "שם מוצר" מדויק (דוחות מכירות)
+      productNameIndex = index;
+      console.log(`✅✅ Found EXACT "שם מוצר" column at index ${index}: "${h}"`);
     } else if (productNameIndex === -1 && (normalized.includes('תאור') || normalized.includes('תיאור')) && !normalized.includes('קוד')) {
       productNameIndex = index;
       console.log(`✅ Found product description column at index ${index}: "${h}"`);
@@ -172,6 +181,12 @@ function extractZReportData(rows, headerRowIndex) {
         normalized.includes('מחזור') || normalized.includes('תקבולים')) && !normalized.includes('אחוז')) {
       revenueIndex = index;
       console.log(`✅ Found total/מחזור revenue column at index ${index}: "${h}"`);
+    }
+    
+    // ✅ NEW: זיהוי עמודת "הכנסה" מדויק (דוחות מכירות)
+    if (revenueIndex === -1 && normalizedTrimmed === 'הכנסה') {
+      revenueIndex = index;
+      console.log(`✅✅ Found EXACT "הכנסה" revenue column at index ${index}: "${h}"`);
     }
   });
   

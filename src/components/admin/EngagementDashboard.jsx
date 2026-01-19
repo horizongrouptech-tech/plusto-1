@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -18,12 +17,17 @@ import {
   FileText,
   Package,
   BarChart3,
-  Database, // New import
-  Shield // New import
+  Database,
+  Shield,
+  UserPlus,
+  FileQuestion
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import FeedbackAnalytics from '../shared/FeedbackAnalytics';
 import LoadingScreen from '../shared/LoadingScreen';
 import { calculateEngagementForAllUsers } from '@/components/logic/userEngagementTracker';
+import UnknownFileQueueManager from './UnknownFileQueueManager';
 
 export default function EngagementDashboard() {
   const [timeFilter, setTimeFilter] = useState('all');
@@ -626,6 +630,48 @@ export default function EngagementDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Quick Links Card */}
+      <Card className="card-horizon">
+        <CardHeader>
+          <CardTitle className="text-horizon-text flex items-center gap-2">
+            <Target className="w-5 h-5 text-horizon-primary" />
+            קישורים מהירים
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Link to={createPageUrl('LeadIntakeManagement')}>
+              <div className="p-4 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/30 hover:border-blue-400 transition-all cursor-pointer group">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-blue-500/20 rounded-lg group-hover:bg-blue-500/30 transition-all">
+                    <UserPlus className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-horizon-text">ניהול לידים נכנסים</h4>
+                    <p className="text-sm text-horizon-accent">מעקב וניהול פניות חדשות</p>
+                  </div>
+                </div>
+              </div>
+            </Link>
+            
+            <div className="p-4 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-lg border border-orange-500/30">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-3 bg-orange-500/20 rounded-lg">
+                  <FileQuestion className="w-6 h-6 text-orange-400" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-horizon-text">קבצים לא מזוהים</h4>
+                  <p className="text-sm text-horizon-accent">קבצים שנכשלו בניתוח</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Unknown File Queue Manager */}
+      <UnknownFileQueueManager />
 
       {supportTickets && supportTickets.length > 0 && (
         <Card className="card-horizon">
