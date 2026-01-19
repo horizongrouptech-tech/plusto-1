@@ -9,11 +9,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    // רק אדמינים ומנהלי מחלקה יכולים לקרוא
+    // רק אדמינים ומנהלי כספים יכולים לקרוא
     const isAdmin = user.role === 'admin';
-    const isDeptManager = user.department_manager_role === 'department_manager';
+    const isFinancialManager = user.user_type === 'financial_manager';
     
-    if (!isAdmin && !isDeptManager) {
+    if (!isAdmin && !isFinancialManager) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
     
