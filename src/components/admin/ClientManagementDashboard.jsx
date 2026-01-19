@@ -145,8 +145,10 @@ export default function ClientManagementDashboard() {
   const filteredClients = useMemo(() => {
     if (!clients) return [];
     return clients.filter((client) => {
-      // סינון ארכיון - אם showInactive=true נציג רק מארכיון, אחרת רק לא מארכיון
-      const isArchived = client.raw?.is_archived === true;
+      // סינון ארכיון - משתמש ב-is_archived לOnboarding ו-is_active לUser
+      const isArchived = client.source === 'onboarding' 
+        ? client.raw?.is_archived === true 
+        : client.raw?.is_active === false;
       const matchesArchiveFilter = showInactive ? isArchived : !isArchived;
       
       const matchesSearch = searchTerm === '' ||
