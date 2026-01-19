@@ -9,9 +9,12 @@ import { he } from 'date-fns/locale';
 import { base44 } from '@/api/base44Client';
 import { useUsers } from '../../shared/UsersContext';
 
-export default function TaskCard({ task, customer, parentGoal, onTaskClick, onMarkAsDone, isDragging }) {
+export default function TaskCard({ task, customer, parentGoal, onTaskClick, onMarkAsDone, isDragging, currentUser, isAdmin }) {
   const [isUpdatingAssignees, setIsUpdatingAssignees] = useState(false);
   const { allUsers = [] } = useUsers();
+  
+  // רק אדמין או מנהל מחלקה יכולים לערוך משימות
+  const canEdit = isAdmin || currentUser?.department_manager_role === 'department_manager';
   
   const getCustomerGroupBadgeColor = (group) => {
     if (group === 'A') return 'bg-[#32acc1] text-white';
@@ -65,10 +68,10 @@ export default function TaskCard({ task, customer, parentGoal, onTaskClick, onMa
 
   return (
     <div
-      className={`bg-horizon-card rounded-lg p-3 border border-horizon hover:border-horizon-primary/50 transition-all cursor-pointer ${getPriorityColor(task.status)} ${
+      className={`bg-horizon-card rounded-lg p-3 border border-horizon hover:border-horizon-primary/50 transition-all ${canEdit ? 'cursor-pointer' : 'cursor-default'} ${getPriorityColor(task.status)} ${
         isDragging ? 'opacity-50 rotate-2 shadow-2xl' : 'shadow-sm hover:shadow-md'
       }`}
-      onClick={() => onTaskClick(task)}
+      onClick={canEdit ? () => onTaskClick(task) : undefined}
     >
       {/* כותרת המשימה */}
       <h4 className="font-semibold text-horizon-text text-right mb-2 line-clamp-2">

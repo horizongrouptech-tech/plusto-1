@@ -354,6 +354,14 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   });
 
   const handleTaskClick = (task) => {
+    // רק אדמין או מנהל מחלקה יכולים לערוך משימות
+    const canEdit = isAdmin || currentUser?.department_manager_role === 'department_manager';
+    
+    if (!canEdit) {
+      // מנהל כספים רגיל - לא פותחים מודאל עריכה
+      return;
+    }
+    
     setSelectedTask(task);
     setEditedTaskData({
       name: task.name,
@@ -666,7 +674,9 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                       parentGoal={parentGoal}
                       onTaskClick={handleTaskClick}
                       onMarkAsDone={handleMarkAsDone}
-                      isDragging={snapshot.isDragging} />
+                      isDragging={snapshot.isDragging}
+                      currentUser={currentUser}
+                      isAdmin={isAdmin} />
 
                       </div>
                   }
@@ -701,7 +711,9 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                       parentGoal={parentGoal}
                       onTaskClick={handleTaskClick}
                       onMarkAsDone={handleMarkAsDone}
-                      isDragging={snapshot.isDragging} />
+                      isDragging={snapshot.isDragging}
+                      currentUser={currentUser}
+                      isAdmin={isAdmin} />
 
                       </div>
                   }
@@ -736,7 +748,9 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                       parentGoal={parentGoal}
                       onTaskClick={handleTaskClick}
                       onMarkAsDone={handleMarkAsDone}
-                      isDragging={snapshot.isDragging} />
+                      isDragging={snapshot.isDragging}
+                      currentUser={currentUser}
+                      isAdmin={isAdmin} />
 
                       </div>
                   }
@@ -771,7 +785,9 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                       parentGoal={parentGoal}
                       onTaskClick={handleTaskClick}
                       onMarkAsDone={handleMarkAsDone}
-                      isDragging={snapshot.isDragging} />
+                      isDragging={snapshot.isDragging}
+                      currentUser={currentUser}
+                      isAdmin={isAdmin} />
 
                       </div>
                   }
@@ -806,7 +822,9 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                       parentGoal={parentGoal}
                       onTaskClick={handleTaskClick}
                       onMarkAsDone={handleMarkAsDone}
-                      isDragging={snapshot.isDragging} />
+                      isDragging={snapshot.isDragging}
+                      currentUser={currentUser}
+                      isAdmin={isAdmin} />
 
                       </div>
                   }
