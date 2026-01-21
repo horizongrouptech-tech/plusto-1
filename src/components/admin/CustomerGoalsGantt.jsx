@@ -33,7 +33,8 @@ export default function CustomerGoalsGantt({ customer }) {
                 base44.entities.CustomerGoal.filter({ customer_email: customer.email, is_active: true }, 'order_index'),
                 showLoadingSpinner ? base44.auth.me() : Promise.resolve(currentUser)
             ]);
-            setGoals(goalsData);
+            // סינון משימות צ'קליסט יומי
+            setGoals(goalsData.filter(g => g.task_type !== 'daily_checklist_360'));
             if (showLoadingSpinner) {
                 setCurrentUser(userData);
             }

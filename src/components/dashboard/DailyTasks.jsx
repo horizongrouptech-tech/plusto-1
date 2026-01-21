@@ -45,10 +45,14 @@ export default function DailyTasks({ user }) {
     
     const { data: tasks, isLoading: isLoadingTasks } = useQuery({
         queryKey: ['dailyTasks', user?.email],
-        queryFn: () => base44.entities.CustomerGoal.filter({ 
-            assignee_email: user.email, 
-            is_active: true,
-        }, '-end_date'),
+        queryFn: async () => {
+            const allTasks = await base44.entities.CustomerGoal.filter({ 
+                assignee_email: user.email, 
+                is_active: true,
+            }, '-end_date');
+            // סינון משימות צ'קליסט יומי
+            return allTasks.filter(t => t.task_type !== 'daily_checklist_360');
+        },
         enabled: !!user?.email,
         refetchInterval: 30000, // רענון אוטומטי כל 30 שניות
     });

@@ -162,7 +162,9 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     queryKey: ['allRelevantTasks', currentUser.email, isAdmin],
     queryFn: async () => {
       if (isAdmin) {
-        return await base44.entities.CustomerGoal.filter({ is_active: true }, 'order_index');
+        const allTasks = await base44.entities.CustomerGoal.filter({ is_active: true }, 'order_index');
+        // סינון משימות צ'קליסט יומי
+        return allTasks.filter(t => t.task_type !== 'daily_checklist_360');
       } else {
         const myCustomers = allCustomers.map((c) => c.email);
         const customerTasks = await base44.entities.CustomerGoal.filter({
@@ -170,8 +172,11 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         }, 'order_index');
 
         const relevantTasks = customerTasks.filter((task) =>
-          task.assignee_email === currentUser.email ||
-          myCustomers.includes(task.customer_email)
+          // סינון משימות צ'קליסט יומי
+          task.task_type !== 'daily_checklist_360' && (
+            task.assignee_email === currentUser.email ||
+            myCustomers.includes(task.customer_email)
+          )
         );
 
         return relevantTasks;

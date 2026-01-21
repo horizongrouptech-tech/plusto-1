@@ -60,7 +60,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
   }, []);
 
   // טעינת יעדים ומשימות מ-CustomerGoal
-  const { data: allGoals = [], isLoading: isLoadingGoals } = useQuery({
+  const { data: rawGoals = [], isLoading: isLoadingGoals } = useQuery({
     queryKey: ['customerGoals', customer?.email],
     queryFn: () => base44.entities.CustomerGoal.filter({
       customer_email: customer.email,
@@ -72,6 +72,11 @@ export default function GoalsAndTasksDashboard({ customer }) {
     refetchOnWindowFocus: false,
     retry: 1
   });
+
+  // סינון משימות צ'קליסט יומי - לא להציג ברשימת המשימות הרגילה
+  const allGoals = useMemo(() => {
+    return rawGoals.filter(g => g.task_type !== 'daily_checklist_360');
+  }, [rawGoals]);
 
   // זיהוי יעדים - פריט הוא יעד אם:
   // 1. יש לו task_type === 'goal' או
