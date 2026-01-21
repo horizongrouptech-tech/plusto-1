@@ -76,6 +76,7 @@ import ManagerChatSystem from "@/components/admin/ManagerChatSystem";
 // import AdvancedCatalogManager from "@/components/admin/AdvancedCatalogManager"; // Removed unused import
 // import CatalogProgressTracker from "@/components/catalog/CatalogProgressTracker"; // Removed unused import
 import FloatingNotificationCenter from "@/components/shared/FloatingNotificationCenter";
+import LeadManagementSystem from "@/components/leads/LeadManagementSystem";
 // import ManagerChatSystem from '../components/admin/ManagerChatSystem'; // Removed duplicate import
 // import FloatingNotificationCenter from '../components/shared/FloatingNotificationCenter'; // Removed duplicate import
 import CustomerInitiatedRecommendationsModal from "@/components/admin/CustomerInitiatedRecommendationsModal";
@@ -2894,6 +2895,15 @@ export default function AdminPage() {
                     ביצועי מנהלי כספים
                   </TabsTrigger>
                 )}
+                {isAdmin && (
+                  <TabsTrigger 
+                    value="leads" 
+                    className="py-3 px-6 text-horizon-accent data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#32acc1] data-[state=active]:to-[#83ddec] data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg font-bold hover-lift"
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    לידים
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               <TabsContent value="overview">
@@ -2931,6 +2941,15 @@ export default function AdminPage() {
                 <TabsContent value="engagement">
                   <Suspense fallback={<div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>}>
                     <EngagementDashboard />
+                  </Suspense>
+                </TabsContent>
+              )}
+
+              {/* Leads Management tab */}
+              {isAdmin && (
+                <TabsContent value="leads">
+                  <Suspense fallback={<div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>}>
+                    <LeadManagementSystem currentUser={currentUser} />
                   </Suspense>
                 </TabsContent>
               )}
