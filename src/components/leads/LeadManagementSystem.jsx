@@ -16,7 +16,7 @@ import {
   MoreVertical, Edit3, Trash2, CheckCircle, XCircle, Star,
   MessageSquare, FileText, Target, AlertCircle, ArrowRight,
   Zap, Globe, Facebook, Instagram, Linkedin, ExternalLink,
-  History, Tag, Funnel, LayoutGrid, List, ChevronDown,
+  History, Tag, Filter as FunnelIcon, LayoutGrid, List, ChevronDown,
   Sparkles, Activity, RefreshCw, Eye, Bookmark, Archive
 } from 'lucide-react';
 import { format, formatDistanceToNow, parseISO, differenceInDays } from 'date-fns';
@@ -460,15 +460,15 @@ export default function LeadManagementSystem({ currentUser }) {
     </div>
   );
 
-  // תצוגת Funnel
-  const FunnelView = () => {
+  // תצוגת FunnelIcon
+  const FunnelIconView = () => {
     const funnelStages = LEAD_STAGES.filter(s => !['closed_lost'].includes(s.id));
     const maxCount = Math.max(...funnelStages.map(s => filteredLeads.filter(l => l.stage === s.id).length), 1);
     
     return (
       <div className="bg-horizon-card rounded-xl border border-horizon p-6">
         <h3 className="text-lg font-bold text-horizon-text mb-6 flex items-center gap-2">
-          <Funnel className="w-5 h-5 text-horizon-primary" />
+          <FunnelIcon className="w-5 h-5 text-horizon-primary" />
           משפך מכירות
         </h3>
         <div className="space-y-3">
@@ -682,7 +682,7 @@ export default function LeadManagementSystem({ currentUser }) {
                 onClick={() => setViewMode('funnel')}
                 className={`h-9 ${viewMode === 'funnel' ? 'bg-horizon-primary text-white' : 'text-horizon-accent hover:text-horizon-text'}`}
               >
-                <Funnel className="w-4 h-4 ml-1" />
+                <FunnelIcon className="w-4 h-4 ml-1" />
                 משפך
               </Button>
             </div>
@@ -704,7 +704,7 @@ export default function LeadManagementSystem({ currentUser }) {
       {viewMode === 'list' && <ListView />}
       {viewMode === 'funnel' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <FunnelView />
+          <FunnelIconView />
           <Card className="bg-horizon-card border-horizon p-6">
             <h3 className="text-lg font-bold text-horizon-text mb-6 flex items-center gap-2">
               <Globe className="w-5 h-5 text-horizon-primary" />
