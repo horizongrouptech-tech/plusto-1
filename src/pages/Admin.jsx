@@ -1050,7 +1050,6 @@ export default function AdminPage() {
   const [customerInitiatedRecsCount, setCustomerInitiatedRecsCount] = useState(0);
   const [showCustomerInitiatedRecsModal, setShowCustomerInitiatedRecsModal] = useState(false);
   const [isRecalculating, setIsRecalculating] = useState(false); // <--- הוסף שורה זו
-  const [performanceRefreshTrigger, setPerformanceRefreshTrigger] = useState(0); // <--- הוסף שורה זו
   
   const categoryTranslations = {
     pricing: "תמחור",
@@ -2921,14 +2920,12 @@ export default function AdminPage() {
               {/* ביצועי מנהלי כספים */}
               {isAdmin && (
                 <TabsContent value="performance">
-                  <div className="space-y-6">
-                    
-
-                    {/* טבלת ביצועים */}
-                    <FinanceManagerPerformanceTable refreshTrigger={performanceRefreshTrigger} />
-
-                    
-                  </div>
+                  <Suspense fallback={<div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>}>
+                    <div className="space-y-6">
+                      {/* טבלת ביצועים */}
+                      <FinanceManagerPerformanceTable />
+                    </div>
+                  </Suspense>
                 </TabsContent>
               )}
 
