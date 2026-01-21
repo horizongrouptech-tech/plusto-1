@@ -60,6 +60,8 @@ import TopBarActions from "@/components/shared/TopBarActions";
 import LoadingScreen from "./components/shared/LoadingScreen";
 import { ThemeProvider, useTheme } from "./components/shared/ThemeContext";
 import { UsersProvider } from "./components/shared/UsersContext";
+import MobileDashboard from "./components/mobile/MobileDashboard";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const navigationItems = [
   {
@@ -591,6 +593,10 @@ function LayoutContent({ children, currentPageName }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
+  const [showMobileView, setShowMobileView] = useState(true);
+  
+  // בדיקת מובייל
+  const isMobile = useIsMobile();
   
   // Safe theme hook usage - only use if available
   let theme = 'light';
@@ -775,6 +781,26 @@ function LayoutContent({ children, currentPageName }) {
   }
 
   if (user && user.role === 'admin' || user.user_type == 'financial_manager') {
+    // הצגת ממשק מובייל כשנכנסים מטלפון
+    if (isMobile && showMobileView) {
+      return (
+        <div data-theme={theme}>
+          <GlobalThemeStyles />
+          <MobileDashboard 
+            currentUser={user} 
+            onLogout={handleLogout}
+          />
+          {/* כפתור למעבר לממשק מלא */}
+          <button
+            onClick={() => setShowMobileView(false)}
+            className="fixed bottom-20 left-4 bg-horizon-card border border-horizon rounded-full px-4 py-2 text-xs text-horizon-accent shadow-lg z-50"
+          >
+            ממשק מלא
+          </button>
+        </div>
+      );
+    }
+    
     return (
       <div dir="rtl" className="min-h-screen bg-horizon-dark" data-theme={theme}>
         <GlobalThemeStyles />
@@ -783,6 +809,15 @@ function LayoutContent({ children, currentPageName }) {
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <h1 className="text-lg font-bold text-horizon-text">ניהול מערכת</h1>
+              {/* כפתור חזרה למובייל */}
+              {isMobile && !showMobileView && (
+                <button
+                  onClick={() => setShowMobileView(true)}
+                  className="text-xs text-horizon-primary underline mr-3"
+                >
+                  חזור לתצוגת מובייל
+                </button>
+              )}
             </div>
             <div className="flex items-center gap-2">
               {user && <TopBarActions user={user} />}
