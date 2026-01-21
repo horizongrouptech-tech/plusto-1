@@ -459,7 +459,11 @@ export default function GoalsTimelineNew({ customer }) {
         />
 
         <CardContent className="p-0">
-          <div ref={flowRef} className="h-[650px] w-full bg-gradient-to-br from-[#0A192F] via-[#112240] to-[#0A192F]">
+          <div 
+            ref={flowRef} 
+            className="h-[650px] w-full bg-gradient-to-br from-[#0A192F] via-[#112240] to-[#0A192F]"
+            style={{ touchAction: 'none' }}
+          >
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -495,6 +499,13 @@ export default function GoalsTimelineNew({ customer }) {
               }}
               minZoom={0.1}
               maxZoom={2}
+              panOnScroll={true}
+              panOnScrollMode="free"
+              zoomOnScroll={true}
+              zoomOnPinch={true}
+              selectionOnDrag={false}
+              panOnDrag={[1, 2]}
+              preventScrolling={true}
             >
               <Background 
                 color="#32acc1" 

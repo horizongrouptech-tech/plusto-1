@@ -31,6 +31,8 @@ import GoalsTimeline from '@/components/goals/GoalsTimeline';
 import GoalsTimelineNew from '@/components/goals/timeline/GoalsTimelineNew';
 import OrganizationChartBuilder from '@/components/organization/OrganizationChartBuilder';
 import ServiceContactsTab from '@/components/admin/ServiceContactsTab';
+import MeetingsTab from '@/components/meetings/MeetingsTab';
+import { Calendar } from 'lucide-react';
 
 const tabs = [
   { id: 'files', label: 'קבצים וסריקת אתר', icon: FolderOpen },
@@ -41,7 +43,8 @@ const tabs = [
   { id: 'suppliers', label: 'ספקים', icon: Truck },
   { id: 'contacts', label: 'אנשי קשר', icon: Users },
   { id: 'cashflow', label: 'תזרים כספים', icon: DollarSign },
-  { id: 'org_chart', label: 'עץ ארגוני', icon: Building2 }
+  { id: 'org_chart', label: 'עץ ארגוני', icon: Building2 },
+  { id: 'meetings', label: 'פגישות', icon: Calendar }
 ];
 
 export default function WorkboardPanel({ 
@@ -223,6 +226,10 @@ export default function WorkboardPanel({
         
         {activeTab === 'org_chart' && (
           <OrganizationChartBuilder customer={customer} />
+        )}
+        
+        {activeTab === 'meetings' && (
+          <MeetingsTab customer={customer} currentUser={currentUser} />
         )}
       </div>
     </div>

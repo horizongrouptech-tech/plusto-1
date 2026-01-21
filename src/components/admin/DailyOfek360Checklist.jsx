@@ -1,287 +1,444 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Target, Loader2, CheckCircle, Circle, MessageSquare, Edit2, Plus, Trash2, Save, X } from 'lucide-react';
+import { 
+  Target, Loader2, CheckCircle, Circle, MessageSquare, Edit2, 
+  Plus, Trash2, Save, X, Calendar, TrendingUp, BarChart3,
+  ChevronDown, ChevronUp, AlertCircle
+} from 'lucide-react';
 
-const DAILY_CHECKLIST_ITEMS = [
+// הגדרת סעיפי הצ'קליסט היומי - מבוסס על מודל אופק 360
+const DAILY_CHECKLIST_CATEGORIES = [
   {
-    id: 'morning_review',
-    title: 'סקירת בוקר - תזרים מזומנים',
+    id: 'cashflow',
+    title: 'תזרים מזומנים',
     description: 'בדיקת מצב תזרים יומי, זיהוי בורות קרובים, תכנון תשלומים',
-    category: 'financial'
+    icon: '💰',
+    color: 'green'
   },
   {
-    id: 'tasks_priorities',
-    title: 'עדכון משימות ועדיפויות',
-    description: 'סימון משימות להיום, התאמת עדיפויות לפי דחיפות',
-    category: 'tasks'
+    id: 'profitability',
+    title: 'רווחיות',
+    description: 'מעקב אחר מרווחים, בדיקת עלויות ומכירות',
+    icon: '📈',
+    color: 'blue'
   },
   {
-    id: 'customer_contact',
-    title: 'יצירת קשר עם לקוח',
-    description: 'מעקב אחר לקוח אחד מהקבוצה היומית, עדכון התקדמות',
-    category: 'client'
+    id: 'business_tree',
+    title: 'עץ עסק',
+    description: 'מעקב אחר מבנה ארגוני, תפקידים ותגמולים',
+    icon: '🌳',
+    color: 'purple'
   },
   {
-    id: 'data_update',
-    title: 'עדכון נתונים',
-    description: 'הזנת נתונים חדשים שהתקבלו, עדכון קטלוג/מלאי',
-    category: 'data'
+    id: 'credit_funding',
+    title: 'אשראי וגיוס',
+    description: 'ניהול צרכי אשראי, מעקב אחר גיוסים',
+    icon: '🏦',
+    color: 'orange'
   },
   {
-    id: 'recommendations_review',
-    title: 'סקירת המלצות פעילות',
-    description: 'מעקב אחר יישום המלצות, זיהוי המלצות חדשות נדרשות',
-    category: 'recommendations'
+    id: 'budget',
+    title: 'תקציב',
+    description: 'בקרה תקציבית, תכנון מול ביצוע',
+    icon: '📊',
+    color: 'cyan'
   },
   {
-    id: 'goals_progress',
-    title: 'התקדמות ביעדים',
-    description: 'עדכון סטטוס יעדים, זיהוי חסמים וצווארי בקבוק',
-    category: 'goals'
+    id: 'tax_accounting',
+    title: 'מס וחשבונאות',
+    description: 'מעקב מס, בקרה על רו"ח',
+    icon: '📋',
+    color: 'pink'
   },
   {
-    id: 'alerts_review',
-    title: 'טיפול בהתראות',
-    description: 'טיפול בהתראות מהמערכת, משימות באיחור, תזרים שלילי',
-    category: 'alerts'
+    id: 'collection_payments',
+    title: 'גבייה ותשלומים',
+    description: 'מעקב גביה, ניהול תשלומים',
+    icon: '💳',
+    color: 'indigo'
   },
   {
-    id: 'evening_summary',
-    title: 'סיכום יום',
-    description: 'רישום תובנות, תוצאות, והכנה ליום המחר',
-    category: 'summary'
+    id: 'profit_centers',
+    title: 'מרכזי רווח',
+    description: 'ניתוח הצעות ערך, תמחורים',
+    icon: '🎯',
+    color: 'amber'
   }
 ];
 
+const MONTH_NAMES = [
+  'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
+];
+
+// קומפוננטת סעיף בודד עם מצב רצוי/מצוי
+function ChecklistItemCard({ item, category, onUpdate, isExpanded, onToggleExpand }) {
+  const statusColors = {
+    desired: 'bg-green-500/20 border-green-500/50 text-green-400',
+    current: 'bg-blue-500/20 border-blue-500/50 text-blue-400',
+    not_checked: 'bg-gray-500/20 border-gray-500/50 text-gray-400'
+  };
+
+  const categoryColors = {
+    green: 'border-l-green-500',
+    blue: 'border-l-blue-500',
+    purple: 'border-l-purple-500',
+    orange: 'border-l-orange-500',
+    cyan: 'border-l-cyan-500',
+    pink: 'border-l-pink-500',
+    indigo: 'border-l-indigo-500',
+    amber: 'border-l-amber-500'
+  };
+
+  return (
+    <Card className={`bg-horizon-card border-horizon border-l-4 ${categoryColors[category.color]} transition-all hover:shadow-lg`}>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl">{category.icon}</span>
+              <h4 className="font-semibold text-horizon-text">{category.title}</h4>
+            </div>
+            <p className="text-sm text-horizon-accent mb-3">{category.description}</p>
+            
+            {/* כפתורי מצב רצוי/מצוי */}
+            <div className="flex gap-2 mb-3">
+              <Button
+                size="sm"
+                variant={item.status === 'desired' ? 'default' : 'outline'}
+                onClick={() => onUpdate(category.id, 'status', 'desired')}
+                className={item.status === 'desired' ? 'bg-green-600 hover:bg-green-700 text-white' : 'border-green-500/50 text-green-400 hover:bg-green-500/10'}
+              >
+                <CheckCircle className="w-4 h-4 ml-1" />
+                מצב רצוי
+              </Button>
+              <Button
+                size="sm"
+                variant={item.status === 'current' ? 'default' : 'outline'}
+                onClick={() => onUpdate(category.id, 'status', 'current')}
+                className={item.status === 'current' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'border-blue-500/50 text-blue-400 hover:bg-blue-500/10'}
+              >
+                <Circle className="w-4 h-4 ml-1" />
+                מצב מצוי
+              </Button>
+            </div>
+          </div>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onToggleExpand(category.id)}
+            className="text-horizon-accent"
+          >
+            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </Button>
+        </div>
+
+        {/* שדה הערות מורחב */}
+        {isExpanded && (
+          <div className="mt-4 pt-4 border-t border-horizon">
+            <Label className="text-horizon-accent text-sm mb-2 block">
+              <MessageSquare className="w-4 h-4 inline ml-1" />
+              הערות עבור {category.title}
+            </Label>
+            <Textarea
+              value={item.notes || ''}
+              onChange={(e) => onUpdate(category.id, 'notes', e.target.value)}
+              placeholder={`רשום הערות לגבי ${category.title}...`}
+              className="bg-horizon-dark border-horizon text-horizon-text min-h-[80px]"
+            />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// קומפוננטת סיכום חודשי
+function MonthlySummary({ checklistHistory, selectedMonth, selectedYear }) {
+  const monthlyStats = useMemo(() => {
+    if (!checklistHistory || checklistHistory.length === 0) {
+      return { desiredPercentage: 0, totalDays: 0, desiredDays: 0, currentDays: 0, byCategory: {} };
+    }
+
+    // סינון רק ימי עבודה (לא שישי-שבת)
+    const workDays = checklistHistory.filter(day => {
+      const date = new Date(day.date);
+      const dayOfWeek = date.getDay();
+      const month = date.getMonth();
+      const year = date.getFullYear();
+      return dayOfWeek !== 5 && dayOfWeek !== 6 && month === selectedMonth && year === selectedYear;
+    });
+
+    const byCategory = {};
+    DAILY_CHECKLIST_CATEGORIES.forEach(cat => {
+      const categoryDays = workDays.filter(day => {
+        const catItem = day.items?.find(i => i.category_id === cat.id);
+        return catItem?.status === 'desired';
+      });
+      byCategory[cat.id] = {
+        desired: categoryDays.length,
+        total: workDays.length,
+        percentage: workDays.length > 0 ? Math.round((categoryDays.length / workDays.length) * 100) : 0
+      };
+    });
+
+    const totalDesiredChecks = workDays.reduce((sum, day) => {
+      return sum + (day.items?.filter(i => i.status === 'desired').length || 0);
+    }, 0);
+
+    const totalPossibleChecks = workDays.length * DAILY_CHECKLIST_CATEGORIES.length;
+    const overallPercentage = totalPossibleChecks > 0 ? Math.round((totalDesiredChecks / totalPossibleChecks) * 100) : 0;
+
+    return {
+      desiredPercentage: overallPercentage,
+      totalDays: workDays.length,
+      desiredDays: totalDesiredChecks,
+      currentDays: totalPossibleChecks - totalDesiredChecks,
+      byCategory
+    };
+  }, [checklistHistory, selectedMonth, selectedYear]);
+
+  return (
+    <Card className="card-horizon">
+      <CardHeader>
+        <CardTitle className="text-horizon-text flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-horizon-primary" />
+          סיכום חודשי - {MONTH_NAMES[selectedMonth]} {selectedYear}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {/* אחוז כללי */}
+        <div className="text-center mb-6">
+          <div className="text-5xl font-bold text-horizon-primary mb-2">
+            {monthlyStats.desiredPercentage}%
+          </div>
+          <p className="text-horizon-accent">מצב רצוי מתוך ימי העבודה</p>
+          <p className="text-sm text-horizon-accent mt-1">
+            ({monthlyStats.totalDays} ימי עבודה, ללא שישי-שבת)
+          </p>
+        </div>
+
+        {/* פירוט לפי קטגוריה */}
+        <div className="space-y-3">
+          {DAILY_CHECKLIST_CATEGORIES.map(cat => {
+            const stats = monthlyStats.byCategory[cat.id] || { percentage: 0, desired: 0, total: 0 };
+            return (
+              <div key={cat.id} className="flex items-center gap-3">
+                <span className="text-xl w-8">{cat.icon}</span>
+                <div className="flex-1">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm text-horizon-text">{cat.title}</span>
+                    <span className="text-sm font-semibold text-horizon-primary">{stats.percentage}%</span>
+                  </div>
+                  <div className="w-full bg-horizon-dark rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-horizon-primary to-horizon-secondary h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${stats.percentage}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function DailyOfek360Checklist({ customer, isOpen, onClose, currentUser }) {
   const queryClient = useQueryClient();
-  const [notes, setNotes] = useState('');
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editedItems, setEditedItems] = useState([]);
+  const [activeTab, setActiveTab] = useState('daily');
+  const [expandedItems, setExpandedItems] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [isSaving, setIsSaving] = useState(false);
   
   // בדיקת הרשאות: רק אדמין ומנהל מחלקה יכולים לערוך
   const canEdit = currentUser?.role === 'admin' || currentUser?.user_type === 'department_head';
 
   const today = new Date().toISOString().split('T')[0];
 
-  // טעינת צ'ק ליסט יומי
-  const { data: checklistData, isLoading, error } = useQuery({
-    queryKey: ['dailyChecklist', customer?.email, today],
+  // טעינת צ'קליסט יומי - שימוש בישות נפרדת (לא CustomerGoal)
+  const { data: todayChecklist, isLoading: isLoadingToday } = useQuery({
+    queryKey: ['dailyChecklist360', customer?.email, today],
     queryFn: async () => {
-      const checklists = await base44.entities.CustomerGoal.filter({
+      const checklists = await base44.entities.DailyChecklist360?.filter({
         customer_email: customer.email,
-        task_type: 'daily_checklist',
-        start_date: today
+        date: today
       });
 
       if (checklists && checklists.length > 0) {
         return checklists[0];
       }
 
-      // אין צ'ק ליסט - נחזיר null ונטפל בזה בנפרד
-      return null;
-    },
-    enabled: isOpen && !!customer?.email,
-    retry: 1
-  });
-
-  // יצירת צ'ק ליסט חדש - נפרד מה-query
-  const createChecklist = async () => {
-    try {
-      // קבלת המשתמש הנוכחי כדי לשייך אותו כאחראי
-      const currentUser = await base44.auth.me();
-      console.log('Creating checklist, currentUser:', currentUser?.email, 'user_type:', currentUser?.user_type, 'role:', currentUser?.role);
-      
-      const checklistData = {
+      // יצירת צ'קליסט חדש
+      const newChecklist = {
         customer_email: customer.email,
-        name: `צ'ק ליסט יומי - ${new Date().toLocaleDateString('he-IL')}`,
-        task_type: 'daily_checklist',
+        date: today,
+        items: DAILY_CHECKLIST_CATEGORIES.map(cat => ({
+          category_id: cat.id,
+          status: 'not_checked',
+          notes: ''
+        })),
+        general_notes: '',
+        created_by: currentUser?.email
+      };
+
+      // בדיקה אם הישות קיימת
+      if (base44.entities.DailyChecklist360) {
+        const created = await base44.entities.DailyChecklist360.create(newChecklist);
+        return created;
+      }
+      
+      // fallback - שמירה ב-CustomerGoal עם task_type מיוחד
+      const fallbackChecklist = await base44.entities.CustomerGoal.create({
+        customer_email: customer.email,
+        name: `צ'קליסט 360 - ${new Date().toLocaleDateString('he-IL')}`,
+        task_type: 'daily_checklist_360',
         start_date: today,
         end_date: today,
         status: 'in_progress',
         is_active: true,
-        notes: '',
-        assignee_email: currentUser?.email,
-        responsible_users: currentUser?.email ? [currentUser.email] : [],
-        assigned_users: currentUser?.email ? [currentUser.email] : [],
-        checklist_items: DAILY_CHECKLIST_ITEMS.map(item => ({
-          ...item,
-          completed: false,
-          completed_at: null,
-          notes: ''
-        }))
+        checklist_items: newChecklist.items,
+        notes: ''
+      });
+      
+      return {
+        ...fallbackChecklist,
+        items: fallbackChecklist.checklist_items,
+        date: today
       };
-      
-      console.log('Checklist data to create:', checklistData);
-      
-      const newChecklist = await base44.entities.CustomerGoal.create(checklistData);
-      queryClient.invalidateQueries(['dailyChecklist', customer.email, today]);
-      return newChecklist;
-    } catch (error) {
-      console.error('Error creating checklist:', error);
-      console.error('Full error details:', JSON.stringify(error, null, 2));
-      throw error;
-    }
-  };
+    },
+    enabled: isOpen && !!customer?.email
+  });
 
-  const handleToggleItem = async (itemId) => {
-    if (!checklistData) return;
+  // טעינת היסטוריית צ'קליסט לחודש הנבחר
+  const { data: checklistHistory = [] } = useQuery({
+    queryKey: ['dailyChecklistHistory360', customer?.email, selectedMonth, selectedYear],
+    queryFn: async () => {
+      const startDate = new Date(selectedYear, selectedMonth, 1).toISOString().split('T')[0];
+      const endDate = new Date(selectedYear, selectedMonth + 1, 0).toISOString().split('T')[0];
+      
+      // נסה לטעון מישות DailyChecklist360
+      if (base44.entities.DailyChecklist360) {
+        return await base44.entities.DailyChecklist360.filter({
+          customer_email: customer.email,
+          date: { $gte: startDate, $lte: endDate }
+        });
+      }
+      
+      // fallback
+      const goals = await base44.entities.CustomerGoal.filter({
+        customer_email: customer.email,
+        task_type: 'daily_checklist_360',
+        start_date: { $gte: startDate, $lte: endDate }
+      });
+      
+      return goals.map(g => ({
+        ...g,
+        items: g.checklist_items,
+        date: g.start_date
+      }));
+    },
+    enabled: isOpen && !!customer?.email && activeTab === 'monthly'
+  });
 
-    const updatedItems = checklistData.checklist_items.map(item => {
-      if (item.id === itemId) {
-        return {
-          ...item,
-          completed: !item.completed,
-          completed_at: !item.completed ? new Date().toISOString() : null
-        };
+  // עדכון סעיף בצ'קליסט
+  const handleUpdateItem = async (categoryId, field, value) => {
+    if (!todayChecklist) return;
+
+    const updatedItems = todayChecklist.items.map(item => {
+      if (item.category_id === categoryId) {
+        return { ...item, [field]: value };
       }
       return item;
     });
 
-    const completedCount = updatedItems.filter(i => i.completed).length;
-    const newStatus = completedCount === updatedItems.length ? 'done' : 'in_progress';
-
+    setIsSaving(true);
     try {
-      await base44.entities.CustomerGoal.update(checklistData.id, {
-        checklist_items: updatedItems,
-        status: newStatus
-      });
-
-      queryClient.invalidateQueries(['dailyChecklist', customer.email, today]);
+      if (base44.entities.DailyChecklist360) {
+        await base44.entities.DailyChecklist360.update(todayChecklist.id, {
+          items: updatedItems
+        });
+      } else {
+        await base44.entities.CustomerGoal.update(todayChecklist.id, {
+          checklist_items: updatedItems
+        });
+      }
+      queryClient.invalidateQueries(['dailyChecklist360', customer.email, today]);
     } catch (error) {
-      console.error('Error updating checklist:', error);
-      alert('שגיאה בעדכון הצ\'ק ליסט');
+      console.error('Error updating checklist item:', error);
+      alert('שגיאה בעדכון הסעיף');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleSaveNotes = async () => {
-    if (!checklistData) return;
+  // שמירת הערות כלליות
+  const handleSaveGeneralNotes = async (notes) => {
+    if (!todayChecklist) return;
 
+    setIsSaving(true);
     try {
-      await base44.entities.CustomerGoal.update(checklistData.id, {
-        notes: notes
-      });
-
-      queryClient.invalidateQueries(['dailyChecklist', customer.email, today]);
-      alert('הערות נשמרו בהצלחה');
+      if (base44.entities.DailyChecklist360) {
+        await base44.entities.DailyChecklist360.update(todayChecklist.id, {
+          general_notes: notes
+        });
+      } else {
+        await base44.entities.CustomerGoal.update(todayChecklist.id, {
+          notes: notes
+        });
+      }
+      queryClient.invalidateQueries(['dailyChecklist360', customer.email, today]);
     } catch (error) {
       console.error('Error saving notes:', error);
       alert('שגיאה בשמירת הערות');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleEditModeToggle = () => {
-    if (!canEdit) return;
-    if (!isEditMode) {
-      setEditedItems([...(checklistData?.checklist_items || DAILY_CHECKLIST_ITEMS.map(item => ({ ...item, completed: false, completed_at: null, notes: '' })))]);
-    }
-    setIsEditMode(!isEditMode);
+  const toggleExpand = (categoryId) => {
+    setExpandedItems(prev => 
+      prev.includes(categoryId) 
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
   };
 
-  const handleAddItem = () => {
-    if (!canEdit) return;
-    const newItem = {
-      id: `custom_${Date.now()}`,
-      title: '',
-      description: '',
-      category: 'custom',
-      completed: false,
-      completed_at: null,
-      notes: ''
+  // חישוב התקדמות יומית
+  const dailyProgress = useMemo(() => {
+    if (!todayChecklist?.items) return { desired: 0, current: 0, percentage: 0 };
+    
+    const desired = todayChecklist.items.filter(i => i.status === 'desired').length;
+    const total = todayChecklist.items.length;
+    
+    return {
+      desired,
+      current: todayChecklist.items.filter(i => i.status === 'current').length,
+      percentage: total > 0 ? Math.round((desired / total) * 100) : 0
     };
-    setEditedItems([...editedItems, newItem]);
-  };
+  }, [todayChecklist]);
 
-  const handleRemoveItem = (itemId) => {
-    if (!canEdit) return;
-    setEditedItems(editedItems.filter(item => item.id !== itemId));
-  };
-
-  const handleItemChange = (itemId, field, value) => {
-    setEditedItems(editedItems.map(item => 
-      item.id === itemId ? { ...item, [field]: value } : item
-    ));
-  };
-
-  const handleSaveEditedChecklist = async () => {
-    if (!checklistData || !canEdit) return;
-
-    try {
-      await base44.entities.CustomerGoal.update(checklistData.id, {
-        checklist_items: editedItems
-      });
-
-      queryClient.invalidateQueries(['dailyChecklist', customer.email, today]);
-      setIsEditMode(false);
-      alert('הצ\'ק ליסט עודכן בהצלחה');
-    } catch (error) {
-      console.error('Error saving checklist:', error);
-      alert('שגיאה בשמירת הצ\'ק ליסט');
-    }
-  };
-
-  const completedItems = checklistData?.checklist_items?.filter(i => i.completed).length || 0;
-  const totalItems = checklistData?.checklist_items?.length || DAILY_CHECKLIST_ITEMS.length;
-  const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
-
-  if (isLoading) {
+  if (isLoadingToday) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-3xl bg-horizon-dark border-horizon" dir="rtl">
+        <DialogContent className="max-w-4xl bg-horizon-dark border-horizon" dir="rtl">
           <div className="flex items-center justify-center p-12">
             <Loader2 className="w-8 h-8 animate-spin text-horizon-primary ml-3" />
-            <span className="text-horizon-text">טוען צ'ק ליסט יומי...</span>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
-  if (error) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-3xl bg-horizon-dark border-horizon" dir="rtl">
-          <div className="p-6 text-center">
-            <p className="text-red-400 mb-4">שגיאה בטעינת הצ'ק ליסט: {error.message}</p>
-            <Button onClick={() => queryClient.invalidateQueries(['dailyChecklist', customer?.email, today])} className="btn-horizon-primary">
-              נסה שוב
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
-  // אם אין צ'ק ליסט קיים - הצג כפתור ליצירה
-  if (!isLoading && checklistData === null) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-3xl bg-horizon-dark border-horizon" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl text-horizon-text flex items-center gap-3">
-              <Target className="w-6 h-6 text-horizon-primary" />
-              צ'ק ליסט יומי - אופק 360
-            </DialogTitle>
-            <p className="text-sm text-horizon-accent mt-2">
-              {customer?.business_name || customer?.full_name} | {new Date().toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-            </p>
-          </DialogHeader>
-          <div className="p-6 text-center">
-            <Target className="w-16 h-16 mx-auto text-horizon-accent mb-4" />
-            <h3 className="text-xl font-semibold text-horizon-text mb-2">אין צ'ק ליסט להיום</h3>
-            <p className="text-horizon-accent mb-6">צור צ'ק ליסט יומי חדש ללקוח זה</p>
-            <Button onClick={createChecklist} className="btn-horizon-primary">
-              <Plus className="w-4 h-4 ml-2" />
-              צור צ'ק ליסט יומי
-            </Button>
+            <span className="text-horizon-text">טוען צ'קליסט יומי...</span>
           </div>
         </DialogContent>
       </Dialog>
@@ -290,201 +447,230 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-horizon-dark border-horizon" dir="rtl">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-horizon-dark border-horizon" dir="rtl">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className="text-2xl text-horizon-text flex items-center gap-3">
-                <Target className="w-6 h-6 text-horizon-primary" />
-                צ'ק ליסט יומי - אופק 360
-              </DialogTitle>
-              <p className="text-sm text-horizon-accent mt-2">
-                {customer?.business_name || customer?.full_name} | {new Date().toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-              </p>
-            </div>
-            {canEdit && (
-              <Button
-                onClick={handleEditModeToggle}
-                variant="outline"
-                className="border-horizon-primary text-horizon-primary"
-                size="sm"
-              >
-                {isEditMode ? (
-                  <>
-                    <X className="w-4 h-4 ml-1" />
-                    ביטול
-                  </>
-                ) : (
-                  <>
-                    <Edit2 className="w-4 h-4 ml-1" />
-                    עריכה
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
+          <DialogTitle className="text-2xl text-horizon-text flex items-center gap-3">
+            <Target className="w-6 h-6 text-horizon-primary" />
+            צ'קליסט יומי - אופק 360
+          </DialogTitle>
+          <p className="text-sm text-horizon-accent mt-2">
+            {customer?.business_name || customer?.full_name} | {new Date().toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
         </DialogHeader>
 
-        {/* התקדמות כללית */}
-        <Card className="card-horizon">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-horizon-text font-semibold">התקדמות יומית</span>
-              <span className="text-2xl font-bold text-horizon-primary">{progressPercentage}%</span>
-            </div>
-            <div className="w-full bg-horizon-card rounded-full h-3">
-              <div 
-                className="bg-gradient-to-r from-horizon-primary to-horizon-secondary h-3 rounded-full transition-all duration-500"
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
-            <p className="text-sm text-horizon-accent mt-2 text-center">
-              {completedItems} מתוך {totalItems} משימות הושלמו
-            </p>
-          </CardContent>
-        </Card>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-horizon-card">
+            <TabsTrigger 
+              value="daily" 
+              className="data-[state=active]:bg-horizon-primary data-[state=active]:text-white"
+            >
+              <Calendar className="w-4 h-4 ml-2" />
+              צ'קליסט יומי
+            </TabsTrigger>
+            <TabsTrigger 
+              value="monthly"
+              className="data-[state=active]:bg-horizon-primary data-[state=active]:text-white"
+            >
+              <BarChart3 className="w-4 h-4 ml-2" />
+              סיכום חודשי
+            </TabsTrigger>
+          </TabsList>
 
-        {/* פריטי הצ'ק ליסט */}
-        <div className="space-y-3">
-          {!checklistData?.checklist_items || checklistData.checklist_items.length === 0 ? (
-            <Card className="bg-horizon-card border-horizon">
-              <CardContent className="p-6 text-center">
-                <Circle className="w-12 h-12 mx-auto text-horizon-accent mb-3" />
-                <p className="text-horizon-accent">טוען משימות...</p>
+          <TabsContent value="daily" className="mt-4 space-y-4">
+            {/* כרטיס התקדמות יומית */}
+            <Card className="card-horizon bg-gradient-to-l from-horizon-primary/10 to-transparent">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-horizon-text font-semibold">התקדמות יומית</span>
+                  <div className="flex items-center gap-4">
+                    <Badge className="bg-green-500/20 text-green-400 border-green-500/50">
+                      <CheckCircle className="w-3 h-3 ml-1" />
+                      רצוי: {dailyProgress.desired}
+                    </Badge>
+                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50">
+                      <Circle className="w-3 h-3 ml-1" />
+                      מצוי: {dailyProgress.current}
+                    </Badge>
+                    <span className="text-2xl font-bold text-horizon-primary">{dailyProgress.percentage}%</span>
+                  </div>
+                </div>
+                <div className="w-full bg-horizon-card rounded-full h-3">
+                  <div 
+                    className="bg-gradient-to-r from-green-500 to-horizon-primary h-3 rounded-full transition-all duration-500"
+                    style={{ width: `${dailyProgress.percentage}%` }}
+                  />
+                </div>
               </CardContent>
             </Card>
-          ) : isEditMode && canEdit ? (
-           <>
-             {editedItems.map((item, index) => (
-               <Card key={item.id} className="bg-horizon-card border-horizon">
-                 <CardContent className="p-4">
-                   <div className="flex items-start gap-3">
-                     <span className="text-horizon-accent font-semibold mt-2">{index + 1}.</span>
-                     <div className="flex-1 space-y-3">
-                       <Input
-                         value={item.title}
-                         onChange={(e) => handleItemChange(item.id, 'title', e.target.value)}
-                         placeholder="כותרת המשימה"
-                         className="bg-horizon-card border-horizon text-horizon-text"
-                       />
-                       <Textarea
-                         value={item.description}
-                         onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
-                         placeholder="תיאור המשימה"
-                         className="bg-horizon-card border-horizon text-horizon-text"
-                         rows={2}
-                       />
-                     </div>
-                     <Button
-                       onClick={() => handleRemoveItem(item.id)}
-                       variant="ghost"
-                       size="icon"
-                       className="text-red-400 hover:text-red-300"
-                     >
-                       <Trash2 className="w-4 h-4" />
-                     </Button>
-                   </div>
-                 </CardContent>
-               </Card>
-             ))}
-             <Button
-               onClick={handleAddItem}
-               variant="outline"
-               className="w-full border-dashed border-horizon-primary text-horizon-primary"
-             >
-               <Plus className="w-4 h-4 ml-2" />
-               הוסף משימה
-             </Button>
-             <Button
-               onClick={handleSaveEditedChecklist}
-               className="btn-horizon-primary w-full"
-             >
-               <Save className="w-4 h-4 ml-2" />
-               שמור שינויים
-             </Button>
-           </>
-          ) : (
-            checklistData?.checklist_items?.map((item, index) => {
-              const isCompleted = item.completed;
-              
-              return (
-                <Card 
-                  key={item.id}
-                  className={`${
-                    isCompleted 
-                      ? 'bg-green-500/10 border-green-500/30' 
-                      : 'bg-horizon-card border-horizon'
-                  } transition-all hover:border-horizon-primary/50`}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        checked={isCompleted}
-                        onCheckedChange={() => handleToggleItem(item.id)}
-                        className="mt-1 border-horizon-primary data-[state=checked]:bg-horizon-primary"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`font-semibold ${isCompleted ? 'line-through text-horizon-accent' : 'text-horizon-text'}`}>
-                            {index + 1}. {item.title}
-                          </span>
-                          {isCompleted && (
-                            <CheckCircle className="w-4 h-4 text-green-400" />
-                          )}
-                        </div>
-                        <p className="text-sm text-horizon-accent">
-                          {item.description}
-                        </p>
-                        {item.completed_at && (
-                          <p className="text-xs text-green-400 mt-2">
-                            ✓ הושלם ב-{new Date(item.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })
-          )}
-        </div>
 
-        {/* הערות יומיות */}
-        <Card className="card-horizon">
-          <CardHeader>
-            <CardTitle className="text-horizon-text flex items-center gap-2 text-base">
-              <MessageSquare className="w-4 h-4 text-horizon-primary" />
-              הערות והתובנות יומיות
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Textarea
-              value={notes || checklistData?.notes || ''}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="רשום כאן תובנות, בעיות שזוהו, או דברים שצריך לעקוב אחריהם..."
-              className="bg-horizon-card border-horizon text-horizon-text min-h-[100px]"
+            {/* סעיפי הצ'קליסט */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {DAILY_CHECKLIST_CATEGORIES.map(category => {
+                const item = todayChecklist?.items?.find(i => i.category_id === category.id) || {
+                  category_id: category.id,
+                  status: 'not_checked',
+                  notes: ''
+                };
+                
+                return (
+                  <ChecklistItemCard
+                    key={category.id}
+                    item={item}
+                    category={category}
+                    onUpdate={handleUpdateItem}
+                    isExpanded={expandedItems.includes(category.id)}
+                    onToggleExpand={toggleExpand}
+                  />
+                );
+              })}
+            </div>
+
+            {/* הערות כלליות */}
+            <Card className="card-horizon">
+              <CardHeader>
+                <CardTitle className="text-horizon-text flex items-center gap-2 text-base">
+                  <MessageSquare className="w-4 h-4 text-horizon-primary" />
+                  הערות ותובנות יומיות כלליות
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Textarea
+                  defaultValue={todayChecklist?.general_notes || todayChecklist?.notes || ''}
+                  onBlur={(e) => handleSaveGeneralNotes(e.target.value)}
+                  placeholder="רשום כאן תובנות כלליות, בעיות שזוהו, או דברים שצריך לעקוב אחריהם..."
+                  className="bg-horizon-card border-horizon text-horizon-text min-h-[100px]"
+                />
+                {isSaving && (
+                  <div className="flex items-center gap-2 text-horizon-accent text-sm">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    שומר...
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* הודעת השלמה */}
+            {dailyProgress.percentage === 100 && (
+              <Card className="bg-green-500/10 border-green-500/30">
+                <CardContent className="p-6 text-center">
+                  <CheckCircle className="w-12 h-12 mx-auto text-green-400 mb-3" />
+                  <h3 className="text-xl font-bold text-green-400 mb-2">כל הסעיפים במצב רצוי!</h3>
+                  <p className="text-horizon-accent">
+                    מצוין! כל הבקרות היומיות הושלמו בהצלחה.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="monthly" className="mt-4 space-y-4">
+            {/* בורר חודש ושנה */}
+            <Card className="card-horizon">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-horizon-accent">חודש:</Label>
+                    <Select value={selectedMonth.toString()} onValueChange={(v) => setSelectedMonth(parseInt(v))}>
+                      <SelectTrigger className="w-32 bg-horizon-card border-horizon text-horizon-text">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MONTH_NAMES.map((name, idx) => (
+                          <SelectItem key={idx} value={idx.toString()}>{name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-horizon-accent">שנה:</Label>
+                    <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+                      <SelectTrigger className="w-24 bg-horizon-card border-horizon text-horizon-text">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2025">2025</SelectItem>
+                        <SelectItem value="2026">2026</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* סיכום חודשי */}
+            <MonthlySummary 
+              checklistHistory={checklistHistory}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
             />
-            <Button
-              onClick={handleSaveNotes}
-              className="btn-horizon-primary w-full"
-            >
-              שמור הערות
-            </Button>
-          </CardContent>
-        </Card>
 
-        {/* סטטוס השלמה */}
-        {progressPercentage === 100 && (
-          <Card className="bg-green-500/10 border-green-500/30">
-            <CardContent className="p-6 text-center">
-              <CheckCircle className="w-12 h-12 mx-auto text-green-400 mb-3" />
-              <h3 className="text-xl font-bold text-green-400 mb-2">יום עבודה מצוין!</h3>
-              <p className="text-horizon-accent">
-                השלמת את כל משימות הצ'ק ליסט היומי. המשך כך!
-              </p>
-            </CardContent>
-          </Card>
-        )}
+            {/* היסטוריית ימים */}
+            <Card className="card-horizon">
+              <CardHeader>
+                <CardTitle className="text-horizon-text flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-horizon-primary" />
+                  היסטוריית ימים
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {checklistHistory.length === 0 ? (
+                  <div className="text-center py-8 text-horizon-accent">
+                    <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>אין נתונים לחודש זה</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {checklistHistory.map((day, idx) => {
+                      const desiredCount = day.items?.filter(i => i.status === 'desired').length || 0;
+                      const totalCount = day.items?.length || DAILY_CHECKLIST_CATEGORIES.length;
+                      const percentage = Math.round((desiredCount / totalCount) * 100);
+                      const date = new Date(day.date);
+                      const dayOfWeek = date.getDay();
+                      const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
+                      
+                      return (
+                        <div 
+                          key={idx} 
+                          className={`flex items-center justify-between p-3 rounded-lg ${
+                            isWeekend ? 'bg-gray-500/10 opacity-50' : 'bg-horizon-card'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-horizon-text font-medium">
+                              {date.toLocaleDateString('he-IL', { weekday: 'short', day: 'numeric' })}
+                            </span>
+                            {isWeekend && (
+                              <Badge variant="outline" className="text-gray-400 border-gray-400 text-xs">
+                                סוף שבוע
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-24 bg-horizon-dark rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full ${
+                                  percentage >= 75 ? 'bg-green-500' : 
+                                  percentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                }`}
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                            <span className={`text-sm font-semibold ${
+                              percentage >= 75 ? 'text-green-400' : 
+                              percentage >= 50 ? 'text-yellow-400' : 'text-red-400'
+                            }`}>
+                              {percentage}%
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

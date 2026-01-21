@@ -12,8 +12,10 @@ import { Target, Plus, Edit3, Trash2, Copy, Loader2, ShieldAlert, CheckCircle2 }
 import { canEditGoalTemplates } from '../utils/goalTemplatePermissions';
 import { CategoryBadge, PopularBadge } from '@/components/goals/GoalTemplateBadges';
 import GoalTemplatePreview from '@/components/goals/GoalTemplatePreview';
+import DefaultTasksManager from './DefaultTasksManager';
 
 export default function GoalBankManager({ currentUser }) {
+  const [showDefaultTasks, setShowDefaultTasks] = useState(false);
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
@@ -201,12 +203,24 @@ export default function GoalBankManager({ currentUser }) {
                 </Badge>
               )}
             </div>
-            {canEdit && (
-              <Button onClick={handleNew} className="btn-horizon-primary">
-                <Plus className="w-4 h-4 ml-2" />
-                הוסף תבנית
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {canEdit && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowDefaultTasks(true)}
+                  className="border-horizon text-horizon-accent hover:text-horizon-text"
+                >
+                  <Target className="w-4 h-4 ml-2" />
+                  משימות ללקוחות חדשים
+                </Button>
+              )}
+              {canEdit && (
+                <Button onClick={handleNew} className="btn-horizon-primary">
+                  <Plus className="w-4 h-4 ml-2" />
+                  הוסף תבנית
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -489,6 +503,13 @@ export default function GoalBankManager({ currentUser }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* מודל משימות דפולטיביות */}
+      <DefaultTasksManager
+        isOpen={showDefaultTasks}
+        onClose={() => setShowDefaultTasks(false)}
+        currentUser={currentUser}
+      />
     </div>
   );
 }
