@@ -8,12 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { toast } from 'sonner';
 import { 
   Target, Loader2, CheckCircle, Circle, MessageSquare, Edit2, 
   Plus, Trash2, Save, X, Calendar, TrendingUp, BarChart3,
-  ChevronDown, ChevronUp, AlertCircle
+  ChevronDown, ChevronUp, AlertCircle, Info
 } from 'lucide-react';
 
 // הגדרת סעיפי הצ'קליסט היומי - מבוסס על מודל אופק 360
@@ -82,7 +84,7 @@ const MONTH_NAMES = [
 ];
 
 // קומפוננטת סעיף בודד עם מצב רצוי/מצוי
-function ChecklistItemCard({ item, category, onUpdate, isExpanded, onToggleExpand }) {
+function ChecklistItemCard({ item, category, onUpdate, isExpanded, onToggleExpand, isUpdating }) {
   const statusColors = {
     desired: 'bg-green-500/20 border-green-500/50 text-green-400',
     current: 'bg-blue-500/20 border-blue-500/50 text-blue-400',
@@ -100,6 +102,14 @@ function ChecklistItemCard({ item, category, onUpdate, isExpanded, onToggleExpan
     amber: 'border-l-amber-500'
   };
 
+  const handleStatusChange = (newStatus) => {
+    onUpdate(category.id, 'status', newStatus);
+    // פתיחה אוטומטית של ההערות אם בחרו "מצב מצוי"
+    if (newStatus === 'current' && !isExpanded) {
+      onToggleExpand(category.id);
+    }
+  };
+
   return (
     <Card className={`bg-horizon-card border-horizon border-l-4 ${categoryColors[category.color]} transition-all hover:shadow-lg`}>
       <CardContent className="p-4">
@@ -111,26 +121,62 @@ function ChecklistItemCard({ item, category, onUpdate, isExpanded, onToggleExpan
             </div>
             <p className="text-sm text-horizon-accent mb-3">{category.description}</p>
             
-            {/* כפתורי מצב רצוי/מצוי */}
-            <div className="flex gap-2 mb-3">
-              <Button
-                size="sm"
-                variant={item.status === 'desired' ? 'default' : 'outline'}
-                onClick={() => onUpdate(category.id, 'status', 'desired')}
-                className={item.status === 'desired' ? 'bg-green-600 hover:bg-green-700 text-white' : 'border-green-500/50 text-green-400 hover:bg-green-500/10'}
-              >
-                <CheckCircle className="w-4 h-4 ml-1" />
-                מצב רצוי
-              </Button>
-              <Button
-                size="sm"
-                variant={item.status === 'current' ? 'default' : 'outline'}
-                onClick={() => onUpdate(category.id, 'status', 'current')}
-                className={item.status === 'current' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'border-blue-500/50 text-blue-400 hover:bg-blue-500/10'}
-              >
-                <Circle className="w-4 h-4 ml-1" />
-                מצב מצוי
-              </Button>
+            {/* כפתורי מצב רצוי/מצוי עם הסבר */}
+            <div className="flex gap-2 mb-3 items-center flex-wrap">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant={item.status === 'desired' ? 'default' : 'outline'}
+                      onClick={() => handleStatusChange('desired')}
+                      disabled={isUpdating}
+                      className={item.status === 'desired' ? 'bg-green-600 hover:bg-green-700 text-white' : 'border-green-500/50 text-green-400 hover:bg-green-500/10'}
+                    >
+                      {isUpdating && item.status === 'desired' ? (
+                        <Loader2 className="w-4 h-4 ml-1 animate-spin" />
+                      ) : (
+                        <CheckCircle className="w-4 h-4 ml-1" />
+                      )}
+                      מצב רצוי
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="bg-green-600 text-white">
+                    <p className="max-w-xs">המצב האידיאלי שאליו אתה רוצה להגיע</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant={item.status === 'current' ? 'default' : 'outline'}
+                      onClick={() => handleStatusChange('current')}
+                      disabled={isUpdating}
+                      className={item.status === 'current' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'border-blue-500/50 text-blue-400 hover:bg-blue-500/10'}
+                    >
+                      {isUpdating && item.status === 'current' ? (
+                        <Loader2 className="w-4 h-4 ml-1 animate-spin" />
+                      ) : (
+                        <Circle className="w-4 h-4 ml-1" />
+                      )}
+                      מצב מצוי
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="bg-blue-600 text-white">
+                    <p className="max-w-xs">המצב הנוכחי שלך בתחום זה - תאר בהערות מה הסיטואציה כיום</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              {item.status === 'current' && !item.notes && (
+                <Badge variant="outline" className="text-yellow-400 border-yellow-400 text-xs animate-pulse">
+                  <AlertCircle className="w-3 h-3 ml-1" />
+                  הוסף הערות
+                </Badge>
+              )}
             </div>
           </div>
 
@@ -149,12 +195,16 @@ function ChecklistItemCard({ item, category, onUpdate, isExpanded, onToggleExpan
           <div className="mt-4 pt-4 border-t border-horizon">
             <Label className="text-horizon-accent text-sm mb-2 block">
               <MessageSquare className="w-4 h-4 inline ml-1" />
-              הערות עבור {category.title}
+              {item.status === 'current' ? 'תאר את המצב הנוכחי בתחום זה' : `הערות עבור ${category.title}`}
             </Label>
             <Textarea
               value={item.notes || ''}
               onChange={(e) => onUpdate(category.id, 'notes', e.target.value)}
-              placeholder={`רשום הערות לגבי ${category.title}...`}
+              placeholder={
+                item.status === 'current' 
+                  ? 'מה המצב הנוכחי? מה הבעיות? מה צריך לשפר?'
+                  : `רשום הערות לגבי ${category.title}...`
+              }
               className="bg-horizon-dark border-horizon text-horizon-text min-h-[80px]"
             />
           </div>
@@ -263,18 +313,18 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
   const [expandedItems, setExpandedItems] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [isSaving, setIsSaving] = useState(false);
+  const [updatingItemId, setUpdatingItemId] = useState(null);
   
   // בדיקת הרשאות: רק אדמין ומנהל מחלקה יכולים לערוך
   const canEdit = currentUser?.role === 'admin' || currentUser?.user_type === 'department_head';
 
   const today = new Date().toISOString().split('T')[0];
 
-  // טעינת צ'קליסט יומי - שימוש בישות נפרדת (לא CustomerGoal)
+  // טעינת צ'קליסט יומי
   const { data: todayChecklist, isLoading: isLoadingToday } = useQuery({
     queryKey: ['dailyChecklist360', customer?.email, today],
     queryFn: async () => {
-      const checklists = await base44.entities.DailyChecklist360?.filter({
+      const checklists = await base44.entities.DailyChecklist360.filter({
         customer_email: customer.email,
         date: today
       });
@@ -296,30 +346,8 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
         created_by: currentUser?.email
       };
 
-      // בדיקה אם הישות קיימת
-      if (base44.entities.DailyChecklist360) {
-        const created = await base44.entities.DailyChecklist360.create(newChecklist);
-        return created;
-      }
-      
-      // fallback - שמירה ב-CustomerGoal עם task_type מיוחד
-      const fallbackChecklist = await base44.entities.CustomerGoal.create({
-        customer_email: customer.email,
-        name: `צ'קליסט 360 - ${new Date().toLocaleDateString('he-IL')}`,
-        task_type: 'daily_checklist_360',
-        start_date: today,
-        end_date: today,
-        status: 'in_progress',
-        is_active: true,
-        checklist_items: newChecklist.items,
-        notes: ''
-      });
-      
-      return {
-        ...fallbackChecklist,
-        items: fallbackChecklist.checklist_items,
-        date: today
-      };
+      const created = await base44.entities.DailyChecklist360.create(newChecklist);
+      return created;
     },
     enabled: isOpen && !!customer?.email
   });
@@ -331,83 +359,117 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
       const startDate = new Date(selectedYear, selectedMonth, 1).toISOString().split('T')[0];
       const endDate = new Date(selectedYear, selectedMonth + 1, 0).toISOString().split('T')[0];
       
-      // נסה לטעון מישות DailyChecklist360
-      if (base44.entities.DailyChecklist360) {
-        return await base44.entities.DailyChecklist360.filter({
-          customer_email: customer.email,
-          date: { $gte: startDate, $lte: endDate }
-        });
-      }
-      
-      // fallback
-      const goals = await base44.entities.CustomerGoal.filter({
+      return await base44.entities.DailyChecklist360.filter({
         customer_email: customer.email,
-        task_type: 'daily_checklist_360',
-        start_date: { $gte: startDate, $lte: endDate }
+        date: { $gte: startDate, $lte: endDate }
       });
-      
-      return goals.map(g => ({
-        ...g,
-        items: g.checklist_items,
-        date: g.start_date
-      }));
     },
     enabled: isOpen && !!customer?.email && activeTab === 'monthly'
   });
 
-  // עדכון סעיף בצ'קליסט
-  const handleUpdateItem = async (categoryId, field, value) => {
-    if (!todayChecklist) return;
+  // Mutation לעדכון סעיף בצ'קליסט עם optimistic updates
+  const updateItemMutation = useMutation({
+    mutationFn: async ({ categoryId, field, value }) => {
+      if (!todayChecklist) return;
 
-    const updatedItems = todayChecklist.items.map(item => {
-      if (item.category_id === categoryId) {
-        return { ...item, [field]: value };
-      }
-      return item;
-    });
+      const updatedItems = todayChecklist.items.map(item => {
+        if (item.category_id === categoryId) {
+          return { ...item, [field]: value };
+        }
+        return item;
+      });
 
-    setIsSaving(true);
-    try {
-      if (base44.entities.DailyChecklist360) {
-        await base44.entities.DailyChecklist360.update(todayChecklist.id, {
-          items: updatedItems
-        });
-      } else {
-        await base44.entities.CustomerGoal.update(todayChecklist.id, {
-          checklist_items: updatedItems
+      await base44.entities.DailyChecklist360.update(todayChecklist.id, {
+        items: updatedItems,
+        last_updated_by: currentUser?.email
+      });
+
+      return { categoryId, field, value, updatedItems };
+    },
+    onMutate: async ({ categoryId, field, value }) => {
+      // ביטול queries קודמים
+      await queryClient.cancelQueries(['dailyChecklist360', customer?.email, today]);
+      
+      // שמירת snapshot של הנתונים הקודמים
+      const previousChecklist = queryClient.getQueryData(['dailyChecklist360', customer?.email, today]);
+      
+      // עדכון אופטימיסטי של ה-cache
+      queryClient.setQueryData(['dailyChecklist360', customer?.email, today], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          items: old.items.map(item => {
+            if (item.category_id === categoryId) {
+              return { ...item, [field]: value };
+            }
+            return item;
+          })
+        };
+      });
+
+      setUpdatingItemId(categoryId);
+      
+      return { previousChecklist };
+    },
+    onSuccess: (data) => {
+      if (data?.field === 'status') {
+        toast.success('הסטטוס עודכן בהצלחה', {
+          description: `הסעיף עודכן ל${data.value === 'desired' ? 'מצב רצוי' : 'מצב מצוי'}`,
+          duration: 2000
         });
       }
-      queryClient.invalidateQueries(['dailyChecklist360', customer.email, today]);
-    } catch (error) {
+    },
+    onError: (error, variables, context) => {
+      // שחזור הנתונים הקודמים במקרה של שגיאה
+      if (context?.previousChecklist) {
+        queryClient.setQueryData(
+          ['dailyChecklist360', customer?.email, today],
+          context.previousChecklist
+        );
+      }
       console.error('Error updating checklist item:', error);
-      alert('שגיאה בעדכון הסעיף');
-    } finally {
-      setIsSaving(false);
+      toast.error('שגיאה בעדכון הסעיף', {
+        description: 'נסה שוב',
+        duration: 3000
+      });
+    },
+    onSettled: () => {
+      setUpdatingItemId(null);
+      queryClient.invalidateQueries(['dailyChecklist360', customer?.email, today]);
     }
+  });
+
+  const handleUpdateItem = (categoryId, field, value) => {
+    updateItemMutation.mutate({ categoryId, field, value });
   };
 
-  // שמירת הערות כלליות
-  const handleSaveGeneralNotes = async (notes) => {
-    if (!todayChecklist) return;
+  // Mutation לשמירת הערות כלליות
+  const saveNotesMutation = useMutation({
+    mutationFn: async (notes) => {
+      if (!todayChecklist) return;
 
-    setIsSaving(true);
-    try {
-      if (base44.entities.DailyChecklist360) {
-        await base44.entities.DailyChecklist360.update(todayChecklist.id, {
-          general_notes: notes
-        });
-      } else {
-        await base44.entities.CustomerGoal.update(todayChecklist.id, {
-          notes: notes
-        });
-      }
-      queryClient.invalidateQueries(['dailyChecklist360', customer.email, today]);
-    } catch (error) {
+      await base44.entities.DailyChecklist360.update(todayChecklist.id, {
+        general_notes: notes,
+        last_updated_by: currentUser?.email
+      });
+
+      return notes;
+    },
+    onSuccess: () => {
+      toast.success('ההערות נשמרו בהצלחה', { duration: 2000 });
+      queryClient.invalidateQueries(['dailyChecklist360', customer?.email, today]);
+    },
+    onError: (error) => {
       console.error('Error saving notes:', error);
-      alert('שגיאה בשמירת הערות');
-    } finally {
-      setIsSaving(false);
+      toast.error('שגיאה בשמירת הערות', {
+        description: 'נסה שוב',
+        duration: 3000
+      });
     }
+  });
+
+  const handleSaveGeneralNotes = (notes) => {
+    saveNotesMutation.mutate(notes);
   };
 
   const toggleExpand = (categoryId) => {
@@ -477,6 +539,28 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
           </TabsList>
 
           <TabsContent value="daily" className="mt-4 space-y-4">
+            {/* הסבר המושגים */}
+            <Card className="bg-gradient-to-l from-blue-500/10 to-purple-500/10 border-blue-500/30">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Info className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm space-y-2">
+                    <p className="text-horizon-text font-semibold">הסבר המושגים:</p>
+                    <div className="flex flex-wrap gap-4">
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-green-500/20 text-green-400 border-green-500/50">רצוי</Badge>
+                        <span className="text-horizon-accent">= המצב האידיאלי שאליך אתה רוצה להגיע</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50">מצוי</Badge>
+                        <span className="text-horizon-accent">= המצב הנוכחי שלך (תאר בהערות מה הסיטואציה כיום)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* כרטיס התקדמות יומית */}
             <Card className="card-horizon bg-gradient-to-l from-horizon-primary/10 to-transparent">
               <CardContent className="p-6">
@@ -520,6 +604,7 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
                     onUpdate={handleUpdateItem}
                     isExpanded={expandedItems.includes(category.id)}
                     onToggleExpand={toggleExpand}
+                    isUpdating={updatingItemId === category.id}
                   />
                 );
               })}
@@ -540,7 +625,7 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
                   placeholder="רשום כאן תובנות כלליות, בעיות שזוהו, או דברים שצריך לעקוב אחריהם..."
                   className="bg-horizon-card border-horizon text-horizon-text min-h-[100px]"
                 />
-                {isSaving && (
+                {saveNotesMutation.isPending && (
                   <div className="flex items-center gap-2 text-horizon-accent text-sm">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     שומר...
