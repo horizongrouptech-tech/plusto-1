@@ -1,6 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
 import PdfPrinter from 'npm:pdfmake@0.2.10';
-import { ChartJSNodeCanvas } from 'npm:chartjs-node-canvas@4.1.6';
 
 // Helper functions
 const formatCurrency = (num) => {
@@ -23,16 +22,174 @@ const formatK = (num) => {
   return `₪${(num / 1000).toFixed(0)}K`;
 };
 
-// יצירת גרף באמצעות ChartJS
-const createChartImage = async (config, width = 800, height = 500) => {
-  const chartJSNodeCanvas = new ChartJSNodeCanvas({ 
-    width, 
-    height,
-    backgroundColour: 'white'
+// יצירת גרף עמודות באמצעות SVG טהור
+const createBarChartSVG = (data, config) => {
+  const { width = 700, height = 350, datasets, title, colors } = config;
+  const chartArea = { left: 60, right: 40, top: 80, bottom: 60 };
+  const chartWidth = width - chartArea.left - chartArea.right;
+  const chartHeight = height - chartArea.top - chartArea.bottom;
+  
+  // מציאת הערך המקסימלי
+  const allValues = datasets.flatMap(ds => ds.data);
+  const maxValue = Math.max(...allValues.filter(v => v > 0)) * 1.15;
+  
+  // רוחב עמודה
+  const barWidth = chartWidth / (data.length * (datasets.length + 1));
+  const groupWidth = barWidth * datasets.length;
+  
+  let bars = '';
+  let labels = '';
+  let gridLines = '';
+  let dataLabels = '';
+  
+  // קווי רשת
+  for (let i = 0; i <= 5; i++) {
+    const y = chartArea.top + (chartHeight / 5) * i;
+    const value = maxValue - (maxValue / 5) * i;
+    gridLines += `<line x1="${chartArea.left}" y1="${y}" x2="${width - chartArea.right}" y2="${y}" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="5,5"/>`;
+    labels += `<text x="${chartArea.left - 10}" y="${y + 5}" text-anchor="end" font-size="11" fill="#666" font-weight="600">${formatK(value)}</text>`;
+  }
+  
+  // עמודות ותוויות נתונים
+  data.forEach((item, index) => {
+    const groupX = chartArea.left + (index * (groupWidth + barWidth));
+    
+    datasets.forEach((dataset, dsIndex) => {
+      const value = dataset.data[index];
+      if (value > 0) {
+        const barHeight = (value / maxValue) * chartHeight;
+        const x = groupX + (dsIndex * barWidth);
+        const y = chartArea.top + chartHeight - barHeight;
+        
+        // גרדיאנט
+        const gradientId = `grad-${index}-${dsIndex}`;
+        bars += `<defs><linearGradient id="${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:${dataset.color};stop-opacity:0.9" />
+          <stop offset="100%" style="stop-color:${dataset.color};stop-opacity:0.7" />
+        </linearGradient></defs>`;
+        
+        // עמודה
+        bars += `<rect x="${x}" y="${y}" width="${barWidth * 0.85}" height="${barHeight}" fill="url(#${gradientId})" rx="6"/>`;
+        
+        // תווית ערך
+        dataLabels += `<text x="${x + barWidth * 0.425}" y="${y - 8}" text-anchor="middle" font-size="11" font-weight="bold" fill="${dataset.color}">${formatK(value)}</text>`;
+      }
+    });
+    
+    // שם החודש (RTL)
+    const labelX = groupX + groupWidth / 2;
+    labels += `<text x="${labelX}" y="${height - chartArea.bottom + 25}" text-anchor="middle" font-size="13" font-weight="600" fill="#333">${item.name}</text>`;
   });
   
-  const imageBuffer = await chartJSNodeCanvas.renderToBuffer(config);
-  return `data:image/png;base64,${imageBuffer.toString('base64')}`;
+  // מקרא
+  let legend = '';
+  datasets.forEach((dataset, idx) => {
+    const legendX = width - chartArea.right - (datasets.length - idx) * 150;
+    legend += `<circle cx="${legendX}" cy="30" r="5" fill="${dataset.color}"/>`;
+    legend += `<text x="${legendX + 15}" y="35" font-size="13" font-weight="600" fill="#333">${dataset.label}</text>`;
+  });
+  
+  // כותרת
+  const titleText = `<text x="${width / 2}" y="25" text-anchor="middle" font-size="16" font-weight="bold" fill="#333">${title}</text>`;
+  
+  const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" direction="rtl">
+    <rect width="${width}" height="${height}" fill="white"/>
+    ${titleText}
+    ${legend}
+    ${gridLines}
+    ${bars}
+    ${dataLabels}
+    ${labels}
+  </svg>`;
+  
+  return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
+};
+
+// יצירת גרף קווים באמצעות SVG טהור
+const createLineChartSVG = (data, config) => {
+  const { width = 700, height = 350, datasets, title } = config;
+  const chartArea = { left: 60, right: 40, top: 80, bottom: 60 };
+  const chartWidth = width - chartArea.left - chartArea.right;
+  const chartHeight = height - chartArea.top - chartArea.bottom;
+  
+  const allValues = datasets.flatMap(ds => ds.data);
+  const maxValue = Math.max(...allValues.filter(v => v > 0)) * 1.15;
+  const minValue = Math.min(...allValues.filter(v => v !== 0)) < 0 ? Math.min(...allValues) * 1.15 : 0;
+  const valueRange = maxValue - minValue;
+  
+  const pointSpacing = chartWidth / (data.length - 1);
+  
+  let lines = '';
+  let points = '';
+  let gridLines = '';
+  let labels = '';
+  let dataLabels = '';
+  
+  // קווי רשת
+  for (let i = 0; i <= 5; i++) {
+    const y = chartArea.top + (chartHeight / 5) * i;
+    const value = maxValue - (valueRange / 5) * i;
+    gridLines += `<line x1="${chartArea.left}" y1="${y}" x2="${width - chartArea.right}" y2="${y}" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="5,5"/>`;
+    labels += `<text x="${chartArea.left - 10}" y="${y + 5}" text-anchor="end" font-size="11" fill="#666" font-weight="600">${formatK(value)}</text>`;
+  }
+  
+  // קווים ונקודות
+  datasets.forEach((dataset, dsIndex) => {
+    let pathData = '';
+    
+    dataset.data.forEach((value, index) => {
+      if (value !== 0) {
+        const x = chartArea.left + (index * pointSpacing);
+        const y = chartArea.top + chartHeight - ((value - minValue) / valueRange * chartHeight);
+        
+        if (pathData === '') {
+          pathData = `M ${x} ${y}`;
+        } else {
+          pathData += ` L ${x} ${y}`;
+        }
+        
+        // נקודה
+        points += `<circle cx="${x}" cy="${y}" r="${dataset.strokeWidth === 5 ? 7 : 6}" fill="${dataset.color}" stroke="white" stroke-width="3"/>`;
+        
+        // תווית ערך
+        if (value !== 0) {
+          dataLabels += `<text x="${x}" y="${y - 15}" text-anchor="middle" font-size="${dataset.strokeWidth === 5 ? 12 : 11}" font-weight="${dataset.strokeWidth === 5 ? 800 : 700}" fill="${dataset.color}">${formatK(value)}</text>`;
+        }
+      }
+    });
+    
+    // קו
+    lines += `<path d="${pathData}" stroke="${dataset.color}" stroke-width="${dataset.strokeWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  });
+  
+  // שמות חודשים
+  data.forEach((item, index) => {
+    const x = chartArea.left + (index * pointSpacing);
+    labels += `<text x="${x}" y="${height - chartArea.bottom + 25}" text-anchor="middle" font-size="13" font-weight="600" fill="#333">${item.name}</text>`;
+  });
+  
+  // מקרא
+  let legend = '';
+  datasets.forEach((dataset, idx) => {
+    const legendX = width - chartArea.right - (datasets.length - idx) * 150;
+    legend += `<line x1="${legendX - 10}" y1="30" x2="${legendX + 10}" y2="30" stroke="${dataset.color}" stroke-width="${dataset.strokeWidth}"/>`;
+    legend += `<text x="${legendX + 20}" y="35" font-size="13" font-weight="600" fill="#333">${dataset.label}</text>`;
+  });
+  
+  const titleText = `<text x="${width / 2}" y="25" text-anchor="middle" font-size="16" font-weight="bold" fill="#333">${title}</text>`;
+  
+  const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" direction="rtl">
+    <rect width="${width}" height="${height}" fill="white"/>
+    ${titleText}
+    ${legend}
+    ${gridLines}
+    ${lines}
+    ${points}
+    ${dataLabels}
+    ${labels}
+  </svg>`;
+  
+  return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
 };
 
 const getTopProducts = (services, sortBy = 'profit', limit = 10) => {
@@ -285,92 +442,23 @@ Deno.serve(async (req) => {
           alignment: 'right'
         });
 
-        const salesChartImage = await createChartImage({
-          type: 'bar',
-          data: {
-            labels: salesComparisonData.map(d => d.name),
-            datasets: [
-              {
-                label: 'תכנון מכירות',
-                data: salesComparisonData.map(d => d.planned),
-                backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                borderColor: '#3b82f6',
-                borderWidth: 2,
-                borderRadius: 8,
-                maxBarThickness: 60
-              },
-              {
-                label: 'ביצוע מכירות',
-                data: salesComparisonData.map(d => d.actual),
-                backgroundColor: 'rgba(16, 185, 129, 0.8)',
-                borderColor: '#10B981',
-                borderWidth: 2,
-                borderRadius: 8,
-                maxBarThickness: 60
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: {
-                display: true,
-                position: 'top',
-                rtl: true,
-                labels: {
-                  font: { size: 14, weight: 'bold' },
-                  color: '#333',
-                  usePointStyle: true,
-                  padding: 20
-                }
-              },
-              datalabels: {
-                display: true,
-                anchor: 'end',
-                align: 'top',
-                color: '#333',
-                font: { size: 11, weight: 'bold' },
-                formatter: (value) => value > 0 ? formatK(value) : ''
-              }
+        const salesChartImage = createBarChartSVG(salesComparisonData, {
+          width: 700,
+          height: 350,
+          title: 'תכנון מול ביצוע - מכירות',
+          datasets: [
+            {
+              label: 'תכנון מכירות',
+              data: salesComparisonData.map(d => d.planned),
+              color: '#3b82f6'
             },
-            scales: {
-              x: {
-                ticks: { 
-                  font: { size: 13, weight: '600' }, 
-                  color: '#333',
-                  reverse: true
-                },
-                grid: { display: false }
-              },
-              y: {
-                ticks: { 
-                  font: { size: 12, weight: '600' }, 
-                  color: '#333',
-                  callback: (value) => formatK(value)
-                },
-                grid: { color: 'rgba(0,0,0,0.05)' }
-              }
+            {
+              label: 'ביצוע מכירות',
+              data: salesComparisonData.map(d => d.actual),
+              color: '#10B981'
             }
-          },
-          plugins: [{
-            id: 'customLabels',
-            afterDatasetsDraw: (chart) => {
-              const ctx = chart.ctx;
-              chart.data.datasets.forEach((dataset, i) => {
-                const meta = chart.getDatasetMeta(i);
-                meta.data.forEach((bar, index) => {
-                  const data = dataset.data[index];
-                  if (data > 0) {
-                    ctx.fillStyle = dataset.borderColor;
-                    ctx.font = 'bold 11px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(formatK(data), bar.x, bar.y - 8);
-                  }
-                });
-              });
-            }
-          }]
-        }, 800, 400);
+          ]
+        });
 
         content.push({
           image: salesChartImage,
@@ -497,93 +585,28 @@ Deno.serve(async (req) => {
             alignment: 'right'
           });
 
-          const revenueChartImage = await createChartImage({
-            type: 'bar',
-            data: {
-              labels: chartData.map(d => d.name),
-              datasets: [
-                {
-                  label: 'הכנסות',
-                  data: chartData.map(d => d.revenue),
-                  backgroundColor: 'rgba(50, 172, 193, 0.85)',
-                  borderColor: '#32acc1',
-                  borderWidth: 2,
-                  borderRadius: 8,
-                  maxBarThickness: 45
-                },
-                {
-                  label: 'עלות מכר',
-                  data: chartData.map(d => d.cogs),
-                  backgroundColor: 'rgba(249, 115, 22, 0.85)',
-                  borderColor: '#f97316',
-                  borderWidth: 2,
-                  borderRadius: 8,
-                  maxBarThickness: 45
-                },
-                {
-                  label: 'רווח גולמי',
-                  data: chartData.map(d => d.grossProfit),
-                  backgroundColor: 'rgba(34, 197, 94, 0.85)',
-                  borderColor: '#22c55e',
-                  borderWidth: 2,
-                  borderRadius: 8,
-                  maxBarThickness: 45
-                }
-              ]
-            },
-            options: {
-              responsive: true,
-              plugins: {
-                legend: {
-                  display: true,
-                  position: 'top',
-                  rtl: true,
-                  labels: {
-                    font: { size: 14, weight: 'bold' },
-                    color: '#333',
-                    usePointStyle: true,
-                    padding: 20
-                  }
-                }
+          const revenueChartImage = createBarChartSVG(chartData, {
+            width: 700,
+            height: 350,
+            title: 'הכנסות, עלות מכר ורווח גולמי',
+            datasets: [
+              {
+                label: 'הכנסות',
+                data: chartData.map(d => d.revenue),
+                color: '#32acc1'
               },
-              scales: {
-                x: {
-                  ticks: { 
-                    font: { size: 13, weight: '600' }, 
-                    color: '#333',
-                    reverse: true
-                  },
-                  grid: { display: false }
-                },
-                y: {
-                  ticks: { 
-                    font: { size: 12, weight: '600' }, 
-                    color: '#333',
-                    callback: (value) => formatK(value)
-                  },
-                  grid: { color: 'rgba(0,0,0,0.05)' }
-                }
+              {
+                label: 'עלות מכר',
+                data: chartData.map(d => d.cogs),
+                color: '#f97316'
+              },
+              {
+                label: 'רווח גולמי',
+                data: chartData.map(d => d.grossProfit),
+                color: '#22c55e'
               }
-            },
-            plugins: [{
-              id: 'revenueLabels',
-              afterDatasetsDraw: (chart) => {
-                const ctx = chart.ctx;
-                chart.data.datasets.forEach((dataset, i) => {
-                  const meta = chart.getDatasetMeta(i);
-                  meta.data.forEach((bar, index) => {
-                    const data = dataset.data[index];
-                    if (data > 0) {
-                      ctx.fillStyle = dataset.borderColor;
-                      ctx.font = 'bold 11px Arial';
-                      ctx.textAlign = 'center';
-                      ctx.fillText(formatK(data), bar.x, bar.y - 8);
-                    }
-                  });
-                });
-              }
-            }]
-          }, 800, 400);
+            ]
+          });
 
           content.push({
             image: revenueChartImage,
@@ -612,84 +635,23 @@ Deno.serve(async (req) => {
           alignment: 'right'
         });
 
-        const expensesChartImage = await createChartImage({
-          type: 'bar',
-          data: {
-            labels: expensesComparisonData.map(d => d.name),
-            datasets: [
-              {
-                label: 'תכנון',
-                data: expensesComparisonData.map(d => d.planned),
-                backgroundColor: 'rgba(245, 158, 11, 0.8)',
-                borderColor: '#f59e0b',
-                borderWidth: 2,
-                borderRadius: 8,
-                maxBarThickness: 60
-              },
-              {
-                label: 'ביצוע',
-                data: expensesComparisonData.map(d => d.actual),
-                backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                borderColor: '#ef4444',
-                borderWidth: 2,
-                borderRadius: 8,
-                maxBarThickness: 60
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: {
-                display: true,
-                position: 'top',
-                rtl: true,
-                labels: {
-                  font: { size: 14, weight: 'bold' },
-                  color: '#333',
-                  usePointStyle: true,
-                  padding: 20
-                }
-              }
+        const expensesChartImage = createBarChartSVG(expensesComparisonData, {
+          width: 700,
+          height: 350,
+          title: 'תכנון מול ביצוע - הוצאות',
+          datasets: [
+            {
+              label: 'תכנון',
+              data: expensesComparisonData.map(d => d.planned),
+              color: '#f59e0b'
             },
-            scales: {
-              x: {
-                ticks: { 
-                  font: { size: 13, weight: '600' }, 
-                  color: '#333',
-                  reverse: true
-                },
-                grid: { display: false }
-              },
-              y: {
-                ticks: { 
-                  font: { size: 12, weight: '600' }, 
-                  color: '#333',
-                  callback: (value) => formatK(value)
-                },
-                grid: { color: 'rgba(0,0,0,0.05)' }
-              }
+            {
+              label: 'ביצוע',
+              data: expensesComparisonData.map(d => d.actual),
+              color: '#ef4444'
             }
-          },
-          plugins: [{
-            id: 'expenseLabels',
-            afterDatasetsDraw: (chart) => {
-              const ctx = chart.ctx;
-              chart.data.datasets.forEach((dataset, i) => {
-                const meta = chart.getDatasetMeta(i);
-                meta.data.forEach((bar, index) => {
-                  const data = dataset.data[index];
-                  if (data > 0) {
-                    ctx.fillStyle = dataset.borderColor;
-                    ctx.font = 'bold 11px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(formatK(data), bar.x, bar.y - 8);
-                  }
-                });
-              });
-            }
-          }]
-        }, 800, 400);
+          ]
+        });
 
         content.push({
           image: expensesChartImage,
@@ -786,102 +748,31 @@ Deno.serve(async (req) => {
           alignment: 'right'
         });
 
-        const profitTrendImage = await createChartImage({
-          type: 'line',
-          data: {
-            labels: chartData.map(d => d.name),
-            datasets: [
-              {
-                label: 'רווח גולמי',
-                data: chartData.map(d => d.grossProfit),
-                borderColor: '#22c55e',
-                backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                borderWidth: 4,
-                pointRadius: 6,
-                pointBackgroundColor: '#22c55e',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 3,
-                tension: 0.3
-              },
-              {
-                label: 'רווח תפעולי',
-                data: chartData.map(d => d.operatingProfit),
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                borderWidth: 4,
-                pointRadius: 6,
-                pointBackgroundColor: '#3b82f6',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 3,
-                tension: 0.3
-              },
-              {
-                label: 'רווח נקי',
-                data: chartData.map(d => d.netProfit),
-                borderColor: '#10B981',
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                borderWidth: 5,
-                pointRadius: 7,
-                pointBackgroundColor: '#10B981',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 3,
-                tension: 0.3
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: {
-                display: true,
-                position: 'top',
-                rtl: true,
-                labels: {
-                  font: { size: 14, weight: 'bold' },
-                  color: '#333',
-                  usePointStyle: true,
-                  padding: 20
-                }
-              }
+        const profitTrendImage = createLineChartSVG(chartData, {
+          width: 700,
+          height: 350,
+          title: 'מגמת רווחיות',
+          datasets: [
+            {
+              label: 'רווח גולמי',
+              data: chartData.map(d => d.grossProfit),
+              color: '#22c55e',
+              strokeWidth: 4
             },
-            scales: {
-              x: {
-                ticks: { 
-                  font: { size: 13, weight: '600' }, 
-                  color: '#333',
-                  reverse: true
-                },
-                grid: { display: false }
-              },
-              y: {
-                ticks: { 
-                  font: { size: 12, weight: '600' }, 
-                  color: '#333',
-                  callback: (value) => formatK(value)
-                },
-                grid: { color: 'rgba(0,0,0,0.05)' }
-              }
+            {
+              label: 'רווח תפעולי',
+              data: chartData.map(d => d.operatingProfit),
+              color: '#3b82f6',
+              strokeWidth: 4
+            },
+            {
+              label: 'רווח נקי',
+              data: chartData.map(d => d.netProfit),
+              color: '#10B981',
+              strokeWidth: 5
             }
-          },
-          plugins: [{
-            id: 'profitLabels',
-            afterDatasetsDraw: (chart) => {
-              const ctx = chart.ctx;
-              chart.data.datasets.forEach((dataset, i) => {
-                const meta = chart.getDatasetMeta(i);
-                meta.data.forEach((point, index) => {
-                  const data = dataset.data[index];
-                  if (data !== 0 && data !== null) {
-                    ctx.fillStyle = dataset.borderColor;
-                    ctx.font = i === 2 ? 'bold 12px Arial' : 'bold 11px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(formatK(data), point.x, point.y - 12);
-                  }
-                });
-              });
-            }
-          }]
-        }, 800, 400);
+          ]
+        });
 
         content.push({
           image: profitTrendImage,
