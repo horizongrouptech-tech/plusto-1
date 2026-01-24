@@ -910,7 +910,7 @@ Deno.serve(async (req) => {
           return {
             columns: [
               { 
-                text: 'Horizon ProfitBooster', 
+                text: 'Plusto', 
                 alignment: 'left', 
                 fontSize: 10, 
                 color: '#32acc1',

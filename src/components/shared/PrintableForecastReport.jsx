@@ -367,7 +367,7 @@ export default function PrintableForecastReport({ forecast, type }) {
 
       {/* Footer */}
       <div className="footer">
-        <p>דוח זה נוצר באמצעות מערכת ProfitBooster - Horizon Group</p>
+        <p>דוח זה נוצר באמצעות מערכת Plusto</p>
         <p>תאריך הפקה: {format(new Date(), 'dd/MM/yyyy HH:mm', { locale: he })}</p>
       </div>
     </div>

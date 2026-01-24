@@ -272,7 +272,7 @@ export default function SupplierAnalysisPage() {
         <!-- Header -->
         <div style="text-align: center; border-bottom: 3px solid #fc9f67; padding-bottom: 20px; margin-bottom: 30px;">
             <h1 style="color: #fc9f67; margin: 0; font-size: 24px;">אישור החלפת ספק</h1>
-            <p style="color: #666; margin: 5px 0 0 0; font-size: 14px;">ProfitBooster System</p>
+            <p style="color: #666; margin: 5px 0 0 0; font-size: 14px;">Plusto System</p>
         </div>
 
         <!-- Customer Info -->
@@ -353,7 +353,7 @@ export default function SupplierAnalysisPage() {
 
         <!-- Footer -->
         <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e0e0e0; color: #666; font-size: 14px;">
-            <p style="margin: 0;">בברכה,<br><strong style="color: #fc9f67;">צוות ProfitBooster</strong></p>
+            <p style="margin: 0;">בברכה,<br><strong style="color: #fc9f67;">צוות Plusto</strong></p>
             <p style="margin: 10px 0 0 0; font-size: 12px;">
                 📧 office@horizon.org.il | 📞 053-302-7572
             </p>

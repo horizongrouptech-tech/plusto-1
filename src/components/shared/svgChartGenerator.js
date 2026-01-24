@@ -1,41 +1,45 @@
 /**
- * SVG Chart Generator for PDF Export
- * יוצר גרפים כ-SVG strings להטמעה ישירה ב-HTML
- * Best Practice: SVG מתרנדר מושלם בדפדפן ובהדפסה
+ * SVG Chart Generator for PDF Export - Professional Edition
+ * מחולל גרפים מקצועי לייצוא PDF
  * 
- * v2.0 - שיפורים לקריאות:
- * - הגדלת מימדי הגרפים
- * - סיבוב תוויות ציר X
- * - מקרא אנכי למניעת חפיפה
- * - פונטים גדולים יותר
+ * v3.0 - עיצוב מקצועי מלא:
+ * - תוויות ברורות וקריאות
+ * - צבעים מקצועיים
+ * - ריווח מושלם
+ * - תמיכה מלאה בעברית RTL
  */
 
 const COLORS = {
-  primary: '#32acc1',
-  secondary: '#83ddec',
-  orange: '#fc9f67',
-  green: '#22c55e',
-  red: '#ef4444',
-  blue: '#3b82f6',
-  purple: '#8b5cf6',
-  yellow: '#f59e0b',
-  text: '#1a1a1a',
-  textLight: '#5a6c7d',
-  grid: '#e1e8ed',
+  primary: '#0891b2',      // Cyan 600
+  secondary: '#06b6d4',    // Cyan 500
+  orange: '#f97316',       // Orange 500
+  green: '#10b981',        // Emerald 500
+  red: '#ef4444',          // Red 500
+  blue: '#3b82f6',         // Blue 500
+  purple: '#8b5cf6',       // Violet 500
+  yellow: '#eab308',       // Yellow 500
+  text: '#1e293b',         // Slate 800
+  textLight: '#64748b',    // Slate 500
+  grid: '#e2e8f0',         // Slate 200
   background: '#ffffff'
 };
 
-const MONTH_NAMES = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+// שמות חודשים מקוצרים לקריאות טובה יותר
+const MONTH_NAMES_SHORT = ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יונ', 'יול', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'];
+const MONTH_NAMES_FULL = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 
 /**
  * Format number to currency string
  */
 const formatCurrency = (value, short = true) => {
   if (typeof value !== 'number' || isNaN(value)) return '₪0';
-  if (short && Math.abs(value) >= 1000) {
-    return `₪${(value / 1000).toFixed(0)}K`;
+  if (short && Math.abs(value) >= 1000000) {
+    return `${(value / 1000000).toFixed(1)}M₪`;
   }
-  return `₪${Math.round(value).toLocaleString()}`;
+  if (short && Math.abs(value) >= 1000) {
+    return `${(value / 1000).toFixed(0)}K₪`;
+  }
+  return `${Math.round(value).toLocaleString()}₪`;
 };
 
 /**
@@ -43,11 +47,11 @@ const formatCurrency = (value, short = true) => {
  */
 const calculateAxisScale = (maxValue, minValue = 0) => {
   if (maxValue === 0 && minValue === 0) {
-    return { min: 0, max: 100, ticks: [0, 20, 40, 60, 80, 100], step: 20 };
+    return { min: 0, max: 100, ticks: [0, 25, 50, 75, 100], step: 25 };
   }
   
-  const range = maxValue - minValue;
-  const rawStep = range / 5;
+  const range = Math.max(maxValue - minValue, 1);
+  const rawStep = range / 4;
   const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep || 1)));
   const normalizedStep = rawStep / magnitude;
   
@@ -61,137 +65,145 @@ const calculateAxisScale = (maxValue, minValue = 0) => {
   const niceMax = Math.ceil(maxValue / step) * step;
   
   const ticks = [];
-  for (let v = niceMin; v <= niceMax; v += step) {
-    ticks.push(v);
+  for (let v = niceMin; v <= niceMax + step * 0.1; v += step) {
+    ticks.push(Math.round(v));
   }
   
   return { min: niceMin, max: niceMax, ticks, step };
 };
 
 /**
- * Generate Bar Chart SVG - גרף עמודות משופר
+ * Generate Professional Bar Chart SVG
  */
 export function generateBarChartSVG({
   data,
-  width = 850,
-  height = 420,
+  width = 750,
+  height = 380,
   title,
   subtitle,
   dataKeys,
-  colors,
-  showLabels = false // Default: off for cleaner look
+  colors
 }) {
-  // מרווחים מוגדלים - במיוחד למטה לתוויות מסובבות ולמקרא
-  const margin = { top: 70, right: 40, bottom: 120, left: 90 };
+  const margin = { top: 50, right: 20, bottom: 80, left: 70 };
   const chartWidth = width - margin.left - margin.right;
   const chartHeight = height - margin.top - margin.bottom;
   
+  // Filter data with values
+  const activeData = data.filter(item => 
+    dataKeys.some(key => (item[key.key] || 0) > 0)
+  );
+  
+  if (activeData.length === 0) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" style="font-family: Arial, sans-serif;">
+      <rect width="${width}" height="${height}" fill="white"/>
+      <text x="${width/2}" y="${height/2}" text-anchor="middle" fill="${COLORS.textLight}" font-size="16">אין נתונים להצגה</text>
+    </svg>`;
+  }
+  
   // Calculate max value
   let maxValue = 0;
-  data.forEach(item => {
+  activeData.forEach(item => {
     dataKeys.forEach(key => {
       if (item[key.key] > maxValue) maxValue = item[key.key];
     });
   });
   
   const scale = calculateAxisScale(maxValue);
-  const barGroupWidth = chartWidth / data.length;
-  const barWidth = Math.min((barGroupWidth - 15) / dataKeys.length, 35); // Max bar width
-  const barGap = 3;
+  const barGroupWidth = chartWidth / activeData.length;
+  const totalBarsWidth = dataKeys.length * 20 + (dataKeys.length - 1) * 4;
+  const barWidth = Math.min(20, (barGroupWidth - 20) / dataKeys.length);
   
-  // Build SVG
-  let svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="font-family: Arial, Helvetica, sans-serif; background: white;">
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="font-family: Arial, Helvetica, sans-serif;">
+      <rect width="${width}" height="${height}" fill="white"/>
+      
       <!-- Title -->
-      <text x="${width / 2}" y="28" text-anchor="middle" font-size="20" font-weight="bold" fill="${COLORS.text}">${title}</text>
-      ${subtitle ? `<text x="${width / 2}" y="52" text-anchor="middle" font-size="14" fill="${COLORS.textLight}">${subtitle}</text>` : ''}
+      <text x="${width / 2}" y="25" text-anchor="middle" font-size="18" font-weight="bold" fill="${COLORS.text}" direction="rtl">${title}</text>
+      ${subtitle ? `<text x="${width / 2}" y="42" text-anchor="middle" font-size="12" fill="${COLORS.textLight}" direction="rtl">${subtitle}</text>` : ''}
       
       <!-- Chart Area -->
       <g transform="translate(${margin.left}, ${margin.top})">
-        <!-- Grid Lines & Y Axis Labels -->
+        <!-- Grid Lines -->
         ${scale.ticks.map(tick => {
           const y = chartHeight - (tick / scale.max) * chartHeight;
           return `
-            <line x1="0" y1="${y}" x2="${chartWidth}" y2="${y}" stroke="${COLORS.grid}" stroke-dasharray="4,4"/>
-            <text x="-15" y="${y + 5}" text-anchor="end" font-size="13" font-weight="500" fill="${COLORS.textLight}">${formatCurrency(tick)}</text>
+            <line x1="0" y1="${y}" x2="${chartWidth}" y2="${y}" stroke="${COLORS.grid}" stroke-width="1"/>
+            <text x="-8" y="${y + 4}" text-anchor="end" font-size="11" fill="${COLORS.textLight}">${formatCurrency(tick)}</text>
           `;
         }).join('')}
         
-        <!-- Y Axis Line -->
-        <line x1="0" y1="0" x2="0" y2="${chartHeight}" stroke="${COLORS.grid}" stroke-width="2"/>
-        
         <!-- Bars -->
-        ${data.map((item, i) => {
-          const groupX = i * barGroupWidth;
-          const groupCenterX = groupX + barGroupWidth / 2;
-          const totalBarsWidth = dataKeys.length * barWidth + (dataKeys.length - 1) * barGap;
-          const startX = groupCenterX - totalBarsWidth / 2;
+        ${activeData.map((item, i) => {
+          const groupX = i * barGroupWidth + (barGroupWidth - totalBarsWidth) / 2;
           
           return dataKeys.map((key, j) => {
             const value = item[key.key] || 0;
             const barHeight = scale.max > 0 ? (value / scale.max) * chartHeight : 0;
-            const barX = startX + j * (barWidth + barGap);
+            const barX = groupX + j * (barWidth + 4);
             const barY = chartHeight - barHeight;
-            const color = colors[j] || COLORS.primary;
+            const color = colors[j];
             
-            return `
-              <rect x="${barX}" y="${barY}" width="${barWidth}" height="${barHeight}" fill="${color}" rx="3"/>
-              ${showLabels && value > 0 ? `
-                <text x="${barX + barWidth / 2}" y="${barY - 8}" text-anchor="middle" font-size="11" font-weight="bold" fill="${color}">${formatCurrency(value)}</text>
-              ` : ''}
-            `;
+            return `<rect x="${barX}" y="${barY}" width="${barWidth}" height="${barHeight}" fill="${color}" rx="2"/>`;
           }).join('');
         }).join('')}
         
-        <!-- X Axis Line -->
+        <!-- X Axis -->
         <line x1="0" y1="${chartHeight}" x2="${chartWidth}" y2="${chartHeight}" stroke="${COLORS.grid}" stroke-width="2"/>
         
-        <!-- X Axis Labels - Rotated 45 degrees -->
-        ${data.map((item, i) => {
+        <!-- X Labels -->
+        ${activeData.map((item, i) => {
           const x = i * barGroupWidth + barGroupWidth / 2;
-          return `
-            <g transform="translate(${x}, ${chartHeight + 15})">
-              <text transform="rotate(-45)" text-anchor="end" font-size="13" font-weight="500" fill="${COLORS.text}">${item.name}</text>
-            </g>
-          `;
+          // Use short month name
+          const shortName = item.name.substring(0, 3);
+          return `<text x="${x}" y="${chartHeight + 18}" text-anchor="middle" font-size="11" fill="${COLORS.text}">${shortName}</text>`;
         }).join('')}
       </g>
       
-      <!-- Legend - Horizontal at bottom with proper spacing -->
-      <g transform="translate(${width / 2 - (dataKeys.length * 110) / 2}, ${height - 35})">
+      <!-- Legend -->
+      <g transform="translate(${width / 2 - (dataKeys.length * 70) / 2}, ${height - 25})">
         ${dataKeys.map((key, i) => `
-          <g transform="translate(${i * 130}, 0)">
-            <rect x="0" y="0" width="16" height="16" fill="${colors[i]}" rx="3"/>
-            <text x="22" y="13" font-size="14" font-weight="500" fill="${COLORS.text}">${key.label}</text>
+          <g transform="translate(${i * 90}, 0)">
+            <rect x="0" y="0" width="14" height="14" fill="${colors[i]}" rx="2"/>
+            <text x="18" y="11" font-size="12" fill="${COLORS.text}">${key.label}</text>
           </g>
         `).join('')}
       </g>
     </svg>
   `;
-  
-  return svg;
 }
 
 /**
- * Generate Line Chart SVG - גרף קווי משופר
+ * Generate Professional Line Chart SVG
  */
 export function generateLineChartSVG({
   data,
-  width = 850,
-  height = 420,
+  width = 750,
+  height = 380,
   title,
   subtitle,
   dataKeys,
   colors
 }) {
-  const margin = { top: 70, right: 40, bottom: 120, left: 90 };
+  const margin = { top: 50, right: 20, bottom: 80, left: 70 };
   const chartWidth = width - margin.left - margin.right;
   const chartHeight = height - margin.top - margin.bottom;
   
-  // Calculate max and min values
+  // Filter data with values
+  const activeData = data.filter(item => 
+    dataKeys.some(key => (item[key.key] || 0) !== 0)
+  );
+  
+  if (activeData.length === 0) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" style="font-family: Arial, sans-serif;">
+      <rect width="${width}" height="${height}" fill="white"/>
+      <text x="${width/2}" y="${height/2}" text-anchor="middle" fill="${COLORS.textLight}" font-size="16">אין נתונים להצגה</text>
+    </svg>`;
+  }
+  
+  // Calculate min/max
   let maxValue = 0;
   let minValue = 0;
-  data.forEach(item => {
+  activeData.forEach(item => {
     dataKeys.forEach(key => {
       const val = item[key.key] || 0;
       if (val > maxValue) maxValue = val;
@@ -200,111 +212,111 @@ export function generateLineChartSVG({
   });
   
   const scale = calculateAxisScale(maxValue, minValue);
-  const xStep = data.length > 1 ? chartWidth / (data.length - 1) : chartWidth / 2;
+  const xStep = activeData.length > 1 ? chartWidth / (activeData.length - 1) : chartWidth / 2;
   
   // Generate paths
   const paths = dataKeys.map((key, keyIndex) => {
-    const points = data.map((item, i) => {
+    const points = activeData.map((item, i) => {
       const value = item[key.key] || 0;
-      const x = data.length > 1 ? i * xStep : chartWidth / 2;
+      const x = activeData.length > 1 ? i * xStep : chartWidth / 2;
       const range = scale.max - scale.min;
       const y = range > 0 ? chartHeight - ((value - scale.min) / range) * chartHeight : chartHeight / 2;
       return { x, y, value };
     });
     
-    const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-    const color = colors[keyIndex];
+    const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
     
     return {
-      path: `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`,
-      dots: points.map(p => `
-        <circle cx="${p.x}" cy="${p.y}" r="6" fill="${color}" stroke="white" stroke-width="2"/>
-      `).join(''),
-      label: key.label,
-      color
+      pathD,
+      points,
+      color: colors[keyIndex],
+      label: key.label
     };
   });
   
-  let svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="font-family: Arial, Helvetica, sans-serif; background: white;">
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="font-family: Arial, Helvetica, sans-serif;">
+      <rect width="${width}" height="${height}" fill="white"/>
+      
       <!-- Title -->
-      <text x="${width / 2}" y="28" text-anchor="middle" font-size="20" font-weight="bold" fill="${COLORS.text}">${title}</text>
-      ${subtitle ? `<text x="${width / 2}" y="52" text-anchor="middle" font-size="14" fill="${COLORS.textLight}">${subtitle}</text>` : ''}
+      <text x="${width / 2}" y="25" text-anchor="middle" font-size="18" font-weight="bold" fill="${COLORS.text}" direction="rtl">${title}</text>
+      ${subtitle ? `<text x="${width / 2}" y="42" text-anchor="middle" font-size="12" fill="${COLORS.textLight}" direction="rtl">${subtitle}</text>` : ''}
       
       <!-- Chart Area -->
       <g transform="translate(${margin.left}, ${margin.top})">
-        <!-- Grid Lines & Y Axis Labels -->
+        <!-- Grid Lines -->
         ${scale.ticks.map(tick => {
           const range = scale.max - scale.min;
           const y = range > 0 ? chartHeight - ((tick - scale.min) / range) * chartHeight : chartHeight / 2;
           return `
-            <line x1="0" y1="${y}" x2="${chartWidth}" y2="${y}" stroke="${COLORS.grid}" stroke-dasharray="4,4"/>
-            <text x="-15" y="${y + 5}" text-anchor="end" font-size="13" font-weight="500" fill="${COLORS.textLight}">${formatCurrency(tick)}</text>
+            <line x1="0" y1="${y.toFixed(1)}" x2="${chartWidth}" y2="${y.toFixed(1)}" stroke="${COLORS.grid}" stroke-width="1"/>
+            <text x="-8" y="${(y + 4).toFixed(1)}" text-anchor="end" font-size="11" fill="${COLORS.textLight}">${formatCurrency(tick)}</text>
           `;
         }).join('')}
         
-        <!-- Y Axis Line -->
-        <line x1="0" y1="0" x2="0" y2="${chartHeight}" stroke="${COLORS.grid}" stroke-width="2"/>
-        
         <!-- Lines -->
-        ${paths.map(p => p.path).join('')}
+        ${paths.map(p => `
+          <path d="${p.pathD}" fill="none" stroke="${p.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        `).join('')}
         
         <!-- Dots -->
-        ${paths.map(p => p.dots).join('')}
+        ${paths.map(p => p.points.map(point => `
+          <circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="4" fill="${p.color}" stroke="white" stroke-width="2"/>
+        `).join('')).join('')}
         
-        <!-- X Axis Line -->
+        <!-- X Axis -->
         <line x1="0" y1="${chartHeight}" x2="${chartWidth}" y2="${chartHeight}" stroke="${COLORS.grid}" stroke-width="2"/>
         
-        <!-- X Axis Labels - Rotated 45 degrees -->
-        ${data.map((item, i) => {
-          const x = data.length > 1 ? i * xStep : chartWidth / 2;
-          return `
-            <g transform="translate(${x}, ${chartHeight + 15})">
-              <text transform="rotate(-45)" text-anchor="end" font-size="13" font-weight="500" fill="${COLORS.text}">${item.name}</text>
-            </g>
-          `;
+        <!-- X Labels -->
+        ${activeData.map((item, i) => {
+          const x = activeData.length > 1 ? i * xStep : chartWidth / 2;
+          const shortName = item.name.substring(0, 3);
+          return `<text x="${x.toFixed(1)}" y="${chartHeight + 18}" text-anchor="middle" font-size="11" fill="${COLORS.text}">${shortName}</text>`;
         }).join('')}
       </g>
       
-      <!-- Legend - Horizontal at bottom with proper spacing -->
-      <g transform="translate(${width / 2 - (dataKeys.length * 120) / 2}, ${height - 35})">
+      <!-- Legend -->
+      <g transform="translate(${width / 2 - (dataKeys.length * 85) / 2}, ${height - 25})">
         ${paths.map((p, i) => `
-          <g transform="translate(${i * 140}, 0)">
-            <line x1="0" y1="8" x2="24" y2="8" stroke="${p.color}" stroke-width="3" stroke-linecap="round"/>
-            <circle cx="12" cy="8" r="5" fill="${p.color}" stroke="white" stroke-width="1"/>
-            <text x="32" y="13" font-size="14" font-weight="500" fill="${COLORS.text}">${p.label}</text>
+          <g transform="translate(${i * 110}, 0)">
+            <line x1="0" y1="7" x2="18" y2="7" stroke="${p.color}" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="9" cy="7" r="4" fill="${p.color}" stroke="white" stroke-width="1"/>
+            <text x="24" y="11" font-size="12" fill="${COLORS.text}">${p.label}</text>
           </g>
         `).join('')}
       </g>
     </svg>
   `;
-  
-  return svg;
 }
 
 /**
- * Generate Pie Chart SVG - גרף עוגה משופר
+ * Generate Professional Pie Chart SVG
  */
 export function generatePieChartSVG({
-  data, // Array of { label, value, color }
-  width = 500,
-  height = 450,
+  data,
+  width = 450,
+  height = 350,
   title
 }) {
-  const centerX = width / 2;
-  const centerY = height / 2 - 20;
-  const radius = Math.min(width, height) / 2 - 100;
+  // Filter out zero values
+  const activeData = data.filter(item => item.value > 0);
   
-  const total = data.reduce((sum, item) => sum + item.value, 0);
-  if (total === 0) {
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" style="font-family: Arial, Helvetica, sans-serif; background: white;">
-      <text x="${centerX}" y="${centerY}" text-anchor="middle" font-size="16" fill="${COLORS.textLight}">אין נתונים להצגה</text>
+  if (activeData.length === 0) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" style="font-family: Arial, sans-serif;">
+      <rect width="${width}" height="${height}" fill="white"/>
+      <text x="${width/2}" y="${height/2}" text-anchor="middle" fill="${COLORS.textLight}" font-size="16">אין נתונים להצגה</text>
     </svg>`;
   }
   
-  let currentAngle = -Math.PI / 2; // Start from top
+  const centerX = width / 2;
+  const centerY = 160;
+  const radius = 100;
   
-  const slices = data.map((item, i) => {
+  const total = activeData.reduce((sum, item) => sum + item.value, 0);
+  
+  let currentAngle = -Math.PI / 2;
+  
+  const slices = activeData.map((item) => {
     const percentage = item.value / total;
     const angle = percentage * 2 * Math.PI;
     const startAngle = currentAngle;
@@ -324,7 +336,7 @@ export function generatePieChartSVG({
     const labelY = centerY + labelRadius * Math.sin(midAngle);
     
     return {
-      path: `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`,
+      path: `M ${centerX} ${centerY} L ${x1.toFixed(1)} ${y1.toFixed(1)} A ${radius} ${radius} 0 ${largeArc} 1 ${x2.toFixed(1)} ${y2.toFixed(1)} Z`,
       color: item.color,
       label: item.label,
       value: item.value,
@@ -334,26 +346,32 @@ export function generatePieChartSVG({
     };
   });
   
+  // Calculate legend position
+  const legendStartY = centerY + radius + 30;
+  const legendItemHeight = 24;
+  
   return `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="font-family: Arial, Helvetica, sans-serif; background: white;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="font-family: Arial, Helvetica, sans-serif;">
+      <rect width="${width}" height="${height}" fill="white"/>
+      
       <!-- Title -->
-      <text x="${width / 2}" y="30" text-anchor="middle" font-size="20" font-weight="bold" fill="${COLORS.text}">${title}</text>
+      <text x="${width / 2}" y="28" text-anchor="middle" font-size="18" font-weight="bold" fill="${COLORS.text}" direction="rtl">${title}</text>
       
       <!-- Pie Slices -->
       ${slices.map(slice => `
-        <path d="${slice.path}" fill="${slice.color}" stroke="white" stroke-width="3"/>
-        ${parseFloat(slice.percentage) > 8 ? `
-          <text x="${slice.labelX}" y="${slice.labelY}" text-anchor="middle" font-size="14" font-weight="bold" fill="white" stroke="#00000033" stroke-width="0.5">${slice.percentage}%</text>
+        <path d="${slice.path}" fill="${slice.color}" stroke="white" stroke-width="2"/>
+        ${parseFloat(slice.percentage) > 10 ? `
+          <text x="${slice.labelX.toFixed(1)}" y="${(slice.labelY + 5).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="bold" fill="white">${slice.percentage}%</text>
         ` : ''}
       `).join('')}
       
-      <!-- Legend - Vertical on the right side for better readability -->
-      <g transform="translate(20, ${height - 30 - slices.length * 28})">
+      <!-- Legend as table -->
+      <g transform="translate(30, ${legendStartY})">
         ${slices.map((slice, i) => `
-          <g transform="translate(0, ${i * 28})">
-            <rect x="0" y="0" width="18" height="18" fill="${slice.color}" rx="3"/>
-            <text x="26" y="14" font-size="13" font-weight="500" fill="${COLORS.text}">${slice.label}</text>
-            <text x="${width - 50}" y="14" text-anchor="end" font-size="13" font-weight="600" fill="${COLORS.text}">${formatCurrency(slice.value, false)}</text>
+          <g transform="translate(0, ${i * legendItemHeight})">
+            <rect x="0" y="0" width="14" height="14" fill="${slice.color}" rx="2"/>
+            <text x="22" y="12" font-size="12" fill="${COLORS.text}">${slice.label}</text>
+            <text x="${width - 60}" y="12" text-anchor="end" font-size="12" font-weight="600" fill="${COLORS.text}">${formatCurrency(slice.value, false)}</text>
           </g>
         `).join('')}
       </g>
@@ -366,11 +384,10 @@ export function generatePieChartSVG({
  */
 export function generateForecastCharts(forecast) {
   const charts = {};
-  const monthNames = MONTH_NAMES;
   
   // Prepare monthly data
   const monthlyData = (forecast.profit_loss_monthly || []).map(month => ({
-    name: monthNames[month.month - 1] || `חודש ${month.month}`,
+    name: MONTH_NAMES_FULL[month.month - 1] || `חודש ${month.month}`,
     revenue: month.revenue || 0,
     costOfSale: month.cost_of_sale || 0,
     grossProfit: month.gross_profit || 0,
@@ -384,32 +401,31 @@ export function generateForecastCharts(forecast) {
     // Revenue and Profit Chart
     charts.revenueChart = generateBarChartSVG({
       data: monthlyData,
-      width: 850,
-      height: 450,
+      width: 700,
+      height: 350,
       title: 'הכנסות, עלות מכר ורווח גולמי',
-      subtitle: 'פירוט חודשי - סכומים בש"ח',
+      subtitle: 'פירוט חודשי',
       dataKeys: [
         { key: 'revenue', label: 'הכנסות' },
         { key: 'costOfSale', label: 'עלות מכר' },
         { key: 'grossProfit', label: 'רווח גולמי' }
       ],
-      colors: [COLORS.primary, COLORS.orange, COLORS.green],
-      showLabels: false
+      colors: [COLORS.primary, COLORS.orange, COLORS.green]
     });
     
     // Profit Trend Chart
     charts.profitChart = generateLineChartSVG({
       data: monthlyData,
-      width: 850,
-      height: 450,
+      width: 700,
+      height: 350,
       title: 'מגמת רווחיות',
-      subtitle: 'רווח גולמי, תפעולי ונקי לאורך השנה',
+      subtitle: 'רווח גולמי, תפעולי ונקי',
       dataKeys: [
         { key: 'grossProfit', label: 'רווח גולמי' },
         { key: 'operatingProfit', label: 'רווח תפעולי' },
         { key: 'netProfit', label: 'רווח נקי' }
       ],
-      colors: [COLORS.green, COLORS.blue, '#10B981']
+      colors: [COLORS.green, COLORS.blue, '#059669']
     });
   }
   
@@ -425,8 +441,8 @@ export function generateForecastCharts(forecast) {
         { label: 'הוצאות מימון', value: Math.max(0, summary.financing_expenses || 0), color: COLORS.red },
         { label: 'מיסים', value: Math.max(0, (summary.profit_before_tax || 0) - (summary.net_profit || 0)), color: COLORS.purple }
       ].filter(item => item.value > 0),
-      width: 500,
-      height: 450,
+      width: 420,
+      height: 380,
       title: 'התפלגות הכנסות והוצאות'
     });
   }
@@ -434,4 +450,4 @@ export function generateForecastCharts(forecast) {
   return charts;
 }
 
-export { COLORS, MONTH_NAMES, formatCurrency };
+export { COLORS, MONTH_NAMES_SHORT, MONTH_NAMES_FULL, formatCurrency };

@@ -64,7 +64,7 @@ const EmergencyChat = ({ isOpen, onClose }) => {
   }, [messages]);
 
   const systemPrompt = `
-    אתה 'ProfitPulse AI', יועץ עסקי לסיוע חירום בפלטפורמת ProfitBooster.
+    אתה 'Plusto AI', יועץ עסקי לסיוע חירום בפלטפורמת Plusto.
     המשימה שלך היא משולשת:
 
     1.  **אבחון ושאילת שאלות:** אל תיתן תשובה מיד. שאל שאלות מנחות כדי להבין את הבעיה. השתמש במידע שכבר קיים על העסק כדי לשאול שאלות חכמות. לדוגמה: "אני רואה שיש לך ${userContext?.productCount || 'מספר'} מוצרים במערכת. האם הבעיה קשורה למוצר ספציפי?"
@@ -139,7 +139,7 @@ const EmergencyChat = ({ isOpen, onClose }) => {
                     </div>
                     <div class="content">
                         <p>הי הילי,</p>
-                        <p>התקבלה בקשה חדשה לפגישת עבודה עם יועץ כספים דרך סוכן החירום במערכת ProfitBooster.</p>
+                        <p>התקבלה בקשה חדשה לפגישת עבודה עם יועץ כספים דרך סוכן החירום במערכת Plusto.</p>
                         <h2>פרטי הלקוח:</h2>
                         <ul class="user-details">
                             <li><span>שם העסק:</span> <strong>${user.business_name || 'לא צוין'}</strong></li>
@@ -151,7 +151,7 @@ const EmergencyChat = ({ isOpen, onClose }) => {
                         <p>אנא צרי קשר עם הלקוח בהקדם האפשרי על מנת לתאם פגישת עבודה קצרה (עד 30 דקות) עם אלירן.</p>
                     </div>
                     <div class="footer">
-                        <p>הודעה זו נשלחה אוטומטית ממערכת ProfitBooster.</p>
+                        <p>הודעה זו נשלחה אוטומטית ממערכת Plusto.</p>
                     </div>
                 </div>
             </body>
@@ -160,7 +160,7 @@ const EmergencyChat = ({ isOpen, onClose }) => {
 
         await base44.integrations.Core.SendEmail({
             to: adminEmail,
-            from_name: "ProfitBooster - מערכת חכמה",
+            from_name: "Plusto - מערכת חכמה",
             subject: emailSubject,
             body: emailBody,
         });

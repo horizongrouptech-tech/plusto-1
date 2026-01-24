@@ -41,7 +41,7 @@ export default function FAQPage() {
         <div className="text-center mb-12">
           <MessageCircleQuestion className="w-20 h-20 mx-auto mb-4 text-horizon-primary" />
           <h1 className="text-4xl font-bold mb-3">שאלות נפוצות</h1>
-          <p className="text-lg text-horizon-accent">כל מה שרצית לדעת על ProfitBooster במקום אחד</p>
+          <p className="text-lg text-horizon-accent">כל מה שרצית לדעת על Plusto במקום אחד</p>
         </div>
 
         <Card className="card-horizon shadow-horizon-strong">

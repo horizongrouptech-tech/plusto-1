@@ -306,7 +306,7 @@ export function generateGoalsHTML(goals, customer) {
       }).join('')}
 
       <div class="footer">
-        <p>דוח יעדים עסקיים - מערכת ProfitBooster by Horizon Group</p>
+        <p>דוח יעדים עסקיים - מערכת Plusto</p>
         <p>תאריך הפקה: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: he })}</p>
       </div>
     </div>

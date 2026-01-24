@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
                     </div>
                     <div class="content">
                         <p>הי הילי,</p>
-                        <p>התקבלה בקשה חדשה לפגישת עבודה עם יועץ כספים דרך סוכן החירום במערכת ProfitBooster.</p>
+                        <p>התקבלה בקשה חדשה לפגישת עבודה עם יועץ כספים דרך סוכן החירום במערכת Plusto.</p>
                         <h2>פרטי הלקוח:</h2>
                         <ul class="user-details">
                             <li><span>שם העסק:</span> <strong>${user.business_name || 'לא צוין'}</strong></li>
@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
                         <p>אנא צרי קשר עם הלקוח בהקדם האפשרי על מנת לתאם פגישת עבודה קצרה (עד 30 דקות) עם אלירן.</p>
                     </div>
                     <div class="footer">
-                        <p>הודעה זו נשלחה אוטומטית ממערכת ProfitBooster.</p>
+                        <p>הודעה זו נשלחה אוטומטית ממערכת Plusto.</p>
                     </div>
                 </div>
             </body>
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
 
         await base44.integrations.Core.SendEmail({
             to: adminEmail,
-            from_name: "ProfitBooster - מערכת חכמה",
+            from_name: "Plusto - מערכת חכמה",
             subject: emailSubject,
             body: emailBody,
         });

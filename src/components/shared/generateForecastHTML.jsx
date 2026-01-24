@@ -238,30 +238,18 @@ export function generateForecastHTML(forecast, type, options = {}, customerName 
 
     .chart-container {
       background: white;
-      border: 1px solid #e1e8ed;
-      border-radius: 12px;
-      padding: 25px;
-      margin-bottom: 35px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
 
     .chart-container svg {
-      width: 100%;
-      height: auto;
       display: block;
       margin: 0 auto;
-    }
-
-    .charts-row {
-      display: flex;
-      gap: 25px;
-      margin-bottom: 35px;
-    }
-
-    .charts-row .chart-container {
-      flex: 1;
-      margin-bottom: 0;
+      max-width: 100%;
+      height: auto;
     }
 
     .chart-full-width {
@@ -326,16 +314,16 @@ export function generateForecastHTML(forecast, type, options = {}, customerName 
     }
 
     @media print {
+      .print-container {
+        padding: 20px;
+      }
       .chart-container {
-        margin-bottom: 25px;
+        margin-bottom: 20px;
         page-break-inside: avoid;
-        page-break-before: auto;
+        border: 1px solid #e2e8f0;
       }
-      .charts-row {
-        display: block;
-      }
-      .charts-row .chart-container {
-        margin-bottom: 25px;
+      .section {
+        margin-bottom: 30px;
       }
     }
   `;
@@ -558,8 +546,8 @@ export function generateForecastHTML(forecast, type, options = {}, customerName 
       ` : ''}
 
       <div class="footer">
-        <div class="footer-logo">Horizon Group - ProfitBooster</div>
-        <p>דוח זה נוצר באמצעות מערכת ProfitBooster</p>
+        <div class="footer-logo">Plusto</div>
+        <p>דוח זה נוצר באמצעות מערכת Plusto</p>
         <p>תאריך הפקה: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: he })}</p>
       </div>
     </div>

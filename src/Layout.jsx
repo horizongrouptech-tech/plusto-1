@@ -850,7 +850,7 @@ function LayoutContent({ children, currentPageName }) {
                   <TrendingUp className="w-6 h-6" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-xl text-horizon-text">ProfitBooster</h2>
+                  <h2 className="font-bold text-xl text-horizon-text">Plusto</h2>
                   <p className="text-sm text-horizon-accent">מערכת חכמה לרווחיות</p>
                 </div>
               </div>
