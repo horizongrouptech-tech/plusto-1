@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Star,
-  Loader2
+  Loader2,
+  Download
 } from "lucide-react";
 import ManualForecastCharts from './ManualForecastCharts';
 import { formatCurrency, formatPercentage } from './utils/numberFormatter';
@@ -29,8 +30,9 @@ import {
 } from './utils/periodCalculations';
 import TopProductsInsights from './TopProductsInsights';
 import ForecastSensitivityAnalysis from './ForecastSensitivityAnalysis';
+import ExportWithGraphsButton from '../ExportWithGraphsButton';
 
-export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave, onBack, isSaving }) {
+export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave, onBack, isSaving, customer }) {
   const [profitLossData, setProfitLossData] = useState([]);
   const [yearlyTotals, setYearlyTotals] = useState({});
 
@@ -38,6 +40,11 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
   const [viewMode, setViewMode] = useState('yearly');
   const [startMonth, setStartMonth] = useState(1);
   const [endMonth, setEndMonth] = useState(12);
+
+  // Refs for PDF export
+  const chartsContainerRef = useRef(null);
+  const summaryRef = useRef(null);
+  const tableRef = useRef(null);
 
   // Load saved preferences from localStorage
   useEffect(() => {
@@ -671,12 +678,14 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
       <ForecastSensitivityAnalysis forecastData={forecastData} />
 
       {/* גרפים */}
-      <ManualForecastCharts
-        profitLossData={filteredProfitLossData}
-        yearlyTotals={periodProfitLoss}
-        salesForecast={forecastData.sales_forecast_onetime}
-        detailedExpenses={forecastData.detailed_expenses}
-      />
+      <div ref={chartsContainerRef}>
+        <ManualForecastCharts
+          profitLossData={filteredProfitLossData}
+          yearlyTotals={periodProfitLoss}
+          salesForecast={forecastData.sales_forecast_onetime}
+          detailedExpenses={forecastData.detailed_expenses}
+        />
+      </div>
 
       {/* טבלת רווח והפסד חודשית - מוצגת רק לתקופה הנבחרת */}
       <Card className="card-horizon">
@@ -732,19 +741,44 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
           <ChevronRight className="w-4 h-4 ml-2" />
           חזור
         </Button>
-        <Button onClick={handleSave} disabled={isSaving} className="btn-horizon-primary">
-          {isSaving ? (
-            <>
-              <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-              שומר...
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4 ml-2" />
-              שמור תחזית
-            </>
-          )}
-        </Button>
+        <div className="flex gap-2">
+          <ExportWithGraphsButton
+            forecast={{
+              forecast_name: forecastData?.forecast_name || 'תחזית ידנית',
+              profit_loss_summary: {
+                total_revenue: periodProfitLoss?.revenue || 0,
+                total_expenses: (periodProfitLoss?.cost_of_sale || 0) + 
+                  (periodProfitLoss?.operating_expenses || 0) +
+                  (periodProfitLoss?.salary_expenses || 0),
+                gross_profit: periodProfitLoss?.gross_profit || 0,
+                net_profit: periodProfitLoss?.net_profit || 0,
+                profit_margin: periodProfitLoss?.revenue > 0 
+                  ? ((periodProfitLoss?.net_profit || 0) / periodProfitLoss.revenue) * 100 
+                  : 0
+              }
+            }}
+            customer={customer || { business_name: forecastData?.customer_name || 'לקוח' }}
+            chartRefs={{
+              revenue_chart: chartsContainerRef,
+              expenses_chart: chartsContainerRef,
+              profit_chart: chartsContainerRef,
+              summary: summaryRef
+            }}
+          />
+          <Button onClick={handleSave} disabled={isSaving} className="btn-horizon-primary">
+            {isSaving ? (
+              <>
+                <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                שומר...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 ml-2" />
+                שמור תחזית
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

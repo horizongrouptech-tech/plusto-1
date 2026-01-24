@@ -5,13 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { 
   Calendar, FileText, ClipboardList, Plus, Edit3, Trash2, 
   Eye, Loader2, Clock, User, CheckCircle2, AlertCircle,
-  Play, Download, MessageSquare
+  Play, Download, MessageSquare, Sparkles, Wand2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -22,8 +22,10 @@ export default function MeetingsTab({ customer, currentUser }) {
   const queryClient = useQueryClient();
   const [activeSubTab, setActiveSubTab] = useState('summaries');
   const [showNewMeetingModal, setShowNewMeetingModal] = useState(false);
+  const [showSmartInputModal, setShowSmartInputModal] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
   const [newMeetingForm, setNewMeetingForm] = useState({
     meeting_date: new Date().toISOString().split('T')[0],
     meeting_type: 'regular',
@@ -32,38 +34,115 @@ export default function MeetingsTab({ customer, currentUser }) {
     action_items: '',
     notes: ''
   });
+  const [smartInput, setSmartInput] = useState('');
 
-  // טעינת פגישות
+  // טעינת פגישות - תמיד משתמש ב-CustomerGoal
   const { data: meetings = [], isLoading } = useQuery({
     queryKey: ['customerMeetings', customer?.email],
     queryFn: async () => {
-      // נסה לטעון מישות MeetingSummary
-      if (base44.entities.MeetingSummary) {
-        return await base44.entities.MeetingSummary.filter({
-          customer_email: customer.email
-        }, '-meeting_date');
-      }
-      
-      // fallback - שימוש ב-CustomerGoal עם task_type מיוחד
+      // השתמש תמיד ב-CustomerGoal כי MeetingSummary לא קיים
       const goals = await base44.entities.CustomerGoal.filter({
         customer_email: customer.email,
-        task_type: 'meeting_summary'
+        task_type: 'meeting_summary',
+        is_active: true
       }, '-start_date');
       
       return goals.map(g => ({
         id: g.id,
         meeting_date: g.start_date,
-        summary: g.notes,
-        key_decisions: g.success_metrics,
-        action_items: g.description,
-        meeting_type: 'regular',
+        summary: g.notes || g.description || '',
+        key_decisions: g.success_metrics || '',
+        action_items: g.checklist_items || '',
+        meeting_type: g.priority === 'high' ? 'first' : 'regular',
+        notes: g.additional_notes || '',
         created_by: g.assignee_email
       }));
     },
     enabled: !!customer?.email
   });
 
-  // יצירת סיכום פגישה חדש
+  // פענוח חכם של סיכום פגישה - מפרק טקסט חופשי לשדות
+  const parseSmartInput = (text) => {
+    // חיפוש משימות (שורות שמתחילות ב--, *, -, מספר, או "משימה")
+    const taskPatterns = [
+      /^[-*•]\s*(.+)$/gm,
+      /^(\d+)[.)]\s*(.+)$/gm,
+      /משימה[:\s]+(.+)$/gmi,
+      /לעשות[:\s]+(.+)$/gmi,
+      /action[:\s]+(.+)$/gmi
+    ];
+    
+    // חיפוש החלטות (שורות עם "הוחלט", "החלטה", "סוכם")
+    const decisionPatterns = [
+      /הוחלט[:\s]+(.+)$/gmi,
+      /החלטה[:\s]+(.+)$/gmi,
+      /סוכם[:\s]+(.+)$/gmi,
+      /decision[:\s]+(.+)$/gmi
+    ];
+
+    let summary = text;
+    let decisions = [];
+    let tasks = [];
+
+    // חילוץ החלטות
+    decisionPatterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        decisions.push(match[1].trim());
+        summary = summary.replace(match[0], '');
+      }
+    });
+
+    // חילוץ משימות
+    taskPatterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const task = match[2] || match[1];
+        if (task && task.length > 3) {
+          tasks.push(task.trim());
+        }
+      }
+    });
+
+    // ניקוי הסיכום
+    summary = summary
+      .split('\n')
+      .filter(line => line.trim() && !tasks.some(t => line.includes(t)) && !decisions.some(d => line.includes(d)))
+      .join('\n')
+      .trim();
+
+    return {
+      summary: summary || text,
+      key_decisions: decisions.join('\n'),
+      action_items: tasks.join('\n')
+    };
+  };
+
+  // טיפול בקלט חכם
+  const handleSmartParse = () => {
+    if (!smartInput.trim()) {
+      alert('נא להזין טקסט');
+      return;
+    }
+
+    setIsParsing(true);
+    
+    // פענוח הטקסט
+    const parsed = parseSmartInput(smartInput);
+    
+    setNewMeetingForm(prev => ({
+      ...prev,
+      summary: parsed.summary,
+      key_decisions: parsed.key_decisions,
+      action_items: parsed.action_items
+    }));
+    
+    setIsParsing(false);
+    setShowSmartInputModal(false);
+    setShowNewMeetingModal(true);
+  };
+
+  // יצירת סיכום פגישה חדש - תמיד ב-CustomerGoal
   const handleCreateMeeting = async () => {
     if (!newMeetingForm.summary.trim()) {
       alert('נא להזין סיכום פגישה');
@@ -72,33 +151,27 @@ export default function MeetingsTab({ customer, currentUser }) {
 
     setIsCreating(true);
     try {
-      if (base44.entities.MeetingSummary) {
-        await base44.entities.MeetingSummary.create({
-          customer_email: customer.email,
-          ...newMeetingForm,
-          key_decisions: newMeetingForm.key_decisions.split('\n').filter(d => d.trim()),
-          action_items: newMeetingForm.action_items.split('\n').filter(a => a.trim()),
-          created_by: currentUser?.email
-        });
-      } else {
-        // fallback
-        await base44.entities.CustomerGoal.create({
-          customer_email: customer.email,
-          name: `סיכום פגישה - ${format(new Date(newMeetingForm.meeting_date), 'dd/MM/yyyy')}`,
-          task_type: 'meeting_summary',
-          start_date: newMeetingForm.meeting_date,
-          end_date: newMeetingForm.meeting_date,
-          notes: newMeetingForm.summary,
-          success_metrics: newMeetingForm.key_decisions,
-          description: newMeetingForm.action_items,
-          assignee_email: currentUser?.email,
-          status: 'done',
-          is_active: true
-        });
-      }
+      // תמיד שימוש ב-CustomerGoal
+      await base44.entities.CustomerGoal.create({
+        customer_email: customer.email,
+        name: `סיכום פגישה - ${format(new Date(newMeetingForm.meeting_date), 'dd/MM/yyyy')}`,
+        task_type: 'meeting_summary',
+        start_date: newMeetingForm.meeting_date,
+        end_date: newMeetingForm.meeting_date,
+        notes: newMeetingForm.summary,
+        success_metrics: newMeetingForm.key_decisions,
+        checklist_items: newMeetingForm.action_items ? 
+          newMeetingForm.action_items.split('\n').filter(a => a.trim()) : [],
+        additional_notes: newMeetingForm.notes,
+        assignee_email: currentUser?.email,
+        status: 'done',
+        is_active: true,
+        priority: newMeetingForm.meeting_type === 'first' ? 'high' : 'normal'
+      });
       
       queryClient.invalidateQueries(['customerMeetings', customer.email]);
       setShowNewMeetingModal(false);
+      setSmartInput('');
       setNewMeetingForm({
         meeting_date: new Date().toISOString().split('T')[0],
         meeting_type: 'regular',
@@ -109,7 +182,7 @@ export default function MeetingsTab({ customer, currentUser }) {
       });
     } catch (error) {
       console.error('Error creating meeting:', error);
-      alert('שגיאה ביצירת סיכום פגישה');
+      alert('שגיאה ביצירת סיכום פגישה: ' + error.message);
     } finally {
       setIsCreating(false);
     }
@@ -120,11 +193,7 @@ export default function MeetingsTab({ customer, currentUser }) {
     if (!confirm('האם למחוק את סיכום הפגישה?')) return;
 
     try {
-      if (base44.entities.MeetingSummary) {
-        await base44.entities.MeetingSummary.delete(meetingId);
-      } else {
-        await base44.entities.CustomerGoal.update(meetingId, { is_active: false });
-      }
+      await base44.entities.CustomerGoal.update(meetingId, { is_active: false });
       queryClient.invalidateQueries(['customerMeetings', customer.email]);
     } catch (error) {
       console.error('Error deleting meeting:', error);
@@ -171,10 +240,20 @@ export default function MeetingsTab({ customer, currentUser }) {
               <Calendar className="w-5 h-5 text-horizon-primary" />
               פגישות - {customer.business_name || customer.full_name}
             </CardTitle>
-            <Button onClick={() => setShowNewMeetingModal(true)} className="btn-horizon-primary">
-              <Plus className="w-4 h-4 ml-2" />
-              סיכום פגישה חדש
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => setShowSmartInputModal(true)} 
+                variant="outline"
+                className="border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10"
+              >
+                <Wand2 className="w-4 h-4 ml-2" />
+                סיכום חכם
+              </Button>
+              <Button onClick={() => setShowNewMeetingModal(true)} className="btn-horizon-primary">
+                <Plus className="w-4 h-4 ml-2" />
+                סיכום פגישה
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -202,10 +281,20 @@ export default function MeetingsTab({ customer, currentUser }) {
                   <FileText className="w-16 h-16 mx-auto mb-4 text-horizon-accent opacity-50" />
                   <h3 className="text-lg font-semibold text-horizon-text mb-2">אין סיכומי פגישות</h3>
                   <p className="text-horizon-accent mb-4">צור סיכום לפגישה הראשונה</p>
-                  <Button onClick={() => setShowNewMeetingModal(true)} className="btn-horizon-primary">
-                    <Plus className="w-4 h-4 ml-2" />
-                    סיכום פגישה חדש
-                  </Button>
+                  <div className="flex gap-2 justify-center">
+                    <Button 
+                      onClick={() => setShowSmartInputModal(true)} 
+                      variant="outline"
+                      className="border-horizon-primary text-horizon-primary"
+                    >
+                      <Wand2 className="w-4 h-4 ml-2" />
+                      סיכום חכם
+                    </Button>
+                    <Button onClick={() => setShowNewMeetingModal(true)} className="btn-horizon-primary">
+                      <Plus className="w-4 h-4 ml-2" />
+                      סיכום פגישה
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -235,7 +324,9 @@ export default function MeetingsTab({ customer, currentUser }) {
                                 <CheckCircle2 className="w-4 h-4 text-green-400" />
                                 {Array.isArray(meeting.key_decisions) 
                                   ? `${meeting.key_decisions.length} החלטות`
-                                  : 'החלטות'
+                                  : typeof meeting.key_decisions === 'string' && meeting.key_decisions.trim()
+                                    ? `${meeting.key_decisions.split('\n').filter(d => d.trim()).length} החלטות`
+                                    : 'החלטות'
                                 }
                               </div>
                             )}
@@ -277,11 +368,91 @@ export default function MeetingsTab({ customer, currentUser }) {
                 customer={customer} 
                 meetings={meetings}
                 currentUser={currentUser}
+                onCreateSummary={() => setShowNewMeetingModal(true)}
               />
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* מודל קלט חכם */}
+      <Dialog open={showSmartInputModal} onOpenChange={setShowSmartInputModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-horizon-dark border-horizon" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-horizon-text flex items-center gap-2">
+              <Wand2 className="w-5 h-5 text-horizon-primary" />
+              סיכום פגישה חכם
+            </DialogTitle>
+            <DialogDescription className="text-horizon-accent">
+              כתוב את כל מה שקרה בפגישה בטקסט חופשי, והמערכת תפרק אוטומטית לסיכום, החלטות ומשימות
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <Sparkles className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                <div className="text-sm">
+                  <p className="font-semibold text-horizon-text mb-1">טיפים לכתיבה:</p>
+                  <ul className="text-horizon-accent space-y-1 list-disc pr-4">
+                    <li>כתוב משימות עם מקף (-) או כוכבית (*) בתחילת השורה</li>
+                    <li>כתוב "הוחלט:" או "החלטה:" לפני החלטות</li>
+                    <li>שאר הטקסט יהפוך לסיכום הפגישה</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-horizon-accent text-sm mb-2 block">
+                כתוב את סיכום הפגישה בטקסט חופשי
+              </label>
+              <Textarea
+                value={smartInput}
+                onChange={(e) => setSmartInput(e.target.value)}
+                placeholder={`דוגמה:
+דיברנו על מצב התזרים של החודש, יש בעיה בגביה מלקוח X.
+
+הוחלט: להתקשר ללקוח X עד סוף השבוע
+הוחלט: להכין דוח תזרים שבועי
+
+משימות:
+- לשלוח מכתב התראה ללקוח X
+- לתאם פגישה עם רו"ח
+- להכין תחזית לרבעון הבא`}
+                className="bg-horizon-card border-horizon text-horizon-text min-h-[250px]"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="mt-6">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowSmartInputModal(false)}
+              className="border-horizon text-horizon-text"
+            >
+              ביטול
+            </Button>
+            <Button 
+              onClick={handleSmartParse}
+              disabled={isParsing || !smartInput.trim()}
+              className="btn-horizon-primary"
+            >
+              {isParsing ? (
+                <>
+                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                  מעבד...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-4 h-4 ml-2" />
+                  פענח והמשך
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* מודל יצירת סיכום פגישה */}
       <Dialog open={showNewMeetingModal} onOpenChange={setShowNewMeetingModal}>

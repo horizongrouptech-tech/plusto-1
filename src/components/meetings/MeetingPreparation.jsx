@@ -3,13 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { 
   ClipboardList, Calendar, CheckCircle2, Circle, AlertCircle,
-  FileText, Target, Loader2, ChevronDown, ChevronUp, ListChecks
+  FileText, Target, Loader2, ChevronDown, ChevronUp, ListChecks,
+  Clock, TrendingUp, AlertTriangle, ArrowLeft, Plus, RefreshCw
 } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, differenceInDays, isAfter } from 'date-fns';
 import { he } from 'date-fns/locale';
 
 // משימות דפולטיביות לפגישה ראשונה
@@ -24,11 +25,24 @@ const DEFAULT_FIRST_MEETING_TASKS = [
   { id: 'catalog', title: 'קטלוג מוצרים', description: 'יצירת או העלאת קטלוג' }
 ];
 
-export default function MeetingPreparation({ customer, meetings = [], currentUser }) {
-  const [expandedSections, setExpandedSections] = useState(['previousMeeting', 'tasks', 'checklist']);
-  const [checkedTasks, setCheckedTasks] = useState({});
+// משימות דפולטיביות לפגישה חוזרת
+const DEFAULT_RECURRING_MEETING_TASKS = [
+  { id: 'review_tasks', title: 'סקירת משימות פתוחות', description: 'לעבור על סטטוס המשימות מהפגישה הקודמת' },
+  { id: 'cashflow_status', title: 'עדכון מצב תזרים', description: 'בדיקת מצב התזרים והתראות' },
+  { id: 'kpis', title: 'בדיקת יעדים', description: 'התקדמות מול יעדים שנקבעו' },
+  { id: 'issues', title: 'בעיות וחסמים', description: 'זיהוי בעיות חדשות שצריך לטפל בהן' },
+  { id: 'next_steps', title: 'צעדים הבאים', description: 'הגדרת משימות לתקופה הקרובה' }
+];
 
-  const isFirstMeeting = meetings.length === 0;
+export default function MeetingPreparation({ customer, meetings = [], currentUser, onCreateSummary }) {
+  const queryClient = useQueryClient();
+  const [expandedSections, setExpandedSections] = useState(['previousMeeting', 'tasks', 'checklist', 'alerts']);
+  const [checkedTasks, setCheckedTasks] = useState({});
+  const [isMarkingFirstMeeting, setIsMarkingFirstMeeting] = useState(false);
+
+  // בדיקה אם יש פגישה ראשונה (לפי סוג הפגישה או אם אין פגישות בכלל)
+  const hasFirstMeeting = meetings.some(m => m.meeting_type === 'first');
+  const isFirstMeeting = meetings.length === 0 && !hasFirstMeeting;
   const lastMeeting = meetings[0]; // כבר ממוינים לפי תאריך יורד
 
   // טעינת משימות פתוחות של הלקוח
@@ -46,26 +60,48 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
         !['meeting_summary', 'daily_checklist', 'daily_checklist_360'].includes(t.task_type)
       );
     },
-    enabled: !!customer?.email && !isFirstMeeting
+    enabled: !!customer?.email
   });
 
-  // טעינת משימות דפולטיביות מהמערכת
-  const { data: defaultTasks = DEFAULT_FIRST_MEETING_TASKS } = useQuery({
-    queryKey: ['defaultOnboardingTasks'],
+  // טעינת משימות שבאיחור
+  const delayedTasks = useMemo(() => {
+    const today = new Date();
+    return openTasks.filter(task => {
+      if (!task.end_date) return false;
+      const endDate = new Date(task.end_date);
+      return isAfter(today, endDate);
+    });
+  }, [openTasks]);
+
+  // טעינת התראות תזרים
+  const { data: cashflowAlerts = [] } = useQuery({
+    queryKey: ['cashflowAlerts', customer?.email],
     queryFn: async () => {
       try {
-        const settings = await base44.entities.SystemSettings?.filter({ 
-          setting_key: 'default_onboarding_tasks' 
-        });
-        if (settings && settings.length > 0) {
-          return JSON.parse(settings[0].setting_value || '[]');
+        const cashflow = await base44.entities.CashFlow?.filter({
+          customer_email: customer.email
+        }, '-date');
+        
+        // חישוב התראות פשוט - בדיקה אם יש יתרה שלילית
+        const alerts = [];
+        if (cashflow && cashflow.length > 0) {
+          const totalCredit = cashflow.reduce((sum, cf) => sum + (cf.credit || 0), 0);
+          const totalDebit = cashflow.reduce((sum, cf) => sum + (cf.debit || 0), 0);
+          const balance = totalCredit - totalDebit;
+          
+          if (balance < 0) {
+            alerts.push({
+              type: 'negative_balance',
+              message: `יתרה שלילית: ₪${Math.abs(balance).toLocaleString()}`
+            });
+          }
         }
+        return alerts;
       } catch (e) {
-        console.log('Using default tasks');
+        return [];
       }
-      return DEFAULT_FIRST_MEETING_TASKS;
     },
-    enabled: isFirstMeeting
+    enabled: !!customer?.email && !isFirstMeeting
   });
 
   // חישוב משימות שהושלמו מאז הפגישה האחרונה
@@ -78,6 +114,33 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
       return taskDate >= meetingDate;
     });
   }, [openTasks, lastMeeting]);
+
+  // סימון "פגישה ראשונה הושלמה"
+  const handleMarkFirstMeetingComplete = async () => {
+    setIsMarkingFirstMeeting(true);
+    try {
+      // יצירת סיכום פגישה ראשונה ריק
+      await base44.entities.CustomerGoal.create({
+        customer_email: customer.email,
+        name: `פגישה ראשונה - ${format(new Date(), 'dd/MM/yyyy')}`,
+        task_type: 'meeting_summary',
+        start_date: new Date().toISOString().split('T')[0],
+        end_date: new Date().toISOString().split('T')[0],
+        notes: 'פגישה ראשונה הושלמה (סומן ידנית)',
+        assignee_email: currentUser?.email,
+        status: 'done',
+        is_active: true,
+        priority: 'high'
+      });
+      
+      queryClient.invalidateQueries(['customerMeetings', customer.email]);
+    } catch (error) {
+      console.error('Error marking first meeting:', error);
+      alert('שגיאה בסימון פגישה ראשונה');
+    } finally {
+      setIsMarkingFirstMeeting(false);
+    }
+  };
 
   const toggleSection = (section) => {
     setExpandedSections(prev => 
@@ -105,20 +168,37 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
     return <Badge className={config.className}>{config.label}</Badge>;
   };
 
+  // תצוגה לפגישה ראשונה
   if (isFirstMeeting) {
-    // תצוגה לפגישה ראשונה
     return (
       <div className="space-y-4">
         <Card className="card-horizon bg-gradient-to-l from-purple-500/10 to-transparent">
           <CardContent className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
-                <Target className="w-6 h-6 text-purple-400" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+                  <Target className="w-6 h-6 text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-horizon-text">הכנה לפגישה ראשונה</h3>
+                  <p className="text-sm text-horizon-accent">זו תהיה הפגישה הראשונה עם הלקוח</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-horizon-text">הכנה לפגישה ראשונה</h3>
-                <p className="text-sm text-horizon-accent">זו תהיה הפגישה הראשונה עם הלקוח</p>
-              </div>
+              <Button 
+                onClick={handleMarkFirstMeetingComplete}
+                disabled={isMarkingFirstMeeting}
+                variant="outline"
+                className="border-green-500 text-green-400 hover:bg-green-500/10"
+              >
+                {isMarkingFirstMeeting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 ml-2" />
+                    פגישה ראשונה הושלמה
+                  </>
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -143,7 +223,7 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
           {expandedSections.includes('checklist') && (
             <CardContent className="pt-0">
               <div className="space-y-3">
-                {defaultTasks.map((task, index) => (
+                {DEFAULT_FIRST_MEETING_TASKS.map((task, index) => (
                   <div 
                     key={task.id || index}
                     className={`flex items-start gap-3 p-3 rounded-lg transition-all ${
@@ -180,11 +260,26 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
 
               <div className="mt-4 p-3 bg-horizon-card rounded-lg">
                 <p className="text-sm text-horizon-accent">
-                  ✅ {Object.values(checkedTasks).filter(Boolean).length} מתוך {defaultTasks.length} משימות הושלמו
+                  ✅ {Object.values(checkedTasks).filter(Boolean).length} מתוך {DEFAULT_FIRST_MEETING_TASKS.length} משימות הושלמו
                 </p>
               </div>
             </CardContent>
           )}
+        </Card>
+
+        {/* כפתור יצירת סיכום */}
+        <Card className="card-horizon bg-gradient-to-l from-horizon-primary/10 to-transparent">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-horizon-accent">
+                לאחר הפגישה, צור סיכום פגישה עם כל המידע החשוב
+              </div>
+              <Button onClick={onCreateSummary} className="btn-horizon-primary">
+                <Plus className="w-4 h-4 ml-2" />
+                צור סיכום פגישה
+              </Button>
+            </div>
+          </CardContent>
         </Card>
       </div>
     );
@@ -193,6 +288,82 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
   // תצוגה לפגישות המשך
   return (
     <div className="space-y-4">
+      {/* כרטיס סיכום מהיר */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="bg-horizon-card border-horizon">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-horizon-primary">{meetings.length}</p>
+            <p className="text-xs text-horizon-accent">פגישות עד כה</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-horizon-card border-horizon">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-blue-400">{openTasks.length}</p>
+            <p className="text-xs text-horizon-accent">משימות פתוחות</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-horizon-card border-horizon">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-red-400">{delayedTasks.length}</p>
+            <p className="text-xs text-horizon-accent">באיחור</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-horizon-card border-horizon">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-green-400">{tasksSinceLastMeeting.length}</p>
+            <p className="text-xs text-horizon-accent">עודכנו מאז הפגישה</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* התראות */}
+      {(delayedTasks.length > 0 || cashflowAlerts.length > 0) && (
+        <Card className="card-horizon border-l-4 border-l-red-500">
+          <CardHeader 
+            className="cursor-pointer"
+            onClick={() => toggleSection('alerts')}
+          >
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-horizon-text flex items-center gap-2 text-base">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+                נקודות לתשומת לב
+                <Badge className="bg-red-500/20 text-red-400 border-red-500/50">
+                  {delayedTasks.length + cashflowAlerts.length}
+                </Badge>
+              </CardTitle>
+              {expandedSections.includes('alerts') ? (
+                <ChevronUp className="w-5 h-5 text-horizon-accent" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-horizon-accent" />
+              )}
+            </div>
+          </CardHeader>
+          {expandedSections.includes('alerts') && (
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {delayedTasks.map(task => (
+                  <div key={task.id} className="flex items-center gap-3 p-2 bg-red-500/10 rounded-lg">
+                    <Clock className="w-4 h-4 text-red-400 flex-shrink-0" />
+                    <div className="flex-1">
+                      <span className="text-horizon-text text-sm">{task.name}</span>
+                      <span className="text-red-400 text-xs mr-2">
+                        באיחור של {differenceInDays(new Date(), new Date(task.end_date))} ימים
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {cashflowAlerts.map((alert, idx) => (
+                  <div key={idx} className="flex items-center gap-3 p-2 bg-orange-500/10 rounded-lg">
+                    <AlertTriangle className="w-4 h-4 text-orange-400 flex-shrink-0" />
+                    <span className="text-horizon-text text-sm">{alert.message}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      )}
+
       {/* סיכום הפגישה האחרונה */}
       <Card className="card-horizon">
         <CardHeader 
@@ -236,8 +407,10 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
                   <ul className="space-y-1">
                     {(Array.isArray(lastMeeting.key_decisions) 
                       ? lastMeeting.key_decisions 
-                      : lastMeeting.key_decisions.split('\n')
-                    ).filter(d => d.trim()).map((decision, idx) => (
+                      : typeof lastMeeting.key_decisions === 'string' 
+                        ? lastMeeting.key_decisions.split('\n')
+                        : []
+                    ).filter(d => d && d.trim()).map((decision, idx) => (
                       <li key={idx} className="text-sm text-horizon-accent flex items-start gap-2">
                         <span className="text-green-400 mt-1">•</span>
                         {decision}
@@ -246,6 +419,71 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
                   </ul>
                 </div>
               )}
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* צ'קליסט לפגישה החוזרת */}
+      <Card className="card-horizon">
+        <CardHeader 
+          className="cursor-pointer"
+          onClick={() => toggleSection('checklist')}
+        >
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-horizon-text flex items-center gap-2 text-base">
+              <ListChecks className="w-5 h-5 text-horizon-primary" />
+              צ'קליסט הכנה לפגישה
+            </CardTitle>
+            {expandedSections.includes('checklist') ? (
+              <ChevronUp className="w-5 h-5 text-horizon-accent" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-horizon-accent" />
+            )}
+          </div>
+        </CardHeader>
+        {expandedSections.includes('checklist') && (
+          <CardContent className="pt-0">
+            <div className="space-y-3">
+              {DEFAULT_RECURRING_MEETING_TASKS.map((task, index) => (
+                <div 
+                  key={task.id || index}
+                  className={`flex items-start gap-3 p-3 rounded-lg transition-all ${
+                    checkedTasks[`recurring_${task.id || index}`] 
+                      ? 'bg-green-500/10 border border-green-500/30' 
+                      : 'bg-horizon-card border border-horizon'
+                  }`}
+                >
+                  <Checkbox
+                    checked={checkedTasks[`recurring_${task.id || index}`] || false}
+                    onCheckedChange={() => toggleTask(`recurring_${task.id || index}`)}
+                    className="mt-1 border-horizon-primary data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`font-medium ${
+                        checkedTasks[`recurring_${task.id || index}`] 
+                          ? 'line-through text-horizon-accent' 
+                          : 'text-horizon-text'
+                      }`}>
+                        {task.title}
+                      </span>
+                      {checkedTasks[`recurring_${task.id || index}`] && (
+                        <CheckCircle2 className="w-4 h-4 text-green-400" />
+                      )}
+                    </div>
+                    {task.description && (
+                      <p className="text-sm text-horizon-accent mt-1">{task.description}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 p-3 bg-horizon-card rounded-lg">
+              <p className="text-sm text-horizon-accent">
+                ✅ {Object.keys(checkedTasks).filter(k => k.startsWith('recurring_') && checkedTasks[k]).length} מתוך {DEFAULT_RECURRING_MEETING_TASKS.length} משימות הושלמו
+              </p>
             </div>
           </CardContent>
         )}
@@ -282,24 +520,35 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
               </div>
             ) : (
               <div className="space-y-2">
-                {openTasks.map((task) => (
-                  <div 
-                    key={task.id}
-                    className="flex items-center justify-between p-3 bg-horizon-card rounded-lg border border-horizon"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-horizon-text">{task.name}</span>
-                        {getStatusBadge(task.status)}
+                {openTasks.map((task) => {
+                  const isDelayed = task.end_date && isAfter(new Date(), new Date(task.end_date));
+                  return (
+                    <div 
+                      key={task.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        isDelayed ? 'bg-red-500/5 border-red-500/30' : 'bg-horizon-card border-horizon'
+                      }`}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-horizon-text">{task.name}</span>
+                          {getStatusBadge(task.status)}
+                          {isDelayed && (
+                            <Badge className="bg-red-500/20 text-red-400 border-red-500/50 text-xs">
+                              באיחור
+                            </Badge>
+                          )}
+                        </div>
+                        {task.end_date && (
+                          <p className={`text-xs mt-1 ${isDelayed ? 'text-red-400' : 'text-horizon-accent'}`}>
+                            יעד: {format(new Date(task.end_date), 'dd/MM/yyyy')}
+                            {isDelayed && ` (${differenceInDays(new Date(), new Date(task.end_date))} ימים באיחור)`}
+                          </p>
+                        )}
                       </div>
-                      {task.end_date && (
-                        <p className="text-xs text-horizon-accent mt-1">
-                          יעד: {format(new Date(task.end_date), 'dd/MM/yyyy')}
-                        </p>
-                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
@@ -311,7 +560,7 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
         <Card className="card-horizon border-l-4 border-l-green-500">
           <CardHeader>
             <CardTitle className="text-horizon-text flex items-center gap-2 text-base">
-              <CheckCircle2 className="w-5 h-5 text-green-400" />
+              <TrendingUp className="w-5 h-5 text-green-400" />
               התקדמות מאז הפגישה האחרונה ({tasksSinceLastMeeting.length})
             </CardTitle>
           </CardHeader>
@@ -336,6 +585,21 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
           </CardContent>
         </Card>
       )}
+
+      {/* כפתור יצירת סיכום */}
+      <Card className="card-horizon bg-gradient-to-l from-horizon-primary/10 to-transparent">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-horizon-accent">
+              לאחר הפגישה, צור סיכום פגישה עם כל המידע החשוב
+            </div>
+            <Button onClick={onCreateSummary} className="btn-horizon-primary">
+              <Plus className="w-4 h-4 ml-2" />
+              צור סיכום פגישה
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

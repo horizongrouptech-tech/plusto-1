@@ -601,6 +601,7 @@ export default function ManualForecastWizard({
             onSave={handleSave}
             onBack={() => setCurrentStep(4)}
             isSaving={isSaving}
+            customer={customer}
           />
         )}
       </div>

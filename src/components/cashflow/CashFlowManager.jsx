@@ -48,11 +48,12 @@ export default function CashFlowManager({ customer }) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [sortOrder, setSortOrder] = useState('desc'); // 'asc' = ישן לחדש, 'desc' = חדש לישן
   
   const queryClient = useQueryClient();
 
   // טעינת תנועות תזרים
-  const { data: cashFlowData = [], isLoading } = useQuery({
+  const { data: rawCashFlowData = [], isLoading } = useQuery({
     queryKey: ['cashFlow', customer?.email, dateRange],
     queryFn: () => base44.entities.CashFlow.filter({
       customer_email: customer.email,
@@ -60,9 +61,35 @@ export default function CashFlowManager({ customer }) {
         $gte: dateRange.start, 
         $lte: dateRange.end 
       }
-    }, '-date'),
+    }, 'date'), // ממיין מהישן לחדש כדי לחשב יתרה מצטברת נכון
     enabled: !!customer?.email
   });
+
+  // חישוב יתרה מצטברת ומיון הנתונים
+  const cashFlowData = React.useMemo(() => {
+    if (!rawCashFlowData || rawCashFlowData.length === 0) return [];
+    
+    // מיון לפי תאריך (מהישן לחדש) לחישוב יתרה מצטברת
+    const sortedByDateAsc = [...rawCashFlowData].sort((a, b) => 
+      new Date(a.date) - new Date(b.date)
+    );
+    
+    // חישוב יתרה מצטברת
+    let cumulativeBalance = 0;
+    const dataWithBalance = sortedByDateAsc.map(item => {
+      cumulativeBalance += (item.credit || 0) - (item.debit || 0);
+      return {
+        ...item,
+        cumulativeBalance: cumulativeBalance
+      };
+    });
+    
+    // מיון לפי הבחירה של המשתמש
+    if (sortOrder === 'desc') {
+      return dataWithBalance.reverse();
+    }
+    return dataWithBalance;
+  }, [rawCashFlowData, sortOrder]);
 
   // טעינת הוצאות קבועות
   const { data: recurringExpenses = [] } = useQuery({
@@ -333,7 +360,7 @@ export default function CashFlowManager({ customer }) {
         <CardContent className="space-y-4">
           {/* סינון טווח תאריכים לתצוגה */}
           <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-            <div className="flex gap-4 items-center">
+            <div className="flex gap-4 items-center flex-wrap">
               <div className="flex items-center gap-2">
                 <Filter className="w-4 h-4 text-blue-400" />
                 <span className="text-sm font-medium text-blue-400">סנן לפי טווח תאריכים:</span>
@@ -351,9 +378,20 @@ export default function CashFlowManager({ customer }) {
                 onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
                 className="w-40 bg-horizon-dark border-blue-500/50 text-horizon-text"
               />
+              <div className="flex items-center gap-2 mr-4">
+                <span className="text-sm text-blue-400">מיון:</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                  className={`border-blue-500/50 ${sortOrder === 'asc' ? 'bg-blue-500/20 text-blue-400' : 'text-horizon-text'}`}
+                >
+                  {sortOrder === 'asc' ? '📅 ישן → חדש' : '📅 חדש → ישן'}
+                </Button>
+              </div>
             </div>
             <p className="text-xs text-blue-300 mt-2">
-              💡 העלאת קובץ תייבא את כל התאריכים. השתמש בסינון זה כדי לראות תקופה ספציפית
+              💡 העלאת קובץ תייבא את כל התאריכים. השתמש בסינון זה כדי לראות תקופה ספציפית. היתרה המצטברת מחושבת מהתאריך הישן ביותר.
             </p>
           </div>
 
@@ -428,7 +466,7 @@ export default function CashFlowManager({ customer }) {
                           <TableHead className="text-right text-horizon-text">אסמכתא</TableHead>
                           <TableHead className="text-right text-horizon-text">זכות</TableHead>
                           <TableHead className="text-right text-horizon-text">חובה</TableHead>
-                          <TableHead className="text-right text-horizon-text">יתרה</TableHead>
+                          <TableHead className="text-right text-horizon-text">יתרה מצטברת</TableHead>
                           <TableHead className="text-right text-horizon-text w-24">פעולות</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -461,8 +499,8 @@ export default function CashFlowManager({ customer }) {
                             <TableCell className="text-right text-red-400 font-medium">
                               {item.debit > 0 ? `₪${item.debit.toLocaleString()}` : '-'}
                             </TableCell>
-                            <TableCell className="text-right text-blue-400 font-medium">
-                              {item.balance != null ? `₪${item.balance.toLocaleString()}` : '-'}
+                            <TableCell className={`text-right font-medium ${item.cumulativeBalance >= 0 ? 'text-blue-400' : 'text-orange-400'}`}>
+                              ₪{item.cumulativeBalance?.toLocaleString() || '0'}
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center gap-1 justify-end">

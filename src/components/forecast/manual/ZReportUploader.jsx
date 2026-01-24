@@ -9,8 +9,21 @@ import { formatCurrency } from './utils/numberFormatter';
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 
+// מערכות קופה נתמכות
+const POS_SYSTEMS = [
+  { id: 'auto', name: 'זיהוי אוטומטי', description: 'המערכת תזהה את הפורמט אוטומטית' },
+  { id: 'generic', name: 'קופה כללית', description: 'פורמט Excel/CSV סטנדרטי' },
+  { id: 'emv', name: 'EMV / ישראכרט', description: 'דוחות מסוף אשראי EMV' },
+  { id: 'priority', name: 'פריוריטי', description: 'דוחות מ-Priority ERP' },
+  { id: 'hashavshevet', name: 'חשבשבת', description: 'דוחות מתוכנת חשבשבת' },
+  { id: 'rivhit', name: 'רווחית', description: 'דוחות מתוכנת רווחית' },
+  { id: 'hilan', name: 'חילן', description: 'דוחות ממערכת חילן' },
+  { id: 'image', name: 'תמונה/סריקה', description: 'ניתוח תמונת דוח Z (JPG/PNG)' }
+];
+
 export default function ZReportUploader({ isOpen, onClose, forecastData, onDataImported }) {
   const [selectedMonth, setSelectedMonth] = useState(null);
+  const [selectedPosSystem, setSelectedPosSystem] = useState('auto');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('');
   const [parsedData, setParsedData] = useState(null);
@@ -58,7 +71,8 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
 
       const response = await base44.functions.invoke('parseZReport', {
         fileUrl: file_url,
-        fileName: file.name
+        fileName: file.name,
+        posSystem: selectedPosSystem
       });
 
       setParsingProgress(70);
@@ -129,6 +143,7 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
     setParsedData(null);
     setShowPreview(false);
     setSelectedMonth(null);
+    setSelectedPosSystem('auto');
     setSearchTerm('');
     setCurrentPage(1);
     setParsingProgress(0);
@@ -181,29 +196,67 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
 
         {!showPreview ? (
           <div className="space-y-6 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-horizon-text flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-horizon-primary" />
-                בחר חודש לעדכון
-              </label>
-              <select
-                value={selectedMonth || ''}
-                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                className="w-full h-12 bg-horizon-card border border-horizon rounded-md px-3 text-horizon-text focus:outline-none focus:border-horizon-primary text-right appearance-none"
-                style={{
-                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                    backgroundPosition: 'left 0.5rem center',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundSize: '1.5em 1.5em'
-                }}
-              >
-                <option value="" disabled>בחר חודש...</option>
-                {monthNames.map((month, index) => (
-                  <option key={index + 1} value={index + 1} className="text-black bg-white">
-                    {month} ({index + 1})
-                  </option>
-                ))}
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              {/* בחירת חודש */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-horizon-text flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-horizon-primary" />
+                  בחר חודש לעדכון
+                </label>
+                <select
+                  value={selectedMonth || ''}
+                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                  className="w-full h-12 bg-horizon-card border border-horizon rounded-md px-3 text-horizon-text focus:outline-none focus:border-horizon-primary text-right appearance-none"
+                  style={{
+                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                      backgroundPosition: 'left 0.5rem center',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundSize: '1.5em 1.5em'
+                  }}
+                >
+                  <option value="" disabled>בחר חודש...</option>
+                  {monthNames.map((month, index) => (
+                    <option key={index + 1} value={index + 1} className="text-black bg-white">
+                      {month} ({index + 1})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* בחירת מערכת קופה */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-horizon-text flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4 text-horizon-primary" />
+                  מערכת/פורמט הדוח
+                </label>
+                <select
+                  value={selectedPosSystem}
+                  onChange={(e) => setSelectedPosSystem(e.target.value)}
+                  className="w-full h-12 bg-horizon-card border border-horizon rounded-md px-3 text-horizon-text focus:outline-none focus:border-horizon-primary text-right appearance-none"
+                  style={{
+                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                      backgroundPosition: 'left 0.5rem center',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundSize: '1.5em 1.5em'
+                  }}
+                >
+                  {POS_SYSTEMS.map(system => (
+                    <option key={system.id} value={system.id} className="text-black bg-white">
+                      {system.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* תיאור המערכת הנבחרת */}
+            <div className="bg-horizon-card/50 border border-horizon rounded-lg p-3">
+              <p className="text-sm text-horizon-accent">
+                <span className="font-medium text-horizon-text">
+                  {POS_SYSTEMS.find(s => s.id === selectedPosSystem)?.name}:
+                </span>{' '}
+                {POS_SYSTEMS.find(s => s.id === selectedPosSystem)?.description}
+              </p>
             </div>
 
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
@@ -212,9 +265,9 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
                 <div className="text-right text-sm text-horizon-text">
                   <p className="font-semibold mb-2">שים לב:</p>
                   <ul className="space-y-1 pr-5 list-disc">
-                    <li>הקובץ צריך להיות בפורמט Excel (.xlsx, .xls) או CSV</li>
+                    <li>הקובץ צריך להיות בפורמט Excel (.xlsx, .xls), CSV או תמונה (JPG/PNG)</li>
+                    <li>בחר את המערכת הנכונה לקבלת תוצאות מדויקות יותר</li>
                     <li>הנתונים יעודכנו רק בעמודת "ביצוע בפועל" של החודש שנבחר</li>
-                    <li>נתוני התכנון והחודשים האחרים לא ישתנו</li>
                     <li>תוצג תצוגה מקדימה לפני השמירה הסופית</li>
                   </ul>
                 </div>
