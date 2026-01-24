@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
 import PdfPrinter from 'npm:pdfmake@0.2.10';
+import { ChartJSNodeCanvas } from 'npm:chartjs-node-canvas@4.1.6';
 
 // Helper functions
 const formatCurrency = (num) => {
@@ -15,6 +16,23 @@ const formatPercent = (num) => {
 const calculateVariance = (planned, actual) => {
   if (!planned || planned === 0) return 0;
   return ((actual - planned) / planned) * 100;
+};
+
+const formatK = (num) => {
+  if (!num && num !== 0) return '0';
+  return `₪${(num / 1000).toFixed(0)}K`;
+};
+
+// יצירת גרף באמצעות ChartJS
+const createChartImage = async (config, width = 800, height = 500) => {
+  const chartJSNodeCanvas = new ChartJSNodeCanvas({ 
+    width, 
+    height,
+    backgroundColour: 'white'
+  });
+  
+  const imageBuffer = await chartJSNodeCanvas.renderToBuffer(config);
+  return `data:image/png;base64,${imageBuffer.toString('base64')}`;
 };
 
 const getTopProducts = (services, sortBy = 'profit', limit = 10) => {
@@ -115,6 +133,67 @@ Deno.serve(async (req) => {
         }
       ];
 
+      const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+
+      // הכנת נתוני גרפים
+      const chartData = (forecast.profit_loss_monthly || []).map(month => ({
+        name: monthNames[month.month - 1] || `חודש ${month.month}`,
+        revenue: month.revenue || 0,
+        cogs: month.cost_of_sale || 0,
+        grossProfit: month.gross_profit || 0,
+        operatingProfit: month.operating_profit || 0,
+        netProfit: month.net_profit || 0
+      }));
+
+      const salesComparisonData = (forecast.profit_loss_monthly || []).map(month => {
+        const monthIndex = month.month - 1;
+        let plannedRevenue = 0;
+        let actualRevenue = 0;
+
+        if (forecast.services) {
+          forecast.services.forEach(item => {
+            plannedRevenue += (item.planned_monthly_revenue?.[monthIndex] || 0);
+            actualRevenue += (item.actual_monthly_revenue?.[monthIndex] || 0);
+          });
+        }
+
+        return {
+          name: monthNames[monthIndex],
+          planned: plannedRevenue,
+          actual: actualRevenue
+        };
+      });
+
+      const expensesComparisonData = (forecast.profit_loss_monthly || []).map(month => {
+        const monthIndex = month.month - 1;
+        let plannedExpenses = 0;
+        let actualExpenses = 0;
+
+        if (forecast.detailed_expenses?.marketing_sales) {
+          forecast.detailed_expenses.marketing_sales.forEach(exp => {
+            plannedExpenses += (exp.planned_monthly_amounts?.[monthIndex] || 0);
+            actualExpenses += (exp.actual_monthly_amounts?.[monthIndex] || 0);
+          });
+        }
+
+        if (forecast.detailed_expenses?.admin_general) {
+          forecast.detailed_expenses.admin_general.forEach(exp => {
+            plannedExpenses += (exp.planned_monthly_amounts?.[monthIndex] || 0);
+            actualExpenses += (exp.actual_monthly_amounts?.[monthIndex] || 0);
+          });
+        }
+
+        const salaryExpenses = month.salary_expenses || 0;
+        plannedExpenses += salaryExpenses;
+        actualExpenses += salaryExpenses;
+
+        return {
+          name: monthNames[monthIndex],
+          planned: plannedExpenses,
+          actual: actualExpenses
+        };
+      });
+
       // Financial Summary
       if (forecast.summary) {
         content.push({
@@ -185,6 +264,119 @@ Deno.serve(async (req) => {
             paddingBottom: () => 6
           },
           margin: [0, 0, 0, 20]
+        });
+      }
+
+      // גרף 1: תכנון מול ביצוע - מכירות
+      if (salesComparisonData.length > 0) {
+        content.push({
+          text: 'תכנון מול ביצוע - מכירות',
+          style: 'chartTitle',
+          margin: [0, 30, 0, 10],
+          color: '#3b82f6',
+          pageBreak: 'before'
+        });
+
+        content.push({
+          text: 'השוואה חודשית בין המכירות המתוכננות לבין המכירות בפועל - עוזר לזהות פערים ולהתאים את התכנון',
+          fontSize: 10,
+          color: '#666',
+          margin: [0, 0, 0, 15],
+          alignment: 'right'
+        });
+
+        const salesChartImage = await createChartImage({
+          type: 'bar',
+          data: {
+            labels: salesComparisonData.map(d => d.name),
+            datasets: [
+              {
+                label: 'תכנון מכירות',
+                data: salesComparisonData.map(d => d.planned),
+                backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                borderColor: '#3b82f6',
+                borderWidth: 2,
+                borderRadius: 8,
+                maxBarThickness: 60
+              },
+              {
+                label: 'ביצוע מכירות',
+                data: salesComparisonData.map(d => d.actual),
+                backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                borderColor: '#10B981',
+                borderWidth: 2,
+                borderRadius: 8,
+                maxBarThickness: 60
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top',
+                rtl: true,
+                labels: {
+                  font: { size: 14, weight: 'bold' },
+                  color: '#333',
+                  usePointStyle: true,
+                  padding: 20
+                }
+              },
+              datalabels: {
+                display: true,
+                anchor: 'end',
+                align: 'top',
+                color: '#333',
+                font: { size: 11, weight: 'bold' },
+                formatter: (value) => value > 0 ? formatK(value) : ''
+              }
+            },
+            scales: {
+              x: {
+                ticks: { 
+                  font: { size: 13, weight: '600' }, 
+                  color: '#333',
+                  reverse: true
+                },
+                grid: { display: false }
+              },
+              y: {
+                ticks: { 
+                  font: { size: 12, weight: '600' }, 
+                  color: '#333',
+                  callback: (value) => formatK(value)
+                },
+                grid: { color: 'rgba(0,0,0,0.05)' }
+              }
+            }
+          },
+          plugins: [{
+            id: 'customLabels',
+            afterDatasetsDraw: (chart) => {
+              const ctx = chart.ctx;
+              chart.data.datasets.forEach((dataset, i) => {
+                const meta = chart.getDatasetMeta(i);
+                meta.data.forEach((bar, index) => {
+                  const data = dataset.data[index];
+                  if (data > 0) {
+                    ctx.fillStyle = dataset.borderColor;
+                    ctx.font = 'bold 11px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(formatK(data), bar.x, bar.y - 8);
+                  }
+                });
+              });
+            }
+          }]
+        }, 800, 400);
+
+        content.push({
+          image: salesChartImage,
+          width: 700,
+          alignment: 'center',
+          margin: [0, 0, 0, 30]
         });
       }
 
@@ -287,45 +479,223 @@ Deno.serve(async (req) => {
           });
         }
 
-        // All Services Table
+        // גרף 2: הכנסות, עלות מכר ורווח גולמי
+        if (chartData.length > 0) {
+          content.push({
+            text: 'הכנסות, עלות מכר ורווח גולמי',
+            style: 'chartTitle',
+            margin: [0, 30, 0, 10],
+            color: '#22c55e',
+            pageBreak: 'before'
+          });
+
+          content.push({
+            text: 'תמונה מקיפה של ההכנסות, עלות המכר והרווח הגולמי בכל חודש - מאפשר לזהות חודשים חזקים וחלשים',
+            fontSize: 10,
+            color: '#666',
+            margin: [0, 0, 0, 15],
+            alignment: 'right'
+          });
+
+          const revenueChartImage = await createChartImage({
+            type: 'bar',
+            data: {
+              labels: chartData.map(d => d.name),
+              datasets: [
+                {
+                  label: 'הכנסות',
+                  data: chartData.map(d => d.revenue),
+                  backgroundColor: 'rgba(50, 172, 193, 0.85)',
+                  borderColor: '#32acc1',
+                  borderWidth: 2,
+                  borderRadius: 8,
+                  maxBarThickness: 45
+                },
+                {
+                  label: 'עלות מכר',
+                  data: chartData.map(d => d.cogs),
+                  backgroundColor: 'rgba(249, 115, 22, 0.85)',
+                  borderColor: '#f97316',
+                  borderWidth: 2,
+                  borderRadius: 8,
+                  maxBarThickness: 45
+                },
+                {
+                  label: 'רווח גולמי',
+                  data: chartData.map(d => d.grossProfit),
+                  backgroundColor: 'rgba(34, 197, 94, 0.85)',
+                  borderColor: '#22c55e',
+                  borderWidth: 2,
+                  borderRadius: 8,
+                  maxBarThickness: 45
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: {
+                  display: true,
+                  position: 'top',
+                  rtl: true,
+                  labels: {
+                    font: { size: 14, weight: 'bold' },
+                    color: '#333',
+                    usePointStyle: true,
+                    padding: 20
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  ticks: { 
+                    font: { size: 13, weight: '600' }, 
+                    color: '#333',
+                    reverse: true
+                  },
+                  grid: { display: false }
+                },
+                y: {
+                  ticks: { 
+                    font: { size: 12, weight: '600' }, 
+                    color: '#333',
+                    callback: (value) => formatK(value)
+                  },
+                  grid: { color: 'rgba(0,0,0,0.05)' }
+                }
+              }
+            },
+            plugins: [{
+              id: 'revenueLabels',
+              afterDatasetsDraw: (chart) => {
+                const ctx = chart.ctx;
+                chart.data.datasets.forEach((dataset, i) => {
+                  const meta = chart.getDatasetMeta(i);
+                  meta.data.forEach((bar, index) => {
+                    const data = dataset.data[index];
+                    if (data > 0) {
+                      ctx.fillStyle = dataset.borderColor;
+                      ctx.font = 'bold 11px Arial';
+                      ctx.textAlign = 'center';
+                      ctx.fillText(formatK(data), bar.x, bar.y - 8);
+                    }
+                  });
+                });
+              }
+            }]
+          }, 800, 400);
+
+          content.push({
+            image: revenueChartImage,
+            width: 700,
+            alignment: 'center',
+            margin: [0, 0, 0, 30]
+          });
+        }
+      }
+
+      // גרף 3: תכנון מול ביצוע - הוצאות
+      if (expensesComparisonData.length > 0) {
         content.push({
-          text: 'כל המוצרים והשירותים',
-          style: 'sectionHeader',
-          margin: [0, 20, 0, 10],
+          text: 'תכנון מול ביצוע - הוצאות',
+          style: 'chartTitle',
+          margin: [0, 30, 0, 10],
+          color: '#f59e0b',
           pageBreak: 'before'
         });
 
-        const servicesData = [
-          [
-            { text: 'שם מוצר/שירות', bold: true, fillColor: '#5a6c7d', color: 'white' },
-            { text: 'מחיר', bold: true, fillColor: '#5a6c7d', color: 'white', alignment: 'left' },
-            { text: 'עלות', bold: true, fillColor: '#5a6c7d', color: 'white', alignment: 'left' },
-            { text: '% רווח', bold: true, fillColor: '#5a6c7d', color: 'white', alignment: 'left' }
-          ],
-          ...forecast.services.map((s, idx) => {
-            const bgColor = idx % 2 === 0 ? '#f8f9fa' : 'white';
-            return [
-              { text: s.service_name, fillColor: bgColor },
-              { text: formatCurrency(s.price || 0), alignment: 'left', fillColor: bgColor },
-              { text: formatCurrency(s.calculated?.cost_of_sale || 0), alignment: 'left', fillColor: bgColor },
-              { text: formatPercent(s.calculated?.gross_margin_percentage || 0), alignment: 'left', fillColor: bgColor }
-            ];
-          })
-        ];
+        content.push({
+          text: 'מעקב אחר הוצאות שיווק, הנהלה ושכר - מראה היכן חרגת מהתקציב ואיפה ניתן לחסוך',
+          fontSize: 10,
+          color: '#666',
+          margin: [0, 0, 0, 15],
+          alignment: 'right'
+        });
+
+        const expensesChartImage = await createChartImage({
+          type: 'bar',
+          data: {
+            labels: expensesComparisonData.map(d => d.name),
+            datasets: [
+              {
+                label: 'תכנון',
+                data: expensesComparisonData.map(d => d.planned),
+                backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                borderColor: '#f59e0b',
+                borderWidth: 2,
+                borderRadius: 8,
+                maxBarThickness: 60
+              },
+              {
+                label: 'ביצוע',
+                data: expensesComparisonData.map(d => d.actual),
+                backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                borderColor: '#ef4444',
+                borderWidth: 2,
+                borderRadius: 8,
+                maxBarThickness: 60
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top',
+                rtl: true,
+                labels: {
+                  font: { size: 14, weight: 'bold' },
+                  color: '#333',
+                  usePointStyle: true,
+                  padding: 20
+                }
+              }
+            },
+            scales: {
+              x: {
+                ticks: { 
+                  font: { size: 13, weight: '600' }, 
+                  color: '#333',
+                  reverse: true
+                },
+                grid: { display: false }
+              },
+              y: {
+                ticks: { 
+                  font: { size: 12, weight: '600' }, 
+                  color: '#333',
+                  callback: (value) => formatK(value)
+                },
+                grid: { color: 'rgba(0,0,0,0.05)' }
+              }
+            }
+          },
+          plugins: [{
+            id: 'expenseLabels',
+            afterDatasetsDraw: (chart) => {
+              const ctx = chart.ctx;
+              chart.data.datasets.forEach((dataset, i) => {
+                const meta = chart.getDatasetMeta(i);
+                meta.data.forEach((bar, index) => {
+                  const data = dataset.data[index];
+                  if (data > 0) {
+                    ctx.fillStyle = dataset.borderColor;
+                    ctx.font = 'bold 11px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(formatK(data), bar.x, bar.y - 8);
+                  }
+                });
+              });
+            }
+          }]
+        }, 800, 400);
 
         content.push({
-          table: {
-            headerRows: 1,
-            widths: ['*', 80, 80, 60],
-            body: servicesData
-          },
-          layout: {
-            hLineWidth: () => 0.5,
-            vLineWidth: () => 0.5,
-            hLineColor: () => '#e1e8ed',
-            vLineColor: () => '#e1e8ed'
-          },
-          margin: [0, 0, 0, 20]
+          image: expensesChartImage,
+          width: 700,
+          alignment: 'center',
+          margin: [0, 0, 0, 30]
         });
       }
 
@@ -398,6 +768,129 @@ Deno.serve(async (req) => {
         }
       }
 
+      // גרף 4: מגמת רווחיות
+      if (chartData.length > 0) {
+        content.push({
+          text: 'מגמת רווחיות - התפתחות הרווח לאורך השנה',
+          style: 'chartTitle',
+          margin: [0, 30, 0, 10],
+          color: '#10B981',
+          pageBreak: 'before'
+        });
+
+        content.push({
+          text: 'מעקב אחר השתלשלות הרווחיות לאורך השנה - מרווח גולמי דרך רווח תפעולי ועד לרווח הנקי הסופי',
+          fontSize: 10,
+          color: '#666',
+          margin: [0, 0, 0, 15],
+          alignment: 'right'
+        });
+
+        const profitTrendImage = await createChartImage({
+          type: 'line',
+          data: {
+            labels: chartData.map(d => d.name),
+            datasets: [
+              {
+                label: 'רווח גולמי',
+                data: chartData.map(d => d.grossProfit),
+                borderColor: '#22c55e',
+                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                borderWidth: 4,
+                pointRadius: 6,
+                pointBackgroundColor: '#22c55e',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 3,
+                tension: 0.3
+              },
+              {
+                label: 'רווח תפעולי',
+                data: chartData.map(d => d.operatingProfit),
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 4,
+                pointRadius: 6,
+                pointBackgroundColor: '#3b82f6',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 3,
+                tension: 0.3
+              },
+              {
+                label: 'רווח נקי',
+                data: chartData.map(d => d.netProfit),
+                borderColor: '#10B981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                borderWidth: 5,
+                pointRadius: 7,
+                pointBackgroundColor: '#10B981',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 3,
+                tension: 0.3
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top',
+                rtl: true,
+                labels: {
+                  font: { size: 14, weight: 'bold' },
+                  color: '#333',
+                  usePointStyle: true,
+                  padding: 20
+                }
+              }
+            },
+            scales: {
+              x: {
+                ticks: { 
+                  font: { size: 13, weight: '600' }, 
+                  color: '#333',
+                  reverse: true
+                },
+                grid: { display: false }
+              },
+              y: {
+                ticks: { 
+                  font: { size: 12, weight: '600' }, 
+                  color: '#333',
+                  callback: (value) => formatK(value)
+                },
+                grid: { color: 'rgba(0,0,0,0.05)' }
+              }
+            }
+          },
+          plugins: [{
+            id: 'profitLabels',
+            afterDatasetsDraw: (chart) => {
+              const ctx = chart.ctx;
+              chart.data.datasets.forEach((dataset, i) => {
+                const meta = chart.getDatasetMeta(i);
+                meta.data.forEach((point, index) => {
+                  const data = dataset.data[index];
+                  if (data !== 0 && data !== null) {
+                    ctx.fillStyle = dataset.borderColor;
+                    ctx.font = i === 2 ? 'bold 12px Arial' : 'bold 11px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(formatK(data), point.x, point.y - 12);
+                  }
+                });
+              });
+            }
+          }]
+        }, 800, 400);
+
+        content.push({
+          image: profitTrendImage,
+          width: 700,
+          alignment: 'center',
+          margin: [0, 0, 0, 30]
+        });
+      }
+
       // Loans
       if (forecast.financing_loans && forecast.financing_loans.length > 0) {
         content.push({
@@ -446,13 +939,11 @@ Deno.serve(async (req) => {
       // Monthly P&L
       if (forecast.profit_loss_monthly && forecast.profit_loss_monthly.length > 0) {
         content.push({
-          text: 'רווח והפסד חודשי (נטו - לא כולל מע"מ)',
+          text: 'טבלת רווח והפסד חודשי (נטו - לא כולל מע"מ)',
           style: 'sectionHeader',
           margin: [0, 20, 0, 10],
           pageBreak: 'before'
         });
-
-        const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
         
         const plData = [
           [
@@ -510,6 +1001,11 @@ Deno.serve(async (req) => {
           },
           sectionHeader: {
             fontSize: 15,
+            bold: true,
+            color: '#32acc1'
+          },
+          chartTitle: {
+            fontSize: 16,
             bold: true,
             color: '#32acc1'
           }
