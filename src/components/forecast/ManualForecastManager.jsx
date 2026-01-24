@@ -77,12 +77,24 @@ export default function ManualForecastManager({
 
   const handleExportPDF = async (forecastId) => {
     try {
-      const response = await base44.functions.invoke('exportForecastToPdf', {
-        forecast_id: forecastId,
-        forecast_type: 'manual'
+      // קריאה ישירה ל-endpoint של הפונקציה
+      const response = await fetch(`${import.meta.env.VITE_BASE44_FUNCTIONS_URL || ''}/functions/exportForecastToPdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('base44_token')}`
+        },
+        body: JSON.stringify({
+          forecast_id: forecastId,
+          forecast_type: 'manual'
+        })
       });
       
-      const blob = new Blob([response], { type: 'application/pdf' });
+      if (!response.ok) {
+        throw new Error('Failed to export PDF');
+      }
+      
+      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
