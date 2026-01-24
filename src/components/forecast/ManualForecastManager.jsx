@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -83,7 +82,7 @@ export default function ManualForecastManager({
         forecast_type: 'manual'
       });
       
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const blob = new Blob([response], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
