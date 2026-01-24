@@ -77,24 +77,29 @@ export default function ManualForecastManager({
 
   const handleExportPDF = async (forecastId) => {
     try {
-      // קריאה ישירה ל-endpoint של הפונקציה
-      const response = await fetch(`${import.meta.env.VITE_BASE44_FUNCTIONS_URL || ''}/functions/exportForecastToPdf`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('base44_token')}`
-        },
-        body: JSON.stringify({
-          forecast_id: forecastId,
-          forecast_type: 'manual'
-        })
+      console.log('Starting PDF export for forecast:', forecastId);
+      
+      const response = await base44.functions.invoke('exportForecastToPdf', {
+        forecast_id: forecastId,
+        forecast_type: 'manual'
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to export PDF');
+      console.log('Got response:', response);
+      console.log('Response type:', typeof response);
+      
+      // התגובה צריכה להיות ArrayBuffer או Uint8Array
+      let pdfData;
+      if (response instanceof ArrayBuffer) {
+        pdfData = response;
+      } else if (response instanceof Uint8Array) {
+        pdfData = response.buffer;
+      } else {
+        // אם זה אובייקט, אולי זה שגיאה
+        console.error('Unexpected response type:', response);
+        throw new Error('Invalid response format');
       }
       
-      const blob = await response.blob();
+      const blob = new Blob([pdfData], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -103,9 +108,11 @@ export default function ManualForecastManager({
       a.click();
       window.URL.revokeObjectURL(url);
       a.remove();
+      
+      console.log('PDF download completed');
     } catch (error) {
       console.error('Error exporting PDF:', error);
-      alert('שגיאה בייצוא PDF');
+      alert(`שגיאה בייצוא PDF: ${error.message}`);
     }
   };
 
