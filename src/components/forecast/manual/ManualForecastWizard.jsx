@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ArrowRight, ArrowLeft, Save, Loader2, CheckCircle2, AlertCircle, Package, Download } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowRight, ArrowLeft, Save, Loader2, CheckCircle2, AlertCircle, Package, Download, FileText, BarChart3, PieChart, Table, TrendingUp, ShoppingBag } from "lucide-react";
 import { base44 } from '@/api/base44Client';
 
 import Step1ServicesAndCosts from './Step1ServicesAndCosts';
@@ -30,6 +32,18 @@ export default function ManualForecastWizard({
   const [saveStatus, setSaveStatus] = useState(null);
   const saveTimeoutRef = useRef(null);
   const [isSavingInProgress, setIsSavingInProgress] = useState(false);
+  
+  // PDF Export Dialog State
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportOptions, setExportOptions] = useState({
+    includeSummary: true,
+    includeServices: true,
+    includeMonthlyTable: true,
+    includeRevenueChart: true,
+    includeProfitChart: true,
+    includeSummaryPie: true
+  });
 
   const [forecastData, setForecastData] = useState({
     customer_email: customer.email,
@@ -399,21 +413,54 @@ export default function ManualForecastWizard({
     }
   };
 
-  const handleExportPDF = async () => {
+  // Open export dialog
+  const handleOpenExportDialog = () => {
     if (!forecastData.id) {
       alert('יש לשמור את התחזית לפני ייצוא ל-PDF');
       return;
     }
+    setShowExportDialog(true);
+  };
+
+  // Toggle export option
+  const toggleExportOption = (option) => {
+    setExportOptions(prev => ({
+      ...prev,
+      [option]: !prev[option]
+    }));
+  };
+
+  // Export to PDF with selected options
+  const handleExportPDF = async () => {
+    setIsExporting(true);
     
     try {
       const fullForecast = await base44.entities.ManualForecast.get(forecastData.id);
-      const htmlContent = generateForecastHTML(fullForecast, 'manual');
-      openPrintWindow(htmlContent, `תחזית_${forecastData.forecast_name || 'ידנית'}`);
+      const htmlContent = generateForecastHTML(
+        fullForecast, 
+        'manual', 
+        exportOptions,
+        customer?.business_name || ''
+      );
+      openPrintWindow(htmlContent, `תחזית_${forecastData.forecast_name || 'ידנית'}_${customer?.business_name || ''}`);
+      setShowExportDialog(false);
     } catch (error) {
       console.error('Error exporting PDF:', error);
       alert('שגיאה בייצוא PDF');
+    } finally {
+      setIsExporting(false);
     }
   };
+
+  // Export options configuration
+  const EXPORT_OPTIONS_CONFIG = [
+    { id: 'includeSummary', label: 'סיכום פיננסי שנתי', icon: FileText, description: 'הכנסות, רווח גולמי, רווח נקי' },
+    { id: 'includeRevenueChart', label: 'גרף הכנסות ורווח', icon: BarChart3, description: 'גרף עמודות חודשי' },
+    { id: 'includeProfitChart', label: 'גרף מגמת רווחיות', icon: TrendingUp, description: 'גרף קווי של הרווחים' },
+    { id: 'includeSummaryPie', label: 'גרף התפלגות', icon: PieChart, description: 'עוגה של הכנסות והוצאות' },
+    { id: 'includeServices', label: 'שירותים ומוצרים', icon: ShoppingBag, description: 'טבלת מוצרים ותמחור' },
+    { id: 'includeMonthlyTable', label: 'טבלת רווח והפסד חודשית', icon: Table, description: 'פירוט מלא לפי חודשים' }
+  ];
 
   const steps = [
     { number: 1, title: "מוצרים ועלויות" },
@@ -478,7 +525,7 @@ export default function ManualForecastWizard({
               )}
               {forecastData.id && (
                 <Button
-                  onClick={handleExportPDF}
+                  onClick={handleOpenExportDialog}
                   variant="outline"
                   size="sm"
                   className="border-green-500 text-green-400 hover:bg-green-500/10"
@@ -605,6 +652,123 @@ export default function ManualForecastWizard({
           />
         )}
       </div>
+
+      {/* PDF Export Dialog */}
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent className="max-w-lg bg-horizon-dark border-horizon" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-horizon-text flex items-center gap-2 text-xl">
+              <FileText className="w-6 h-6 text-horizon-primary" />
+              ייצוא תחזית עסקית ל-PDF
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-horizon-accent">
+              בחר אילו רכיבים לכלול בקובץ ה-PDF:
+            </p>
+
+            <div className="space-y-3">
+              {EXPORT_OPTIONS_CONFIG.map((option) => {
+                const Icon = option.icon;
+                const isChecked = exportOptions[option.id];
+                return (
+                  <div
+                    key={option.id}
+                    onClick={() => toggleExportOption(option.id)}
+                    className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                      isChecked 
+                        ? 'border-horizon-primary bg-horizon-primary/5' 
+                        : 'border-horizon hover:border-horizon-primary/50 bg-horizon-card'
+                    }`}
+                  >
+                    <Checkbox
+                      checked={isChecked}
+                      onCheckedChange={() => toggleExportOption(option.id)}
+                      className="border-horizon-primary data-[state=checked]:bg-horizon-primary"
+                    />
+                    <div className={`p-2 rounded-lg ${isChecked ? 'bg-horizon-primary/20' : 'bg-horizon-card'}`}>
+                      <Icon className={`w-5 h-5 ${isChecked ? 'text-horizon-primary' : 'text-horizon-accent'}`} />
+                    </div>
+                    <div className="flex-1">
+                      <div className={`font-medium ${isChecked ? 'text-horizon-text' : 'text-horizon-accent'}`}>
+                        {option.label}
+                      </div>
+                      <div className="text-xs text-horizon-accent">
+                        {option.description}
+                      </div>
+                    </div>
+                    {isChecked && (
+                      <CheckCircle2 className="w-5 h-5 text-green-400" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-2 mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setExportOptions({
+                  includeSummary: true,
+                  includeServices: true,
+                  includeMonthlyTable: true,
+                  includeRevenueChart: true,
+                  includeProfitChart: true,
+                  includeSummaryPie: true
+                })}
+                className="text-xs border-horizon text-horizon-accent"
+              >
+                בחר הכל
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setExportOptions({
+                  includeSummary: false,
+                  includeServices: false,
+                  includeMonthlyTable: false,
+                  includeRevenueChart: false,
+                  includeProfitChart: false,
+                  includeSummaryPie: false
+                })}
+                className="text-xs border-horizon text-horizon-accent"
+              >
+                נקה הכל
+              </Button>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowExportDialog(false)}
+              disabled={isExporting}
+              className="border-horizon text-horizon-text"
+            >
+              ביטול
+            </Button>
+            <Button 
+              onClick={handleExportPDF}
+              disabled={isExporting || !Object.values(exportOptions).some(Boolean)}
+              className="btn-horizon-primary"
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                  מייצא...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 ml-2" />
+                  ייצא PDF
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
