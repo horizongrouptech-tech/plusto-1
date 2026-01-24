@@ -222,7 +222,12 @@ export default function ManualForecastManager({
                     ערוך
                   </Button>
                   <Button
-                    onClick={() => handleExportPDF(forecast.id)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('🔴 PDF Export button clicked!', forecast.id);
+                      handleExportPDF(forecast.id);
+                    }}
                     variant="outline"
                     className="border-green-500 text-green-400 hover:bg-green-500/10"
                   >
