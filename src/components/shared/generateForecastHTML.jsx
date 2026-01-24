@@ -240,31 +240,32 @@ export function generateForecastHTML(forecast, type, options = {}, customerName 
       background: white;
       border: 1px solid #e1e8ed;
       border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 30px;
+      padding: 25px;
+      margin-bottom: 35px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      overflow: hidden;
     }
 
     .chart-container svg {
-      max-width: 100%;
+      width: 100%;
       height: auto;
       display: block;
       margin: 0 auto;
     }
 
-    .charts-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 30px;
+    .charts-row {
+      display: flex;
+      gap: 25px;
+      margin-bottom: 35px;
     }
 
-    .charts-grid .chart-container {
+    .charts-row .chart-container {
+      flex: 1;
       margin-bottom: 0;
     }
 
     .chart-full-width {
-      grid-column: 1 / -1;
+      width: 100%;
     }
 
     .footer {
@@ -325,12 +326,16 @@ export function generateForecastHTML(forecast, type, options = {}, customerName 
     }
 
     @media print {
-      .charts-grid {
+      .chart-container {
+        margin-bottom: 25px;
+        page-break-inside: avoid;
+        page-break-before: auto;
+      }
+      .charts-row {
         display: block;
       }
-      .charts-grid .chart-container {
-        margin-bottom: 20px;
-        page-break-inside: avoid;
+      .charts-row .chart-container {
+        margin-bottom: 25px;
       }
     }
   `;
@@ -447,24 +452,22 @@ export function generateForecastHTML(forecast, type, options = {}, customerName 
           </h2>
           
           ${exportOptions.includeRevenueChart && charts.revenueChart ? `
-            <div class="chart-container avoid-break">
+            <div class="chart-container chart-full-width avoid-break">
               ${charts.revenueChart}
             </div>
           ` : ''}
           
-          <div class="charts-grid">
-            ${exportOptions.includeProfitChart && charts.profitChart ? `
-              <div class="chart-container">
-                ${charts.profitChart}
-              </div>
-            ` : ''}
-            
-            ${exportOptions.includeSummaryPie && charts.summaryPie ? `
-              <div class="chart-container">
-                ${charts.summaryPie}
-              </div>
-            ` : ''}
-          </div>
+          ${exportOptions.includeProfitChart && charts.profitChart ? `
+            <div class="chart-container chart-full-width avoid-break">
+              ${charts.profitChart}
+            </div>
+          ` : ''}
+          
+          ${exportOptions.includeSummaryPie && charts.summaryPie ? `
+            <div class="chart-container chart-full-width avoid-break">
+              ${charts.summaryPie}
+            </div>
+          ` : ''}
         </div>
       ` : ''}
 
