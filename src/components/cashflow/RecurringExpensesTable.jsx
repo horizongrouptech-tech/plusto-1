@@ -2,16 +2,36 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Link as LinkIcon, Save, Check, RefreshCw, Calendar } from 'lucide-react';
+import { Loader2, Link as LinkIcon, Save, Check, RefreshCw, Calendar, FileText, Tag, CheckCircle2, AlertCircle } from 'lucide-react';
 import { format, subMonths } from 'date-fns';
 
 const MONTH_NAMES = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 
 const ITEMS_PER_PAGE = 15;
+
+// קטגוריות הוצאות אפשריות בתחזית
+const FORECAST_EXPENSE_CATEGORIES = [
+  { value: 'salary_expenses', label: 'הוצאות שכר' },
+  { value: 'rent', label: 'שכירות' },
+  { value: 'utilities', label: 'חשמל/מים/ארנונה' },
+  { value: 'marketing', label: 'שיווק ופרסום' },
+  { value: 'insurance', label: 'ביטוחים' },
+  { value: 'professional_services', label: 'שירותים מקצועיים' },
+  { value: 'office_supplies', label: 'ציוד משרדי' },
+  { value: 'transportation', label: 'הובלות ונסיעות' },
+  { value: 'maintenance', label: 'תחזוקה ותיקונים' },
+  { value: 'communication', label: 'תקשורת וטלפון' },
+  { value: 'financing', label: 'הוצאות מימון' },
+  { value: 'other', label: 'אחר' }
+];
 
 export default function RecurringExpensesTable({ customer, dateRange }) {
   const [linkStatus, setLinkStatus] = useState({});
@@ -25,12 +45,32 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
   const [lastCalcDate, setLastCalcDate] = useState(null);
   const queryClient = useQueryClient();
 
+  // State for linking dialog
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const [selectedExpenseForLink, setSelectedExpenseForLink] = useState(null);
+  const [selectedForecastId, setSelectedForecastId] = useState('');
+  const [selectedExpenseCategory, setSelectedExpenseCategory] = useState('');
+  const [isLinking, setIsLinking] = useState(false);
+  const [linkSuccess, setLinkSuccess] = useState(false);
+
   // טעינת הוצאות קבועות
   const { data: recurringExpenses = [], isLoading } = useQuery({
     queryKey: ['recurringExpenses', customer?.email],
     queryFn: () => base44.entities.RecurringExpense.filter({
       customer_email: customer.email
     }),
+    enabled: !!customer?.email
+  });
+
+  // טעינת תחזיות זמינות
+  const { data: availableForecasts = [] } = useQuery({
+    queryKey: ['forecasts', customer?.email],
+    queryFn: async () => {
+      const forecasts = await base44.entities.ManualForecast.filter({
+        customer_email: customer.email
+      });
+      return forecasts.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+    },
     enabled: !!customer?.email
   });
 
@@ -43,7 +83,11 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
       }
       expense.monthly_amounts?.forEach(month => {
         const key = `${expense.category}_${month.month}_${month.year}`;
-        initialStatus[key] = month.linked_to_forecast || false;
+        initialStatus[key] = {
+          linked: month.linked_to_forecast || false,
+          forecastId: month.linked_forecast_id || null,
+          expenseCategory: month.linked_expense_category || null
+        };
       });
     });
     setLinkStatus(initialStatus);
@@ -127,54 +171,116 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
     }
   };
 
-  const toggleLink = (category, month, year) => {
-    const key = `${category}_${month}_${year}`;
-    setLinkStatus(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
+  // פתיחת דיאלוג השיוך
+  const openLinkDialog = (expense) => {
+    setSelectedExpenseForLink(expense);
+    setSelectedForecastId('');
+    setSelectedExpenseCategory('');
+    setLinkSuccess(false);
+    setShowLinkDialog(true);
   };
 
-  const linkEntireRow = (category) => {
-    const expense = recurringExpenses.find(e => e.category === category);
-    if (!expense) return;
+  // שיוך הוצאה לתחזית
+  const handleLinkToForecast = async () => {
+    if (!selectedForecastId || !selectedExpenseCategory || !selectedExpenseForLink) {
+      alert('יש לבחור תחזית וקטגוריית הוצאה');
+      return;
+    }
 
-    const newStatus = { ...linkStatus };
-    expense.monthly_amounts?.forEach(month => {
-      const key = `${category}_${month.month}_${month.year}`;
-      newStatus[key] = true;
-    });
-    setLinkStatus(newStatus);
-  };
-
-  const handleSaveLinks = async () => {
-    setIsSaving(true);
+    setIsLinking(true);
     try {
-      // עדכון כל ההוצאות הקבועות
-      const updates = recurringExpenses.map(expense => {
-        const updatedMonthlyAmounts = expense.monthly_amounts?.map(month => {
-          const key = `${expense.category}_${month.month}_${month.year}`;
-          return {
-            ...month,
-            linked_to_forecast: linkStatus[key] || false
-          };
-        });
+      // טען את התחזית הנבחרת
+      const forecast = await base44.entities.ManualForecast.get(selectedForecastId);
+      
+      if (!forecast) {
+        throw new Error('לא נמצאה התחזית');
+      }
 
-        return base44.entities.RecurringExpense.update(expense.id, {
-          monthly_amounts: updatedMonthlyAmounts
-        });
+      // עדכון ההוצאה הקבועה עם פרטי השיוך
+      const updatedMonthlyAmounts = selectedExpenseForLink.monthly_amounts?.map(month => ({
+        ...month,
+        linked_to_forecast: true,
+        linked_forecast_id: selectedForecastId,
+        linked_expense_category: selectedExpenseCategory
+      }));
+
+      await base44.entities.RecurringExpense.update(selectedExpenseForLink.id, {
+        monthly_amounts: updatedMonthlyAmounts,
+        linked_forecast_id: selectedForecastId,
+        linked_expense_category: selectedExpenseCategory
       });
 
-      await Promise.all(updates);
+      // עדכון התחזית עם הנתונים מהתזרים
+      const forecastData = forecast.data || {};
+      const expenseData = forecastData.expenses || {};
       
+      // הוסף את הסכום הממוצע לקטגוריית ההוצאה בתחזית
+      const currentCategoryAmount = expenseData[selectedExpenseCategory] || 0;
+      const newAmount = currentCategoryAmount + (selectedExpenseForLink.average_monthly || 0);
+      
+      await base44.entities.ManualForecast.update(selectedForecastId, {
+        data: {
+          ...forecastData,
+          expenses: {
+            ...expenseData,
+            [selectedExpenseCategory]: newAmount
+          },
+          linked_recurring_expenses: [
+            ...(forecastData.linked_recurring_expenses || []),
+            {
+              recurring_expense_id: selectedExpenseForLink.id,
+              category: selectedExpenseForLink.category,
+              expense_category: selectedExpenseCategory,
+              average_monthly: selectedExpenseForLink.average_monthly,
+              linked_date: new Date().toISOString()
+            }
+          ]
+        }
+      });
+
+      // עדכון הסטטוס המקומי
+      const newLinkStatus = { ...linkStatus };
+      selectedExpenseForLink.monthly_amounts?.forEach(month => {
+        const key = `${selectedExpenseForLink.category}_${month.month}_${month.year}`;
+        newLinkStatus[key] = {
+          linked: true,
+          forecastId: selectedForecastId,
+          expenseCategory: selectedExpenseCategory
+        };
+      });
+      setLinkStatus(newLinkStatus);
+
+      setLinkSuccess(true);
       queryClient.invalidateQueries(['recurringExpenses', customer.email]);
-      alert('השיוכים נשמרו בהצלחה!');
+      queryClient.invalidateQueries(['forecasts', customer.email]);
+      
+      // סגור את הדיאלוג אחרי 2 שניות
+      setTimeout(() => {
+        setShowLinkDialog(false);
+        setLinkSuccess(false);
+      }, 2000);
+
     } catch (error) {
-      console.error('Error saving links:', error);
-      alert('שגיאה בשמירת השיוכים: ' + error.message);
+      console.error('Error linking to forecast:', error);
+      alert('שגיאה בשיוך לתחזית: ' + error.message);
     } finally {
-      setIsSaving(false);
+      setIsLinking(false);
     }
+  };
+
+  // בדיקה אם הוצאה כבר משויכת
+  const getLinkedInfo = (expense) => {
+    const firstMonth = expense.monthly_amounts?.[0];
+    if (firstMonth?.linked_forecast_id) {
+      const forecast = availableForecasts.find(f => f.id === firstMonth.linked_forecast_id);
+      const category = FORECAST_EXPENSE_CATEGORIES.find(c => c.value === firstMonth.linked_expense_category);
+      return {
+        isLinked: true,
+        forecastName: forecast?.name || 'תחזית',
+        categoryName: category?.label || firstMonth.linked_expense_category
+      };
+    }
+    return { isLinked: false };
   };
 
   // קבלת החודשים הרלוונטיים מהטווח
@@ -231,23 +337,6 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
                 </p>
               )}
             </div>
-            <Button
-              onClick={handleSaveLinks}
-              disabled={isSaving}
-              className="btn-horizon-primary"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                  שומר...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 ml-2" />
-                  שמור שיוכים
-                </>
-              )}
-            </Button>
           </div>
           
           {/* עדכון הוצאות קבועות */}
@@ -315,57 +404,73 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
                     </TableHead>
                   ))}
                   <TableHead className="text-center text-horizon-text">ממוצע</TableHead>
+                  <TableHead className="text-center text-horizon-text">סטטוס</TableHead>
                   <TableHead className="text-center text-horizon-text">פעולות</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedExpenses.map((expense) => (
-                  <TableRow key={expense.id} className="hover:bg-horizon-dark/20">
-                    <TableCell className="text-right font-medium text-horizon-text sticky right-0 bg-horizon-card">
-                      {expense.category}
-                    </TableCell>
-                    {monthsInRange.map((m, idx) => {
-                      const monthData = expense.monthly_amounts?.find(
-                        ma => ma.month === m.month && ma.year === m.year
-                      );
-                      const key = `${expense.category}_${m.month}_${m.year}`;
-                      const isLinked = linkStatus[key] || false;
+                {paginatedExpenses.map((expense) => {
+                  const linkedInfo = getLinkedInfo(expense);
+                  
+                  return (
+                    <TableRow key={expense.id} className="hover:bg-horizon-dark/20">
+                      <TableCell className="text-right font-medium text-horizon-text sticky right-0 bg-horizon-card">
+                        {expense.category}
+                      </TableCell>
+                      {monthsInRange.map((m, idx) => {
+                        const monthData = expense.monthly_amounts?.find(
+                          ma => ma.month === m.month && ma.year === m.year
+                        );
 
-                      return (
-                        <TableCell key={idx} className="text-center">
-                          {monthData ? (
-                            <div className="flex flex-col items-center gap-1">
+                        return (
+                          <TableCell key={idx} className="text-center">
+                            {monthData ? (
                               <span className="text-sm text-horizon-text">
                                 ₪{monthData.amount?.toLocaleString() || '0'}
                               </span>
-                              <Checkbox
-                                checked={isLinked}
-                                onCheckedChange={() => toggleLink(expense.category, m.month, m.year)}
-                                className="border-horizon"
-                              />
-                            </div>
-                          ) : (
-                            <span className="text-horizon-accent">-</span>
-                          )}
-                        </TableCell>
-                      );
-                    })}
-                    <TableCell className="text-center text-horizon-primary font-bold">
-                      ₪{expense.average_monthly?.toLocaleString() || '0'}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => linkEntireRow(expense.category)}
-                        className="text-horizon-primary hover:text-horizon-accent"
-                      >
-                        <LinkIcon className="w-4 h-4 ml-1" />
-                        שייך הכל
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                            ) : (
+                              <span className="text-horizon-accent">-</span>
+                            )}
+                          </TableCell>
+                        );
+                      })}
+                      <TableCell className="text-center text-horizon-primary font-bold">
+                        ₪{expense.average_monthly?.toLocaleString() || '0'}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {linkedInfo.isLinked ? (
+                          <div className="flex flex-col items-center gap-1">
+                            <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
+                              <CheckCircle2 className="w-3 h-3 ml-1" />
+                              משויך
+                            </Badge>
+                            <span className="text-xs text-horizon-accent">
+                              {linkedInfo.categoryName}
+                            </span>
+                          </div>
+                        ) : (
+                          <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-xs">
+                            לא משויך
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          size="sm"
+                          variant={linkedInfo.isLinked ? "outline" : "default"}
+                          onClick={() => openLinkDialog(expense)}
+                          className={linkedInfo.isLinked 
+                            ? "border-horizon text-horizon-accent hover:text-horizon-primary" 
+                            : "btn-horizon-primary"
+                          }
+                        >
+                          <LinkIcon className="w-4 h-4 ml-1" />
+                          {linkedInfo.isLinked ? 'עדכן שיוך' : 'שייך לתחזית'}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
             
@@ -421,6 +526,142 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
           </div>
         )}
       </CardContent>
+
+      {/* דיאלוג שיוך לתחזית */}
+      <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
+        <DialogContent className="bg-horizon-card border-horizon text-horizon-text max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <LinkIcon className="w-6 h-6 text-horizon-primary" />
+              שיוך הוצאה קבועה לתחזית
+            </DialogTitle>
+            <DialogDescription className="text-horizon-accent">
+              בחר את התחזית וקטגוריית ההוצאה שאליה תרצה לשייך את ההוצאה הקבועה
+            </DialogDescription>
+          </DialogHeader>
+
+          {linkSuccess ? (
+            <div className="py-8 text-center">
+              <CheckCircle2 className="w-16 h-16 mx-auto text-green-400 mb-4" />
+              <p className="text-xl font-bold text-green-400">השיוך בוצע בהצלחה!</p>
+              <p className="text-horizon-accent mt-2">
+                ההוצאה "{selectedExpenseForLink?.category}" שויכה לתחזית
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6 py-4">
+              {/* פרטי ההוצאה הנבחרת */}
+              <div className="bg-horizon-dark/50 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Tag className="w-4 h-4 text-horizon-primary" />
+                  <span className="font-medium text-horizon-text">הוצאה נבחרת:</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-horizon-accent">קטגוריה:</span>
+                    <p className="font-medium text-horizon-text">{selectedExpenseForLink?.category}</p>
+                  </div>
+                  <div>
+                    <span className="text-horizon-accent">ממוצע חודשי:</span>
+                    <p className="font-medium text-horizon-primary">
+                      ₪{selectedExpenseForLink?.average_monthly?.toLocaleString() || '0'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* בחירת תחזית */}
+              <div>
+                <Label className="text-horizon-text mb-2 block">
+                  <FileText className="w-4 h-4 inline ml-2" />
+                  בחר תחזית
+                </Label>
+                <Select value={selectedForecastId} onValueChange={setSelectedForecastId}>
+                  <SelectTrigger className="bg-horizon-dark border-horizon text-horizon-text">
+                    <SelectValue placeholder="בחר תחזית..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-horizon-dark border-horizon">
+                    {availableForecasts.length === 0 ? (
+                      <SelectItem value="_none" disabled>
+                        אין תחזיות זמינות
+                      </SelectItem>
+                    ) : (
+                      availableForecasts.map(forecast => (
+                        <SelectItem key={forecast.id} value={forecast.id}>
+                          {forecast.name || `תחזית ${format(new Date(forecast.created_date), 'dd/MM/yyyy')}`}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                {availableForecasts.length === 0 && (
+                  <p className="text-xs text-yellow-400 mt-2 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    יש ליצור תחזית קודם בלשונית "תוכנית עסקית"
+                  </p>
+                )}
+              </div>
+
+              {/* בחירת קטגוריית הוצאה */}
+              <div>
+                <Label className="text-horizon-text mb-2 block">
+                  <Tag className="w-4 h-4 inline ml-2" />
+                  בחר קטגוריית הוצאה בתחזית
+                </Label>
+                <Select value={selectedExpenseCategory} onValueChange={setSelectedExpenseCategory}>
+                  <SelectTrigger className="bg-horizon-dark border-horizon text-horizon-text">
+                    <SelectValue placeholder="בחר קטגוריה..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-horizon-dark border-horizon">
+                    {FORECAST_EXPENSE_CATEGORIES.map(cat => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* הסבר */}
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                <p className="text-xs text-blue-300">
+                  💡 לאחר השיוך, הסכום הממוצע החודשי של ההוצאה יתווסף לקטגוריה הנבחרת בתחזית.
+                  ניתן לעדכן את השיוך בכל עת.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {!linkSuccess && (
+            <DialogFooter className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowLinkDialog(false)}
+                className="border-horizon text-horizon-text"
+              >
+                ביטול
+              </Button>
+              <Button
+                onClick={handleLinkToForecast}
+                disabled={!selectedForecastId || !selectedExpenseCategory || isLinking}
+                className="btn-horizon-primary"
+              >
+                {isLinking ? (
+                  <>
+                    <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                    משייך...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 ml-2" />
+                    שייך לתחזית
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
