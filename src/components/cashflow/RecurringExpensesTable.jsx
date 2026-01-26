@@ -268,14 +268,18 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
       });
 
       setLinkSuccess(true);
-      await queryClient.invalidateQueries(['recurringExpenses', customer.email]);
-      await queryClient.invalidateQueries(['forecasts', customer.email]);
+
+      // Refetch עם await כדי לוודא שהמידע מתעדכן לפני סגירת הדיאלוג
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['recurringExpenses', customer.email], exact: true }),
+        queryClient.refetchQueries({ queryKey: ['forecasts', customer?.email], exact: true })
+      ]);
       
-      // סגור את הדיאלוג אחרי 2 שניות
+      // סגור את הדיאלוג אחרי שהמידע התעדכן
       setTimeout(() => {
         setShowLinkDialog(false);
         setLinkSuccess(false);
-      }, 2000);
+      }, 1500);
 
     } catch (error) {
       console.error('Error linking to forecast:', error);
@@ -293,7 +297,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
       const category = FORECAST_EXPENSE_CATEGORIES.find(c => c.value === expense.linked_expense_category);
       return {
         isLinked: true,
-        forecastName: forecast?.forecast_name || 'תחזית',
+        forecastName: forecast?.forecast_name || forecast?.name || 'תחזית',
         categoryName: category?.label || expense.linked_expense_category
       };
     }
@@ -305,7 +309,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
       const category = FORECAST_EXPENSE_CATEGORIES.find(c => c.value === firstMonth.linked_expense_category);
       return {
         isLinked: true,
-        forecastName: forecast?.forecast_name || 'תחזית',
+        forecastName: forecast?.forecast_name || forecast?.name || 'תחזית',
         categoryName: category?.label || firstMonth.linked_expense_category
       };
     }
