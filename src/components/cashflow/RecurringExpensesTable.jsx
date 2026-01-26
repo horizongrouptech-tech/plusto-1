@@ -268,14 +268,8 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
       });
 
       setLinkSuccess(true);
-
-      // Refetch עם await כדי לוודא שהמידע מתעדכן לפני סגירת הדיאלוג
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['recurringExpenses', customer.email], exact: true }),
-        queryClient.refetchQueries({ queryKey: ['forecasts', customer?.email], exact: true })
-      ]);
       
-      // סגור את הדיאלוג אחרי שהמידע התעדכן
+      // סגור את הדיאלוג אחרי הצלחה
       setTimeout(() => {
         setShowLinkDialog(false);
         setLinkSuccess(false);
