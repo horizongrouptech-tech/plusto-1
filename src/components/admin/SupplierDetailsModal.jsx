@@ -4,6 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   Star,
@@ -20,7 +25,13 @@ import {
   User,
   Clock,
   RefreshCw,
-  Search
+  Search,
+  Plus,
+  Edit,
+  Trash2,
+  Loader2,
+  Save,
+  X
 } from "lucide-react";
 import SpecificFileUploadBox from "./SpecificFileUploadBox";
 import { PurchaseRecord } from "@/entities/PurchaseRecord";
@@ -63,6 +74,17 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
   const [expenseHistoryData, setExpenseHistoryData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadKey, setUploadKey] = useState(0);
+  const [showManualEntryDialog, setShowManualEntryDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingRecord, setEditingRecord] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [manualEntry, setManualEntry] = useState({
+    document_type: 'invoice',
+    purchase_date: new Date().toISOString().split('T')[0],
+    invoice_number: '',
+    total_amount: 0,
+    items: [{ description: '', quantity: 1, unit_price: 0, total_price: 0 }]
+  });
 
   useEffect(() => {
     if (isOpen && supplier) {
@@ -286,10 +308,29 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
             {/* העלאת מסמכי רכש */}
             <Card className="card-horizon">
               <CardHeader>
-                <CardTitle className="text-horizon-text flex items-center gap-2">
-                  <Upload className="w-5 h-5 text-horizon-primary" />
-                  העלאת מסמכי רכש
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-horizon-text flex items-center gap-2">
+                    <Upload className="w-5 h-5 text-horizon-primary" />
+                    העלאת מסמכי רכש
+                  </CardTitle>
+                  <Button
+                    onClick={() => {
+                      setManualEntry({
+                        document_type: 'invoice',
+                        purchase_date: new Date().toISOString().split('T')[0],
+                        invoice_number: '',
+                        total_amount: 0,
+                        items: [{ description: '', quantity: 1, unit_price: 0, total_price: 0 }]
+                      });
+                      setShowManualEntryDialog(true);
+                    }}
+                    className="btn-horizon-primary"
+                    size="sm"
+                  >
+                    <Plus className="w-4 h-4 ml-1" />
+                    הוסף רכישה ידנית
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <SpecificFileUploadBox
@@ -316,35 +357,66 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Select
-                  value={selectedPurchaseRecordId || ''}
-                  onValueChange={handlePurchaseRecordSelection}
-                >
-                  <SelectTrigger className="w-full bg-horizon-card border-2 border-horizon-primary/30 text-horizon-text font-medium">
-                    <SelectValue placeholder="בחר מסמך רכש להצגת פירוט..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-horizon-card border-horizon">
-                    {purchaseRecords.map((record) => (
-                      <SelectItem 
-                        key={record.id} 
-                        value={record.id}
-                        className="text-horizon-text hover:bg-horizon-primary/10"
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <span>
+                <div className="space-y-2">
+                  {purchaseRecords.map((record) => (
+                    <div
+                      key={record.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        selectedPurchaseRecordId === record.id
+                          ? 'bg-horizon-primary/10 border-horizon-primary'
+                          : 'bg-horizon-card border-horizon hover:border-horizon-primary/50'
+                      } cursor-pointer transition-all`}
+                      onClick={() => handlePurchaseRecordSelection(record.id)}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-horizon-text">
                             {record.document_type === 'invoice' ? 'חשבונית' : 
                              record.document_type === 'delivery_note' ? 'תעודת משלוח' :
                              record.document_type === 'purchase_order' ? 'הזמנת רכש' : 'מסמך'} 
                             {record.invoice_number ? ` #${record.invoice_number}` : ''}
                           </span>
-                          <div className="text-sm text-horizon-accent ml-4">
-                            {new Date(record.purchase_date).toLocaleDateString('he-IL')} - {formatCurrency(record.total_amount)}
-                          </div>
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                        <div className="text-sm text-horizon-accent mt-1">
+                          {new Date(record.purchase_date).toLocaleDateString('he-IL')} - {formatCurrency(record.total_amount)}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingRecord(record);
+                            setShowEditDialog(true);
+                          }}
+                          className="h-8 w-8 text-horizon-primary hover:bg-horizon-primary/10"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (window.confirm('האם אתה בטוח שברצונך למחוק את המסמך?')) {
+                              try {
+                                await PurchaseRecord.delete(record.id);
+                                handleUploadComplete();
+                              } catch (error) {
+                                console.error('Error deleting record:', error);
+                                alert('שגיאה במחיקת המסמך: ' + error.message);
+                              }
+                            }
+                          }}
+                          className="h-8 w-8 text-red-400 hover:bg-red-500/10"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}
@@ -463,6 +535,373 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
           </div>
         </div>
       </DialogContent>
+
+      {/* דיאלוג הוספת רכישה ידנית */}
+      <Dialog open={showManualEntryDialog} onOpenChange={setShowManualEntryDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-horizon-dark border-horizon" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-horizon-text">הוספת רכישה ידנית</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-horizon-accent">סוג מסמך</Label>
+                <Select
+                  value={manualEntry.document_type}
+                  onValueChange={(v) => setManualEntry({ ...manualEntry, document_type: v })}
+                >
+                  <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="invoice">חשבונית</SelectItem>
+                    <SelectItem value="delivery_note">תעודת משלוח</SelectItem>
+                    <SelectItem value="purchase_order">הזמנת רכש</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-horizon-accent">תאריך</Label>
+                <Input
+                  type="date"
+                  value={manualEntry.purchase_date}
+                  onChange={(e) => setManualEntry({ ...manualEntry, purchase_date: e.target.value })}
+                  className="bg-horizon-card border-horizon text-horizon-text"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-horizon-accent">מספר חשבונית/מסמך</Label>
+                <Input
+                  value={manualEntry.invoice_number}
+                  onChange={(e) => setManualEntry({ ...manualEntry, invoice_number: e.target.value })}
+                  className="bg-horizon-card border-horizon text-horizon-text"
+                  placeholder="אופציונלי"
+                />
+              </div>
+              <div>
+                <Label className="text-horizon-accent">סה"כ (₪)</Label>
+                <Input
+                  type="number"
+                  value={manualEntry.total_amount}
+                  onChange={(e) => setManualEntry({ ...manualEntry, total_amount: parseFloat(e.target.value) || 0 })}
+                  className="bg-horizon-card border-horizon text-horizon-text"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-horizon-accent mb-2 block">פריטים</Label>
+              <div className="space-y-2">
+                {manualEntry.items.map((item, idx) => (
+                  <div key={idx} className="grid grid-cols-4 gap-2 p-2 bg-horizon-card rounded">
+                    <Input
+                      placeholder="תיאור"
+                      value={item.description}
+                      onChange={(e) => {
+                        const newItems = [...manualEntry.items];
+                        newItems[idx].description = e.target.value;
+                        setManualEntry({ ...manualEntry, items: newItems });
+                      }}
+                      className="bg-horizon-dark border-horizon text-horizon-text"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="כמות"
+                      value={item.quantity}
+                      onChange={(e) => {
+                        const newItems = [...manualEntry.items];
+                        newItems[idx].quantity = parseFloat(e.target.value) || 0;
+                        newItems[idx].total_price = newItems[idx].quantity * newItems[idx].unit_price;
+                        setManualEntry({ ...manualEntry, items: newItems });
+                      }}
+                      className="bg-horizon-dark border-horizon text-horizon-text"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="מחיר יחידה"
+                      value={item.unit_price}
+                      onChange={(e) => {
+                        const newItems = [...manualEntry.items];
+                        newItems[idx].unit_price = parseFloat(e.target.value) || 0;
+                        newItems[idx].total_price = newItems[idx].quantity * newItems[idx].unit_price;
+                        setManualEntry({ ...manualEntry, items: newItems });
+                      }}
+                      className="bg-horizon-dark border-horizon text-horizon-text"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        placeholder="סה"כ"
+                        value={item.total_price}
+                        readOnly
+                        className="bg-horizon-dark/50 border-horizon text-horizon-text"
+                      />
+                      {manualEntry.items.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            const newItems = manualEntry.items.filter((_, i) => i !== idx);
+                            setManualEntry({ ...manualEntry, items: newItems });
+                          }}
+                          className="text-red-400"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setManualEntry({
+                      ...manualEntry,
+                      items: [...manualEntry.items, { description: '', quantity: 1, unit_price: 0, total_price: 0 }]
+                    });
+                  }}
+                  className="w-full border-horizon text-horizon-text"
+                >
+                  <Plus className="w-4 h-4 ml-1" />
+                  הוסף פריט
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowManualEntryDialog(false)}
+              className="border-horizon text-horizon-text"
+            >
+              ביטול
+            </Button>
+            <Button
+              onClick={async () => {
+                setIsSaving(true);
+                try {
+                  const total = manualEntry.items.reduce((sum, item) => sum + (item.total_price || 0), 0);
+                  await PurchaseRecord.create({
+                    supplier_id: supplier.id,
+                    customer_email: customerEmail,
+                    document_type: manualEntry.document_type,
+                    purchase_date: manualEntry.purchase_date,
+                    invoice_number: manualEntry.invoice_number || null,
+                    total_amount: total || manualEntry.total_amount,
+                    items: manualEntry.items
+                  });
+                  handleUploadComplete();
+                  setShowManualEntryDialog(false);
+                } catch (error) {
+                  console.error('Error creating purchase record:', error);
+                  alert('שגיאה ביצירת רכישה: ' + error.message);
+                } finally {
+                  setIsSaving(false);
+                }
+              }}
+              disabled={isSaving}
+              className="btn-horizon-primary"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                  שומר...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 ml-2" />
+                  שמור
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* דיאלוג עריכת מסמך */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-horizon-dark border-horizon" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-horizon-text">עריכת מסמך רכש</DialogTitle>
+          </DialogHeader>
+          {editingRecord && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-horizon-accent">סוג מסמך</Label>
+                  <Select
+                    value={editingRecord.document_type}
+                    onValueChange={(v) => setEditingRecord({ ...editingRecord, document_type: v })}
+                  >
+                    <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="invoice">חשבונית</SelectItem>
+                      <SelectItem value="delivery_note">תעודת משלוח</SelectItem>
+                      <SelectItem value="purchase_order">הזמנת רכש</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-horizon-accent">תאריך</Label>
+                  <Input
+                    type="date"
+                    value={editingRecord.purchase_date ? new Date(editingRecord.purchase_date).toISOString().split('T')[0] : ''}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, purchase_date: e.target.value })}
+                    className="bg-horizon-card border-horizon text-horizon-text"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-horizon-accent">מספר חשבונית/מסמך</Label>
+                  <Input
+                    value={editingRecord.invoice_number || ''}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, invoice_number: e.target.value })}
+                    className="bg-horizon-card border-horizon text-horizon-text"
+                  />
+                </div>
+                <div>
+                  <Label className="text-horizon-accent">סה"כ (₪)</Label>
+                  <Input
+                    type="number"
+                    value={editingRecord.total_amount || 0}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, total_amount: parseFloat(e.target.value) || 0 })}
+                    className="bg-horizon-card border-horizon text-horizon-text"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-horizon-accent mb-2 block">פריטים</Label>
+                <div className="space-y-2">
+                  {(editingRecord.items || []).map((item, idx) => (
+                    <div key={idx} className="grid grid-cols-4 gap-2 p-2 bg-horizon-card rounded">
+                      <Input
+                        placeholder="תיאור"
+                        value={item.description || ''}
+                        onChange={(e) => {
+                          const newItems = [...(editingRecord.items || [])];
+                          newItems[idx].description = e.target.value;
+                          setEditingRecord({ ...editingRecord, items: newItems });
+                        }}
+                        className="bg-horizon-dark border-horizon text-horizon-text"
+                      />
+                      <Input
+                        type="number"
+                        placeholder="כמות"
+                        value={item.quantity || 0}
+                        onChange={(e) => {
+                          const newItems = [...(editingRecord.items || [])];
+                          newItems[idx].quantity = parseFloat(e.target.value) || 0;
+                          newItems[idx].total_price = newItems[idx].quantity * (newItems[idx].unit_price || 0);
+                          setEditingRecord({ ...editingRecord, items: newItems });
+                        }}
+                        className="bg-horizon-dark border-horizon text-horizon-text"
+                      />
+                      <Input
+                        type="number"
+                        placeholder="מחיר יחידה"
+                        value={item.unit_price || 0}
+                        onChange={(e) => {
+                          const newItems = [...(editingRecord.items || [])];
+                          newItems[idx].unit_price = parseFloat(e.target.value) || 0;
+                          newItems[idx].total_price = newItems[idx].quantity * newItems[idx].unit_price;
+                          setEditingRecord({ ...editingRecord, items: newItems });
+                        }}
+                        className="bg-horizon-dark border-horizon text-horizon-text"
+                      />
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          placeholder="סה"כ"
+                          value={item.total_price || 0}
+                          readOnly
+                          className="bg-horizon-dark/50 border-horizon text-horizon-text"
+                        />
+                        {(editingRecord.items || []).length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              const newItems = (editingRecord.items || []).filter((_, i) => i !== idx);
+                              setEditingRecord({ ...editingRecord, items: newItems });
+                            }}
+                            className="text-red-400"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setEditingRecord({
+                        ...editingRecord,
+                        items: [...(editingRecord.items || []), { description: '', quantity: 1, unit_price: 0, total_price: 0 }]
+                      });
+                    }}
+                    className="w-full border-horizon text-horizon-text"
+                  >
+                    <Plus className="w-4 h-4 ml-1" />
+                    הוסף פריט
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEditDialog(false)}
+              className="border-horizon text-horizon-text"
+            >
+              ביטול
+            </Button>
+            <Button
+              onClick={async () => {
+                setIsSaving(true);
+                try {
+                  const total = (editingRecord.items || []).reduce((sum, item) => sum + (item.total_price || 0), 0);
+                  await PurchaseRecord.update(editingRecord.id, {
+                    document_type: editingRecord.document_type,
+                    purchase_date: editingRecord.purchase_date,
+                    invoice_number: editingRecord.invoice_number || null,
+                    total_amount: total || editingRecord.total_amount,
+                    items: editingRecord.items
+                  });
+                  handleUploadComplete();
+                  setShowEditDialog(false);
+                } catch (error) {
+                  console.error('Error updating purchase record:', error);
+                  alert('שגיאה בעדכון המסמך: ' + error.message);
+                } finally {
+                  setIsSaving(false);
+                }
+              }}
+              disabled={isSaving}
+              className="btn-horizon-primary"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                  שומר...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 ml-2" />
+                  שמור שינויים
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

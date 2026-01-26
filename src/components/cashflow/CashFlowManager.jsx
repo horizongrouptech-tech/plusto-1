@@ -49,6 +49,8 @@ export default function CashFlowManager({ customer }) {
   const [isSaving, setIsSaving] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' = ישן לחדש, 'desc' = חדש לישן
+  const [openingBalance, setOpeningBalance] = useState(0);
+  const [showOpeningBalanceDialog, setShowOpeningBalanceDialog] = useState(false);
   
   const queryClient = useQueryClient();
 
@@ -65,6 +67,25 @@ export default function CashFlowManager({ customer }) {
     enabled: !!customer?.email
   });
 
+  // טעינת יתרת פתיחה מ-Customer או SystemSettings
+  React.useEffect(() => {
+    const loadOpeningBalance = async () => {
+      if (!customer?.email) return;
+      try {
+        // נסה לטעון מ-Customer entity
+        const customerData = await base44.entities.Customer.filter({
+          email: customer.email
+        });
+        if (customerData && customerData.length > 0 && customerData[0].opening_balance !== undefined) {
+          setOpeningBalance(customerData[0].opening_balance || 0);
+        }
+      } catch (error) {
+        console.log('No opening balance found, using default 0');
+      }
+    };
+    loadOpeningBalance();
+  }, [customer?.email]);
+
   // חישוב יתרה מצטברת ומיון הנתונים
   const cashFlowData = React.useMemo(() => {
     if (!rawCashFlowData || rawCashFlowData.length === 0) return [];
@@ -74,8 +95,8 @@ export default function CashFlowManager({ customer }) {
       new Date(a.date) - new Date(b.date)
     );
     
-    // חישוב יתרה מצטברת
-    let cumulativeBalance = 0;
+    // חישוב יתרה מצטברת - מתחיל מיתרת פתיחה
+    let cumulativeBalance = openingBalance || 0;
     const dataWithBalance = sortedByDateAsc.map(item => {
       cumulativeBalance += (item.credit || 0) - (item.debit || 0);
       return {
@@ -89,7 +110,7 @@ export default function CashFlowManager({ customer }) {
       return dataWithBalance.reverse();
     }
     return dataWithBalance;
-  }, [rawCashFlowData, sortOrder]);
+  }, [rawCashFlowData, sortOrder, openingBalance]);
 
   // טעינת הוצאות קבועות
   const { data: recurringExpenses = [] } = useQuery({
@@ -389,9 +410,18 @@ export default function CashFlowManager({ customer }) {
                   {sortOrder === 'asc' ? '📅 ישן → חדש' : '📅 חדש → ישן'}
                 </Button>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowOpeningBalanceDialog(true)}
+                className="border-green-500/50 text-green-400 hover:bg-green-500/10"
+              >
+                <DollarSign className="w-4 h-4 ml-1" />
+                יתרת פתיחה: ₪{openingBalance.toLocaleString()}
+              </Button>
             </div>
             <p className="text-xs text-blue-300 mt-2">
-              💡 העלאת קובץ תייבא את כל התאריכים. השתמש בסינון זה כדי לראות תקופה ספציפית. היתרה המצטברת מחושבת מהתאריך הישן ביותר.
+              💡 העלאת קובץ תייבא את כל התאריכים. השתמש בסינון זה כדי לראות תקופה ספציפית. היתרה המצטברת מחושבת מיתרת הפתיחה.
             </p>
           </div>
 
@@ -755,6 +785,63 @@ export default function CashFlowManager({ customer }) {
               className="btn-horizon-primary"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'שמור'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* דיאלוג לעדכון יתרת פתיחה */}
+      <Dialog open={showOpeningBalanceDialog} onOpenChange={setShowOpeningBalanceDialog}>
+        <DialogContent className="bg-horizon-dark border-horizon text-horizon-text" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>עדכון יתרת פתיחה</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-horizon-accent mb-2 block">יתרת פתיחה (₪)</Label>
+              <Input
+                type="number"
+                value={openingBalance}
+                onChange={(e) => setOpeningBalance(parseFloat(e.target.value) || 0)}
+                className="bg-horizon-card border-horizon text-horizon-text text-lg"
+                placeholder="0"
+              />
+              <p className="text-xs text-horizon-accent mt-2">
+                💡 יתרת הפתיחה תתווסף לתחילת התזרים ותחושב כחלק מהיתרה המצטברת
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowOpeningBalanceDialog(false)}
+              className="border-horizon text-horizon-text"
+            >
+              ביטול
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  // עדכון יתרת פתיחה ב-Customer entity
+                  const customers = await base44.entities.Customer.filter({
+                    email: customer.email
+                  });
+                  if (customers && customers.length > 0) {
+                    await base44.entities.Customer.update(customers[0].id, {
+                      opening_balance: openingBalance
+                    });
+                  }
+                  queryClient.invalidateQueries(['cashFlow', customer.email]);
+                  setShowOpeningBalanceDialog(false);
+                  alert('יתרת הפתיחה עודכנה בהצלחה!');
+                } catch (error) {
+                  console.error('Error updating opening balance:', error);
+                  alert('שגיאה בעדכון יתרת פתיחה: ' + error.message);
+                }
+              }}
+              className="btn-horizon-primary"
+            >
+              שמור
             </Button>
           </DialogFooter>
         </DialogContent>
