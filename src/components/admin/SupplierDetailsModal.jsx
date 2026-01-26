@@ -630,7 +630,7 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
                     <div className="flex items-center gap-2">
                       <Input
                         type="number"
-                        placeholder="סה"כ"
+                        placeholder="סהכ"
                         value={item.total_price}
                         readOnly
                         className="bg-horizon-dark/50 border-horizon text-horizon-text"
