@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, ChevronDown, ChevronUp, DollarSign, Check, ArrowRight, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronUp, DollarSign, Check, ArrowRight, ArrowLeft, TrendingUp, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "./utils/numberFormatter";
 import LoanManagerSection from "./LoanManagerSection";
 
@@ -213,13 +213,26 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
 
   const monthNames = ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יונ', 'יול', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'];
 
-  const calculateExpenseTotal = (expense) => {
+  const calculateExpenseTotal = (expense, mode = 'max') => {
     if (expense.is_annual_total && expense.amount) {
       return expense.amount;
     }
+    
     const planned = (expense.planned_monthly_amounts || []).reduce((sum, val) => sum + (val || 0), 0);
     const actual = (expense.actual_monthly_amounts || []).reduce((sum, val) => sum + (val || 0), 0);
-    return Math.max(planned, actual);
+    
+    // Different display modes
+    switch (mode) {
+      case 'planned':
+        return planned;
+      case 'actual':
+        return actual;
+      case 'variance':
+        return actual - planned;
+      case 'max':
+      default:
+        return Math.max(planned, actual);
+    }
   };
 
   return (
@@ -259,11 +272,35 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
                   variant="outline"
                   size="sm"
                   onClick={() => toggleMarketingExpenseVAT(expIndex)}
-                  className={(expense.has_vat !== false) ? "border-green-400 text-green-300" : "border-orange-400 text-orange-300"}
-                  title={(expense.has_vat !== false) ? "כרגע כולל מע״מ (18%). לחץ/י להסרה." : "כרגע ללא מע״מ. לחץ/י להוספה (18%)."}
+                  className={
+                    (expense.has_vat !== false) 
+                      ? "border-green-500 text-green-400 bg-green-500/10" 
+                      : "border-orange-500 text-orange-400 bg-orange-500/10"
+                  }
+                  title={
+                    (expense.has_vat !== false) 
+                      ? "לחץ להסרת מע״מ (יפחית ב-18%)" 
+                      : "לחץ להוספת מע״מ (יוסיף 18%)"
+                  }
                 >
-                  {(expense.has_vat !== false) ? "כולל מע״מ 18%" : "ללא מע״מ"}
+                  {(expense.has_vat !== false) ? (
+                    <>
+                      <Check className="w-3 h-3 ml-1" />
+                      כולל מע״מ
+                    </>
+                  ) : (
+                    <>
+                      ✕ ללא מע״מ
+                    </>
+                  )}
                 </Button>
+                
+                {expense.is_annual_total && (expense.planned_monthly_amounts?.some(v => v > 0) || expense.actual_monthly_amounts?.some(v => v > 0)) && (
+                  <Badge variant="outline" className="border-yellow-500 text-yellow-400 text-xs">
+                    <AlertTriangle className="w-3 h-3 ml-1" />
+                    סכום שנתי דורס נתונים חודשיים
+                  </Badge>
+                )}
 
                 <div className="flex items-center gap-2">
                   <label className="text-sm text-horizon-accent whitespace-nowrap">
@@ -427,11 +464,35 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
                   variant="outline"
                   size="sm"
                   onClick={() => toggleAdminExpenseVAT(expIndex)}
-                  className={(expense.has_vat !== false) ? "border-green-400 text-green-300" : "border-orange-400 text-orange-300"}
-                  title={(expense.has_vat !== false) ? "כרגע כולל מע״מ (18%). לחץ/י להסרה." : "כרגע ללא מע״מ. לחץ/י להוספה (18%)."}
+                  className={
+                    (expense.has_vat !== false) 
+                      ? "border-green-500 text-green-400 bg-green-500/10" 
+                      : "border-orange-500 text-orange-400 bg-orange-500/10"
+                  }
+                  title={
+                    (expense.has_vat !== false) 
+                      ? "לחץ להסרת מע״מ (יפחית ב-18%)" 
+                      : "לחץ להוספת מע״מ (יוסיף 18%)"
+                  }
                 >
-                  {(expense.has_vat !== false) ? "כולל מע״מ 18%" : "ללא מע״מ"}
+                  {(expense.has_vat !== false) ? (
+                    <>
+                      <Check className="w-3 h-3 ml-1" />
+                      כולל מע״מ
+                    </>
+                  ) : (
+                    <>
+                      ✕ ללא מע״מ
+                    </>
+                  )}
                 </Button>
+                
+                {expense.is_annual_total && (expense.planned_monthly_amounts?.some(v => v > 0) || expense.actual_monthly_amounts?.some(v => v > 0)) && (
+                  <Badge variant="outline" className="border-yellow-500 text-yellow-400 text-xs">
+                    <AlertTriangle className="w-3 h-3 ml-1" />
+                    סכום שנתי דורס נתונים חודשיים
+                  </Badge>
+                )}
 
                 <div className="flex items-center gap-2">
                   <label className="text-sm text-horizon-accent whitespace-nowrap">
@@ -562,6 +623,103 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
 
       {/* Loans & Financing - NEW SECTION */}
       <LoanManagerSection forecastData={forecastData} onUpdateForecast={onUpdateForecast} />
+
+      {/* Expense Optimization Summary */}
+      <Card className="card-horizon bg-gradient-to-l from-yellow-500/10 to-transparent border-yellow-500/30">
+        <CardHeader>
+          <CardTitle className="text-horizon-text flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-yellow-400" />
+            יעול הוצאות - סיכום
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Total Planned */}
+            <div className="text-center p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
+              <div className="text-sm text-blue-400 mb-1">תכנון שנתי</div>
+              <div className="text-2xl font-bold text-blue-400">
+                {formatCurrency(
+                  [...marketingExpenses, ...adminExpenses]
+                    .reduce((sum, exp) => sum + calculateExpenseTotal(exp, 'planned'), 0)
+                )}
+              </div>
+            </div>
+            
+            {/* Total Actual */}
+            <div className="text-center p-4 bg-green-500/10 rounded-lg border border-green-500/30">
+              <div className="text-sm text-green-400 mb-1">ביצוע שנתי</div>
+              <div className="text-2xl font-bold text-green-400">
+                {formatCurrency(
+                  [...marketingExpenses, ...adminExpenses]
+                    .reduce((sum, exp) => sum + calculateExpenseTotal(exp, 'actual'), 0)
+                )}
+              </div>
+            </div>
+            
+            {/* Variance (Optimization) */}
+            <div className="text-center p-4 bg-purple-500/10 rounded-lg border border-purple-500/30">
+              <div className="text-sm text-purple-400 mb-1">סטייה (ביצוע - תכנון)</div>
+              <div className={`text-2xl font-bold ${
+                (() => {
+                  const variance = [...marketingExpenses, ...adminExpenses]
+                    .reduce((sum, exp) => sum + calculateExpenseTotal(exp, 'variance'), 0);
+                  return variance > 0 ? 'text-red-400' : 'text-green-400';
+                })()
+              }`}>
+                {(() => {
+                  const variance = [...marketingExpenses, ...adminExpenses]
+                    .reduce((sum, exp) => sum + calculateExpenseTotal(exp, 'variance'), 0);
+                  return (variance >= 0 ? '+' : '') + formatCurrency(variance);
+                })()}
+              </div>
+              <div className="text-xs text-horizon-accent mt-1">
+                {(() => {
+                  const variance = [...marketingExpenses, ...adminExpenses]
+                    .reduce((sum, exp) => sum + calculateExpenseTotal(exp, 'variance'), 0);
+                  return variance > 0 ? 'הוצאת יתר' : 'חיסכון';
+                })()}
+              </div>
+            </div>
+          </div>
+          
+          {/* Breakdown by category */}
+          <div className="mt-4 space-y-2">
+            <h4 className="text-sm font-semibold text-horizon-accent">פירוט לפי סוג:</h4>
+            
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              {/* Marketing variance */}
+              <div className="flex justify-between p-2 bg-horizon-card rounded border border-horizon">
+                <span className="text-horizon-accent">שיווק ומכירות:</span>
+                <span className={
+                  marketingExpenses.reduce((sum, exp) => sum + calculateExpenseTotal(exp, 'variance'), 0) > 0
+                    ? 'text-red-400 font-semibold'
+                    : 'text-green-400 font-semibold'
+                }>
+                  {(() => {
+                    const variance = marketingExpenses.reduce((sum, exp) => sum + calculateExpenseTotal(exp, 'variance'), 0);
+                    return (variance >= 0 ? '+' : '') + formatCurrency(variance);
+                  })()}
+                </span>
+              </div>
+              
+              {/* Admin variance */}
+              <div className="flex justify-between p-2 bg-horizon-card rounded border border-horizon">
+                <span className="text-horizon-accent">הנהלה וכלליות:</span>
+                <span className={
+                  adminExpenses.reduce((sum, exp) => sum + calculateExpenseTotal(exp, 'variance'), 0) > 0
+                    ? 'text-red-400 font-semibold'
+                    : 'text-green-400 font-semibold'
+                }>
+                  {(() => {
+                    const variance = adminExpenses.reduce((sum, exp) => sum + calculateExpenseTotal(exp, 'variance'), 0);
+                    return (variance >= 0 ? '+' : '') + formatCurrency(variance);
+                  })()}
+                </span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Navigation */}
       <div className="flex justify-between">

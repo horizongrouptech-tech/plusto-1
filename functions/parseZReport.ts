@@ -32,16 +32,27 @@ function findHeaderRow(rows) {
     // Hebrew - Z Report common headers
     'פריטים', 'פריט', 'שם', 'מוצר', 'נמכר', 'מכירה', 'מכירות', 'הוכן', 'כולל', 'ברקוד', 'מק"ט', 'קוד',
     // Hebrew - Sales report headers  
-    'שם מוצר', 'מזהה', 'כמות', 'הכנסה', 'תיאור', 'סכום',
+    'שם מוצר', 'מזהה', 'כמות', 'הכנסה', 'תיאור', 'סכום', 'פדיון',
     // English
     'product', 'title', 'name', 'item', 'sold', 'sales', 'quantity', 'ordered', 'total', 'sku', 'barcode', 'net', 'revenue', 'amount'
   ];
   
-  for (let i = 0; i < Math.min(10, rows.length); i++) {
+  for (let i = 0; i < Math.min(15, rows.length); i++) {
     const row = rows[i];
     if (!row || row.length === 0) continue;
     
     const rowText = row.map(cell => (cell || '').toString().toLowerCase()).join(' ');
+    
+    // PRIORITY 1: Exact match for "שם מוצר" + "כמות" + "הכנסה"
+    const hasExactSalesReportHeaders = 
+      row.some(cell => cell?.toString().trim() === 'שם מוצר') &&
+      row.some(cell => cell?.toString().trim() === 'כמות') &&
+      row.some(cell => cell?.toString().trim() === 'הכנסה');
+    
+    if (hasExactSalesReportHeaders) {
+      console.log(`✅ EXACT MATCH: Found sales report header row at index ${i}:`, row);
+      return i;
+    }
     
     const matches = possibleHeaders.filter(header => 
       rowText.includes(header.toLowerCase())
@@ -50,7 +61,7 @@ function findHeaderRow(rows) {
     // Also check for exact column header patterns like "שם מוצר" + "כמות" + "הכנסה"
     const hasSalesReportHeaders = rowText.includes('שם מוצר') && (rowText.includes('כמות') || rowText.includes('הכנסה'));
     
-    if (matches.length >= 2 || hasSalesReportHeaders) {
+    if (matches.length >= 3 || hasSalesReportHeaders) {
       console.log(`Found header row at index ${i}:`, row);
       return i;
     }
@@ -89,6 +100,12 @@ function extractZReportData(rows, headerRowIndex) {
   headers.forEach((h, index) => {
     const normalized = h.toLowerCase();
     const normalizedTrimmed = normalized.trim();
+    
+    // ID column - מזהה - should be IGNORED, not used as product name or quantity
+    if (normalizedTrimmed === 'מזהה' || normalizedTrimmed === 'id' || normalizedTrimmed === 'identifier') {
+      console.log(`ℹ️ Skipping ID column at index ${index}: "${h}"`);
+      return;
+    }
     
     // Barcode / SKU column - MUST check first to not confuse with product name
     if (normalized.includes('ברקוד') || normalized.includes('קוד פריט') || normalizedTrimmed === 'קוד פריט' ||
@@ -293,12 +310,32 @@ function extractZReportData(rows, headerRowIndex) {
   console.log(`   - Ordered Qty: ${orderedQtyIndex} ${orderedQtyIndex !== -1 ? `("${headers[orderedQtyIndex]}")` : '(not found)'}`);
   console.log(`\n📋 All headers:`, headers);
   
+  // Helper: Check if row is a summary row
+  const isSummaryRow = (row) => {
+    const firstCell = (row[0] || '').toString().toLowerCase();
+    return firstCell.includes('סכום') || 
+           firstCell.includes('סיכום') || 
+           firstCell.includes('total') ||
+           firstCell.includes('סה"כ') ||
+           firstCell.includes('discount') ||
+           firstCell.includes('הנחה') ||
+           firstCell.includes('זיכוי') ||
+           firstCell.includes('9997') ||
+           firstCell.includes('9999');
+  };
+  
   const products = [];
   
   for (let i = headerRowIndex + 1; i < rows.length; i++) {
     const row = rows[i];
     
     if (!row || row.length === 0) continue;
+    
+    // Skip summary rows
+    if (isSummaryRow(row)) {
+      console.log(`⏭️ Skipping summary row ${i}:`, row[0]);
+      continue;
+    }
     
     console.log(`Row ${i} length: ${row.length}, content:`, row);
     

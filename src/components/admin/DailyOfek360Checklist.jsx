@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -85,6 +85,9 @@ const MONTH_NAMES = [
 
 // קומפוננטת סעיף בודד עם מצב רצוי/מצוי
 function ChecklistItemCard({ item, category, onUpdate, isExpanded, onToggleExpand, isUpdating }) {
+  const [localNotes, setLocalNotes] = useState(item.notes || '');
+  const [notesTimer, setNotesTimer] = useState(null);
+  
   const statusColors = {
     desired: 'bg-green-500/20 border-green-500/50 text-green-400',
     current: 'bg-blue-500/20 border-blue-500/50 text-blue-400',
@@ -101,6 +104,18 @@ function ChecklistItemCard({ item, category, onUpdate, isExpanded, onToggleExpan
     indigo: 'border-l-indigo-500',
     amber: 'border-l-amber-500'
   };
+  
+  // Update local state when item changes from parent
+  useEffect(() => {
+    setLocalNotes(item.notes || '');
+  }, [item.notes]);
+  
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (notesTimer) clearTimeout(notesTimer);
+    };
+  }, [notesTimer]);
 
   const handleStatusChange = (newStatus) => {
     onUpdate(category.id, 'status', newStatus);
@@ -108,6 +123,20 @@ function ChecklistItemCard({ item, category, onUpdate, isExpanded, onToggleExpan
     if (newStatus === 'current' && !isExpanded) {
       onToggleExpand(category.id);
     }
+  };
+  
+  const handleNotesChange = (newValue) => {
+    setLocalNotes(newValue);
+    
+    if (notesTimer) {
+      clearTimeout(notesTimer);
+    }
+    
+    const timer = setTimeout(() => {
+      onUpdate(category.id, 'notes', newValue);
+    }, 1000);
+    
+    setNotesTimer(timer);
   };
 
   return (
@@ -198,8 +227,13 @@ function ChecklistItemCard({ item, category, onUpdate, isExpanded, onToggleExpan
               {item.status === 'current' ? 'תאר את המצב הנוכחי בתחום זה' : `הערות עבור ${category.title}`}
             </Label>
             <Textarea
-              value={item.notes || ''}
-              onChange={(e) => onUpdate(category.id, 'notes', e.target.value)}
+              value={localNotes}
+              onChange={(e) => handleNotesChange(e.target.value)}
+              onBlur={() => {
+                if (localNotes !== item.notes) {
+                  onUpdate(category.id, 'notes', localNotes);
+                }
+              }}
               placeholder={
                 item.status === 'current' 
                   ? 'מה המצב הנוכחי? מה הבעיות? מה צריך לשפר?'
@@ -314,6 +348,8 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [updatingItemId, setUpdatingItemId] = useState(null);
+  const [localGeneralNotes, setLocalGeneralNotes] = useState('');
+  const [generalNotesTimer, setGeneralNotesTimer] = useState(null);
   
   // בדיקת הרשאות: רק אדמין ומנהל מחלקה יכולים לערוך
   const canEdit = currentUser?.role === 'admin' || currentUser?.user_type === 'department_head';
@@ -468,8 +504,34 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
     }
   });
 
+  // Update local general notes when checklist loads
+  useEffect(() => {
+    setLocalGeneralNotes(todayChecklist?.general_notes || todayChecklist?.notes || '');
+  }, [todayChecklist]);
+  
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (generalNotesTimer) clearTimeout(generalNotesTimer);
+    };
+  }, [generalNotesTimer]);
+
   const handleSaveGeneralNotes = (notes) => {
     saveNotesMutation.mutate(notes);
+  };
+  
+  const handleGeneralNotesChange = (newValue) => {
+    setLocalGeneralNotes(newValue);
+    
+    if (generalNotesTimer) {
+      clearTimeout(generalNotesTimer);
+    }
+    
+    const timer = setTimeout(() => {
+      handleSaveGeneralNotes(newValue);
+    }, 1000);
+    
+    setGeneralNotesTimer(timer);
   };
 
   const toggleExpand = (categoryId) => {
@@ -620,8 +682,13 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
               </CardHeader>
               <CardContent className="space-y-3">
                 <Textarea
-                  defaultValue={todayChecklist?.general_notes || todayChecklist?.notes || ''}
-                  onBlur={(e) => handleSaveGeneralNotes(e.target.value)}
+                  value={localGeneralNotes}
+                  onChange={(e) => handleGeneralNotesChange(e.target.value)}
+                  onBlur={() => {
+                    if (localGeneralNotes !== (todayChecklist?.general_notes || todayChecklist?.notes || '')) {
+                      handleSaveGeneralNotes(localGeneralNotes);
+                    }
+                  }}
                   placeholder="רשום כאן תובנות כלליות, בעיות שזוהו, או דברים שצריך לעקוב אחריהם..."
                   className="bg-horizon-card border-horizon text-horizon-text min-h-[100px]"
                 />
