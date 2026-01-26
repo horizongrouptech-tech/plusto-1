@@ -67,13 +67,13 @@ export default function CashFlowManager({ customer }) {
     enabled: !!customer?.email
   });
 
-  // טעינת יתרת פתיחה מ-Customer או SystemSettings
+  // טעינת יתרת פתיחה מ-OnboardingRequest
   React.useEffect(() => {
     const loadOpeningBalance = async () => {
       if (!customer?.email) return;
       try {
-        // נסה לטעון מ-Customer entity
-        const customerData = await base44.entities.Customer.filter({
+        // נסה לטעון מ-OnboardingRequest entity
+        const customerData = await base44.entities.OnboardingRequest.filter({
           email: customer.email
         });
         if (customerData && customerData.length > 0 && customerData[0].opening_balance !== undefined) {
@@ -822,12 +822,12 @@ export default function CashFlowManager({ customer }) {
             <Button
               onClick={async () => {
                 try {
-                  // עדכון יתרת פתיחה ב-Customer entity
-                  const customers = await base44.entities.Customer.filter({
+                  // עדכון יתרת פתיחה ב-OnboardingRequest entity
+                  const customers = await base44.entities.OnboardingRequest.filter({
                     email: customer.email
                   });
                   if (customers && customers.length > 0) {
-                    await base44.entities.Customer.update(customers[0].id, {
+                    await base44.entities.OnboardingRequest.update(customers[0].id, {
                       opening_balance: openingBalance
                     });
                   }
