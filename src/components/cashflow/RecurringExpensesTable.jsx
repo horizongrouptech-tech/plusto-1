@@ -190,7 +190,8 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
     setIsLinking(true);
     try {
       // טען את התחזית הנבחרת
-      const forecast = await base44.entities.ManualForecast.get(selectedForecastId);
+      const forecasts = await base44.entities.ManualForecast.filter({ id: selectedForecastId });
+      const forecast = forecasts?.[0];
       
       if (!forecast) {
         throw new Error('לא נמצאה התחזית');
@@ -250,9 +251,25 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
       });
       setLinkStatus(newLinkStatus);
 
+      // עדכון אופטימי של הדאטה
+      queryClient.setQueryData(['recurringExpenses', customer.email], (oldData) => {
+        if (!oldData) return oldData;
+        return oldData.map(exp => {
+          if (exp.id === selectedExpenseForLink.id) {
+            return {
+              ...exp,
+              linked_forecast_id: selectedForecastId,
+              linked_expense_category: selectedExpenseCategory,
+              monthly_amounts: updatedMonthlyAmounts
+            };
+          }
+          return exp;
+        });
+      });
+
       setLinkSuccess(true);
-      queryClient.invalidateQueries(['recurringExpenses', customer.email]);
-      queryClient.invalidateQueries(['forecasts', customer.email]);
+      await queryClient.invalidateQueries(['recurringExpenses', customer.email]);
+      await queryClient.invalidateQueries(['forecasts', customer.email]);
       
       // סגור את הדיאלוג אחרי 2 שניות
       setTimeout(() => {
@@ -270,13 +287,25 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
 
   // בדיקה אם הוצאה כבר משויכת
   const getLinkedInfo = (expense) => {
+    // בדיקה ראשונה - ברמת ההוצאה
+    if (expense.linked_forecast_id) {
+      const forecast = availableForecasts.find(f => f.id === expense.linked_forecast_id);
+      const category = FORECAST_EXPENSE_CATEGORIES.find(c => c.value === expense.linked_expense_category);
+      return {
+        isLinked: true,
+        forecastName: forecast?.forecast_name || 'תחזית',
+        categoryName: category?.label || expense.linked_expense_category
+      };
+    }
+    
+    // בדיקה חלופית - ברמת החודשים
     const firstMonth = expense.monthly_amounts?.[0];
     if (firstMonth?.linked_forecast_id) {
       const forecast = availableForecasts.find(f => f.id === firstMonth.linked_forecast_id);
       const category = FORECAST_EXPENSE_CATEGORIES.find(c => c.value === firstMonth.linked_expense_category);
       return {
         isLinked: true,
-        forecastName: forecast?.name || 'תחזית',
+        forecastName: forecast?.forecast_name || 'תחזית',
         categoryName: category?.label || firstMonth.linked_expense_category
       };
     }
