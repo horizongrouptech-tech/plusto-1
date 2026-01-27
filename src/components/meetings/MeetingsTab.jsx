@@ -63,58 +63,107 @@ export default function MeetingsTab({ customer, currentUser }) {
 
   // פענוח חכם של סיכום פגישה - מפרק טקסט חופשי לשדות
   const parseSmartInput = (text) => {
-    // חיפוש משימות (שורות שמתחילות ב--, *, -, מספר, או "משימה")
+    // חיפוש משימות - דפוסים מורחבים
     const taskPatterns = [
-      /^[-*•]\s*(.+)$/gm,
-      /^(\d+)[.)]\s*(.+)$/gm,
-      /משימה[:\s]+(.+)$/gmi,
-      /לעשות[:\s]+(.+)$/gmi,
-      /action[:\s]+(.+)$/gmi
+      /^[-*•]\s*(.+)$/gm,                    // שורות שמתחילות ב-, *, •
+      /^(\d+)[.)]\s*(.+)$/gm,                // מספר נקודה או סוגריים
+      /משימה[:\s]+(.+)$/gmi,                 // "משימה:"
+      /לעשות[:\s]+(.+)$/gmi,                 // "לעשות:"
+      /action[:\s]+(.+)$/gmi,                // "action:"
+      /^לבצע[:\s]+(.+)$/gmi,                 // "לבצע:"
+      /^צריך[:\s]+(.+)$/gmi,                 // "צריך:"
+      /^נדרש[:\s]+(.+)$/gmi,                 // "נדרש:"
+      /^טו[ד]?[א]?[ק]?[:\s]+(.+)$/gmi,       // "טודק" / "טוד" / "טו"
+      /^TODO[:\s]+(.+)$/gmi,                 // "TODO:"
+      /^\.\s*(.+)$/gm,                       // שורה שמתחילה בנקודה
+      /^→\s*(.+)$/gm,                         // חץ ימינה
+      /^>\s*(.+)$/gm                          // סימן גדול מ
     ];
     
-    // חיפוש החלטות (שורות עם "הוחלט", "החלטה", "סוכם")
+    // חיפוש החלטות - דפוסים מורחבים
     const decisionPatterns = [
-      /הוחלט[:\s]+(.+)$/gmi,
-      /החלטה[:\s]+(.+)$/gmi,
-      /סוכם[:\s]+(.+)$/gmi,
-      /decision[:\s]+(.+)$/gmi
+      /הוחלט[:\s]+(.+)$/gmi,                 // "הוחלט:"
+      /החלטה[:\s]+(.+)$/gmi,                 // "החלטה:"
+      /סוכם[:\s]+(.+)$/gmi,                  // "סוכם:"
+      /decision[:\s]+(.+)$/gmi,               // "decision:"
+      /^נקבע[:\s]+(.+)$/gmi,                 // "נקבע:"
+      /^סיכום[:\s]+(.+)$/gmi,                // "סיכום:"
+      /^החלטנו[:\s]+(.+)$/gmi,               // "החלטנו:"
+      /^✓\s*(.+)$/gm,                         // סימן V
+      /^✅\s*(.+)$/gm                         // אימוג'י V
     ];
 
     let summary = text;
     let decisions = [];
     let tasks = [];
+    const usedLines = new Set();
 
     // חילוץ החלטות
     decisionPatterns.forEach(pattern => {
       let match;
-      while ((match = pattern.exec(text)) !== null) {
-        decisions.push(match[1].trim());
-        summary = summary.replace(match[0], '');
+      const regex = new RegExp(pattern.source, pattern.flags);
+      while ((match = regex.exec(text)) !== null) {
+        const decision = match[1]?.trim();
+        if (decision && decision.length > 2 && !usedLines.has(match[0])) {
+          decisions.push(decision);
+          usedLines.add(match[0]);
+        }
       }
     });
 
     // חילוץ משימות
     taskPatterns.forEach(pattern => {
       let match;
-      while ((match = pattern.exec(text)) !== null) {
-        const task = match[2] || match[1];
-        if (task && task.length > 3) {
-          tasks.push(task.trim());
+      const regex = new RegExp(pattern.source, pattern.flags);
+      while ((match = regex.exec(text)) !== null) {
+        const task = match[2]?.trim() || match[1]?.trim();
+        if (task && task.length > 2 && !usedLines.has(match[0])) {
+          tasks.push(task);
+          usedLines.add(match[0]);
         }
       }
     });
 
-    // ניקוי הסיכום
-    summary = summary
-      .split('\n')
-      .filter(line => line.trim() && !tasks.some(t => line.includes(t)) && !decisions.some(d => line.includes(d)))
-      .join('\n')
-      .trim();
+    // ניקוי הסיכום - הסרת שורות שזוהו כמשימות או החלטות
+    const lines = summary.split('\n');
+    const cleanedLines = lines.filter(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return true; // שמירת שורות ריקות
+      
+      // בדיקה אם השורה היא משימה או החלטה
+      const isTask = tasks.some(t => trimmed.includes(t) || t.includes(trimmed));
+      const isDecision = decisions.some(d => trimmed.includes(d) || d.includes(trimmed));
+      
+      // בדיקה אם השורה מתחילה בדפוס של משימה/החלטה
+      const startsWithTaskPattern = taskPatterns.some(p => {
+        const regex = new RegExp(p.source, p.flags);
+        return regex.test(trimmed);
+      });
+      const startsWithDecisionPattern = decisionPatterns.some(p => {
+        const regex = new RegExp(p.source, p.flags);
+        return regex.test(trimmed);
+      });
+      
+      return !isTask && !isDecision && !startsWithTaskPattern && !startsWithDecisionPattern;
+    });
+
+    summary = cleanedLines.join('\n').trim();
+
+    // אם הסיכום ריק, נשתמש בטקסט המקורי (פחות משימות והחלטות)
+    if (!summary && (tasks.length > 0 || decisions.length > 0)) {
+      summary = text.split('\n')
+        .filter(line => {
+          const trimmed = line.trim();
+          return trimmed && !tasks.some(t => trimmed.includes(t)) && !decisions.some(d => trimmed.includes(d));
+        })
+        .join('\n')
+        .trim();
+    }
 
     return {
-      summary: summary || text,
-      key_decisions: decisions.join('\n'),
-      action_items: tasks.join('\n')
+      summary: summary || (tasks.length === 0 && decisions.length === 0 ? text : ''),
+      key_decisions: decisions.length > 0 ? decisions.join('\n') : '',
+      action_items: tasks.length > 0 ? tasks.join('\n') : ''
     };
   };
 

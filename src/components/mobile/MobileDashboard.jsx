@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
@@ -11,9 +12,10 @@ import {
   TrendingUp, TrendingDown, Calendar, ChevronRight, Loader2,
   Bell, FileText, User, Settings, BarChart3, Wallet, Building2,
   Phone, Mail, Users, ListTodo, RefreshCw, LogOut, Zap,
-  ArrowUp, ArrowDown, ChevronDown, Eye, MessageSquare
+  ArrowUp, ArrowDown, ChevronDown, Eye, MessageSquare, 
+  CheckCircle2, Circle, PieChart, LineChart, Activity
 } from 'lucide-react';
-import { format, formatDistanceToNow, isToday, isTomorrow, parseISO, differenceInDays } from 'date-fns';
+import { format, formatDistanceToNow, isToday, isTomorrow, parseISO, differenceInDays, startOfMonth, endOfMonth } from 'date-fns';
 import { he } from 'date-fns/locale';
 
 // ניווט תחתון
@@ -150,6 +152,153 @@ export default function MobileDashboard({ currentUser, onLogout }) {
     // כרגע מציג את כל הלקוחות הפעילים - ניתן להרחיב בעתיד לפי פגישות
     return myCustomers.slice(0, 10);
   }, [myCustomers]);
+
+  // טעינת צ'קליסט 360 להיום לכל הלקוחות
+  const { data: todayChecklists = [] } = useQuery({
+    queryKey: ['mobileTodayChecklists', currentUser?.email],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const customerEmails = myCustomers.map(c => c.email);
+      
+      if (customerEmails.length === 0) return [];
+      
+      try {
+        // נסה לטעון מ-DailyChecklist360
+        const checklists = await base44.entities.DailyChecklist360?.filter({
+          customer_email: { $in: customerEmails },
+          date: today
+        }) || [];
+        
+        // Fallback ל-CustomerGoal
+        if (checklists.length === 0) {
+          const goals = await base44.entities.CustomerGoal.filter({
+            customer_email: { $in: customerEmails },
+            task_type: 'daily_checklist_360',
+            due_date: today
+          });
+          
+          return goals.map(g => ({
+            id: g.id,
+            customer_email: g.customer_email,
+            date: g.due_date,
+            items: g.checklist_items || [],
+            general_notes: g.notes || '',
+            _isGoalFallback: true
+          }));
+        }
+        
+        return checklists;
+      } catch (e) {
+        // Fallback ל-CustomerGoal
+        const goals = await base44.entities.CustomerGoal.filter({
+          customer_email: { $in: customerEmails },
+          task_type: 'daily_checklist_360',
+          due_date: today
+        });
+        
+        return goals.map(g => ({
+          id: g.id,
+          customer_email: g.customer_email,
+          date: g.due_date,
+          items: g.checklist_items || [],
+          general_notes: g.notes || '',
+          _isGoalFallback: true
+        }));
+      }
+    },
+    enabled: !!currentUser?.email && myCustomers.length > 0
+  });
+
+  // חישוב סיכום צ'קליסט 360
+  const checklistSummary = useMemo(() => {
+    if (todayChecklists.length === 0) return null;
+    
+    let totalItems = 0;
+    let desiredItems = 0;
+    
+    todayChecklists.forEach(checklist => {
+      if (checklist.items && Array.isArray(checklist.items)) {
+        checklist.items.forEach(item => {
+          totalItems++;
+          if (item.status === 'desired') {
+            desiredItems++;
+          }
+        });
+      }
+    });
+    
+    const percentage = totalItems > 0 ? Math.round((desiredItems / totalItems) * 100) : 0;
+    
+    return {
+      total: todayChecklists.length,
+      percentage,
+      desiredItems,
+      totalItems
+    };
+  }, [todayChecklists]);
+
+  // טעינת נתוני תזרים סיכומיים לכל הלקוחות
+  const { data: cashflowSummary = [] } = useQuery({
+    queryKey: ['mobileCashflowSummary', currentUser?.email],
+    queryFn: async () => {
+      const customerEmails = myCustomers.map(c => c.email);
+      if (customerEmails.length === 0) return [];
+      
+      const summaries = await Promise.all(
+        customerEmails.map(async (email) => {
+          try {
+            const cashflow = await base44.entities.CashFlow?.filter({
+              customer_email: email
+            }, '-date') || [];
+            
+            if (cashflow.length === 0) return null;
+            
+            // חישוב יתרה מצטברת
+            let balance = 0;
+            const sorted = [...cashflow].sort((a, b) => new Date(a.date) - new Date(b.date));
+            sorted.forEach(cf => {
+              balance += (cf.credit || 0) - (cf.debit || 0);
+            });
+            
+            const totalCredit = cashflow.reduce((sum, cf) => sum + (cf.credit || 0), 0);
+            const totalDebit = cashflow.reduce((sum, cf) => sum + (cf.debit || 0), 0);
+            
+            return {
+              customer_email: email,
+              balance,
+              totalCredit,
+              totalDebit,
+              entries: cashflow.length,
+              lastEntryDate: cashflow[0]?.date
+            };
+          } catch (e) {
+            return null;
+          }
+        })
+      );
+      
+      return summaries.filter(s => s !== null);
+    },
+    enabled: !!currentUser?.email && myCustomers.length > 0
+  });
+
+  // חישוב סיכום תזרים כללי
+  const overallCashflow = useMemo(() => {
+    if (cashflowSummary.length === 0) return null;
+    
+    const totalBalance = cashflowSummary.reduce((sum, s) => sum + (s.balance || 0), 0);
+    const totalCredit = cashflowSummary.reduce((sum, s) => sum + (s.totalCredit || 0), 0);
+    const totalDebit = cashflowSummary.reduce((sum, s) => sum + (s.totalDebit || 0), 0);
+    const negativeBalanceCount = cashflowSummary.filter(s => s.balance < 0).length;
+    
+    return {
+      totalBalance,
+      totalCredit,
+      totalDebit,
+      negativeBalanceCount,
+      totalCustomers: cashflowSummary.length
+    };
+  }, [cashflowSummary]);
 
   // פונקציות עזר
   const getCustomerTasks = (customerEmail) => {
@@ -316,6 +465,78 @@ export default function MobileDashboard({ currentUser, onLogout }) {
               </Card>
             )}
 
+            {/* סיכום צ'קליסט 360 */}
+            {checklistSummary && checklistSummary.total > 0 && (
+              <Card className="bg-gradient-to-br from-purple-500/15 to-purple-600/5 border-purple-500/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Activity className="w-5 h-5 text-purple-400" />
+                      <span className="font-semibold text-horizon-text">צ'קליסט 360 היום</span>
+                    </div>
+                    <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/50">
+                      {checklistSummary.total} לקוחות
+                    </Badge>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-horizon-accent">מצב רצוי</span>
+                      <span className="font-bold text-purple-400">{checklistSummary.percentage}%</span>
+                    </div>
+                    <Progress value={checklistSummary.percentage} className="h-2" />
+                    <div className="flex items-center justify-between text-xs text-horizon-accent mt-1">
+                      <span>{checklistSummary.desiredItems} מתוך {checklistSummary.totalItems} סעיפים</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* סיכום תזרים כללי */}
+            {overallCashflow && (
+              <Card className="bg-gradient-to-br from-blue-500/15 to-cyan-500/5 border-blue-500/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-5 h-5 text-blue-400" />
+                      <span className="font-semibold text-horizon-text">סיכום תזרים</span>
+                    </div>
+                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50">
+                      {overallCashflow.totalCustomers} לקוחות
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-xs text-horizon-accent">יתרה כללית</p>
+                      <p className={`text-sm font-bold ${overallCashflow.totalBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        ₪{Math.abs(overallCashflow.totalBalance).toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-horizon-accent">הכנסות</p>
+                      <p className="text-sm font-bold text-green-400">
+                        ₪{overallCashflow.totalCredit.toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-horizon-accent">הוצאות</p>
+                      <p className="text-sm font-bold text-red-400">
+                        ₪{overallCashflow.totalDebit.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  {overallCashflow.negativeBalanceCount > 0 && (
+                    <div className="mt-2 pt-2 border-t border-blue-500/30">
+                      <p className="text-xs text-red-400 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {overallCashflow.negativeBalanceCount} לקוחות עם יתרה שלילית
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* משימות להיום */}
             <Card className="card-horizon">
               <CardHeader className="pb-2 pt-4 px-4">
@@ -370,13 +591,13 @@ export default function MobileDashboard({ currentUser, onLogout }) {
               </CardContent>
             </Card>
 
-            {/* לקוחות */}
+            {/* לקוחות להיום - עם מידע מורחב */}
             <Card className="card-horizon">
               <CardHeader className="pb-2 pt-4 px-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base text-horizon-text flex items-center gap-2">
                     <Users className="w-4 h-4 text-horizon-primary" />
-                    הלקוחות שלי
+                    הלקוחות שלי להיום
                   </CardTitle>
                   <Button
                     variant="ghost"
@@ -394,13 +615,24 @@ export default function MobileDashboard({ currentUser, onLogout }) {
                   {myCustomers.slice(0, 4).map(customer => {
                     const openTasks = getCustomerOpenTasks(customer.email);
                     const delayed = getCustomerDelayedTasks(customer.email);
+                    const customerChecklist = todayChecklists.find(c => c.customer_email === customer.email);
+                    const customerCashflow = cashflowSummary.find(c => c.customer_email === customer.email);
+                    
+                    // חישוב אחוז צ'קליסט
+                    let checklistPercentage = 0;
+                    if (customerChecklist?.items && Array.isArray(customerChecklist.items)) {
+                      const desired = customerChecklist.items.filter(i => i.status === 'desired').length;
+                      checklistPercentage = customerChecklist.items.length > 0 
+                        ? Math.round((desired / customerChecklist.items.length) * 100) 
+                        : 0;
+                    }
                     
                     return (
                       <div 
                         key={customer.id}
-                        className="flex items-center gap-3 p-3 bg-horizon-dark/50 rounded-xl"
+                        className="flex items-start gap-3 p-3 bg-horizon-dark/50 rounded-xl"
                       >
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-horizon-primary/30 to-horizon-secondary/30 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-horizon-primary/30 to-horizon-secondary/30 flex items-center justify-center flex-shrink-0">
                           <Building2 className="w-5 h-5 text-horizon-primary" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -408,20 +640,104 @@ export default function MobileDashboard({ currentUser, onLogout }) {
                             {customer.business_name}
                           </p>
                           <p className="text-xs text-horizon-accent">{customer.full_name}</p>
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <Badge className="bg-horizon-card text-horizon-accent text-[10px]">
-                            {openTasks.length} משימות
-                          </Badge>
-                          {delayed.length > 0 && (
-                            <Badge className="bg-red-500/20 text-red-400 text-[10px]">
-                              {delayed.length} באיחור
-                            </Badge>
-                          )}
+                          
+                          {/* מידע נוסף */}
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {openTasks.length > 0 && (
+                              <Badge className="bg-blue-500/20 text-blue-400 text-[10px] px-1.5">
+                                {openTasks.length} משימות
+                              </Badge>
+                            )}
+                            {delayed.length > 0 && (
+                              <Badge className="bg-red-500/20 text-red-400 text-[10px] px-1.5">
+                                {delayed.length} באיחור
+                              </Badge>
+                            )}
+                            {customerChecklist && (
+                              <Badge className={`text-[10px] px-1.5 ${
+                                checklistPercentage >= 75 
+                                  ? 'bg-green-500/20 text-green-400' 
+                                  : checklistPercentage >= 50
+                                  ? 'bg-yellow-500/20 text-yellow-400'
+                                  : 'bg-red-500/20 text-red-400'
+                              }`}>
+                                צ'קליסט: {checklistPercentage}%
+                              </Badge>
+                            )}
+                            {customerCashflow && (
+                              <Badge className={`text-[10px] px-1.5 ${
+                                customerCashflow.balance >= 0 
+                                  ? 'bg-green-500/20 text-green-400' 
+                                  : 'bg-red-500/20 text-red-400'
+                              }`}>
+                                תזרים: {customerCashflow.balance >= 0 ? '+' : ''}₪{Math.abs(customerCashflow.balance).toLocaleString()}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
                   })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* סיכום יומי מפורט */}
+            <Card className="card-horizon bg-gradient-to-br from-indigo-500/10 to-purple-500/5 border-indigo-500/30">
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="text-base text-horizon-text flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-indigo-400" />
+                  סיכום יומי
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 px-4 pb-4">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-horizon-dark/50 rounded-lg p-2">
+                      <p className="text-xs text-horizon-accent">לקוחות פעילים</p>
+                      <p className="text-lg font-bold text-horizon-text">{myCustomers.length}</p>
+                    </div>
+                    <div className="bg-horizon-dark/50 rounded-lg p-2">
+                      <p className="text-xs text-horizon-accent">משימות פתוחות</p>
+                      <p className="text-lg font-bold text-blue-400">
+                        {allTasks.filter(t => t.status !== 'done' && t.status !== 'cancelled').length}
+                      </p>
+                    </div>
+                    <div className="bg-horizon-dark/50 rounded-lg p-2">
+                      <p className="text-xs text-horizon-accent">משימות היום</p>
+                      <p className="text-lg font-bold text-yellow-400">{todayTasks.length}</p>
+                    </div>
+                    <div className="bg-horizon-dark/50 rounded-lg p-2">
+                      <p className="text-xs text-horizon-accent">באיחור</p>
+                      <p className="text-lg font-bold text-red-400">{delayedTasks.length}</p>
+                    </div>
+                  </div>
+                  
+                  {checklistSummary && (
+                    <div className="bg-horizon-dark/50 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-horizon-accent">צ'קליסט 360</span>
+                        <span className="text-sm font-bold text-purple-400">{checklistSummary.percentage}%</span>
+                      </div>
+                      <Progress value={checklistSummary.percentage} className="h-2" />
+                    </div>
+                  )}
+                  
+                  {overallCashflow && (
+                    <div className="bg-horizon-dark/50 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-horizon-accent">יתרה כללית</span>
+                        <span className={`text-sm font-bold ${overallCashflow.totalBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          ₪{Math.abs(overallCashflow.totalBalance).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-horizon-accent">
+                        <span>+₪{overallCashflow.totalCredit.toLocaleString()}</span>
+                        <span>•</span>
+                        <span>-₪{overallCashflow.totalDebit.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -534,6 +850,61 @@ export default function MobileDashboard({ currentUser, onLogout }) {
                                 </a>
                               )}
                             </div>
+                            
+                            {/* צ'קליסט 360 */}
+                            {(() => {
+                              const customerChecklist = todayChecklists.find(c => c.customer_email === customer.email);
+                              if (customerChecklist?.items && Array.isArray(customerChecklist.items)) {
+                                const desired = customerChecklist.items.filter(i => i.status === 'desired').length;
+                                const percentage = customerChecklist.items.length > 0 
+                                  ? Math.round((desired / customerChecklist.items.length) * 100) 
+                                  : 0;
+                                
+                                return (
+                                  <div className="bg-purple-500/10 rounded-lg p-2 border border-purple-500/30">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-xs text-horizon-accent">צ'קליסט 360 היום</span>
+                                      <span className={`text-xs font-bold ${
+                                        percentage >= 75 ? 'text-green-400' : 
+                                        percentage >= 50 ? 'text-yellow-400' : 'text-red-400'
+                                      }`}>
+                                        {percentage}%
+                                      </span>
+                                    </div>
+                                    <Progress value={percentage} className="h-1.5" />
+                                    <p className="text-[10px] text-horizon-accent mt-1">
+                                      {desired} מתוך {customerChecklist.items.length} סעיפים במצב רצוי
+                                    </p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+                            
+                            {/* תזרים */}
+                            {(() => {
+                              const customerCashflow = cashflowSummary.find(c => c.customer_email === customer.email);
+                              if (customerCashflow) {
+                                return (
+                                  <div className="bg-blue-500/10 rounded-lg p-2 border border-blue-500/30">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-xs text-horizon-accent">יתרת תזרים</span>
+                                      <span className={`text-xs font-bold ${
+                                        customerCashflow.balance >= 0 ? 'text-green-400' : 'text-red-400'
+                                      }`}>
+                                        {customerCashflow.balance >= 0 ? '+' : ''}₪{Math.abs(customerCashflow.balance).toLocaleString()}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-[10px] text-horizon-accent">
+                                      <span>+₪{customerCashflow.totalCredit.toLocaleString()}</span>
+                                      <span>•</span>
+                                      <span>-₪{customerCashflow.totalDebit.toLocaleString()}</span>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
                             
                             {/* משימות פתוחות */}
                             {openTasks.length > 0 && (

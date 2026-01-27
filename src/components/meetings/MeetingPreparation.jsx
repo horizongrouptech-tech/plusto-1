@@ -285,6 +285,54 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
     );
   }
 
+  // טעינת נתונים דינמיים לפגישה החוזרת
+  const { data: cashflowData } = useQuery({
+    queryKey: ['cashflowForMeeting', customer?.email],
+    queryFn: async () => {
+      try {
+        const cashflow = await base44.entities.CashFlow?.filter({
+          customer_email: customer.email
+        }, '-date');
+        
+        if (!cashflow || cashflow.length === 0) return null;
+        
+        // חישוב יתרה מצטברת
+        let balance = 0;
+        const sorted = [...cashflow].sort((a, b) => new Date(a.date) - new Date(b.date));
+        sorted.forEach(cf => {
+          balance += (cf.credit || 0) - (cf.debit || 0);
+        });
+        
+        return {
+          totalEntries: cashflow.length,
+          balance: balance,
+          lastEntryDate: cashflow[0]?.date
+        };
+      } catch (e) {
+        return null;
+      }
+    },
+    enabled: !!customer?.email && !isFirstMeeting
+  });
+
+  // טעינת יעדים
+  const { data: goals = [] } = useQuery({
+    queryKey: ['customerGoalsForMeeting', customer?.email],
+    queryFn: async () => {
+      try {
+        const goals = await base44.entities.CustomerGoal.filter({
+          customer_email: customer.email,
+          is_active: true,
+          task_type: { $ne: 'meeting_summary' }
+        }, '-created_date');
+        return goals.slice(0, 10);
+      } catch (e) {
+        return [];
+      }
+    },
+    enabled: !!customer?.email && !isFirstMeeting
+  });
+
   // תצוגה לפגישות המשך
   return (
     <div className="space-y-4">
@@ -424,7 +472,7 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
         )}
       </Card>
 
-      {/* צ'קליסט לפגישה החוזרת */}
+      {/* צ'קליסט לפגישה החוזרת - עם נתונים דינמיים */}
       <Card className="card-horizon">
         <CardHeader 
           className="cursor-pointer"
@@ -445,44 +493,204 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
         {expandedSections.includes('checklist') && (
           <CardContent className="pt-0">
             <div className="space-y-3">
-              {DEFAULT_RECURRING_MEETING_TASKS.map((task, index) => (
-                <div 
-                  key={task.id || index}
-                  className={`flex items-start gap-3 p-3 rounded-lg transition-all ${
-                    checkedTasks[`recurring_${task.id || index}`] 
-                      ? 'bg-green-500/10 border border-green-500/30' 
-                      : 'bg-horizon-card border border-horizon'
-                  }`}
-                >
-                  <Checkbox
-                    checked={checkedTasks[`recurring_${task.id || index}`] || false}
-                    onCheckedChange={() => toggleTask(`recurring_${task.id || index}`)}
-                    className="mt-1 border-horizon-primary data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`font-medium ${
-                        checkedTasks[`recurring_${task.id || index}`] 
-                          ? 'line-through text-horizon-accent' 
-                          : 'text-horizon-text'
-                      }`}>
-                        {task.title}
-                      </span>
-                      {checkedTasks[`recurring_${task.id || index}`] && (
-                        <CheckCircle2 className="w-4 h-4 text-green-400" />
-                      )}
-                    </div>
-                    {task.description && (
-                      <p className="text-sm text-horizon-accent mt-1">{task.description}</p>
+              {/* סקירת משימות פתוחות - עם נתונים אמיתיים */}
+              <div 
+                className={`flex items-start gap-3 p-3 rounded-lg transition-all ${
+                  checkedTasks['recurring_review_tasks'] 
+                    ? 'bg-green-500/10 border border-green-500/30' 
+                    : 'bg-horizon-card border border-horizon'
+                }`}
+              >
+                <Checkbox
+                  checked={checkedTasks['recurring_review_tasks'] || false}
+                  onCheckedChange={() => toggleTask('recurring_review_tasks')}
+                  className="mt-1 border-horizon-primary data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`font-medium ${
+                      checkedTasks['recurring_review_tasks'] 
+                        ? 'line-through text-horizon-accent' 
+                        : 'text-horizon-text'
+                    }`}>
+                      סקירת משימות פתוחות
+                    </span>
+                    {checkedTasks['recurring_review_tasks'] && (
+                      <CheckCircle2 className="w-4 h-4 text-green-400" />
+                    )}
+                    {openTasks.length > 0 && (
+                      <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50 text-xs">
+                        {openTasks.length} פתוחות
+                      </Badge>
                     )}
                   </div>
+                  <p className="text-sm text-horizon-accent mt-1">
+                    לעבור על סטטוס המשימות מהפגישה הקודמת ({openTasks.length} משימות פתוחות)
+                  </p>
                 </div>
-              ))}
+              </div>
+
+              {/* עדכון מצב תזרים - עם נתונים אמיתיים */}
+              <div 
+                className={`flex items-start gap-3 p-3 rounded-lg transition-all ${
+                  checkedTasks['recurring_cashflow_status'] 
+                    ? 'bg-green-500/10 border border-green-500/30' 
+                    : 'bg-horizon-card border border-horizon'
+                }`}
+              >
+                <Checkbox
+                  checked={checkedTasks['recurring_cashflow_status'] || false}
+                  onCheckedChange={() => toggleTask('recurring_cashflow_status')}
+                  className="mt-1 border-horizon-primary data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`font-medium ${
+                      checkedTasks['recurring_cashflow_status'] 
+                        ? 'line-through text-horizon-accent' 
+                        : 'text-horizon-text'
+                    }`}>
+                      עדכון מצב תזרים
+                    </span>
+                    {checkedTasks['recurring_cashflow_status'] && (
+                      <CheckCircle2 className="w-4 h-4 text-green-400" />
+                    )}
+                    {cashflowData && (
+                      <Badge className={`text-xs ${
+                        cashflowData.balance < 0 
+                          ? 'bg-red-500/20 text-red-400 border-red-500/50' 
+                          : 'bg-green-500/20 text-green-400 border-green-500/50'
+                      }`}>
+                        {cashflowData.balance < 0 ? 'יתרה שלילית' : 'יתרה חיובית'}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-horizon-accent mt-1">
+                    בדיקת מצב התזרים והתראות
+                    {cashflowData && (
+                      <span className="mr-2">
+                        ({cashflowData.totalEntries} תנועות, יתרה: ₪{cashflowData.balance?.toLocaleString() || '0'})
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* בדיקת יעדים - עם נתונים אמיתיים */}
+              <div 
+                className={`flex items-start gap-3 p-3 rounded-lg transition-all ${
+                  checkedTasks['recurring_kpis'] 
+                    ? 'bg-green-500/10 border border-green-500/30' 
+                    : 'bg-horizon-card border border-horizon'
+                }`}
+              >
+                <Checkbox
+                  checked={checkedTasks['recurring_kpis'] || false}
+                  onCheckedChange={() => toggleTask('recurring_kpis')}
+                  className="mt-1 border-horizon-primary data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`font-medium ${
+                      checkedTasks['recurring_kpis'] 
+                        ? 'line-through text-horizon-accent' 
+                        : 'text-horizon-text'
+                    }`}>
+                      בדיקת יעדים
+                    </span>
+                    {checkedTasks['recurring_kpis'] && (
+                      <CheckCircle2 className="w-4 h-4 text-green-400" />
+                    )}
+                    {goals.length > 0 && (
+                      <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/50 text-xs">
+                        {goals.length} יעדים
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-horizon-accent mt-1">
+                    התקדמות מול יעדים שנקבעו ({goals.length} יעדים פעילים)
+                  </p>
+                </div>
+              </div>
+
+              {/* בעיות וחסמים */}
+              <div 
+                className={`flex items-start gap-3 p-3 rounded-lg transition-all ${
+                  checkedTasks['recurring_issues'] 
+                    ? 'bg-green-500/10 border border-green-500/30' 
+                    : 'bg-horizon-card border border-horizon'
+                }`}
+              >
+                <Checkbox
+                  checked={checkedTasks['recurring_issues'] || false}
+                  onCheckedChange={() => toggleTask('recurring_issues')}
+                  className="mt-1 border-horizon-primary data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`font-medium ${
+                      checkedTasks['recurring_issues'] 
+                        ? 'line-through text-horizon-accent' 
+                        : 'text-horizon-text'
+                    }`}>
+                      בעיות וחסמים
+                    </span>
+                    {checkedTasks['recurring_issues'] && (
+                      <CheckCircle2 className="w-4 h-4 text-green-400" />
+                    )}
+                    {(delayedTasks.length > 0 || cashflowAlerts.length > 0) && (
+                      <Badge className="bg-red-500/20 text-red-400 border-red-500/50 text-xs">
+                        {delayedTasks.length + cashflowAlerts.length} התראות
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-horizon-accent mt-1">
+                    זיהוי בעיות חדשות שצריך לטפל בהן
+                    {(delayedTasks.length > 0 || cashflowAlerts.length > 0) && (
+                      <span className="mr-2">
+                        ({delayedTasks.length} משימות באיחור, {cashflowAlerts.length} התראות תזרים)
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* צעדים הבאים */}
+              <div 
+                className={`flex items-start gap-3 p-3 rounded-lg transition-all ${
+                  checkedTasks['recurring_next_steps'] 
+                    ? 'bg-green-500/10 border border-green-500/30' 
+                    : 'bg-horizon-card border border-horizon'
+                }`}
+              >
+                <Checkbox
+                  checked={checkedTasks['recurring_next_steps'] || false}
+                  onCheckedChange={() => toggleTask('recurring_next_steps')}
+                  className="mt-1 border-horizon-primary data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`font-medium ${
+                      checkedTasks['recurring_next_steps'] 
+                        ? 'line-through text-horizon-accent' 
+                        : 'text-horizon-text'
+                    }`}>
+                      צעדים הבאים
+                    </span>
+                    {checkedTasks['recurring_next_steps'] && (
+                      <CheckCircle2 className="w-4 h-4 text-green-400" />
+                    )}
+                  </div>
+                  <p className="text-sm text-horizon-accent mt-1">
+                    הגדרת משימות לתקופה הקרובה
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="mt-4 p-3 bg-horizon-card rounded-lg">
               <p className="text-sm text-horizon-accent">
-                ✅ {Object.keys(checkedTasks).filter(k => k.startsWith('recurring_') && checkedTasks[k]).length} מתוך {DEFAULT_RECURRING_MEETING_TASKS.length} משימות הושלמו
+                ✅ {Object.keys(checkedTasks).filter(k => k.startsWith('recurring_') && checkedTasks[k]).length} מתוך 5 משימות הושלמו
               </p>
             </div>
           </CardContent>
