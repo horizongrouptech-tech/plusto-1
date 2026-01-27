@@ -144,12 +144,12 @@ export default function ServiceContactsTab({ customer }) {
           address: formData.address,
           notes: formData.notes
         } : {
-          contact_name: formData.system_name, // שמירת שם המערכת גם כשם איש קשר לתאימות
           system_name: formData.system_name,
           system_url: formData.system_url,
           username: formData.username,
           password: formData.password,
-          system_notes: formData.system_notes
+          system_notes: formData.system_notes,
+          contact_type: 'אחר' // ערך ברירת מחדל למערכות
         })
       };
 
