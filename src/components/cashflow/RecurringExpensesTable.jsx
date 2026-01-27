@@ -331,32 +331,28 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
       }
 
       // עדכון ההוצאה הקבועה עם פרטי השיוך
-      const linkInfo = `${expenseType}::${expenseItemName}`;
+      const finalLinkInfo = `${expenseType}::${expenseItemName}`;
       const updatedMonthlyAmounts = selectedExpenseForLink.monthly_amounts?.map(month => ({
         ...month,
         linked_to_forecast: true,
         linked_forecast_id: selectedForecastId,
-        linked_expense_category: linkInfo
+        linked_expense_category: finalLinkInfo
       }));
 
       await base44.entities.RecurringExpense.update(selectedExpenseForLink.id, {
         monthly_amounts: updatedMonthlyAmounts,
         linked_forecast_id: selectedForecastId,
-        linked_expense_category: linkInfo
+        linked_expense_category: finalLinkInfo
       });
 
       // עדכון הסטטוס המקומי
-      const linkInfo = createNewExpense 
-        ? `${selectedExpenseType}::${newExpenseName}` 
-        : selectedExpenseCategory;
-        
       const newLinkStatus = { ...linkStatus };
       selectedExpenseForLink.monthly_amounts?.forEach(month => {
         const key = `${selectedExpenseForLink.category}_${month.month}_${month.year}`;
         newLinkStatus[key] = {
           linked: true,
           forecastId: selectedForecastId,
-          expenseCategory: linkInfo
+          expenseCategory: finalLinkInfo
         };
       });
       setLinkStatus(newLinkStatus);
@@ -369,7 +365,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
             return {
               ...exp,
               linked_forecast_id: selectedForecastId,
-              linked_expense_category: linkInfo,
+              linked_expense_category: finalLinkInfo,
               monthly_amounts: updatedMonthlyAmounts
             };
           }
