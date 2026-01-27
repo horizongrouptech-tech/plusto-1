@@ -50,8 +50,12 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
   const [selectedExpenseForLink, setSelectedExpenseForLink] = useState(null);
   const [selectedForecastId, setSelectedForecastId] = useState('');
   const [selectedExpenseCategory, setSelectedExpenseCategory] = useState('');
+  const [selectedExpenseType, setSelectedExpenseType] = useState('marketing_sales'); // 'marketing_sales' | 'admin_general'
+  const [newExpenseName, setNewExpenseName] = useState('');
+  const [createNewExpense, setCreateNewExpense] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
   const [linkSuccess, setLinkSuccess] = useState(false);
+  const [availableExpenseItems, setAvailableExpenseItems] = useState([]);
 
   // טעינת הוצאות קבועות
   const { data: recurringExpenses = [], isLoading } = useQuery({
@@ -171,19 +175,81 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
     }
   };
 
+  // טעינת פריטי הוצאות מהתחזית הנבחרת
+  React.useEffect(() => {
+    const loadExpenseItems = async () => {
+      if (!selectedForecastId) {
+        setAvailableExpenseItems([]);
+        return;
+      }
+      
+      try {
+        const forecasts = await base44.entities.ManualForecast.filter({ id: selectedForecastId });
+        const forecast = forecasts?.[0];
+        
+        if (forecast && forecast.detailed_expenses) {
+          const items = [];
+          
+          // הוסף פריטים מ-marketing_sales
+          if (forecast.detailed_expenses.marketing_sales) {
+            forecast.detailed_expenses.marketing_sales.forEach(item => {
+              items.push({
+                name: item.name,
+                type: 'marketing_sales',
+                label: `${item.name} (שיווק ומכירות)`,
+                value: `marketing_sales::${item.name}`
+              });
+            });
+          }
+          
+          // הוסף פריטים מ-admin_general
+          if (forecast.detailed_expenses.admin_general) {
+            forecast.detailed_expenses.admin_general.forEach(item => {
+              items.push({
+                name: item.name,
+                type: 'admin_general',
+                label: `${item.name} (הנהלה וכלליות)`,
+                value: `admin_general::${item.name}`
+              });
+            });
+          }
+          
+          setAvailableExpenseItems(items);
+        }
+      } catch (error) {
+        console.error('Error loading expense items:', error);
+      }
+    };
+    
+    loadExpenseItems();
+  }, [selectedForecastId]);
+
   // פתיחת דיאלוג השיוך
   const openLinkDialog = (expense) => {
     setSelectedExpenseForLink(expense);
     setSelectedForecastId('');
     setSelectedExpenseCategory('');
+    setNewExpenseName('');
+    setCreateNewExpense(false);
+    setSelectedExpenseType('marketing_sales');
     setLinkSuccess(false);
     setShowLinkDialog(true);
   };
 
   // שיוך הוצאה לתחזית
   const handleLinkToForecast = async () => {
-    if (!selectedForecastId || !selectedExpenseCategory || !selectedExpenseForLink) {
-      alert('יש לבחור תחזית וקטגוריית הוצאה');
+    if (!selectedForecastId || !selectedExpenseForLink) {
+      alert('יש לבחור תחזית');
+      return;
+    }
+
+    if (!createNewExpense && !selectedExpenseCategory) {
+      alert('יש לבחור פריט הוצאה קיים או ליצור חדש');
+      return;
+    }
+
+    if (createNewExpense && !newExpenseName) {
+      alert('יש למלא שם להוצאה החדשה');
       return;
     }
 
@@ -197,56 +263,100 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
         throw new Error('לא נמצאה התחזית');
       }
 
+      let expenseItemName;
+      let expenseType;
+
+      if (createNewExpense) {
+        // יצירת פריט הוצאה חדש
+        expenseItemName = newExpenseName;
+        expenseType = selectedExpenseType;
+        
+        // עדכון התחזית עם הפריט החדש
+        const detailedExpenses = forecast.detailed_expenses || { marketing_sales: [], admin_general: [] };
+        const targetArray = expenseType === 'marketing_sales' ? 'marketing_sales' : 'admin_general';
+        
+        // צור מערך של 12 חודשים עם הסכום הממוצע
+        const monthlyAmounts = Array(12).fill(selectedExpenseForLink.average_monthly || 0);
+        
+        const newExpenseItem = {
+          name: expenseItemName,
+          amount: selectedExpenseForLink.average_monthly || 0,
+          monthly_amounts: monthlyAmounts,
+          is_annual_total: false
+        };
+        
+        detailedExpenses[targetArray] = [
+          ...(detailedExpenses[targetArray] || []),
+          newExpenseItem
+        ];
+        
+        await base44.entities.ManualForecast.update(selectedForecastId, {
+          detailed_expenses: detailedExpenses
+        });
+      } else {
+        // שיוך לפריט קיים
+        const [type, name] = selectedExpenseCategory.split('::');
+        expenseItemName = name;
+        expenseType = type;
+        
+        // עדכון הפריט הקיים עם הסכום
+        const detailedExpenses = forecast.detailed_expenses || { marketing_sales: [], admin_general: [] };
+        const targetArray = type === 'marketing_sales' ? 'marketing_sales' : 'admin_general';
+        
+        const existingItems = detailedExpenses[targetArray] || [];
+        const itemIndex = existingItems.findIndex(item => item.name === name);
+        
+        if (itemIndex !== -1) {
+          // עדכן את הסכומים החודשיים
+          const existingItem = existingItems[itemIndex];
+          const monthlyAmounts = existingItem.monthly_amounts || Array(12).fill(0);
+          
+          // הוסף את הסכום הממוצע לכל חודש
+          const updatedMonthlyAmounts = monthlyAmounts.map(amount => 
+            amount + (selectedExpenseForLink.average_monthly || 0)
+          );
+          
+          existingItems[itemIndex] = {
+            ...existingItem,
+            amount: (existingItem.amount || 0) + (selectedExpenseForLink.average_monthly || 0),
+            monthly_amounts: updatedMonthlyAmounts
+          };
+          
+          detailedExpenses[targetArray] = existingItems;
+          
+          await base44.entities.ManualForecast.update(selectedForecastId, {
+            detailed_expenses: detailedExpenses
+          });
+        }
+      }
+
       // עדכון ההוצאה הקבועה עם פרטי השיוך
+      const linkInfo = `${expenseType}::${expenseItemName}`;
       const updatedMonthlyAmounts = selectedExpenseForLink.monthly_amounts?.map(month => ({
         ...month,
         linked_to_forecast: true,
         linked_forecast_id: selectedForecastId,
-        linked_expense_category: selectedExpenseCategory
+        linked_expense_category: linkInfo
       }));
 
       await base44.entities.RecurringExpense.update(selectedExpenseForLink.id, {
         monthly_amounts: updatedMonthlyAmounts,
         linked_forecast_id: selectedForecastId,
-        linked_expense_category: selectedExpenseCategory
-      });
-
-      // עדכון התחזית עם הנתונים מהתזרים
-      const forecastData = forecast.data || {};
-      const expenseData = forecastData.expenses || {};
-      
-      // הוסף את הסכום הממוצע לקטגוריית ההוצאה בתחזית
-      const currentCategoryAmount = expenseData[selectedExpenseCategory] || 0;
-      const newAmount = currentCategoryAmount + (selectedExpenseForLink.average_monthly || 0);
-      
-      await base44.entities.ManualForecast.update(selectedForecastId, {
-        data: {
-          ...forecastData,
-          expenses: {
-            ...expenseData,
-            [selectedExpenseCategory]: newAmount
-          },
-          linked_recurring_expenses: [
-            ...(forecastData.linked_recurring_expenses || []),
-            {
-              recurring_expense_id: selectedExpenseForLink.id,
-              category: selectedExpenseForLink.category,
-              expense_category: selectedExpenseCategory,
-              average_monthly: selectedExpenseForLink.average_monthly,
-              linked_date: new Date().toISOString()
-            }
-          ]
-        }
+        linked_expense_category: linkInfo
       });
 
       // עדכון הסטטוס המקומי
+      const linkInfo = createNewExpense 
+        ? `${selectedExpenseType}::${newExpenseName}` 
+        : selectedExpenseCategory;
+        
       const newLinkStatus = { ...linkStatus };
       selectedExpenseForLink.monthly_amounts?.forEach(month => {
         const key = `${selectedExpenseForLink.category}_${month.month}_${month.year}`;
         newLinkStatus[key] = {
           linked: true,
           forecastId: selectedForecastId,
-          expenseCategory: selectedExpenseCategory
+          expenseCategory: linkInfo
         };
       });
       setLinkStatus(newLinkStatus);
@@ -259,7 +369,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
             return {
               ...exp,
               linked_forecast_id: selectedForecastId,
-              linked_expense_category: selectedExpenseCategory,
+              linked_expense_category: linkInfo,
               monthly_amounts: updatedMonthlyAmounts
             };
           }
@@ -286,25 +396,41 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
   // בדיקה אם הוצאה כבר משויכת
   const getLinkedInfo = (expense) => {
     // בדיקה ראשונה - ברמת ההוצאה
-    if (expense.linked_forecast_id) {
+    if (expense.linked_forecast_id && expense.linked_expense_category) {
       const forecast = availableForecasts.find(f => f.id === expense.linked_forecast_id);
-      const category = FORECAST_EXPENSE_CATEGORIES.find(c => c.value === expense.linked_expense_category);
+      
+      // פענוח הקטגוריה
+      let categoryName = expense.linked_expense_category;
+      if (expense.linked_expense_category.includes('::')) {
+        const [type, name] = expense.linked_expense_category.split('::');
+        const typeLabel = type === 'marketing_sales' ? 'שיווק ומכירות' : 'הנהלה וכלליות';
+        categoryName = `${name} (${typeLabel})`;
+      }
+      
       return {
         isLinked: true,
         forecastName: forecast?.forecast_name || forecast?.name || 'תחזית',
-        categoryName: category?.label || expense.linked_expense_category
+        categoryName: categoryName
       };
     }
     
     // בדיקה חלופית - ברמת החודשים
     const firstMonth = expense.monthly_amounts?.[0];
-    if (firstMonth?.linked_forecast_id) {
+    if (firstMonth?.linked_forecast_id && firstMonth?.linked_expense_category) {
       const forecast = availableForecasts.find(f => f.id === firstMonth.linked_forecast_id);
-      const category = FORECAST_EXPENSE_CATEGORIES.find(c => c.value === firstMonth.linked_expense_category);
+      
+      // פענוח הקטגוריה
+      let categoryName = firstMonth.linked_expense_category;
+      if (firstMonth.linked_expense_category.includes('::')) {
+        const [type, name] = firstMonth.linked_expense_category.split('::');
+        const typeLabel = type === 'marketing_sales' ? 'שיווק ומכירות' : 'הנהלה וכלליות';
+        categoryName = `${name} (${typeLabel})`;
+      }
+      
       return {
         isLinked: true,
         forecastName: forecast?.forecast_name || forecast?.name || 'תחזית',
-        categoryName: category?.label || firstMonth.linked_expense_category
+        categoryName: categoryName
       };
     }
     return { isLinked: false };
@@ -629,24 +755,79 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
                 )}
               </div>
 
-              {/* בחירת קטגוריית הוצאה */}
+              {/* בחירת קטגוריית הוצאה או יצירת חדשה */}
               <div>
-                <Label className="text-horizon-text mb-2 block">
-                  <Tag className="w-4 h-4 inline ml-2" />
-                  בחר קטגוריית הוצאה בתחזית
-                </Label>
-                <Select value={selectedExpenseCategory} onValueChange={setSelectedExpenseCategory}>
-                  <SelectTrigger className="bg-horizon-dark border-horizon text-horizon-text">
-                    <SelectValue placeholder="בחר קטגוריה..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-horizon-dark border-horizon">
-                    {FORECAST_EXPENSE_CATEGORIES.map(cat => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    id="createNew"
+                    checked={createNewExpense}
+                    onChange={(e) => {
+                      setCreateNewExpense(e.target.checked);
+                      if (e.target.checked) {
+                        setSelectedExpenseCategory('');
+                      } else {
+                        setNewExpenseName('');
+                      }
+                    }}
+                    className="rounded border-horizon bg-horizon-card"
+                  />
+                  <Label htmlFor="createNew" className="text-horizon-text cursor-pointer">
+                    צור פריט הוצאה חדש
+                  </Label>
+                </div>
+
+                {createNewExpense ? (
+                  <>
+                    <div className="mb-3">
+                      <Label className="text-horizon-accent mb-2 block text-sm">שם ההוצאה החדשה</Label>
+                      <Input
+                        value={newExpenseName}
+                        onChange={(e) => setNewExpenseName(e.target.value)}
+                        placeholder="לדוגמה: שכירות משרד, פרסום בגוגל..."
+                        className="bg-horizon-dark border-horizon text-horizon-text"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-horizon-accent mb-2 block text-sm">סוג ההוצאה</Label>
+                      <Select value={selectedExpenseType} onValueChange={setSelectedExpenseType}>
+                        <SelectTrigger className="bg-horizon-dark border-horizon text-horizon-text">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-horizon-dark border-horizon">
+                          <SelectItem value="marketing_sales">שיווק ומכירות</SelectItem>
+                          <SelectItem value="admin_general">הנהלה וכלליות</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <Label className="text-horizon-accent mb-2 block text-sm">בחר פריט הוצאה קיים</Label>
+                    <Select 
+                      value={selectedExpenseCategory} 
+                      onValueChange={setSelectedExpenseCategory}
+                      disabled={!selectedForecastId}
+                    >
+                      <SelectTrigger className="bg-horizon-dark border-horizon text-horizon-text">
+                        <SelectValue placeholder={selectedForecastId ? "בחר פריט..." : "בחר תחזית תחילה"} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-horizon-dark border-horizon">
+                        {availableExpenseItems.length === 0 ? (
+                          <SelectItem value="_none" disabled>
+                            אין פריטי הוצאות בתחזית - צור חדש
+                          </SelectItem>
+                        ) : (
+                          availableExpenseItems.map(item => (
+                            <SelectItem key={item.value} value={item.value}>
+                              {item.label}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               {/* הסבר */}
@@ -670,7 +851,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
               </Button>
               <Button
                 onClick={handleLinkToForecast}
-                disabled={!selectedForecastId || !selectedExpenseCategory || isLinking}
+                disabled={!selectedForecastId || (!createNewExpense && !selectedExpenseCategory) || (createNewExpense && !newExpenseName) || isLinking}
                 className="btn-horizon-primary"
               >
                 {isLinking ? (
