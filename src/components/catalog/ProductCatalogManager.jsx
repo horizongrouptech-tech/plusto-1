@@ -28,6 +28,7 @@ import ProductEditModal from "./ProductEditModal";
 import CatalogDeletionModal from "./CatalogDeletionModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { base44 } from '@/api/base44Client';
 import { cleanCatalogSmartly } from "@/functions/cleanCatalogSmartly";
 import { processCatalogUpload } from "@/functions/processCatalogUpload";
 import { cancelCatalogGeneration } from "@/functions/cancelCatalogGeneration";
@@ -679,8 +680,30 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
 
     } catch (error) {
         console.error("Error processing file:", error);
-        setProcessingStatus(`שגיאה: ${error.message}`);
-        alert(`שגיאה בעיבוד הקובץ: ${error.message}`);
+        const errorMessage = error.message || 'שגיאה לא ידועה';
+        
+        // שמירת הקובץ כנכשל במערכת
+        try {
+            if (file_url) {
+                await base44.entities.FileUpload.create({
+                    filename: file?.name || 'קובץ קטלוג',
+                    file_url: file_url,
+                    file_type: file?.name?.split('.').pop()?.toLowerCase() || 'unknown',
+                    status: 'failed',
+                    data_category: 'catalog',
+                    analysis_notes: errorMessage,
+                    error_message: error.message || errorMessage,
+                    customer_email: customer?.email
+                });
+            }
+        } catch (saveError) {
+            console.error('Error saving failed file record:', saveError);
+        }
+        
+        // הודעה ידידותית למשתמש
+        const friendlyMessage = '⚠️ הקובץ לא הועלה בהצלחה\n\nהקובץ הועבר לטיפול מנהל המערכת ונבדק בהקדם.\nתוכל לראות את הסטטוס בעדכונים שיישלחו אליך.';
+        setProcessingStatus('הקובץ הועבר לטיפול מנהל המערכת');
+        alert(friendlyMessage);
         setIsProcessing(false);
         setTimeout(() => {
             setProgress(0);

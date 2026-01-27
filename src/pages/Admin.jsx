@@ -94,6 +94,7 @@ import LoadingScreen from '@/components/shared/LoadingScreen';
 // import RecommendationDisplayCard from '@/components/admin/RecommendationDisplayCard'; // Removed unused import
 // import DailyTasksDashboard from '../components/dashboard/DailyTasksDashboard'; // Removed direct import, lazy loaded
 import TaskManagement from './TaskManagement';
+import FailedFileUploadsManager from '../components/admin/FailedFileUploadsManager';
 
 // Lazy loading של קומפוננטים כבדים
 const ClientManagementDashboard = lazy(() => import('../components/admin/ClientManagementDashboard'));
@@ -2903,6 +2904,15 @@ export default function AdminPage() {
                     לידים
                   </TabsTrigger>
                 )}
+                {isAdmin && (
+                  <TabsTrigger 
+                    value="failed-uploads" 
+                    className="py-3 px-6 text-horizon-accent data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#32acc1] data-[state=active]:to-[#83ddec] data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg font-bold hover-lift"
+                  >
+                    <FileX className="w-4 h-4 mr-2" />
+                    קבצים שנכשלו
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               <TabsContent value="overview">
@@ -2947,6 +2957,15 @@ export default function AdminPage() {
                 <TabsContent value="leads">
                   <Suspense fallback={<div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>}>
                     <LeadManagementSystem currentUser={currentUser} />
+                  </Suspense>
+                </TabsContent>
+              )}
+
+              {/* Failed File Uploads tab */}
+              {isAdmin && (
+                <TabsContent value="failed-uploads">
+                  <Suspense fallback={<div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>}>
+                    <FailedFileUploadsManager />
                   </Suspense>
                 </TabsContent>
               )}

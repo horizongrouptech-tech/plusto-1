@@ -197,19 +197,37 @@ export default function CashFlowManager({ customer }) {
     } catch (error) {
       console.error('Error uploading file:', error);
       
-      let errorMessage = 'שגיאה בהעלאת הקובץ: ';
+      // שמירת פרטי השגיאה
+      let technicalError = error.message || 'שגיאה לא ידועה';
       
-      if (error.message.includes('לא נמצאו תנועות')) {
-        errorMessage += 'הקובץ ריק או לא מכיל נתוני תזרים תקינים מ-BiziBox.';
-      } else if (error.message.includes('JSON')) {
-        errorMessage += 'הקובץ לא בפורמט תקין. נא לוודא שמדובר בדוח תזרים מ-BiziBox.';
-      } else if (error.message.includes('טווח התאריכים')) {
-        errorMessage += 'לא נמצאו תנועות בטווח התאריכים שנבחר. נסה להרחיב את הטווח.';
-      } else {
-        errorMessage += error.message;
+      if (error.message?.includes('לא נמצאו תנועות')) {
+        technicalError = 'הקובץ ריק או לא מכיל נתוני תזרים תקינים מ-BiziBox.';
+      } else if (error.message?.includes('JSON')) {
+        technicalError = 'הקובץ לא בפורמט תקין. נא לוודא שמדובר בדוח תזרים מ-BiziBox.';
+      } else if (error.message?.includes('טווח התאריכים')) {
+        technicalError = 'לא נמצאו תנועות בטווח התאריכים שנבחר. נסה להרחיב את הטווח.';
       }
       
-      alert(errorMessage);
+      // שמירת הקובץ כנכשל במערכת
+      try {
+        if (file_url) {
+          await base44.entities.FileUpload.create({
+            filename: file?.name || 'קובץ תזרים',
+            file_url: file_url,
+            file_type: file?.name?.split('.').pop()?.toLowerCase() || 'unknown',
+            status: 'failed',
+            data_category: 'cashflow',
+            analysis_notes: technicalError,
+            error_message: error.message || technicalError,
+            customer_email: customer?.email
+          });
+        }
+      } catch (saveError) {
+        console.error('Error saving failed file record:', saveError);
+      }
+      
+      // הודעה ידידותית למשתמש
+      alert('⚠️ הקובץ לא הועלה בהצלחה\n\nהקובץ הועבר לטיפול מנהל המערכת ונבדק בהקדם.\nתוכל לראות את הסטטוס בעדכונים שיישלחו אליך.');
     } finally {
       setIsUploading(false);
       // איפוס שדה הקובץ

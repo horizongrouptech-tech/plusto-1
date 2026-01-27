@@ -101,19 +101,38 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
       console.error('❌ Error uploading Z report:', error);
       setUploadStatus('');
       
-      let errorMessage = 'שגיאה בעיבוד הקובץ:\n';
+      // שמירת פרטי השגיאה
+      const errorDetails = error.message || 'שגיאה לא ידועה';
+      let technicalError = errorDetails;
       
-      if (error.message.includes('No products found')) {
-        errorMessage += 'לא נמצאו מוצרים בדוח. וודא שהקובץ מכיל נתוני מכירות תקינים.';
-      } else if (error.message.includes('File is empty')) {
-        errorMessage += 'הקובץ ריק או לא ניתן לקריאה. נסה קובץ אחר.';
-      } else if (error.message.includes('Unsupported file format')) {
-        errorMessage += 'פורמט קובץ לא נתמך. העלה קובץ Excel או CSV בלבד.';
-      } else {
-        errorMessage += error.message;
+      if (error.message?.includes('No products found')) {
+        technicalError = 'לא נמצאו מוצרים בדוח. וודא שהקובץ מכיל נתוני מכירות תקינים.';
+      } else if (error.message?.includes('File is empty')) {
+        technicalError = 'הקובץ ריק או לא ניתן לקריאה. נסה קובץ אחר.';
+      } else if (error.message?.includes('Unsupported file format')) {
+        technicalError = 'פורמט קובץ לא נתמך. העלה קובץ Excel או CSV בלבד.';
       }
       
-      alert(errorMessage);
+      // שמירת הקובץ כנכשל במערכת
+      try {
+        if (file_url) {
+          await base44.entities.FileUpload.create({
+            filename: file.name,
+            file_url: file_url,
+            file_type: file.name.split('.').pop()?.toLowerCase(),
+            status: 'failed',
+            data_category: 'z_report',
+            analysis_notes: technicalError,
+            error_message: errorDetails,
+            customer_email: forecastData?.customer_email
+          });
+        }
+      } catch (saveError) {
+        console.error('Error saving failed file record:', saveError);
+      }
+      
+      // הודעה ידידותית למשתמש
+      alert('⚠️ הקובץ לא הועלה בהצלחה\n\nהקובץ הועבר לטיפול מנהל המערכת ונבדק בהקדם.\nתוכל לראות את הסטטוס בעדכונים שיישלחו אליך.');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {

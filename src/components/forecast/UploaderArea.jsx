@@ -6,6 +6,7 @@ import { UploadFile } from "@/integrations/Core";
 import { uploadManualForecastXlsx } from "@/functions/uploadManualForecastXlsx";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+import { base44 } from '@/api/base44Client';
 
 export default function UploaderArea({ customer, onUploadComplete }) {
     const [isDragging, setIsDragging] = useState(false);
@@ -102,10 +103,31 @@ export default function UploaderArea({ customer, onUploadComplete }) {
             }, 1500);
 
         } catch (error) {
-            const errorMessage = 'שגיאה בתהליך ההעלאה: ' + error.message;
-            console.error(errorMessage, error);
-            setError(errorMessage);
-            toast.error(errorMessage);
+            const errorMessage = error.message || 'שגיאה לא ידועה';
+            console.error('Error uploading forecast file:', error);
+            
+            // שמירת הקובץ כנכשל במערכת
+            try {
+                if (file_url) {
+                    await base44.entities.FileUpload.create({
+                        filename: file?.name || 'קובץ תחזית',
+                        file_url: file_url,
+                        file_type: file?.name?.split('.').pop()?.toLowerCase() || 'unknown',
+                        status: 'failed',
+                        data_category: 'forecast',
+                        analysis_notes: errorMessage,
+                        error_message: error.message || errorMessage,
+                        customer_email: customer?.email
+                    });
+                }
+            } catch (saveError) {
+                console.error('Error saving failed file record:', saveError);
+            }
+            
+            // הודעה ידידותית למשתמש
+            const friendlyMessage = '⚠️ הקובץ לא הועלה בהצלחה\n\nהקובץ הועבר לטיפול מנהל המערכת ונבדק בהקדם.\nתוכל לראות את הסטטוס בעדכונים שיישלחו אליך.';
+            setError(friendlyMessage);
+            toast.error(friendlyMessage);
             setIsUploading(false);
             setUploadStatus('');
             setUploadProgress(0);

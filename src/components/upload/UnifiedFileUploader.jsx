@@ -585,16 +585,39 @@ ${rawDataForPrompt}
     } catch (err) {
       console.error('File upload failed:', err);
       const displayMessage = err.message || 'אירעה שגיאה לא ידועה';
-      alert(`שגיאה בתהליך העלאת הקובץ: ${displayMessage}`);
-      setProcessingStatus(`שגיאה: ${displayMessage}`);
-      setFinalStatus('error');
       
+      // עדכון רשומת הקובץ עם פרטי השגיאה
       if (fileRecordId) {
-        await base44.entities.FileUpload.update(fileRecordId, { 
-          status: 'failed', 
-          analysis_notes: displayMessage 
-        });
+        try {
+          await base44.entities.FileUpload.update(fileRecordId, { 
+            status: 'failed', 
+            analysis_notes: displayMessage,
+            error_message: err.message || displayMessage
+          });
+        } catch (updateError) {
+          console.error('Error updating file record:', updateError);
+        }
+      } else {
+        // אם אין fileRecordId, ניצור רשומה חדשה
+        try {
+          await base44.entities.FileUpload.create({
+            filename: file?.name || 'קובץ לא מזוהה',
+            file_url: file_url || '',
+            file_type: file?.name?.split('.').pop()?.toLowerCase() || 'unknown',
+            status: 'failed',
+            data_category: selectedCategory || 'unknown',
+            analysis_notes: displayMessage,
+            error_message: err.message || displayMessage
+          });
+        } catch (createError) {
+          console.error('Error creating failed file record:', createError);
+        }
       }
+      
+      // הודעה ידידותית למשתמש
+      alert('⚠️ הקובץ לא הועלה בהצלחה\n\nהקובץ הועבר לטיפול מנהל המערכת ונבדק בהקדם.\nתוכל לראות את הסטטוס בעדכונים שיישלחו אליך.');
+      setProcessingStatus('הקובץ הועבר לטיפול מנהל המערכת');
+      setFinalStatus('error');
     } finally {
       setIsUploading(false);
       setTimeout(() => {
