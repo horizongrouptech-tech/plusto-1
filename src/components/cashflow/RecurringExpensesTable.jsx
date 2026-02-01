@@ -758,80 +758,88 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
                 )}
               </div>
 
-              {/* בחירת קטגוריית הוצאה או יצירת חדשה */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <input
-                    type="checkbox"
-                    id="createNew"
-                    checked={createNewExpense}
-                    onChange={(e) => {
-                      setCreateNewExpense(e.target.checked);
-                      if (e.target.checked) {
-                        setSelectedExpenseCategory('');
-                      } else {
-                        setNewExpenseName('');
-                      }
-                    }}
-                    className="rounded border-horizon bg-horizon-card"
-                  />
-                  <Label htmlFor="createNew" className="text-horizon-text cursor-pointer">
-                    צור פריט הוצאה חדש
+              {/* בחירת פריט הוצאה או יצירת חדש */}
+              {selectedForecastId && (
+                <div>
+                  <Label className="text-horizon-text mb-3 block font-medium">
+                    <Tag className="w-4 h-4 inline ml-2" />
+                    שיוך לפריט הוצאה
                   </Label>
-                </div>
+                  
+                  {availableExpenseItems.length > 0 ? (
+                    <>
+                      <div>
+                        <Label className="text-horizon-accent mb-2 block text-sm">בחר פריט הוצאה קיים</Label>
+                        <Select 
+                          value={selectedExpenseCategory} 
+                          onValueChange={(val) => {
+                            setSelectedExpenseCategory(val);
+                            setCreateNewExpense(false);
+                            setNewExpenseName('');
+                          }}
+                        >
+                          <SelectTrigger className="bg-horizon-dark border-horizon text-horizon-text">
+                            <SelectValue placeholder="בחר פריט קיים..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-horizon-dark border-horizon">
+                            {availableExpenseItems.map(item => (
+                              <SelectItem key={item.value} value={item.value}>
+                                {item.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                {createNewExpense ? (
-                  <>
-                    <div className="mb-3">
-                      <Label className="text-horizon-accent mb-2 block text-sm">שם ההוצאה החדשה</Label>
-                      <Input
-                        value={newExpenseName}
-                        onChange={(e) => setNewExpenseName(e.target.value)}
-                        placeholder="לדוגמה: שכירות משרד, פרסום בגוגל..."
-                        className="bg-horizon-dark border-horizon text-horizon-text"
-                      />
+                      <div className="flex items-center gap-2 my-3">
+                        <div className="flex-1 h-px bg-horizon"></div>
+                        <span className="text-xs text-horizon-accent">או</span>
+                        <div className="flex-1 h-px bg-horizon"></div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-3">
+                      <p className="text-xs text-yellow-300 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4" />
+                        לא נמצאו פריטי הוצאות קיימים בתחזית זו. יש ליצור פריט חדש.
+                      </p>
                     </div>
-                    <div>
-                      <Label className="text-horizon-accent mb-2 block text-sm">סוג ההוצאה</Label>
-                      <Select value={selectedExpenseType} onValueChange={setSelectedExpenseType}>
-                        <SelectTrigger className="bg-horizon-dark border-horizon text-horizon-text">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-horizon-dark border-horizon">
-                          <SelectItem value="marketing_sales">שיווק ומכירות</SelectItem>
-                          <SelectItem value="admin_general">הנהלה וכלליות</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </>
-                ) : (
+                  )}
+
                   <div>
-                    <Label className="text-horizon-accent mb-2 block text-sm">בחר פריט הוצאה קיים</Label>
+                    <Label className="text-horizon-accent mb-2 block text-sm">
+                      {availableExpenseItems.length > 0 ? 'צור פריט הוצאה חדש' : 'שם ההוצאה החדשה'}
+                    </Label>
+                    <Input
+                      value={newExpenseName}
+                      onChange={(e) => {
+                        setNewExpenseName(e.target.value);
+                        if (e.target.value) {
+                          setCreateNewExpense(true);
+                          setSelectedExpenseCategory('');
+                        } else {
+                          setCreateNewExpense(false);
+                        }
+                      }}
+                      placeholder={selectedExpenseForLink?.category || "לדוגמה: שכירות משרד, פרסום בגוגל..."}
+                      className="bg-horizon-dark border-horizon text-horizon-text mb-2"
+                    />
                     <Select 
-                      value={selectedExpenseCategory} 
-                      onValueChange={setSelectedExpenseCategory}
-                      disabled={!selectedForecastId}
+                      value={selectedExpenseType} 
+                      onValueChange={setSelectedExpenseType}
+                      disabled={!newExpenseName}
                     >
                       <SelectTrigger className="bg-horizon-dark border-horizon text-horizon-text">
-                        <SelectValue placeholder={selectedForecastId ? "בחר פריט..." : "בחר תחזית תחילה"} />
+                        <SelectValue placeholder="בחר סוג הוצאה..." />
                       </SelectTrigger>
                       <SelectContent className="bg-horizon-dark border-horizon">
-                        {availableExpenseItems.length === 0 ? (
-                          <SelectItem value="_none" disabled>
-                            אין פריטי הוצאות בתחזית - צור חדש
-                          </SelectItem>
-                        ) : (
-                          availableExpenseItems.map(item => (
-                            <SelectItem key={item.value} value={item.value}>
-                              {item.label}
-                            </SelectItem>
-                          ))
-                        )}
+                        <SelectItem value="marketing_sales">שיווק ומכירות</SelectItem>
+                        <SelectItem value="admin_general">הנהלה וכלליות</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* הסבר */}
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
