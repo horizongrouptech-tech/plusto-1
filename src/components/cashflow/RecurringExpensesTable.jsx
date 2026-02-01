@@ -287,8 +287,11 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
         const newExpenseItem = {
           name: expenseItemName,
           amount: selectedExpenseForLink.average_monthly || 0,
-          monthly_amounts: monthlyAmounts,
-          is_annual_total: false
+          planned_monthly_amounts: monthlyAmounts,
+          actual_monthly_amounts: Array(12).fill(0),
+          is_annual_total: false,
+          has_vat: true,
+          notes: `משויך מהוצאה קבועה: ${selectedExpenseForLink.category}`
         };
         
         detailedExpenses[targetArray] = [
