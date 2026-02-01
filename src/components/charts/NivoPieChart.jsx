@@ -1,9 +1,10 @@
 import React from 'react';
 import { ResponsivePie } from '@nivo/pie';
+import { NIVO_THEME, CHART_COLORS, formatCurrencyHebrew } from '@/components/utils/chartConfig';
 
 export default function NivoPieChart({ 
   data, 
-  colors = { scheme: 'nivo' },
+  colors = CHART_COLORS,
   margin = { top: 50, right: 120, bottom: 80, left: 120 },
   innerRadius = 0.5,
   padAngle = 1,
@@ -11,55 +12,14 @@ export default function NivoPieChart({
   enableArcLabels = true,
   enableArcLinkLabels = true,
   valueFormat = null,
-  sortByValue = true
+  sortByValue = true,
+  showLegend = true
 }) {
-  // עיצוב משופר עם קריאות מעולה
-  const enhancedTheme = {
-    text: {
-      fill: '#334155',
-      fontSize: 13,
-      fontFamily: 'Heebo, Inter, -apple-system, sans-serif',
-      fontWeight: 500
-    },
-    tooltip: {
-      container: {
-        background: '#ffffff',
-        color: '#1e293b',
-        fontSize: '14px',
-        fontWeight: 500,
-        borderRadius: '12px',
-        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1)',
-        padding: '14px 18px',
-        border: '1px solid #e2e8f0'
-      }
-    },
-    legends: {
-      text: {
-        fill: '#475569',
-        fontSize: 12,
-        fontWeight: 500
-      }
-    },
-    labels: {
-      text: {
-        fill: '#ffffff',
-        fontSize: 12,
-        fontWeight: 600
-      }
-    }
-  };
+  // שימוש בקונפיגורציה המשותפת
+  const enhancedTheme = NIVO_THEME;
 
-  // פורמט ברירת מחדל לערכים
-  const defaultValueFormat = (value) => {
-    if (typeof value !== 'number') return value;
-    if (Math.abs(value) >= 1000000) {
-      return `₪${(value / 1000000).toFixed(1)}M`;
-    }
-    if (Math.abs(value) >= 1000) {
-      return `₪${(value / 1000).toFixed(0)}K`;
-    }
-    return `₪${value.toLocaleString()}`;
-  };
+  // פורמט ברירת מחדל לערכים - משתמש בפונקציה המשותפת
+  const defaultValueFormat = formatCurrencyHebrew;
 
   // חישוב סה"כ לאחוזים
   const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
@@ -95,7 +55,7 @@ export default function NivoPieChart({
         const percentage = total > 0 ? ((d.value / total) * 100).toFixed(0) : 0;
         return `${percentage}%`;
       }}
-      legends={[
+      legends={showLegend ? [
         {
           anchor: 'bottom',
           direction: 'row',
@@ -105,7 +65,7 @@ export default function NivoPieChart({
           itemsSpacing: 8,
           itemWidth: 110,
           itemHeight: 22,
-          itemTextColor: '#475569',
+          itemTextColor: 'var(--horizon-accent, #475569)',
           itemDirection: 'right-to-left',
           itemOpacity: 1,
           symbolSize: 14,
@@ -114,12 +74,12 @@ export default function NivoPieChart({
             {
               on: 'hover',
               style: {
-                itemTextColor: '#1e293b'
+                itemTextColor: 'var(--horizon-text, #1e293b)'
               }
             }
           ]
         }
-      ]}
+      ] : []}
       animate={true}
       motionConfig="gentle"
       tooltip={({ datum }) => {

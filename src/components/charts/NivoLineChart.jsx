@@ -1,9 +1,10 @@
 import React from 'react';
 import { ResponsiveLine } from '@nivo/line';
+import { NIVO_THEME, CHART_COLORS, formatCurrencyHebrew } from '@/components/utils/chartConfig';
 
 export default function NivoLineChart({ 
   data, 
-  colors = { scheme: 'category10' },
+  colors = CHART_COLORS,
   margin = { top: 50, right: 160, bottom: 70, left: 80 },
   enableArea = false,
   enablePoints = true,
@@ -13,89 +14,16 @@ export default function NivoLineChart({
   yScaleMin = 'auto',
   yScaleMax = 'auto',
   enableSlices = 'x',
-  valueFormat = null
+  valueFormat = null,
+  areaOpacity = 0.15,
+  lineWidth = 3,
+  pointSize = 10
 }) {
-  // עיצוב משופר עם קריאות מעולה
-  const enhancedTheme = {
-    text: {
-      fill: '#334155',
-      fontSize: 13,
-      fontFamily: 'Heebo, Inter, -apple-system, sans-serif',
-      fontWeight: 500
-    },
-    axis: {
-      domain: {
-        line: {
-          stroke: '#cbd5e1',
-          strokeWidth: 1.5
-        }
-      },
-      ticks: {
-        line: {
-          stroke: '#e2e8f0',
-          strokeWidth: 1
-        },
-        text: {
-          fill: '#475569',
-          fontSize: 12,
-          fontWeight: 500
-        }
-      },
-      legend: {
-        text: {
-          fill: '#1e293b',
-          fontSize: 13,
-          fontWeight: 600
-        }
-      }
-    },
-    tooltip: {
-      container: {
-        background: '#ffffff',
-        color: '#1e293b',
-        fontSize: '14px',
-        fontWeight: 500,
-        borderRadius: '12px',
-        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1)',
-        padding: '14px 18px',
-        border: '1px solid #e2e8f0'
-      }
-    },
-    grid: {
-      line: {
-        stroke: '#f1f5f9',
-        strokeWidth: 1,
-        strokeDasharray: '4 4'
-      }
-    },
-    legends: {
-      text: {
-        fill: '#475569',
-        fontSize: 12,
-        fontWeight: 500
-      }
-    },
-    crosshair: {
-      line: {
-        stroke: '#64748b',
-        strokeWidth: 1,
-        strokeOpacity: 0.5,
-        strokeDasharray: '6 6'
-      }
-    }
-  };
+  // שימוש בקונפיגורציה המשותפת
+  const enhancedTheme = NIVO_THEME;
 
-  // פורמט ברירת מחדל לערכים
-  const defaultValueFormat = (value) => {
-    if (typeof value !== 'number') return value;
-    if (Math.abs(value) >= 1000000) {
-      return `₪${(value / 1000000).toFixed(1)}M`;
-    }
-    if (Math.abs(value) >= 1000) {
-      return `₪${(value / 1000).toFixed(0)}K`;
-    }
-    return `₪${value.toLocaleString()}`;
-  };
+  // פורמט ברירת מחדל לערכים - משתמש בפונקציה המשותפת
+  const defaultValueFormat = formatCurrencyHebrew;
 
   return (
     <ResponsiveLine
@@ -139,10 +67,12 @@ export default function NivoLineChart({
       pointBorderColor={{ from: 'serieColor' }}
       pointLabelYOffset={-14}
       enableArea={enableArea}
-      areaOpacity={0.15}
+      areaOpacity={areaOpacity}
       areaBlendMode="normal"
       useMesh={true}
       enablePoints={enablePoints}
+      lineWidth={lineWidth}
+      pointSize={pointSize}
       enableSlices={enableSlices}
       theme={enhancedTheme}
       legends={[
