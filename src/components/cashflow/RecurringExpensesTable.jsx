@@ -250,13 +250,12 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
       return;
     }
 
-    if (!createNewExpense && !selectedExpenseCategory) {
-      alert('יש לבחור פריט הוצאה קיים או ליצור חדש');
-      return;
-    }
-
-    if (createNewExpense && !newExpenseName) {
-      alert('יש למלא שם להוצאה החדשה');
+    // בדוק אם יש בחירת פריט קיים או שם לפריט חדש
+    const hasExistingSelection = selectedExpenseCategory && !newExpenseName;
+    const hasNewExpenseName = newExpenseName && newExpenseName.trim();
+    
+    if (!hasExistingSelection && !hasNewExpenseName) {
+      alert('יש לבחור פריט הוצאה קיים או למלא שם לפריט חדש');
       return;
     }
 
