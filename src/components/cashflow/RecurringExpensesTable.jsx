@@ -328,7 +328,10 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
           existingItems[itemIndex] = {
             ...existingItem,
             amount: (existingItem.amount || 0) + (selectedExpenseForLink.average_monthly || 0),
-            monthly_amounts: updatedMonthlyAmounts
+            planned_monthly_amounts: updatedMonthlyAmounts,
+            notes: existingItem.notes 
+              ? `${existingItem.notes}\nעדכון: הוספת סכום מהוצאה קבועה "${selectedExpenseForLink.category}"`
+              : `משויך מהוצאה קבועה: ${selectedExpenseForLink.category}`
           };
           
           detailedExpenses[targetArray] = existingItems;
