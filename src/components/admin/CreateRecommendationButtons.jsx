@@ -29,7 +29,10 @@ export default function CreateRecommendationButtons({
         </DropdownMenuTrigger>
         <DropdownMenuContent className="bg-horizon-dark border-horizon w-64" align="start" dir="rtl">
           <DropdownMenuItem 
-            onClick={onCreateSystemRecommendations}
+            onSelect={(e) => {
+              e.preventDefault();
+              onCreateSystemRecommendations?.();
+            }}
             className="text-horizon-text hover:bg-horizon-primary/20 cursor-pointer py-3 px-4"
           >
             <Sparkles className="w-5 h-5 ml-3 text-blue-400" />
@@ -40,7 +43,10 @@ export default function CreateRecommendationButtons({
           </DropdownMenuItem>
           
           <DropdownMenuItem 
-            onClick={onCreateTargeted}
+            onSelect={(e) => {
+              e.preventDefault();
+              onCreateTargeted?.();
+            }}
             className="text-horizon-text hover:bg-horizon-primary/20 cursor-pointer py-3 px-4"
           >
             <Target className="w-5 h-5 ml-3 text-purple-400" />
@@ -51,7 +57,10 @@ export default function CreateRecommendationButtons({
           </DropdownMenuItem>
           
           <DropdownMenuItem 
-            onClick={onCreateGoalOriented}
+            onSelect={(e) => {
+              e.preventDefault();
+              onCreateGoalOriented?.();
+            }}
             className="text-horizon-text hover:bg-horizon-primary/20 cursor-pointer py-3 px-4"
           >
             <Trophy className="w-5 h-5 ml-3 text-yellow-400" />
@@ -62,7 +71,10 @@ export default function CreateRecommendationButtons({
           </DropdownMenuItem>
           
           <DropdownMenuItem 
-            onClick={onCreateManual}
+            onSelect={(e) => {
+              e.preventDefault();
+              onCreateManual?.();
+            }}
             className="text-horizon-text hover:bg-horizon-primary/20 cursor-pointer py-3 px-4"
           >
             <Edit3 className="w-5 h-5 ml-3 text-green-400" />
