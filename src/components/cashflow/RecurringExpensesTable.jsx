@@ -743,15 +743,15 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
                   </SelectTrigger>
                   <SelectContent className="bg-horizon-dark border-horizon">
                     {availableForecasts.length === 0 ? (
-                      <SelectItem value="_none" disabled>
-                        אין תחזיות זמינות
-                      </SelectItem>
+                     <SelectItem value="_none" disabled>
+                       אין תחזיות זמינות
+                     </SelectItem>
                     ) : (
-                      availableForecasts.map(forecast => (
-                        <SelectItem key={forecast.id} value={forecast.id}>
-                          {forecast.name || `תחזית ${format(new Date(forecast.created_date), 'dd/MM/yyyy')}`}
-                        </SelectItem>
-                      ))
+                     availableForecasts.map(forecast => (
+                       <SelectItem key={forecast.id} value={forecast.id}>
+                         {forecast.forecast_name || forecast.name || `תחזית ${forecast.forecast_year || format(new Date(forecast.created_date), 'yyyy')}`}
+                       </SelectItem>
+                     ))
                     )}
                   </SelectContent>
                 </Select>
