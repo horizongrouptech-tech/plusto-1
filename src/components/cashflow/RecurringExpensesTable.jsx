@@ -867,7 +867,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
               </Button>
               <Button
                 onClick={handleLinkToForecast}
-                disabled={!selectedForecastId || (!createNewExpense && !selectedExpenseCategory) || (createNewExpense && !newExpenseName) || isLinking}
+                disabled={!selectedForecastId || (!selectedExpenseCategory && !newExpenseName) || isLinking}
                 className="btn-horizon-primary"
               >
                 {isLinking ? (
