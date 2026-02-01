@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
     try {
@@ -9,7 +9,15 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { customer_email, search_query, category, current_supplier_name } = await req.json();
+        const { 
+            customer_email, 
+            search_query, 
+            category, 
+            current_supplier_name,
+            business_type,
+            main_products,
+            location 
+        } = await req.json();
 
         if (!search_query || !category) {
             return Response.json({ 
@@ -18,31 +26,45 @@ Deno.serve(async (req) => {
             }, { status: 400 });
         }
 
-        // בניית פרומפט מפורט לחיפוש ספקים
+        // בניית פרומפט מותאם לסוג העסק
+        const businessContext = business_type ? `
+סוג העסק של הלקוח: ${business_type}
+${main_products ? `מוצרים/שירותים עיקריים: ${main_products}` : ''}
+${location ? `מיקום: ${location}` : ''}
+` : '';
+
         const searchPrompt = `
-אתה מומחה במציאת ספקים עסקיים בישראל. המשתמש מחפש ספקים עבור: "${search_query}" בקטגוריה: "${category}".
-${current_supplier_name ? `הספק הנוכחי: ${current_supplier_name}` : ''}
+אתה מומחה במציאת ספקים עסקיים בישראל. 
 
-חפש 3-5 ספקים מובילים ואיכותיים בישראל שמתאימים לחיפוש זה.
-עבור כל ספק, אסוף מידע מדויק ככל האפשר.
+פרטי החיפוש:
+- מה מחפשים: "${search_query}"
+- קטגוריה: "${category}"
+${current_supplier_name ? `- ספק נוכחי (לחיפוש חלופה): ${current_supplier_name}` : ''}
+${businessContext}
 
-חשוב מאוד:
-1. מצא ספקים אמיתיים וקיימים בישראל
-2. ספק מידע מדויק ועדכני
-3. אם לא מצאת מידע כלשהו, השתמש ב-null או השאר את השדה ריק
-4. דאג שהתוצאות יהיו רלוונטיות לחיפוש
-5. אל תכלול קישורים או URLs בתשובה
+משימתך:
+1. מצא 3-5 ספקים מובילים ואיכותיים בישראל שמתאימים לחיפוש
+2. התמקד בספקים שמתאימים לסוג העסק והצרכים הספציפיים
+3. העדף ספקים עם מוניטין טוב ושירות איכותי
+
+⚠️ חשוב מאוד - פרטיות ודיוק:
+- אל תציג מידע פנימי או סודי
+- ספק רק מידע ציבורי וזמין
+- אם לא מצאת מידע - השאר את השדה ריק
+- דאג שהתוצאות יהיו רלוונטיות לסוג העסק
+- אל תכלול קישורים או URLs
 
 החזר JSON עם המבנה הבא:
 {
     "suppliers": [
         {
             "name": "שם הספק",
-            "description": "תיאור קצר של הספק ושירותיו (2-3 משפטים)",
+            "description": "תיאור קצר של הספק, שירותיו והתאמתו לסוג העסק (2-3 משפטים)",
             "category": "הקטגוריה המדויקת",
             "phone": "מספר טלפון (אם זמין)",
             "email": "אימייל (אם זמין)",
-            "contact_person": "שם איש קשר (אם זמין)"
+            "contact_person": "שם איש קשר (אם זמין)",
+            "relevance_reason": "למה ספק זה מתאים לסוג העסק הזה (משפט אחד)"
         }
     ]
 }
@@ -64,7 +86,8 @@ ${current_supplier_name ? `הספק הנוכחי: ${current_supplier_name}` : ''
                                 category: { type: "string" },
                                 phone: { type: "string" },
                                 email: { type: "string" },
-                                contact_person: { type: "string" }
+                                contact_person: { type: "string" },
+                                relevance_reason: { type: "string" }
                             }
                         }
                     }
@@ -78,23 +101,30 @@ ${current_supplier_name ? `הספק הנוכחי: ${current_supplier_name}` : ''
             return Response.json({ 
                 success: true, 
                 suppliers: [],
-                message: 'לא נמצאו ספקים מתאימים' 
+                message: 'לא נמצאו ספקים מתאימים לחיפוש זה' 
             });
         }
 
-        // ניקוי והעשרת נתונים
+        // ניקוי נתונים - רק מידע ציבורי
         const cleanedSuppliers = suppliers.map(supplier => ({
             name: supplier.name || 'לא צוין',
             description: supplier.description || '',
             category: supplier.category || category,
             phone: supplier.phone || '',
             email: supplier.email || '',
-            contact_person: supplier.contact_person || 'לא צוין'
+            contact_person: supplier.contact_person || '',
+            relevance_reason: supplier.relevance_reason || '',
+            source: 'internet_search'
         }));
 
         return Response.json({ 
             success: true, 
-            suppliers: cleanedSuppliers
+            suppliers: cleanedSuppliers,
+            search_context: {
+                query: search_query,
+                category: category,
+                business_type: business_type || null
+            }
         });
 
     } catch (error) {
