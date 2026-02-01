@@ -191,33 +191,40 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
           const items = [];
           
           // הוסף פריטים מ-marketing_sales
-          if (forecast.detailed_expenses.marketing_sales) {
+          if (forecast.detailed_expenses.marketing_sales && Array.isArray(forecast.detailed_expenses.marketing_sales)) {
             forecast.detailed_expenses.marketing_sales.forEach(item => {
-              items.push({
-                name: item.name,
-                type: 'marketing_sales',
-                label: `${item.name} (שיווק ומכירות)`,
-                value: `marketing_sales::${item.name}`
-              });
+              if (item.name) {
+                items.push({
+                  name: item.name,
+                  type: 'marketing_sales',
+                  label: `${item.name} (שיווק ומכירות)`,
+                  value: `marketing_sales::${item.name}`
+                });
+              }
             });
           }
           
           // הוסף פריטים מ-admin_general
-          if (forecast.detailed_expenses.admin_general) {
+          if (forecast.detailed_expenses.admin_general && Array.isArray(forecast.detailed_expenses.admin_general)) {
             forecast.detailed_expenses.admin_general.forEach(item => {
-              items.push({
-                name: item.name,
-                type: 'admin_general',
-                label: `${item.name} (הנהלה וכלליות)`,
-                value: `admin_general::${item.name}`
-              });
+              if (item.name) {
+                items.push({
+                  name: item.name,
+                  type: 'admin_general',
+                  label: `${item.name} (הנהלה וכלליות)`,
+                  value: `admin_general::${item.name}`
+                });
+              }
             });
           }
           
           setAvailableExpenseItems(items);
+        } else {
+          setAvailableExpenseItems([]);
         }
       } catch (error) {
         console.error('Error loading expense items:', error);
+        setAvailableExpenseItems([]);
       }
     };
     
