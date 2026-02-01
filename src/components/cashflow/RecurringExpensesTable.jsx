@@ -318,7 +318,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
         if (itemIndex !== -1) {
           // עדכן את הסכומים החודשיים
           const existingItem = existingItems[itemIndex];
-          const monthlyAmounts = existingItem.monthly_amounts || Array(12).fill(0);
+          const monthlyAmounts = existingItem.planned_monthly_amounts || existingItem.monthly_amounts || Array(12).fill(0);
           
           // הוסף את הסכום הממוצע לכל חודש
           const updatedMonthlyAmounts = monthlyAmounts.map(amount => 
