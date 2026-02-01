@@ -272,9 +272,9 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
       let expenseItemName;
       let expenseType;
 
-      if (createNewExpense) {
+      if (newExpenseName && newExpenseName.trim()) {
         // יצירת פריט הוצאה חדש
-        expenseItemName = newExpenseName;
+        expenseItemName = newExpenseName.trim();
         expenseType = selectedExpenseType;
         
         // עדכון התחזית עם הפריט החדש
