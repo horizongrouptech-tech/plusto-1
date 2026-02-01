@@ -377,17 +377,15 @@ export default function CustomerManagementNew() {
       />
 
       {/* מודלים להמלצות */}
-      {systemRecModalOpen && (
-        <SystemRecommendationsModal
-          customer={selectedCustomer}
-          isOpen={systemRecModalOpen}
-          onClose={() => setSystemRecModalOpen(false)}
-          onSuccess={() => {
-            queryClient.invalidateQueries(['customerRecommendations', selectedCustomer.email]);
-            setSystemRecModalOpen(false);
-          }}
-        />
-      )}
+      <SystemRecommendationsModal
+        isOpen={systemRecModalOpen}
+        onClose={() => setSystemRecModalOpen(false)}
+        onGenerate={(categories) => {
+          // TODO: implement system recommendation generation
+          console.log('Generating system recommendations:', categories);
+        }}
+        isLoading={isGeneratingRecs}
+      />
 
       {targetedRecModalOpen && (
         <TargetedRecommendationModal
