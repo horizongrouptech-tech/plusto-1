@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,268 +6,453 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { 
   Calendar, FileText, ClipboardList, Plus, Edit3, Trash2, 
   Eye, Loader2, Clock, User, CheckCircle2, AlertCircle,
-  Play, Download, MessageSquare, Sparkles, Wand2
+  Play, Download, MessageSquare, Sparkles, Wand2, Video,
+  Phone, MapPin, CalendarPlus, CalendarCheck, CalendarX,
+  ChevronDown, ChevronUp, Target, AlertTriangle, Users,
+  Send, Link as LinkIcon, ExternalLink
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow, isAfter, isBefore, isToday, isTomorrow, addDays, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
-import MeetingPreparation from './MeetingPreparation';
-import MeetingSummaryViewer from './MeetingSummaryViewer';
+
+// סטטוסים אפשריים לפגישה
+const MEETING_STATUSES = [
+  { value: 'scheduled', label: 'נקבעה', color: 'bg-blue-500/20 text-blue-400 border-blue-500/50', icon: CalendarCheck },
+  { value: 'completed', label: 'בוצעה', color: 'bg-green-500/20 text-green-400 border-green-500/50', icon: CheckCircle2 },
+  { value: 'cancelled', label: 'בוטלה', color: 'bg-red-500/20 text-red-400 border-red-500/50', icon: CalendarX },
+  { value: 'rescheduled', label: 'נדחתה', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50', icon: Clock }
+];
+
+// ערוצי פגישה
+const MEETING_CHANNELS = [
+  { value: 'zoom', label: 'זום', icon: Video },
+  { value: 'office', label: 'פגישה פיזית', icon: MapPin },
+  { value: 'phone', label: 'טלפון', icon: Phone },
+  { value: 'teams', label: 'Teams', icon: Video },
+  { value: 'google_meet', label: 'Google Meet', icon: Video }
+];
 
 export default function MeetingsTab({ customer, currentUser }) {
   const queryClient = useQueryClient();
-  const [activeSubTab, setActiveSubTab] = useState('summaries');
+  const [activeSubTab, setActiveSubTab] = useState('upcoming');
   const [showNewMeetingModal, setShowNewMeetingModal] = useState(false);
-  const [showSmartInputModal, setShowSmartInputModal] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
+  const [showMeetingDetailsModal, setShowMeetingDetailsModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [isParsing, setIsParsing] = useState(false);
-  const [newMeetingForm, setNewMeetingForm] = useState({
-    meeting_date: new Date().toISOString().split('T')[0],
-    meeting_type: 'regular',
-    summary: '',
-    key_decisions: '',
-    action_items: '',
-    notes: ''
-  });
-  const [smartInput, setSmartInput] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  // טעינת פגישות - תמיד משתמש ב-CustomerGoal
+  // טופס פגישה חדשה
+  const [newMeetingForm, setNewMeetingForm] = useState({
+    subject: '',
+    start_date: new Date().toISOString().split('T')[0],
+    start_time: '10:00',
+    end_date: new Date().toISOString().split('T')[0],
+    end_time: '11:00',
+    channel: 'zoom',
+    location: '',
+    location_details: '',
+    status: 'scheduled',
+    description: '',
+    send_reminder: true,
+    invite_customer: true,
+    // שדות סיכום
+    participants: '',
+    main_points: ['', '', '', '', ''],
+    tasks: '',
+    next_meeting_date: '',
+    whatsapp_summary: ''
+  });
+
+  // טעינת פגישות
   const { data: meetings = [], isLoading } = useQuery({
     queryKey: ['customerMeetings', customer?.email],
     queryFn: async () => {
-      // השתמש תמיד ב-CustomerGoal כי MeetingSummary לא קיים
       const goals = await base44.entities.CustomerGoal.filter({
         customer_email: customer.email,
-        task_type: 'meeting_summary',
+        task_type: { $in: ['meeting', 'meeting_summary'] },
         is_active: true
       }, '-start_date');
       
-      return goals.map(g => ({
-        id: g.id,
-        meeting_date: g.start_date,
-        summary: g.notes || g.description || '',
-        key_decisions: g.success_metrics || '',
-        action_items: g.checklist_items || '',
-        meeting_type: g.priority === 'high' ? 'first' : 'regular',
-        notes: g.additional_notes || '',
-        created_by: g.assignee_email
-      }));
+      return goals.map(g => {
+        // פענוח נתונים נוספים מ-additional_notes (JSON)
+        let additionalData = {};
+        try {
+          if (g.additional_notes && g.additional_notes.startsWith('{')) {
+            additionalData = JSON.parse(g.additional_notes);
+          }
+        } catch (e) {
+          // אם זה לא JSON, נשמור כתיאור
+          additionalData.description = g.additional_notes;
+        }
+
+        return {
+          id: g.id,
+          subject: g.name || '',
+          start_date: g.start_date,
+          start_time: additionalData.start_time || '10:00',
+          end_date: g.end_date || g.start_date,
+          end_time: additionalData.end_time || '11:00',
+          channel: additionalData.channel || 'zoom',
+          location: additionalData.location || '',
+          location_details: additionalData.location_details || '',
+          status: g.status === 'done' ? 'completed' : (g.status === 'cancelled' ? 'cancelled' : 'scheduled'),
+          description: additionalData.description || g.description || '',
+          participants: additionalData.participants || '',
+          main_points: additionalData.main_points || ['', '', '', '', ''],
+          tasks: additionalData.tasks || '',
+          next_meeting_date: additionalData.next_meeting_date || '',
+          whatsapp_summary: additionalData.whatsapp_summary || '',
+          google_event_id: additionalData.google_event_id || '',
+          send_reminder: additionalData.send_reminder !== false,
+          invite_customer: additionalData.invite_customer !== false,
+          created_by: g.assignee_email,
+          created_date: g.created_date,
+          _raw: g
+        };
+      });
     },
     enabled: !!customer?.email
   });
 
-  // פענוח חכם של סיכום פגישה - מפרק טקסט חופשי לשדות
-  const parseSmartInput = (text) => {
-    // חיפוש משימות - דפוסים מורחבים
-    const taskPatterns = [
-      /^[-*•]\s*(.+)$/gm,                    // שורות שמתחילות ב-, *, •
-      /^(\d+)[.)]\s*(.+)$/gm,                // מספר נקודה או סוגריים
-      /משימה[:\s]+(.+)$/gmi,                 // "משימה:"
-      /לעשות[:\s]+(.+)$/gmi,                 // "לעשות:"
-      /action[:\s]+(.+)$/gmi,                // "action:"
-      /^לבצע[:\s]+(.+)$/gmi,                 // "לבצע:"
-      /^צריך[:\s]+(.+)$/gmi,                 // "צריך:"
-      /^נדרש[:\s]+(.+)$/gmi,                 // "נדרש:"
-      /^טו[ד]?[א]?[ק]?[:\s]+(.+)$/gmi,       // "טודק" / "טוד" / "טו"
-      /^TODO[:\s]+(.+)$/gmi,                 // "TODO:"
-      /^\.\s*(.+)$/gm,                       // שורה שמתחילה בנקודה
-      /^→\s*(.+)$/gm,                         // חץ ימינה
-      /^>\s*(.+)$/gm                          // סימן גדול מ
-    ];
+  // חלוקת פגישות לקטגוריות
+  const categorizedMeetings = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
-    // חיפוש החלטות - דפוסים מורחבים
-    const decisionPatterns = [
-      /הוחלט[:\s]+(.+)$/gmi,                 // "הוחלט:"
-      /החלטה[:\s]+(.+)$/gmi,                 // "החלטה:"
-      /סוכם[:\s]+(.+)$/gmi,                  // "סוכם:"
-      /decision[:\s]+(.+)$/gmi,               // "decision:"
-      /^נקבע[:\s]+(.+)$/gmi,                 // "נקבע:"
-      /^סיכום[:\s]+(.+)$/gmi,                // "סיכום:"
-      /^החלטנו[:\s]+(.+)$/gmi,               // "החלטנו:"
-      /^✓\s*(.+)$/gm,                         // סימן V
-      /^✅\s*(.+)$/gm                         // אימוג'י V
-    ];
-
-    let summary = text;
-    let decisions = [];
-    let tasks = [];
-    const usedLines = new Set();
-
-    // חילוץ החלטות
-    decisionPatterns.forEach(pattern => {
-      let match;
-      const regex = new RegExp(pattern.source, pattern.flags);
-      while ((match = regex.exec(text)) !== null) {
-        const decision = match[1]?.trim();
-        if (decision && decision.length > 2 && !usedLines.has(match[0])) {
-          decisions.push(decision);
-          usedLines.add(match[0]);
-        }
-      }
-    });
-
-    // חילוץ משימות
-    taskPatterns.forEach(pattern => {
-      let match;
-      const regex = new RegExp(pattern.source, pattern.flags);
-      while ((match = regex.exec(text)) !== null) {
-        const task = match[2]?.trim() || match[1]?.trim();
-        if (task && task.length > 2 && !usedLines.has(match[0])) {
-          tasks.push(task);
-          usedLines.add(match[0]);
-        }
-      }
-    });
-
-    // ניקוי הסיכום - הסרת שורות שזוהו כמשימות או החלטות
-    const lines = summary.split('\n');
-    const cleanedLines = lines.filter(line => {
-      const trimmed = line.trim();
-      if (!trimmed) return true; // שמירת שורות ריקות
-      
-      // בדיקה אם השורה היא משימה או החלטה
-      const isTask = tasks.some(t => trimmed.includes(t) || t.includes(trimmed));
-      const isDecision = decisions.some(d => trimmed.includes(d) || d.includes(trimmed));
-      
-      // בדיקה אם השורה מתחילה בדפוס של משימה/החלטה
-      const startsWithTaskPattern = taskPatterns.some(p => {
-        const regex = new RegExp(p.source, p.flags);
-        return regex.test(trimmed);
-      });
-      const startsWithDecisionPattern = decisionPatterns.some(p => {
-        const regex = new RegExp(p.source, p.flags);
-        return regex.test(trimmed);
-      });
-      
-      return !isTask && !isDecision && !startsWithTaskPattern && !startsWithDecisionPattern;
-    });
-
-    summary = cleanedLines.join('\n').trim();
-
-    // אם הסיכום ריק, נשתמש בטקסט המקורי (פחות משימות והחלטות)
-    if (!summary && (tasks.length > 0 || decisions.length > 0)) {
-      summary = text.split('\n')
-        .filter(line => {
-          const trimmed = line.trim();
-          return trimmed && !tasks.some(t => trimmed.includes(t)) && !decisions.some(d => trimmed.includes(d));
-        })
-        .join('\n')
-        .trim();
-    }
-
-    return {
-      summary: summary || (tasks.length === 0 && decisions.length === 0 ? text : ''),
-      key_decisions: decisions.length > 0 ? decisions.join('\n') : '',
-      action_items: tasks.length > 0 ? tasks.join('\n') : ''
-    };
-  };
-
-  // טיפול בקלט חכם
-  const handleSmartParse = () => {
-    if (!smartInput.trim()) {
-      alert('נא להזין טקסט');
-      return;
-    }
-
-    setIsParsing(true);
+    const future = meetings.filter(m => {
+      const meetingDate = new Date(m.start_date);
+      meetingDate.setHours(0, 0, 0, 0);
+      return meetingDate >= today && m.status !== 'cancelled' && m.status !== 'completed';
+    }).sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
     
-    // פענוח הטקסט
-    const parsed = parseSmartInput(smartInput);
+    const past = meetings.filter(m => {
+      const meetingDate = new Date(m.start_date);
+      meetingDate.setHours(0, 0, 0, 0);
+      return meetingDate < today || m.status === 'completed';
+    }).sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
     
-    setNewMeetingForm(prev => ({
-      ...prev,
-      summary: parsed.summary,
-      key_decisions: parsed.key_decisions,
-      action_items: parsed.action_items
-    }));
+    const cancelled = meetings.filter(m => m.status === 'cancelled');
     
-    setIsParsing(false);
-    setShowSmartInputModal(false);
-    setShowNewMeetingModal(true);
-  };
+    return { future, past, cancelled, all: meetings };
+  }, [meetings]);
 
-  // יצירת סיכום פגישה חדש - תמיד ב-CustomerGoal
+  // הפגישה הבאה
+  const nextMeeting = categorizedMeetings.future[0];
+
+  // יצירת פגישה חדשה
   const handleCreateMeeting = async () => {
-    if (!newMeetingForm.summary.trim()) {
-      alert('נא להזין סיכום פגישה');
+    if (!newMeetingForm.subject.trim()) {
+      alert('נא להזין נושא לפגישה');
       return;
     }
 
     setIsCreating(true);
     try {
-      // תמיד שימוש ב-CustomerGoal
-      await base44.entities.CustomerGoal.create({
+      // בניית אובייקט נתונים נוספים
+      const additionalData = {
+        start_time: newMeetingForm.start_time,
+        end_time: newMeetingForm.end_time,
+        channel: newMeetingForm.channel,
+        location: newMeetingForm.location,
+        location_details: newMeetingForm.location_details,
+        description: newMeetingForm.description,
+        participants: newMeetingForm.participants,
+        main_points: newMeetingForm.main_points,
+        tasks: newMeetingForm.tasks,
+        next_meeting_date: newMeetingForm.next_meeting_date,
+        whatsapp_summary: newMeetingForm.whatsapp_summary,
+        send_reminder: newMeetingForm.send_reminder,
+        invite_customer: newMeetingForm.invite_customer
+      };
+
+      // יצירת הפגישה
+      const newMeeting = await base44.entities.CustomerGoal.create({
         customer_email: customer.email,
-        name: `סיכום פגישה - ${format(new Date(newMeetingForm.meeting_date), 'dd/MM/yyyy')}`,
-        task_type: 'meeting_summary',
-        start_date: newMeetingForm.meeting_date,
-        end_date: newMeetingForm.meeting_date,
-        notes: newMeetingForm.summary,
-        success_metrics: newMeetingForm.key_decisions,
-        checklist_items: newMeetingForm.action_items ? 
-          newMeetingForm.action_items.split('\n').filter(a => a.trim()) : [],
-        additional_notes: newMeetingForm.notes,
+        name: newMeetingForm.subject.trim(),
+        task_type: 'meeting',
+        start_date: newMeetingForm.start_date,
+        end_date: newMeetingForm.end_date,
+        description: newMeetingForm.description,
+        additional_notes: JSON.stringify(additionalData),
         assignee_email: currentUser?.email,
-        status: 'done',
+        status: 'open',
         is_active: true,
-        priority: newMeetingForm.meeting_type === 'first' ? 'high' : 'normal'
+        priority: 'high'
       });
+
+      // אם צריך לזמן בגוגל קלנדר
+      if (newMeetingForm.invite_customer || newMeetingForm.send_reminder) {
+        try {
+          const { data: calendarResult } = await base44.functions.invoke('scheduleMeeting', {
+            meeting_id: newMeeting.id,
+            customer_email: customer.email,
+            financial_manager_email: currentUser?.email,
+            subject: newMeetingForm.subject.trim(),
+            start_datetime: `${newMeetingForm.start_date}T${newMeetingForm.start_time}:00`,
+            end_datetime: `${newMeetingForm.end_date}T${newMeetingForm.end_time}:00`,
+            location: newMeetingForm.channel === 'office' ? newMeetingForm.location : newMeetingForm.channel,
+            description: newMeetingForm.description,
+            invite_customer: newMeetingForm.invite_customer,
+            send_reminder: newMeetingForm.send_reminder,
+            customer_name: customer.business_name || customer.full_name
+          });
+
+          // עדכון ה-google_event_id
+          if (calendarResult?.event_id) {
+            additionalData.google_event_id = calendarResult.event_id;
+            await base44.entities.CustomerGoal.update(newMeeting.id, {
+              additional_notes: JSON.stringify(additionalData)
+            });
+          }
+        } catch (calendarError) {
+          console.error('Error scheduling Google Calendar event:', calendarError);
+          // לא נכשיל את יצירת הפגישה אם הקלנדר נכשל
+        }
+      }
       
       queryClient.invalidateQueries(['customerMeetings', customer.email]);
       setShowNewMeetingModal(false);
-      setSmartInput('');
-      setNewMeetingForm({
-        meeting_date: new Date().toISOString().split('T')[0],
-        meeting_type: 'regular',
-        summary: '',
-        key_decisions: '',
-        action_items: '',
-        notes: ''
-      });
+      resetNewMeetingForm();
+      alert('הפגישה נוצרה בהצלחה!');
     } catch (error) {
       console.error('Error creating meeting:', error);
-      alert('שגיאה ביצירת סיכום פגישה: ' + error.message);
+      alert('שגיאה ביצירת פגישה: ' + error.message);
     } finally {
       setIsCreating(false);
     }
   };
 
+  // עדכון פגישה
+  const handleUpdateMeeting = async () => {
+    if (!selectedMeeting) return;
+    
+    setIsSaving(true);
+    try {
+      const additionalData = {
+        start_time: selectedMeeting.start_time,
+        end_time: selectedMeeting.end_time,
+        channel: selectedMeeting.channel,
+        location: selectedMeeting.location,
+        location_details: selectedMeeting.location_details,
+        description: selectedMeeting.description,
+        participants: selectedMeeting.participants,
+        main_points: selectedMeeting.main_points,
+        tasks: selectedMeeting.tasks,
+        next_meeting_date: selectedMeeting.next_meeting_date,
+        whatsapp_summary: selectedMeeting.whatsapp_summary,
+        google_event_id: selectedMeeting.google_event_id,
+        send_reminder: selectedMeeting.send_reminder,
+        invite_customer: selectedMeeting.invite_customer
+      };
+
+      await base44.entities.CustomerGoal.update(selectedMeeting.id, {
+        name: selectedMeeting.subject,
+        start_date: selectedMeeting.start_date,
+        end_date: selectedMeeting.end_date,
+        description: selectedMeeting.description,
+        additional_notes: JSON.stringify(additionalData),
+        status: selectedMeeting.status === 'completed' ? 'done' : (selectedMeeting.status === 'cancelled' ? 'cancelled' : 'open')
+      });
+      
+      queryClient.invalidateQueries(['customerMeetings', customer.email]);
+      setShowMeetingDetailsModal(false);
+      setSelectedMeeting(null);
+    } catch (error) {
+      console.error('Error updating meeting:', error);
+      alert('שגיאה בעדכון פגישה');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // מחיקת פגישה
   const handleDeleteMeeting = async (meetingId) => {
-    if (!confirm('האם למחוק את סיכום הפגישה?')) return;
+    if (!confirm('האם למחוק את הפגישה?')) return;
 
     try {
       await base44.entities.CustomerGoal.update(meetingId, { is_active: false });
       queryClient.invalidateQueries(['customerMeetings', customer.email]);
+      setShowMeetingDetailsModal(false);
+      setSelectedMeeting(null);
     } catch (error) {
       console.error('Error deleting meeting:', error);
-      alert('שגיאה במחיקת סיכום הפגישה');
+      alert('שגיאה במחיקת הפגישה');
     }
   };
 
-  const getMeetingTypeLabel = (type) => {
-    const labels = {
-      first: 'פגישה ראשונה',
-      regular: 'פגישה שוטפת',
-      followup: 'פגישת מעקב',
-      closing: 'פגישת סיכום'
-    };
-    return labels[type] || 'פגישה';
+  // שליחת סיכום לווצאפ
+  const handleSendWhatsAppSummary = async () => {
+    if (!selectedMeeting?.whatsapp_summary) {
+      alert('נא למלא את סיכום הווצאפ לפני השליחה');
+      return;
+    }
+
+    try {
+      await base44.functions.invoke('sendWhatsAppMessage', {
+        phoneNumber: customer.phone,
+        customerEmail: customer.email,
+        message: selectedMeeting.whatsapp_summary,
+        templateType: 'meeting_summary'
+      });
+      alert('הסיכום נשלח בהצלחה לווטסאפ!');
+    } catch (error) {
+      console.error('Error sending WhatsApp:', error);
+      alert('שגיאה בשליחת הסיכום לווצאפ');
+    }
   };
 
-  const getMeetingTypeColor = (type) => {
-    const colors = {
-      first: 'bg-purple-500/20 text-purple-400 border-purple-500/50',
-      regular: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
-      followup: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
-      closing: 'bg-green-500/20 text-green-400 border-green-500/50'
-    };
-    return colors[type] || colors.regular;
+  // איפוס טופס
+  const resetNewMeetingForm = () => {
+    setNewMeetingForm({
+      subject: '',
+      start_date: new Date().toISOString().split('T')[0],
+      start_time: '10:00',
+      end_date: new Date().toISOString().split('T')[0],
+      end_time: '11:00',
+      channel: 'zoom',
+      location: '',
+      location_details: '',
+      status: 'scheduled',
+      description: '',
+      send_reminder: true,
+      invite_customer: true,
+      participants: '',
+      main_points: ['', '', '', '', ''],
+      tasks: '',
+      next_meeting_date: '',
+      whatsapp_summary: ''
+    });
+  };
+
+  // פתיחת פרטי פגישה
+  const openMeetingDetails = (meeting) => {
+    setSelectedMeeting({ ...meeting });
+    setShowMeetingDetailsModal(true);
+  };
+
+  // עדכון נקודה עיקרית
+  const updateMainPoint = (index, value, isNew = false) => {
+    if (isNew) {
+      setNewMeetingForm(prev => {
+        const points = [...prev.main_points];
+        points[index] = value;
+        return { ...prev, main_points: points };
+      });
+    } else {
+      setSelectedMeeting(prev => {
+        const points = [...(prev.main_points || ['', '', '', '', ''])];
+        points[index] = value;
+        return { ...prev, main_points: points };
+      });
+    }
+  };
+
+  // קבלת אייקון וצבע סטטוס
+  const getStatusConfig = (status) => {
+    return MEETING_STATUSES.find(s => s.value === status) || MEETING_STATUSES[0];
+  };
+
+  // קבלת אייקון ערוץ
+  const getChannelConfig = (channel) => {
+    return MEETING_CHANNELS.find(c => c.value === channel) || MEETING_CHANNELS[0];
+  };
+
+  // רנדור כרטיס פגישה
+  const renderMeetingCard = (meeting) => {
+    const meetingDate = new Date(meeting.start_date);
+    const statusConfig = getStatusConfig(meeting.status);
+    const channelConfig = getChannelConfig(meeting.channel);
+    const StatusIcon = statusConfig.icon;
+    const ChannelIcon = channelConfig.icon;
+    
+    return (
+      <Card 
+        key={meeting.id}
+        className={`bg-horizon-card border-horizon hover:border-horizon-primary/50 transition-all cursor-pointer ${
+          meeting.status === 'cancelled' ? 'opacity-60' : ''
+        }`}
+        onClick={() => openMeetingDetails(meeting)}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-4">
+            {/* תאריך ושעה */}
+            <div className="flex-shrink-0 text-center bg-horizon-dark/50 rounded-lg p-3 min-w-[90px]">
+              <p className="text-2xl font-bold text-horizon-primary">
+                {format(meetingDate, 'dd')}
+              </p>
+              <p className="text-sm text-horizon-accent">
+                {format(meetingDate, 'MMM yyyy', { locale: he })}
+              </p>
+              <p className="text-xs text-horizon-text mt-1 font-medium">
+                {meeting.start_time} - {meeting.end_time}
+              </p>
+            </div>
+
+            {/* פרטי פגישה */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-2">
+                <Badge className={statusConfig.color}>
+                  <StatusIcon className="w-3 h-3 ml-1" />
+                  {statusConfig.label}
+                </Badge>
+                <Badge variant="outline" className="border-horizon text-horizon-accent">
+                  <ChannelIcon className="w-3 h-3 ml-1" />
+                  {channelConfig.label}
+                </Badge>
+                {isToday(meetingDate) && meeting.status === 'scheduled' && (
+                  <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/50">היום!</Badge>
+                )}
+              </div>
+
+              <h3 className="font-semibold text-horizon-text mb-1 truncate text-lg">
+                {meeting.subject || 'פגישת ניהול כספים'}
+              </h3>
+
+              <div className="flex items-center gap-4 text-sm text-horizon-accent">
+                {meeting.location && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    {meeting.location}
+                  </span>
+                )}
+                {meeting.google_event_id && (
+                  <span className="flex items-center gap-1 text-green-400">
+                    <CalendarCheck className="w-3 h-3" />
+                    מסונכרן
+                  </span>
+                )}
+              </div>
+
+              {meeting.description && (
+                <p className="text-sm text-horizon-accent mt-2 line-clamp-1">
+                  {meeting.description}
+                </p>
+              )}
+            </div>
+
+            {/* כפתור צפייה */}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-horizon-primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                openMeetingDetails(meeting);
+              }}
+            >
+              <Eye className="w-4 h-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   if (isLoading) {
@@ -282,333 +467,335 @@ export default function MeetingsTab({ customer, currentUser }) {
 
   return (
     <div className="space-y-4" dir="rtl">
+      {/* כותרת עם כפתור פגישה חדשה */}
       <Card className="card-horizon">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-horizon-text flex items-center gap-2">
               <Calendar className="w-5 h-5 text-horizon-primary" />
-              פגישות - {customer.business_name || customer.full_name}
+              ניהול פגישות - {customer.business_name || customer.full_name}
             </CardTitle>
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => setShowSmartInputModal(true)} 
-                variant="outline"
-                className="border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10"
-              >
-                <Wand2 className="w-4 h-4 ml-2" />
-                סיכום חכם
-              </Button>
-              <Button onClick={() => setShowNewMeetingModal(true)} className="btn-horizon-primary">
-                <Plus className="w-4 h-4 ml-2" />
-                סיכום פגישה
-              </Button>
-            </div>
+            <Button onClick={() => setShowNewMeetingModal(true)} className="bg-orange-500 hover:bg-orange-600 text-white">
+              <CalendarPlus className="w-4 h-4 ml-2" />
+              פגישה חדשה
+            </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
-            <TabsList className="grid w-full grid-cols-2 bg-horizon-card">
-              <TabsTrigger 
-                value="summaries" 
-                className="data-[state=active]:bg-horizon-primary data-[state=active]:text-white"
-              >
-                <FileText className="w-4 h-4 ml-2" />
-                סיכומי פגישות ({meetings.length})
-              </TabsTrigger>
-              <TabsTrigger 
-                value="preparation"
-                className="data-[state=active]:bg-horizon-primary data-[state=active]:text-white"
-              >
-                <ClipboardList className="w-4 h-4 ml-2" />
-                הכנה לפגישה
-              </TabsTrigger>
-            </TabsList>
 
-            <TabsContent value="summaries" className="mt-4">
-              {meetings.length === 0 ? (
-                <div className="text-center py-12">
-                  <FileText className="w-16 h-16 mx-auto mb-4 text-horizon-accent opacity-50" />
-                  <h3 className="text-lg font-semibold text-horizon-text mb-2">אין סיכומי פגישות</h3>
-                  <p className="text-horizon-accent mb-4">צור סיכום לפגישה הראשונה</p>
-                  <div className="flex gap-2 justify-center">
-                    <Button 
-                      onClick={() => setShowSmartInputModal(true)} 
-                      variant="outline"
-                      className="border-horizon-primary text-horizon-primary"
-                    >
-                      <Wand2 className="w-4 h-4 ml-2" />
-                      סיכום חכם
-                    </Button>
-                    <Button onClick={() => setShowNewMeetingModal(true)} className="btn-horizon-primary">
-                      <Plus className="w-4 h-4 ml-2" />
-                      סיכום פגישה
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {meetings.map((meeting) => (
-                    <Card 
-                      key={meeting.id}
-                      className="bg-horizon-card border-horizon hover:border-horizon-primary/50 transition-all cursor-pointer"
-                      onClick={() => setSelectedMeeting(meeting)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <Badge className={getMeetingTypeColor(meeting.meeting_type)}>
-                                {getMeetingTypeLabel(meeting.meeting_type)}
-                              </Badge>
-                              <span className="text-horizon-accent text-sm flex items-center gap-1">
-                                <Calendar className="w-4 h-4" />
-                                {format(new Date(meeting.meeting_date), 'dd MMMM yyyy', { locale: he })}
-                              </span>
-                            </div>
-                            <p className="text-horizon-text line-clamp-2">
-                              {meeting.summary}
-                            </p>
-                            {meeting.key_decisions && (
-                              <div className="flex items-center gap-2 mt-2 text-sm text-horizon-accent">
-                                <CheckCircle2 className="w-4 h-4 text-green-400" />
-                                {Array.isArray(meeting.key_decisions) 
-                                  ? `${meeting.key_decisions.length} החלטות`
-                                  : typeof meeting.key_decisions === 'string' && meeting.key_decisions.trim()
-                                    ? `${meeting.key_decisions.split('\n').filter(d => d.trim()).length} החלטות`
-                                    : 'החלטות'
-                                }
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedMeeting(meeting);
-                              }}
-                              className="text-horizon-accent hover:text-horizon-primary"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteMeeting(meeting.id);
-                              }}
-                              className="text-red-400 hover:text-red-300"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
+        {/* סיכום מהיר */}
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="bg-horizon-dark/50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-blue-400">{categorizedMeetings.future.length}</p>
+              <p className="text-xs text-horizon-accent">פגישות קרובות</p>
+            </div>
+            <div className="bg-horizon-dark/50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-green-400">{categorizedMeetings.past.filter(m => m.status === 'completed').length}</p>
+              <p className="text-xs text-horizon-accent">בוצעו</p>
+            </div>
+            <div className="bg-horizon-dark/50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-horizon-text">{meetings.length}</p>
+              <p className="text-xs text-horizon-accent">סה"כ</p>
+            </div>
+            <div className="bg-horizon-dark/50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-red-400">{categorizedMeetings.cancelled.length}</p>
+              <p className="text-xs text-horizon-accent">בוטלו</p>
+            </div>
+          </div>
 
-            <TabsContent value="preparation" className="mt-4">
-              <MeetingPreparation 
-                customer={customer} 
-                meetings={meetings}
-                currentUser={currentUser}
-                onCreateSummary={() => setShowNewMeetingModal(true)}
-              />
-            </TabsContent>
-          </Tabs>
+          {/* הפגישה הבאה */}
+          {nextMeeting && (
+            <div className="bg-gradient-to-l from-horizon-primary/20 to-transparent rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-horizon-accent">הפגישה הבאה:</p>
+                  <p className="font-semibold text-horizon-text">
+                    {nextMeeting.subject || 'פגישת ניהול כספים'} - {format(new Date(nextMeeting.start_date), 'EEEE, dd/MM', { locale: he })} 
+                    {' '}בשעה {nextMeeting.start_time}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => openMeetingDetails(nextMeeting)}
+                  className="bg-horizon-primary hover:bg-horizon-primary/90 text-white"
+                >
+                  <Eye className="w-4 h-4 ml-2" />
+                  פרטי פגישה
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* מודל קלט חכם */}
-      <Dialog open={showSmartInputModal} onOpenChange={setShowSmartInputModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-horizon-dark border-horizon" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-horizon-text flex items-center gap-2">
-              <Wand2 className="w-5 h-5 text-horizon-primary" />
-              סיכום פגישה חכם
-            </DialogTitle>
-            <DialogDescription className="text-horizon-accent">
-              כתוב את כל מה שקרה בפגישה בטקסט חופשי, והמערכת תפרק אוטומטית לסיכום, החלטות ומשימות
-            </DialogDescription>
-          </DialogHeader>
+      {/* טאבים */}
+      <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
+        <TabsList className="grid w-full grid-cols-3 bg-horizon-card">
+          <TabsTrigger 
+            value="upcoming" 
+            className="data-[state=active]:bg-horizon-primary data-[state=active]:text-white"
+          >
+            <CalendarCheck className="w-4 h-4 ml-2" />
+            קרובות ({categorizedMeetings.future.length})
+          </TabsTrigger>
+          <TabsTrigger 
+            value="past"
+            className="data-[state=active]:bg-horizon-primary data-[state=active]:text-white"
+          >
+            <CheckCircle2 className="w-4 h-4 ml-2" />
+            שבוצעו ({categorizedMeetings.past.length})
+          </TabsTrigger>
+          <TabsTrigger 
+            value="all"
+            className="data-[state=active]:bg-horizon-primary data-[state=active]:text-white"
+          >
+            <Calendar className="w-4 h-4 ml-2" />
+            הכל ({meetings.length})
+          </TabsTrigger>
+        </TabsList>
 
-          <div className="space-y-4">
-            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-              <div className="flex items-start gap-2">
-                <Sparkles className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
-                <div className="text-sm">
-                  <p className="font-semibold text-horizon-text mb-1">טיפים לכתיבה:</p>
-                  <ul className="text-horizon-accent space-y-1 list-disc pr-4">
-                    <li>כתוב משימות עם מקף (-) או כוכבית (*) בתחילת השורה</li>
-                    <li>כתוב "הוחלט:" או "החלטה:" לפני החלטות</li>
-                    <li>שאר הטקסט יהפוך לסיכום הפגישה</li>
-                  </ul>
-                </div>
-              </div>
+        {/* פגישות קרובות */}
+        <TabsContent value="upcoming" className="mt-4">
+          {categorizedMeetings.future.length === 0 ? (
+            <Card className="card-horizon">
+              <CardContent className="p-8 text-center">
+                <CalendarCheck className="w-16 h-16 mx-auto mb-4 text-horizon-accent opacity-50" />
+                <h3 className="text-lg font-semibold text-horizon-text mb-2">אין פגישות קרובות</h3>
+                <p className="text-horizon-accent mb-4">קבע פגישה חדשה עם הלקוח</p>
+                <Button onClick={() => setShowNewMeetingModal(true)} className="bg-orange-500 hover:bg-orange-600 text-white">
+                  <CalendarPlus className="w-4 h-4 ml-2" />
+                  קבע פגישה
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {categorizedMeetings.future.map(renderMeetingCard)}
             </div>
+          )}
+        </TabsContent>
 
-            <div>
-              <label className="text-horizon-accent text-sm mb-2 block">
-                כתוב את סיכום הפגישה בטקסט חופשי
-              </label>
-              <Textarea
-                value={smartInput}
-                onChange={(e) => setSmartInput(e.target.value)}
-                placeholder={`דוגמה:
-דיברנו על מצב התזרים של החודש, יש בעיה בגביה מלקוח X.
-
-הוחלט: להתקשר ללקוח X עד סוף השבוע
-הוחלט: להכין דוח תזרים שבועי
-
-משימות:
-- לשלוח מכתב התראה ללקוח X
-- לתאם פגישה עם רו"ח
-- להכין תחזית לרבעון הבא`}
-                className="bg-horizon-card border-horizon text-horizon-text min-h-[250px]"
-              />
+        {/* פגישות שבוצעו */}
+        <TabsContent value="past" className="mt-4">
+          {categorizedMeetings.past.length === 0 ? (
+            <Card className="card-horizon">
+              <CardContent className="p-8 text-center">
+                <FileText className="w-16 h-16 mx-auto mb-4 text-horizon-accent opacity-50" />
+                <h3 className="text-lg font-semibold text-horizon-text mb-2">אין פגישות קודמות</h3>
+                <p className="text-horizon-accent">פגישות שבוצעו יופיעו כאן</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {categorizedMeetings.past.map(renderMeetingCard)}
             </div>
-          </div>
+          )}
+        </TabsContent>
 
-          <DialogFooter className="mt-6">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowSmartInputModal(false)}
-              className="border-horizon text-horizon-text"
-            >
-              ביטול
-            </Button>
-            <Button 
-              onClick={handleSmartParse}
-              disabled={isParsing || !smartInput.trim()}
-              className="btn-horizon-primary"
-            >
-              {isParsing ? (
-                <>
-                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                  מעבד...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="w-4 h-4 ml-2" />
-                  פענח והמשך
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {/* כל הפגישות */}
+        <TabsContent value="all" className="mt-4">
+          {meetings.length === 0 ? (
+            <Card className="card-horizon">
+              <CardContent className="p-8 text-center">
+                <Calendar className="w-16 h-16 mx-auto mb-4 text-horizon-accent opacity-50" />
+                <h3 className="text-lg font-semibold text-horizon-text mb-2">אין פגישות</h3>
+                <p className="text-horizon-accent mb-4">לחץ על "פגישה חדשה" כדי לקבוע את הפגישה הראשונה</p>
+                <Button onClick={() => setShowNewMeetingModal(true)} className="bg-orange-500 hover:bg-orange-600 text-white">
+                  <CalendarPlus className="w-4 h-4 ml-2" />
+                  קבע פגישה חדשה
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {meetings.map(renderMeetingCard)}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
-      {/* מודל יצירת סיכום פגישה */}
+      {/* מודל פגישה חדשה */}
       <Dialog open={showNewMeetingModal} onOpenChange={setShowNewMeetingModal}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-horizon-dark border-horizon" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="text-horizon-text flex items-center gap-2">
-              <Plus className="w-5 h-5 text-horizon-primary" />
-              סיכום פגישה חדש
+            <DialogTitle className="text-horizon-text flex items-center gap-2 text-xl">
+              <CalendarPlus className="w-6 h-6 text-orange-500" />
+              פגישה חדשה - פגישת ניהול כספים
             </DialogTitle>
+            <DialogDescription className="text-horizon-accent">
+              {customer.business_name || customer.full_name} ~ {currentUser?.full_name || 'מנהל כספים'}
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-6 py-4">
+            {/* נושא */}
+            <div>
+              <Label className="text-horizon-text mb-2 block font-medium">נושא הפגישה *</Label>
+              <Input
+                value={newMeetingForm.subject}
+                onChange={(e) => setNewMeetingForm({ ...newMeetingForm, subject: e.target.value })}
+                placeholder={`פגישת ניהול כספים ~ ${currentUser?.full_name || ''} ~ ${customer.business_name || customer.full_name}`}
+                className="bg-horizon-card border-horizon text-horizon-text"
+              />
+            </div>
+
+            {/* תאריך ושעת התחלה */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-horizon-accent text-sm mb-2 block">תאריך הפגישה</label>
+                <Label className="text-horizon-text mb-2 block font-medium">תאריך התחלה *</Label>
                 <Input
                   type="date"
-                  value={newMeetingForm.meeting_date}
-                  onChange={(e) => setNewMeetingForm({ ...newMeetingForm, meeting_date: e.target.value })}
+                  value={newMeetingForm.start_date}
+                  onChange={(e) => setNewMeetingForm({ 
+                    ...newMeetingForm, 
+                    start_date: e.target.value,
+                    end_date: e.target.value // עדכון אוטומטי של תאריך סיום
+                  })}
                   className="bg-horizon-card border-horizon text-horizon-text"
                 />
               </div>
               <div>
-                <label className="text-horizon-accent text-sm mb-2 block">סוג פגישה</label>
-                <select
-                  value={newMeetingForm.meeting_type}
-                  onChange={(e) => setNewMeetingForm({ ...newMeetingForm, meeting_type: e.target.value })}
-                  className="w-full bg-horizon-card border border-horizon rounded-md p-2 text-horizon-text"
-                >
-                  <option value="first">פגישה ראשונה</option>
-                  <option value="regular">פגישה שוטפת</option>
-                  <option value="followup">פגישת מעקב</option>
-                  <option value="closing">פגישת סיכום</option>
-                </select>
+                <Label className="text-horizon-text mb-2 block font-medium">שעת התחלה *</Label>
+                <Input
+                  type="time"
+                  value={newMeetingForm.start_time}
+                  onChange={(e) => setNewMeetingForm({ ...newMeetingForm, start_time: e.target.value })}
+                  className="bg-horizon-card border-horizon text-horizon-text"
+                />
               </div>
             </div>
 
-            <div>
-              <label className="text-horizon-accent text-sm mb-2 block">סיכום הפגישה *</label>
-              <Textarea
-                value={newMeetingForm.summary}
-                onChange={(e) => setNewMeetingForm({ ...newMeetingForm, summary: e.target.value })}
-                placeholder="תאר את הנקודות העיקריות שעלו בפגישה..."
-                className="bg-horizon-card border-horizon text-horizon-text min-h-[120px]"
-              />
+            {/* תאריך ושעת סיום */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-horizon-text mb-2 block font-medium">תאריך סיום *</Label>
+                <Input
+                  type="date"
+                  value={newMeetingForm.end_date}
+                  onChange={(e) => setNewMeetingForm({ ...newMeetingForm, end_date: e.target.value })}
+                  className="bg-horizon-card border-horizon text-horizon-text"
+                />
+              </div>
+              <div>
+                <Label className="text-horizon-text mb-2 block font-medium">שעת סיום *</Label>
+                <Input
+                  type="time"
+                  value={newMeetingForm.end_time}
+                  onChange={(e) => setNewMeetingForm({ ...newMeetingForm, end_time: e.target.value })}
+                  className="bg-horizon-card border-horizon text-horizon-text"
+                />
+              </div>
             </div>
 
+            {/* ערוץ פגישה */}
             <div>
-              <label className="text-horizon-accent text-sm mb-2 block">
-                <CheckCircle2 className="w-4 h-4 inline ml-1 text-green-400" />
-                החלטות מפתח (שורה לכל החלטה)
-              </label>
+              <Label className="text-horizon-text mb-2 block font-medium">ערוץ פגישה</Label>
+              <Select 
+                value={newMeetingForm.channel} 
+                onValueChange={(value) => setNewMeetingForm({ ...newMeetingForm, channel: value })}
+              >
+                <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-horizon-dark border-horizon">
+                  {MEETING_CHANNELS.map(channel => (
+                    <SelectItem key={channel.value} value={channel.value}>
+                      <div className="flex items-center gap-2">
+                        <channel.icon className="w-4 h-4" />
+                        {channel.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* מיקום - רק אם פגישה פיזית */}
+            {newMeetingForm.channel === 'office' && (
+              <div>
+                <Label className="text-horizon-text mb-2 block font-medium">מיקום</Label>
+                <Input
+                  value={newMeetingForm.location}
+                  onChange={(e) => setNewMeetingForm({ ...newMeetingForm, location: e.target.value })}
+                  placeholder="כתובת הפגישה"
+                  className="bg-horizon-card border-horizon text-horizon-text"
+                />
+              </div>
+            )}
+
+            {/* תיאור */}
+            <div>
+              <Label className="text-horizon-text mb-2 block font-medium">תיאור / הערות מקדימות</Label>
               <Textarea
-                value={newMeetingForm.key_decisions}
-                onChange={(e) => setNewMeetingForm({ ...newMeetingForm, key_decisions: e.target.value })}
-                placeholder="לדוגמה:&#10;לבדוק חלופות ספקים&#10;להכין תחזית לרבעון הבא"
+                value={newMeetingForm.description}
+                onChange={(e) => setNewMeetingForm({ ...newMeetingForm, description: e.target.value })}
+                placeholder="נושאים לדיון, הכנות נדרשות..."
                 className="bg-horizon-card border-horizon text-horizon-text min-h-[80px]"
               />
             </div>
 
-            <div>
-              <label className="text-horizon-accent text-sm mb-2 block">
-                <ClipboardList className="w-4 h-4 inline ml-1 text-blue-400" />
-                משימות לביצוע (שורה לכל משימה)
-              </label>
-              <Textarea
-                value={newMeetingForm.action_items}
-                onChange={(e) => setNewMeetingForm({ ...newMeetingForm, action_items: e.target.value })}
-                placeholder="לדוגמה:&#10;לשלוח דוחות עדכניים&#10;לתאם פגישה עם רו&quot;ח"
-                className="bg-horizon-card border-horizon text-horizon-text min-h-[80px]"
-              />
-            </div>
+            {/* אפשרויות זימון */}
+            <div className="bg-horizon-card/50 rounded-lg p-4 space-y-3">
+              <h4 className="font-medium text-horizon-text flex items-center gap-2">
+                <CalendarCheck className="w-4 h-4 text-horizon-primary" />
+                אפשרויות זימון
+              </h4>
+              
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id="invite_customer"
+                  checked={newMeetingForm.invite_customer}
+                  onCheckedChange={(checked) => setNewMeetingForm({ ...newMeetingForm, invite_customer: checked })}
+                  className="border-horizon-primary data-[state=checked]:bg-horizon-primary"
+                />
+                <Label htmlFor="invite_customer" className="text-horizon-text cursor-pointer">
+                  שלח זימון ללקוח ({customer.email})
+                </Label>
+              </div>
 
-            <div>
-              <label className="text-horizon-accent text-sm mb-2 block">הערות נוספות</label>
-              <Textarea
-                value={newMeetingForm.notes}
-                onChange={(e) => setNewMeetingForm({ ...newMeetingForm, notes: e.target.value })}
-                placeholder="הערות פנימיות או מידע נוסף..."
-                className="bg-horizon-card border-horizon text-horizon-text"
-                rows={2}
-              />
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id="send_reminder"
+                  checked={newMeetingForm.send_reminder}
+                  onCheckedChange={(checked) => setNewMeetingForm({ ...newMeetingForm, send_reminder: checked })}
+                  className="border-horizon-primary data-[state=checked]:bg-horizon-primary"
+                />
+                <Label htmlFor="send_reminder" className="text-horizon-text cursor-pointer">
+                  שלח תזכורת לפני הפגישה
+                </Label>
+              </div>
+
+              <p className="text-xs text-horizon-accent">
+                * הזימון יישלח דרך Google Calendar לכתובות המייל של מנהל הכספים והלקוח
+              </p>
             </div>
           </div>
 
           <DialogFooter className="mt-6">
             <Button 
               variant="outline" 
-              onClick={() => setShowNewMeetingModal(false)}
+              onClick={() => {
+                setShowNewMeetingModal(false);
+                resetNewMeetingForm();
+              }}
               className="border-horizon text-horizon-text"
             >
               ביטול
             </Button>
             <Button 
               onClick={handleCreateMeeting}
-              disabled={isCreating}
-              className="btn-horizon-primary"
+              disabled={isCreating || !newMeetingForm.subject.trim()}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
             >
               {isCreating ? (
                 <>
                   <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                  שומר...
+                  יוצר פגישה...
                 </>
               ) : (
                 <>
-                  <Plus className="w-4 h-4 ml-2" />
-                  צור סיכום
+                  <CalendarPlus className="w-4 h-4 ml-2" />
+                  צור פגישה
                 </>
               )}
             </Button>
@@ -616,14 +803,317 @@ export default function MeetingsTab({ customer, currentUser }) {
         </DialogContent>
       </Dialog>
 
-      {/* מודל צפייה בסיכום פגישה */}
-      {selectedMeeting && (
-        <MeetingSummaryViewer
-          meeting={selectedMeeting}
-          isOpen={!!selectedMeeting}
-          onClose={() => setSelectedMeeting(null)}
-        />
-      )}
+      {/* מודל פרטי פגישה ועריכה */}
+      <Dialog open={showMeetingDetailsModal} onOpenChange={(open) => {
+        if (!open) {
+          setShowMeetingDetailsModal(false);
+          setSelectedMeeting(null);
+        }
+      }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-horizon-dark border-horizon" dir="rtl">
+          {selectedMeeting && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-horizon-text flex items-center gap-2 text-xl">
+                  <Calendar className="w-6 h-6 text-horizon-primary" />
+                  פרטי פגישה
+                </DialogTitle>
+                <DialogDescription className="text-horizon-accent">
+                  {customer.business_name || customer.full_name} ~ {currentUser?.full_name || 'מנהל כספים'}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-6 py-4">
+                {/* פרטי פעילות - Header */}
+                <div className="bg-horizon-card/30 rounded-lg p-4 border border-horizon">
+                  <h3 className="text-horizon-primary font-semibold mb-4 flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    פרטי פעילות
+                  </h3>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* תאריך התחלה */}
+                    <div>
+                      <Label className="text-horizon-accent text-sm">תאריך התחלה</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          type="date"
+                          value={selectedMeeting.start_date}
+                          onChange={(e) => setSelectedMeeting({ ...selectedMeeting, start_date: e.target.value })}
+                          className="bg-horizon-card border-horizon text-horizon-text flex-1"
+                        />
+                        <Input
+                          type="time"
+                          value={selectedMeeting.start_time}
+                          onChange={(e) => setSelectedMeeting({ ...selectedMeeting, start_time: e.target.value })}
+                          className="bg-horizon-card border-horizon text-horizon-text w-24"
+                        />
+                      </div>
+                    </div>
+
+                    {/* תאריך סיום */}
+                    <div>
+                      <Label className="text-horizon-accent text-sm">תאריך סיום</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          type="date"
+                          value={selectedMeeting.end_date}
+                          onChange={(e) => setSelectedMeeting({ ...selectedMeeting, end_date: e.target.value })}
+                          className="bg-horizon-card border-horizon text-horizon-text flex-1"
+                        />
+                        <Input
+                          type="time"
+                          value={selectedMeeting.end_time}
+                          onChange={(e) => setSelectedMeeting({ ...selectedMeeting, end_time: e.target.value })}
+                          className="bg-horizon-card border-horizon text-horizon-text w-24"
+                        />
+                      </div>
+                    </div>
+
+                    {/* נושא */}
+                    <div className="col-span-2">
+                      <Label className="text-horizon-accent text-sm">נושא</Label>
+                      <Input
+                        value={selectedMeeting.subject}
+                        onChange={(e) => setSelectedMeeting({ ...selectedMeeting, subject: e.target.value })}
+                        className="bg-horizon-card border-horizon text-horizon-text mt-1"
+                      />
+                    </div>
+
+                    {/* ערוץ פגישה */}
+                    <div>
+                      <Label className="text-horizon-accent text-sm">ערוץ פגישה</Label>
+                      <Select 
+                        value={selectedMeeting.channel} 
+                        onValueChange={(value) => setSelectedMeeting({ ...selectedMeeting, channel: value })}
+                      >
+                        <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-horizon-dark border-horizon">
+                          {MEETING_CHANNELS.map(channel => (
+                            <SelectItem key={channel.value} value={channel.value}>
+                              {channel.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* סטטוס */}
+                    <div>
+                      <Label className="text-horizon-accent text-sm">סטטוס</Label>
+                      <Select 
+                        value={selectedMeeting.status} 
+                        onValueChange={(value) => setSelectedMeeting({ ...selectedMeeting, status: value })}
+                      >
+                        <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-horizon-dark border-horizon">
+                          {MEETING_STATUSES.map(status => (
+                            <SelectItem key={status.value} value={status.value}>
+                              <div className="flex items-center gap-2">
+                                <status.icon className="w-4 h-4" />
+                                {status.label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* מי נפגש */}
+                    <div>
+                      <Label className="text-horizon-accent text-sm">מי נפגש</Label>
+                      <p className="text-horizon-primary mt-1">{currentUser?.full_name || 'מנהל כספים'}</p>
+                    </div>
+
+                    {/* לקוח */}
+                    <div>
+                      <Label className="text-horizon-accent text-sm">לקוח</Label>
+                      <p className="text-horizon-primary mt-1">{customer.business_name || customer.full_name}</p>
+                    </div>
+
+                    {/* מיקום */}
+                    {selectedMeeting.channel === 'office' && (
+                      <div className="col-span-2">
+                        <Label className="text-horizon-accent text-sm">מיקום</Label>
+                        <Input
+                          value={selectedMeeting.location || ''}
+                          onChange={(e) => setSelectedMeeting({ ...selectedMeeting, location: e.target.value })}
+                          placeholder="כתובת הפגישה"
+                          className="bg-horizon-card border-horizon text-horizon-text mt-1"
+                        />
+                      </div>
+                    )}
+
+                    {/* תיאור */}
+                    <div className="col-span-2">
+                      <Label className="text-horizon-accent text-sm">תיאור</Label>
+                      <Textarea
+                        value={selectedMeeting.description || ''}
+                        onChange={(e) => setSelectedMeeting({ ...selectedMeeting, description: e.target.value })}
+                        placeholder="תיאור הפגישה..."
+                        className="bg-horizon-card border-horizon text-horizon-text mt-1 min-h-[60px]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* סיכום פגישה */}
+                <div className="bg-horizon-card/30 rounded-lg p-4 border border-horizon">
+                  <h3 className="text-horizon-primary font-semibold mb-4 flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5" />
+                    סיכום פגישה
+                  </h3>
+
+                  {/* נוכחים בפגישה */}
+                  <div className="mb-4">
+                    <Label className="text-horizon-text font-medium">*נוכחים בפגישה:*</Label>
+                    <Input
+                      value={selectedMeeting.participants || ''}
+                      onChange={(e) => setSelectedMeeting({ ...selectedMeeting, participants: e.target.value })}
+                      placeholder="שמות המשתתפים בפגישה"
+                      className="bg-horizon-card border-horizon text-horizon-text mt-1"
+                    />
+                  </div>
+
+                  {/* עיקרי הדברים שעלו */}
+                  <div className="mb-4">
+                    <Label className="text-horizon-text font-medium">*עיקרי הדברים שעלו:*</Label>
+                    <div className="space-y-2 mt-2">
+                      {[0, 1, 2, 3, 4].map((index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <span className="text-horizon-accent w-6">{index + 1}.</span>
+                          <Input
+                            value={(selectedMeeting.main_points || [])[index] || ''}
+                            onChange={(e) => updateMainPoint(index, e.target.value)}
+                            placeholder={`נקודה ${index + 1}`}
+                            className="bg-horizon-card border-horizon text-horizon-text flex-1"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* משימות */}
+                  <div className="mb-4">
+                    <Label className="text-horizon-text font-medium">*משימות:*</Label>
+                    <Textarea
+                      value={selectedMeeting.tasks || ''}
+                      onChange={(e) => setSelectedMeeting({ ...selectedMeeting, tasks: e.target.value })}
+                      placeholder="משימות שנקבעו בפגישה..."
+                      className="bg-horizon-card border-horizon text-horizon-text mt-1 min-h-[80px]"
+                    />
+                  </div>
+
+                  {/* תאריך פגישה הבאה */}
+                  <div className="mb-4">
+                    <Label className="text-horizon-text font-medium">*תאריך פגישה הבאה:*</Label>
+                    <Input
+                      type="date"
+                      value={selectedMeeting.next_meeting_date || ''}
+                      onChange={(e) => setSelectedMeeting({ ...selectedMeeting, next_meeting_date: e.target.value })}
+                      className="bg-horizon-card border-horizon text-horizon-text mt-1 w-48"
+                    />
+                    {!selectedMeeting.next_meeting_date && (
+                      <span className="text-horizon-accent text-sm mr-2">טרם נקבעה</span>
+                    )}
+                  </div>
+
+                  {/* סיכום לווצאפ */}
+                  <div>
+                    <Label className="text-horizon-text font-medium flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-green-400" />
+                      סיכום לווצאפ
+                    </Label>
+                    <Textarea
+                      value={selectedMeeting.whatsapp_summary || ''}
+                      onChange={(e) => setSelectedMeeting({ ...selectedMeeting, whatsapp_summary: e.target.value })}
+                      placeholder="סיכום קצר לשליחה בווצאפ ללקוח..."
+                      className="bg-horizon-card border-horizon text-horizon-text mt-1 min-h-[100px]"
+                    />
+                    {customer.phone && (
+                      <Button
+                        size="sm"
+                        onClick={handleSendWhatsAppSummary}
+                        className="mt-2 bg-green-600 hover:bg-green-700 text-white"
+                        disabled={!selectedMeeting.whatsapp_summary}
+                      >
+                        <Send className="w-4 h-4 ml-2" />
+                        שלח לווצאפ
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* מידע נוסף */}
+                <div className="bg-horizon-card/30 rounded-lg p-4 border border-horizon">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-horizon-accent">נוצר על ידי:</span>
+                      <span className="text-horizon-primary mr-2">{selectedMeeting.created_by || currentUser?.full_name}</span>
+                    </div>
+                    {selectedMeeting.created_date && (
+                      <div>
+                        <span className="text-horizon-accent">נוצר בתאריך:</span>
+                        <span className="text-horizon-text mr-2">
+                          {format(new Date(selectedMeeting.created_date), 'dd/MM/yyyy HH:mm')}
+                        </span>
+                      </div>
+                    )}
+                    {selectedMeeting.google_event_id && (
+                      <div className="col-span-2">
+                        <span className="text-horizon-accent">מזהה אירוע בגוגל:</span>
+                        <span className="text-horizon-text mr-2 font-mono text-xs">{selectedMeeting.google_event_id}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="flex justify-between items-center border-t border-horizon pt-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => handleDeleteMeeting(selectedMeeting.id)}
+                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                >
+                  <Trash2 className="w-4 h-4 ml-2" />
+                  מחק פגישה
+                </Button>
+                
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowMeetingDetailsModal(false);
+                      setSelectedMeeting(null);
+                    }}
+                    className="border-horizon text-horizon-text"
+                  >
+                    ביטול
+                  </Button>
+                  <Button 
+                    onClick={handleUpdateMeeting}
+                    disabled={isSaving}
+                    className="btn-horizon-primary"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 ml-2" />
+                        שמור שינויים
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

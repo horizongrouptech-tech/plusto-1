@@ -1,87 +1,210 @@
-import { createClient } from 'npm:@base44/sdk@0.1.0';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
 
-const base44 = createClient({
-    appId: Deno.env.get('BASE44_APP_ID'), 
-});
-
+/**
+ * פונקציה לתזמון פגישה וסנכרון עם Google Calendar
+ * 
+ * הפונקציה:
+ * 1. יוצרת אירוע ב-Google Calendar
+ * 2. שולחת זימונים למנהל הכספים ולקוח
+ * 3. מחזירה את מזהה האירוע לשמירה במערכת
+ */
 Deno.serve(async (req) => {
-    try {
-        const authHeader = req.headers.get('Authorization');
-        if (!authHeader) {
-            return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { "Content-Type": "application/json" } });
-        }
-        const token = authHeader.split(' ')[1];
-        base44.auth.setToken(token);
-        const user = await base44.auth.me();
-        
-        if (!user) {
-            return new Response(JSON.stringify({ error: 'User not found' }), { status: 404, headers: { "Content-Type": "application/json" } });
-        }
+  try {
+    const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
 
-        const adminEmail = "byo@post.bgu.ac.il"; // Email for Hilli
-        const emailSubject = `בקשה לפגישת ייעוץ מלקוח: ${user.business_name || user.full_name}`;
-        
-        const emailBody = `
-            <!DOCTYPE html>
-            <html dir="rtl" lang="he">
-            <head>
-                <meta charset="UTF-8">
-                <style>
-                    body { font-family: 'Arial', sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 0; }
-                    .email-container { max-width: 600px; margin: 20px auto; padding: 25px; border-radius: 12px; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 5px solid #32acc1; }
-                    .header { text-align: center; border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
-                    .header h1 { color: #121725; font-size: 24px; margin: 0; }
-                    .content p { line-height: 1.7; }
-                    .content h2 { color: #32acc1; font-size: 18px; border-bottom: 2px solid #fc9f67; padding-bottom: 5px; display: inline-block; margin-top: 20px; }
-                    .user-details { list-style: none; padding: 0; }
-                    .user-details li { background-color: #f9f9f9; border: 1px solid #eee; padding: 12px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
-                    .user-details strong { color: #121725; font-size: 16px; }
-                    .footer { text-align: center; margin-top: 25px; font-size: 12px; color: #888; }
-                </style>
-            </head>
-            <body>
-                <div class="email-container">
-                    <div class="header">
-                        <h1>בקשה חדשה לפגישת ייעוץ</h1>
-                    </div>
-                    <div class="content">
-                        <p>הי הילי,</p>
-                        <p>התקבלה בקשה חדשה לפגישת עבודה עם יועץ כספים דרך סוכן החירום במערכת Plusto.</p>
-                        <h2>פרטי הלקוח:</h2>
-                        <ul class="user-details">
-                            <li><span>שם העסק:</span> <strong>${user.business_name || 'לא צוין'}</strong></li>
-                            <li><span>שם מלא:</span> <strong>${user.full_name || 'לא צוין'}</strong></li>
-                            <li><span>אימייל:</span> <strong><a href="mailto:${user.email}">${user.email}</a></strong></li>
-                            <li><span>טלפון:</span> <strong><a href="tel:${user.phone}">${user.phone || 'לא צוין'}</a></strong></li>
-                        </ul>
-                        <h2>שלבים הבאים:</h2>
-                        <p>אנא צרי קשר עם הלקוח בהקדם האפשרי על מנת לתאם פגישת עבודה קצרה (עד 30 דקות) עם אלירן.</p>
-                    </div>
-                    <div class="footer">
-                        <p>הודעה זו נשלחה אוטומטית ממערכת Plusto.</p>
-                    </div>
-                </div>
-            </body>
-            </html>
-        `;
-
-        await base44.integrations.Core.SendEmail({
-            to: adminEmail,
-            from_name: "Plusto - מערכת חכמה",
-            subject: emailSubject,
-            body: emailBody,
-        });
-
-        return new Response(JSON.stringify({ message: "Request sent successfully" }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-        });
-
-    } catch (error) {
-        console.error("Error in scheduleMeeting function:", error);
-        return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-        });
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const {
+      meeting_id,
+      customer_email,
+      financial_manager_email,
+      subject,
+      start_datetime,
+      end_datetime,
+      location,
+      description,
+      invite_customer,
+      send_reminder,
+      customer_name
+    } = await req.json();
+
+    // בניית רשימת המוזמנים
+    const attendees = [];
+    
+    // מנהל הכספים תמיד מוזמן
+    if (financial_manager_email) {
+      attendees.push({
+        email: financial_manager_email,
+        responseStatus: 'accepted'
+      });
+    }
+
+    // הלקוח מוזמן רק אם נבחר
+    if (invite_customer && customer_email) {
+      attendees.push({
+        email: customer_email,
+        displayName: customer_name || customer_email
+      });
+    }
+
+    // בניית תיאור הפגישה
+    const eventDescription = `
+פגישת ניהול כספים
+
+לקוח: ${customer_name || customer_email}
+מנהל כספים: ${financial_manager_email}
+
+${description || ''}
+
+---
+פגישה זו נוצרה אוטומטית ממערכת Plusto
+    `.trim();
+
+    // בניית מיקום הפגישה
+    let eventLocation = location;
+    if (location === 'zoom') {
+      eventLocation = 'Zoom (קישור יישלח בנפרד)';
+    } else if (location === 'teams') {
+      eventLocation = 'Microsoft Teams';
+    } else if (location === 'google_meet') {
+      eventLocation = 'Google Meet';
+    } else if (location === 'phone') {
+      eventLocation = 'שיחת טלפון';
+    }
+
+    // הגדרת תזכורות
+    const reminders = send_reminder ? {
+      useDefault: false,
+      overrides: [
+        { method: 'email', minutes: 24 * 60 }, // יום לפני
+        { method: 'popup', minutes: 30 }, // 30 דקות לפני
+        { method: 'email', minutes: 60 } // שעה לפני
+      ]
+    } : { useDefault: true };
+
+    // יצירת האירוע בגוגל קלנדר
+    try {
+      const { data: calendarResponse, error: calendarError } = await base44.asServiceRole.integrations.Google.CreateCalendarEvent({
+        summary: subject || 'פגישת ניהול כספים',
+        description: eventDescription,
+        start: {
+          dateTime: start_datetime,
+          timeZone: 'Asia/Jerusalem'
+        },
+        end: {
+          dateTime: end_datetime,
+          timeZone: 'Asia/Jerusalem'
+        },
+        location: eventLocation,
+        attendees: attendees,
+        reminders: reminders,
+        // הוספת Google Meet אוטומטית אם זה נבחר
+        conferenceData: location === 'google_meet' ? {
+          createRequest: {
+            requestId: `plusto-${meeting_id}-${Date.now()}`,
+            conferenceSolutionKey: { type: 'hangoutsMeet' }
+          }
+        } : undefined,
+        sendUpdates: 'all' // שליחת הזמנות לכל המשתתפים
+      });
+
+      if (calendarError) {
+        console.error('Google Calendar API Error:', calendarError);
+        return Response.json({ 
+          success: false, 
+          error: 'Failed to create calendar event',
+          details: calendarError 
+        }, { status: 500 });
+      }
+
+      // שליחת מייל נוסף ללקוח עם פרטי הפגישה
+      if (invite_customer && customer_email) {
+        try {
+          await base44.asServiceRole.integrations.Core.SendEmail({
+            to: customer_email,
+            subject: `זימון לפגישה: ${subject}`,
+            body: `
+שלום ${customer_name || ''},
+
+הוזמנת לפגישת ניהול כספים.
+
+פרטי הפגישה:
+📅 תאריך: ${new Date(start_datetime).toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+🕐 שעה: ${new Date(start_datetime).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })} - ${new Date(end_datetime).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+📍 מיקום: ${eventLocation}
+
+${description ? `הערות: ${description}` : ''}
+
+נשמח לראותך!
+
+בברכה,
+צוות Plusto
+            `.trim()
+          });
+        } catch (emailError) {
+          console.error('Error sending email to customer:', emailError);
+          // לא נכשיל את הפונקציה אם המייל נכשל
+        }
+      }
+
+      return Response.json({
+        success: true,
+        event_id: calendarResponse?.id,
+        html_link: calendarResponse?.htmlLink,
+        meet_link: calendarResponse?.hangoutLink || calendarResponse?.conferenceData?.entryPoints?.[0]?.uri
+      });
+
+    } catch (calendarException) {
+      console.error('Calendar exception:', calendarException);
+      
+      // במקרה שאין אינטגרציה פעילה, נשלח לפחות מייל
+      if (invite_customer && customer_email) {
+        try {
+          await base44.asServiceRole.integrations.Core.SendEmail({
+            to: customer_email,
+            subject: `זימון לפגישה: ${subject}`,
+            body: `
+שלום ${customer_name || ''},
+
+הוזמנת לפגישת ניהול כספים.
+
+פרטי הפגישה:
+📅 תאריך: ${new Date(start_datetime).toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+🕐 שעה: ${new Date(start_datetime).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })} - ${new Date(end_datetime).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+📍 מיקום: ${eventLocation || 'יימסר בנפרד'}
+
+${description ? `הערות: ${description}` : ''}
+
+בברכה,
+צוות Plusto
+            `.trim()
+          });
+          
+          return Response.json({
+            success: true,
+            event_id: null,
+            message: 'Meeting created, email sent (Google Calendar not available)'
+          });
+        } catch (emailError) {
+          console.error('Email error:', emailError);
+        }
+      }
+
+      return Response.json({
+        success: false,
+        error: 'Google Calendar integration not available',
+        details: calendarException.message
+      }, { status: 500 });
+    }
+
+  } catch (error) {
+    console.error('Error in scheduleMeeting:', error);
+    return Response.json({ 
+      error: error.message,
+      success: false 
+    }, { status: 500 });
+  }
 });

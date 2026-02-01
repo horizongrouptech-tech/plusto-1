@@ -331,12 +331,11 @@ export default function GoalsAndTasksDashboard({ customer }) {
         </div>
       </div>
 
-      {/* קוביות סטטיסטיקה */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      {/* קוביות סטטיסטיקה - סינון מהיר */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card
           className={`card-horizon cursor-pointer transition-all ${activeStatFilter === 'today' ? 'ring-2 ring-horizon-primary' : ''}`}
           onClick={() => setActiveStatFilter(activeStatFilter === 'today' ? null : 'today')}>
-
           <CardContent className="p-4">
             <div className="flex justify-between items-center">
               <div className="text-right">
@@ -349,9 +348,22 @@ export default function GoalsAndTasksDashboard({ customer }) {
         </Card>
 
         <Card
-          className={`card-horizon cursor-pointer transition-all ${activeStatFilter === 'delayed' ? 'ring-2 ring-horizon-primary' : ''}`}
-          onClick={() => setActiveStatFilter(activeStatFilter === 'delayed' ? null : 'delayed')}>
+          className={`card-horizon cursor-pointer transition-all ${activeStatFilter === 'week' ? 'ring-2 ring-blue-500' : ''}`}
+          onClick={() => setActiveStatFilter(activeStatFilter === 'week' ? null : 'week')}>
+          <CardContent className="p-4">
+            <div className="flex justify-between items-center">
+              <div className="text-right">
+                <p className="text-sm text-horizon-accent">משימות השבוע</p>
+                <p className="text-2xl font-bold text-blue-400">{stats.tasksThisWeek}</p>
+              </div>
+              <Clock className="w-8 h-8 text-blue-400" />
+            </div>
+          </CardContent>
+        </Card>
 
+        <Card
+          className={`card-horizon cursor-pointer transition-all ${activeStatFilter === 'delayed' ? 'ring-2 ring-red-500' : ''}`}
+          onClick={() => setActiveStatFilter(activeStatFilter === 'delayed' ? null : 'delayed')}>
           <CardContent className="p-4">
             <div className="flex justify-between items-center">
               <div className="text-right">
@@ -363,12 +375,14 @@ export default function GoalsAndTasksDashboard({ customer }) {
           </CardContent>
         </Card>
 
-        <Card className="card-horizon">
+        <Card
+          className={`card-horizon cursor-pointer transition-all ${activeStatFilter === 'open' ? 'ring-2 ring-green-500' : ''}`}
+          onClick={() => setActiveStatFilter(activeStatFilter === 'open' ? null : 'open')}>
           <CardContent className="p-4">
             <div className="flex justify-between items-center">
               <div className="text-right">
-                <p className="text-sm text-horizon-accent">יעדים באיחור</p>
-                <p className="text-2xl font-bold text-green-400">{stats.openGoals}</p>
+                <p className="text-sm text-horizon-accent">כל הפתוחות</p>
+                <p className="text-2xl font-bold text-green-400">{stats.openTasks}</p>
               </div>
               <Target className="w-8 h-8 text-green-400" />
             </div>

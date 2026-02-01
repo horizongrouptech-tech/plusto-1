@@ -23,6 +23,7 @@ import {
 "@/components/ui/table";
 import AddSupplierModal from "../shared/AddSupplierModal";
 import SupplierDetailsModal from "./SupplierDetailsModal";
+import SupplierPreviewModal from "./SupplierPreviewModal";
 import FindAlternativeSupplierModal from "./FindAlternativeSupplierModal";
 
 const getCategoryBadgeStyle = (category) => {
@@ -65,6 +66,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [selectedSuggestedSupplier, setSelectedSuggestedSupplier] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState(null);
   const [showFindAlternativeModal, setShowFindAlternativeModal] = useState(false);
 
@@ -77,35 +79,57 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
     try {
       setIsLoading(true);
 
-      // טען ספקים של הלקוח
-      const customerSuppliers = await base44.entities.Supplier.filter({
-        customer_emails: [customer.email],
-        is_active: true
-      });
+      // טעינה מקבילית - ספקי הלקוח וספקים מוצעים במקביל
+      const [customerSuppliersResult, suggestedResult] = await Promise.allSettled([
+        // טען ספקים של הלקוח
+        base44.entities.Supplier.filter({
+          customer_emails: [customer.email],
+          is_active: true
+        }),
+        // טען ספקים מוצעים חכמים
+        base44.functions.invoke('getSuggestedSuppliers', {
+          customer_email: customer.email,
+          customer_data: customer
+        })
+      ]);
 
-      // טען ספקים מוצעים חכמים
-      const { data: suggested, error } = await base44.functions.invoke('getSuggestedSuppliers', {
-        customer_email: customer.email,
-        customer_data: customer
-      });
-
-      if (error) {
-        console.error('Error loading suggested suppliers:', error);
-        // fallback - טען את כל הספקים שלא משויכים
-        const allSuppliers = await base44.entities.Supplier.filter({ is_active: true });
-        const filteredSuggested = allSuppliers.filter((supplier) =>
-        !supplier.customer_emails?.includes(customer.email)
-        );
-        setSuggestedSuppliers(filteredSuggested);
+      // עיבוד ספקי הלקוח
+      if (customerSuppliersResult.status === 'fulfilled') {
+        setSuppliers(customerSuppliersResult.value);
       } else {
-        // תיקון: הפונקציה מחזירה {success, data}, צריך לגשת ל-data
-        const suppliersList = suggested?.data || suggested || [];
-        setSuggestedSuppliers(Array.isArray(suppliersList) ? suppliersList : []);
+        console.error('Error loading customer suppliers:', customerSuppliersResult.reason);
+        setSuppliers([]);
       }
 
-      setSuppliers(customerSuppliers);
+      // עיבוד ספקים מוצעים
+      if (suggestedResult.status === 'fulfilled') {
+        const { data: suggested, error } = suggestedResult.value;
+        if (error) {
+          console.error('Error from getSuggestedSuppliers:', error);
+          // fallback - טען את כל הספקים שלא משויכים
+          try {
+            const allSuppliers = await base44.entities.Supplier.filter({ is_active: true });
+            const filteredSuggested = allSuppliers.filter((supplier) =>
+              !supplier.customer_emails?.includes(customer.email)
+            );
+            setSuggestedSuppliers(filteredSuggested);
+          } catch (fallbackError) {
+            console.error('Fallback also failed:', fallbackError);
+            setSuggestedSuppliers([]);
+          }
+        } else {
+          // תיקון: הפונקציה מחזירה {success, data}, צריך לגשת ל-data
+          const suppliersList = suggested?.data || suggested || [];
+          setSuggestedSuppliers(Array.isArray(suppliersList) ? suppliersList : []);
+        }
+      } else {
+        console.error('Error loading suggested suppliers:', suggestedResult.reason);
+        setSuggestedSuppliers([]);
+      }
+
     } catch (error) {
       console.error("Error loading suppliers:", error);
+      setSuppliers([]);
       setSuggestedSuppliers([]); // ברירת מחדל למערך ריק במקרה של שגיאה
     } finally {
       setIsLoading(false);
@@ -371,7 +395,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                     {filteredSuggestedSuppliers.map((supplier) =>
                   <TableRow key={supplier.id} className="border-horizon">
                         <TableCell className="font-medium text-right">
-                          <Button variant="link" onClick={() => setSelectedSupplier(supplier)} className="text-horizon-primary p-0 h-auto">
+                          <Button variant="link" onClick={() => setSelectedSuggestedSupplier(supplier)} className="text-horizon-primary p-0 h-auto">
                             {supplier.name}
                           </Button>
                         </TableCell>
@@ -442,6 +466,20 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
           loadSuppliers();
           setShowFindAlternativeModal(false);
         }} />
+
+      }
+
+      {/* מודל תצוגה מקדימה לספקים מוצעים - מציג רק פרטים בסיסיים */}
+      {selectedSuggestedSupplier &&
+      <SupplierPreviewModal
+        supplier={selectedSuggestedSupplier}
+        isOpen={!!selectedSuggestedSupplier}
+        onClose={() => setSelectedSuggestedSupplier(null)}
+        onAssign={(supplier) => {
+          handleAssignSupplier(supplier);
+          setSelectedSuggestedSupplier(null);
+        }}
+        canAssign={canAddSupplier} />
 
       }
     </Card>);
