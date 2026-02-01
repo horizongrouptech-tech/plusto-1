@@ -1,23 +1,36 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { DollarSign, TrendingUp, AlertTriangle } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList } from 'recharts';
+import { DollarSign, TrendingUp, AlertTriangle, Download } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import NoZReportsPlaceholder from './NoZReportsPlaceholder';
+import { RECHARTS_CONFIG, HORIZON_COLORS } from '@/components/utils/chartConfig';
 
 export default function ProfitabilityAnalysis({ categorizedProducts, products = [], hasZReports = true }) {
   const { profitable, controversial, unprofitable, unknown } = categorizedProducts;
 
   const pieData = [
-    { name: 'רווחיים (>25%)', value: profitable.length, color: '#48BB78' },
-    { name: 'שנויים במחלוקת (15-25%)', value: controversial.length, color: '#fc9f67' },
-    { name: 'לא רווחיים (<15%)', value: unprofitable.length, color: '#FC8181' },
+    { name: 'רווחיים (>25%)', value: profitable.length, color: HORIZON_COLORS.green },
+    { name: 'שנויים במחלוקת (15-25%)', value: controversial.length, color: HORIZON_COLORS.secondary },
+    { name: 'לא רווחיים (<15%)', value: unprofitable.length, color: HORIZON_COLORS.red },
     { name: 'חסרים נתונים', value: unknown.length, color: '#718096' }
   ];
 
-  const formatCurrency = (value) => {
-    if (!value) return '₪0';
-    return `₪${Math.round(value).toLocaleString()}`;
+  const handleExport = () => {
+    const csvData = [
+      ['קטגוריה', 'שם מוצר', 'אחוז רווח', 'מכירות חודשיות', 'מחיר מכירה'],
+      ...profitable.map(p => ['רווחי', p.product_name, p.profitMargin?.toFixed(1), p.monthly_sales || 0, p.selling_price || 0]),
+      ...controversial.map(p => ['שנוי', p.product_name, p.profitMargin?.toFixed(1), p.monthly_sales || 0, p.selling_price || 0]),
+      ...unprofitable.map(p => ['לא רווחי', p.product_name, p.profitMargin?.toFixed(1), p.monthly_sales || 0, p.selling_price || 0])
+    ];
+    
+    const csv = csvData.map(row => row.join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `ניתוח_רווחיות_${new Date().toLocaleDateString('he-IL')}.csv`;
+    link.click();
   };
 
   const topUnprofitable = unprofitable
@@ -31,6 +44,14 @@ export default function ProfitabilityAnalysis({ categorizedProducts, products = 
 
   return (
     <div className="space-y-6">
+      {/* כפתור ייצוא */}
+      <div className="flex justify-end">
+        <Button onClick={handleExport} variant="outline" size="sm" className="border-horizon text-horizon-accent hover:bg-horizon-card">
+          <Download className="w-4 h-4 ml-2" />
+          ייצא ל-CSV
+        </Button>
+      </div>
+
       {/* סיכום כללי */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-green-500/10 border-green-500/30">
@@ -82,22 +103,29 @@ export default function ProfitabilityAnalysis({ categorizedProducts, products = 
                   data={pieData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={100}
+                  labelLine={true}
+                  label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                  outerRadius={90}
+                  innerRadius={40}
                   fill="#8884d8"
                   dataKey="value"
+                  paddingAngle={2}
                 >
                   {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                    <Cell key={`cell-${index}`} fill={entry.color} stroke="var(--horizon-card-bg)" strokeWidth={2} />
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'var(--horizon-dark)',
-                    border: '1px solid var(--horizon-border)',
-                    borderRadius: '8px'
-                  }}
+                  {...RECHARTS_CONFIG.tooltip}
+                  formatter={(value, name, props) => [
+                    `${value} מוצרים`,
+                    props.payload.name
+                  ]}
+                />
+                <Legend 
+                  {...RECHARTS_CONFIG.legend}
+                  verticalAlign="bottom"
+                  height={36}
                 />
               </PieChart>
             </ResponsiveContainer>
