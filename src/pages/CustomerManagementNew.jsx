@@ -380,9 +380,32 @@ export default function CustomerManagementNew() {
       <SystemRecommendationsModal
         isOpen={systemRecModalOpen}
         onClose={() => setSystemRecModalOpen(false)}
-        onGenerate={(categories) => {
-          // TODO: implement system recommendation generation
-          console.log('Generating system recommendations:', categories);
+        onGenerate={async (categories) => {
+          if (!selectedCustomer) return;
+          
+          setIsGeneratingRecs(true);
+          try {
+            const response = await base44.functions.invoke('generateStrategicRecommendations', {
+              customer_email: selectedCustomer.email,
+              business_type: selectedCustomer.business_type,
+              business_goals: selectedCustomer.business_goals,
+              target_audience: selectedCustomer.target_audience,
+              main_products_services: selectedCustomer.main_products_services,
+              monthly_revenue: selectedCustomer.monthly_revenue
+            });
+            
+            if (response.data?.success) {
+              queryClient.invalidateQueries(['customerRecommendations', selectedCustomer.email]);
+              alert(`נוצרו בהצלחה ${response.data.recommendations_count} המלצות!`);
+            } else {
+              throw new Error(response.data?.error || 'Failed to generate recommendations');
+            }
+          } catch (error) {
+            console.error('Error generating recommendations:', error);
+            alert('שגיאה ביצירת המלצות: ' + error.message);
+          } finally {
+            setIsGeneratingRecs(false);
+          }
         }}
         isLoading={isGeneratingRecs}
       />
