@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, ChevronDown, ChevronUp, DollarSign, Check, ArrowRight, ArrowLeft, TrendingUp, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "./utils/numberFormatter";
 import LoanManagerSection from "./LoanManagerSection";
+import { base44 } from '@/api/base44Client';
+import SaveProgressIndicator from './SaveProgressIndicator';
 
 // מע״מ קבוע
 const VAT_RATE = 0.18;
@@ -17,6 +19,9 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
   const [adminExpenses, setAdminExpenses] = useState([]);
   const [expandedMarketing, setExpandedMarketing] = useState({});
   const [expandedAdmin, setExpandedAdmin] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [saveStatus, setSaveStatus] = useState(null);
 
   useEffect(() => {
     if (forecastData?.detailed_expenses?.marketing_sales) {
@@ -213,6 +218,45 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
 
   const monthNames = ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יונ', 'יול', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'];
 
+  const handleSaveProgress = async () => {
+    if (!forecastData.forecast_name?.trim()) {
+      alert('נא להזין שם לתחזית לפני שמירה');
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveStatus('saving');
+
+    try {
+      const dataToSave = {
+        ...forecastData,
+        detailed_expenses: {
+          marketing_sales: marketingExpenses,
+          admin_general: adminExpenses
+        }
+      };
+
+      if (forecastData.id) {
+        await base44.entities.ManualForecast.update(forecastData.id, dataToSave);
+      } else {
+        const created = await base44.entities.ManualForecast.create(dataToSave);
+        if (onUpdateForecast) {
+          onUpdateForecast({ id: created.id });
+        }
+      }
+
+      setLastSaved(new Date());
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus(null), 2000);
+    } catch (error) {
+      console.error('Error saving:', error);
+      setSaveStatus('error');
+      alert('שגיאה בשמירה: ' + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const calculateExpenseTotal = (expense, mode = 'max') => {
     if (expense.is_annual_total && expense.amount) {
       return expense.amount;
@@ -240,9 +284,16 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
       {/* Marketing & Sales Expenses */}
       <Card className="card-horizon">
         <CardHeader>
-          <CardTitle className="text-xl text-horizon-text flex items-center gap-2">
+          <CardTitle className="text-xl text-horizon-text flex items-center gap-3">
             <DollarSign className="w-5 h-5 text-horizon-primary" />
             הוצאות שיווק ומכירות - תכנון מול ביצוע
+            <SaveProgressIndicator
+              onSave={handleSaveProgress}
+              isSaving={isSaving}
+              lastSaved={lastSaved}
+              saveStatus={saveStatus}
+              compact={true}
+            />
           </CardTitle>
           <p className="text-sm text-horizon-accent">
             הזן את ההוצאות המתוכננות והבפועל לכל חודש. לחיצה על השם תאפשר להזין נתונים חודשיים.
