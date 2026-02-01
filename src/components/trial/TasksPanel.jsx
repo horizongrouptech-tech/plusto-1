@@ -12,7 +12,8 @@ import {
   AlertTriangle,
   Target,
   Loader2,
-  Lightbulb
+  Lightbulb,
+  List
 } from 'lucide-react';
 import { format, isToday, isPast, isFuture, parseISO } from 'date-fns';
 import GoalTemplateSelector from '@/components/trial/GoalTemplateSelector';
@@ -21,18 +22,28 @@ export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCo
   const [newTaskName, setNewTaskName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [showGoalTemplateSelector, setShowGoalTemplateSelector] = useState(false);
+  const [filterType, setFilterType] = useState('all'); // 'all', 'goals', 'tasks'
 
   // סינון משימות לפי תאריך התחלה - רק משימות שהתאריך שלהן הגיע
   const relevantTasks = useMemo(() => {
     const now = new Date();
-    return tasks.filter(task => {
+    let filtered = tasks.filter(task => {
       // אם אין תאריך התחלה - הצג
       if (!task.start_date) return true;
       // אם תאריך ההתחלה עבר או היום - הצג
       const startDate = parseISO(task.start_date);
       return startDate <= now;
     });
-  }, [tasks]);
+
+    // החל סינון לפי סוג משימה
+    if (filterType === 'goals') {
+      filtered = filtered.filter(task => task.task_type === 'goal');
+    } else if (filterType === 'tasks') {
+      filtered = filtered.filter(task => task.task_type !== 'goal' && task.task_type !== 'meeting');
+    }
+
+    return filtered;
+  }, [tasks, filterType]);
 
   // קיבוץ משימות לפי סטטוס
   const groupedTasks = useMemo(() => {
@@ -210,6 +221,43 @@ export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCo
             className="text-horizon-accent hover:text-horizon-text h-8 w-8"
           >
             <ChevronLeft className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* פילטר סוג משימות */}
+        <div className="flex gap-2 mb-3" dir="rtl">
+          <Button
+            variant={filterType === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilterType('all')}
+            className={filterType === 'all' 
+              ? 'bg-horizon-primary text-white flex-1' 
+              : 'border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10 flex-1'}
+          >
+            <List className="w-4 h-4 ml-1" />
+            הכל
+          </Button>
+          <Button
+            variant={filterType === 'goals' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilterType('goals')}
+            className={filterType === 'goals' 
+              ? 'bg-horizon-primary text-white flex-1' 
+              : 'border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10 flex-1'}
+          >
+            <Target className="w-4 h-4 ml-1" />
+            יעדים
+          </Button>
+          <Button
+            variant={filterType === 'tasks' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilterType('tasks')}
+            className={filterType === 'tasks' 
+              ? 'bg-horizon-primary text-white flex-1' 
+              : 'border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10 flex-1'}
+          >
+            <CheckCircle2 className="w-4 h-4 ml-1" />
+            משימות
           </Button>
         </div>
 
