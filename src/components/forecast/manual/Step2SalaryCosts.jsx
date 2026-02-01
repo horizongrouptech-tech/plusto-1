@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,8 @@ import {
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { formatCurrency } from './utils/numberFormatter';
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { base44 } from '@/api/base44Client';
+import SaveProgressIndicator from './SaveProgressIndicator';
 
 const MONTHS = [
   'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
@@ -30,6 +32,40 @@ const MONTHS = [
 ];
 
 export default function Step2SalaryCosts({ forecastData, onUpdateForecast, onNext, onBack }) {
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [saveStatus, setSaveStatus] = useState(null);
+  
+  const handleSaveProgress = async () => {
+    if (!forecastData.forecast_name?.trim()) {
+      alert('נא להזין שם לתחזית לפני שמירה');
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveStatus('saving');
+
+    try {
+      if (forecastData.id) {
+        await base44.entities.ManualForecast.update(forecastData.id, forecastData);
+      } else {
+        const created = await base44.entities.ManualForecast.create(forecastData);
+        if (onUpdateForecast) {
+          onUpdateForecast({ id: created.id });
+        }
+      }
+
+      setLastSaved(new Date());
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus(null), 2000);
+    } catch (error) {
+      console.error('Error saving:', error);
+      setSaveStatus('error');
+      alert('שגיאה בשמירה: ' + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
   
   // פונקציה לחישוב עלות עובד בחודש ספציפי
   const calculateEmployeeMonthlyCost = (employee, monthIndex) => {
@@ -476,9 +512,16 @@ export default function Step2SalaryCosts({ forecastData, onUpdateForecast, onNex
       {/* עובדים קיימים */}
       <Card className="card-horizon">
         <CardHeader>
-          <CardTitle className="text-horizon-text flex items-center gap-2">
+          <CardTitle className="text-horizon-text flex items-center gap-3">
             <Users className="w-5 h-5 text-horizon-primary" />
             עובדים קיימים
+            <SaveProgressIndicator
+              onSave={handleSaveProgress}
+              isSaving={isSaving}
+              lastSaved={lastSaved}
+              saveStatus={saveStatus}
+              compact={true}
+            />
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">

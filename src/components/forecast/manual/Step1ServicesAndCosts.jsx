@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -22,11 +21,13 @@ import {
   CheckCircle,
   Percent,
   TrendingUp,
-  Search
+  Search,
+  Save
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { formatCurrency } from './utils/numberFormatter';
 import { base44 } from '@/api/base44Client';
+import SaveProgressIndicator from './SaveProgressIndicator';
 
 export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, onNext, onBack }) {
   const [services, setServices] = useState(forecastData.services || []);
@@ -38,6 +39,9 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
     return initial;
   });
   const [searchTerm, setSearchTerm] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [saveStatus, setSaveStatus] = useState(null);
   
   // ⭐ State לבחירת קטלוג
   const [selectedCatalogForLoad, setSelectedCatalogForLoad] = useState(null);
@@ -367,6 +371,43 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
     };
   };
 
+  const handleSaveProgress = async () => {
+    if (!forecastData.forecast_name?.trim()) {
+      alert('נא להזין שם לתחזית לפני שמירה');
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveStatus('saving');
+
+    try {
+      const dataToSave = {
+        ...forecastData,
+        services
+      };
+
+      if (forecastData.id) {
+        await base44.entities.ManualForecast.update(forecastData.id, dataToSave);
+      } else {
+        const created = await base44.entities.ManualForecast.create(dataToSave);
+        if (onUpdateForecast) {
+          onUpdateForecast({ id: created.id });
+        }
+      }
+
+      setLastSaved(new Date());
+      setSaveStatus('saved');
+
+      setTimeout(() => setSaveStatus(null), 2000);
+    } catch (error) {
+      console.error('Error saving:', error);
+      setSaveStatus('error');
+      alert('שגיאה בשמירה: ' + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleContinue = () => {
     if (services.length === 0) {
       alert('יש להוסיף לפחות שירות/מוצר אחד לפני המשך');
@@ -501,7 +542,16 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <CardTitle className="text-horizon-text">רשימת שירותים ומוצרים</CardTitle>
+              <CardTitle className="text-horizon-text flex items-center gap-3">
+                רשימת שירותים ומוצרים
+                <SaveProgressIndicator
+                  onSave={handleSaveProgress}
+                  isSaving={isSaving}
+                  lastSaved={lastSaved}
+                  saveStatus={saveStatus}
+                  compact={true}
+                />
+              </CardTitle>
               <p className="text-horizon-accent mt-1">הגדר את השירותים והמוצרים שלך ואת עלויות הגלם</p>
               {catalogProductsCount > 0 && (
                 <Badge variant="outline" className="border-horizon-primary text-horizon-primary mt-2">

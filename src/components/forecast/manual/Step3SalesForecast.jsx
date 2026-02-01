@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ChevronRight, ChevronLeft, GripVertical, Eye, EyeOff, TrendingUp, Calendar, Upload, FileSpreadsheet, CheckCircle2, Package, BarChart3, Calculator, Loader2 } from "lucide-react";
+import { ChevronRight, ChevronLeft, GripVertical, Eye, EyeOff, TrendingUp, Calendar, Upload, FileSpreadsheet, CheckCircle2, Package, BarChart3, Calculator, Loader2, Save } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { formatCurrency, formatNumber } from './utils/numberFormatter';
 import ZReportUploader from './ZReportUploader';
@@ -15,12 +15,17 @@ import ServiceCategoryGroup from './ServiceCategoryGroup';
 import AggregatePlanning from './AggregatePlanning';
 import FutureRevenueUploader from './FutureRevenueUploader';
 import { Progress } from "@/components/ui/progress";
+import SaveProgressIndicator from './SaveProgressIndicator';
 
 export default function Step3SalesForecast({ forecastData, onUpdateForecast, onNext, onBack, customer, sanitizeAllForecastData, setForecastData }) {
   const [isImportingZReport, setIsImportingZReport] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [importStatusText, setImportStatusText] = useState('');
   const [retryAttempt, setRetryAttempt] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [saveStatus, setSaveStatus] = useState(null);
+  const saveTimeoutRef = useRef(null);
   
   // ✅ תיקון: טוען נתונים קיימים מיד בהתחלה, לא אפסים!
   const [salesForecast, setSalesForecast] = useState(() => {
@@ -380,48 +385,42 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     }
   };
 
-  const autoSaveForecast = (dataToSave) => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
+  const handleSaveProgress = async () => {
+    if (!forecastData.forecast_name?.trim()) {
+      alert('נא להזין שם לתחזית לפני שמירה');
+      return;
     }
 
-    saveTimeoutRef.current = setTimeout(async () => {
-      if (!dataToSave.forecast_name?.trim()) {
-        console.log('Skipping auto-save - missing forecast name');
-        return;
+    setIsSaving(true);
+    setSaveStatus('saving');
+
+    try {
+      const dataToSave = {
+        ...forecastData,
+        sales_forecast_onetime: salesForecast,
+        working_days_per_month: workingDays
+      };
+
+      if (forecastData.id) {
+        await base44.entities.ManualForecast.update(forecastData.id, dataToSave);
+      } else {
+        const created = await base44.entities.ManualForecast.create(dataToSave);
+        if (onUpdateForecast) {
+          onUpdateForecast({ id: created.id });
+        }
+        setForecastData(prev => ({ ...prev, id: created.id }));
       }
 
-      setSaveStatus('saving');
-      
-      try {
-        const sanitizedData = sanitizeAllForecastData(dataToSave);
-        
-        let savedForecast;
-        
-        if (sanitizedData.id) {
-          await base44.entities.ManualForecast.update(sanitizedData.id, sanitizedData);
-          savedForecast = sanitizedData;
-        } else {
-          savedForecast = await base44.entities.ManualForecast.create(sanitizedData);
-          setForecastData(prev => ({ ...prev, id: savedForecast.id }));
-        }
-        
-        setLastSaved(new Date());
-        setSaveStatus('saved');
-        
-        setTimeout(() => {
-          setSaveStatus(null);
-        }, 3000);
-        
-      } catch (error) {
-        console.error('Error auto-saving forecast:', error);
-        setSaveStatus('error');
-        
-        setTimeout(() => {
-          setSaveStatus(null);
-        }, 5000);
-      }
-    }, 1500);
+      setLastSaved(new Date());
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus(null), 2000);
+    } catch (error) {
+      console.error('Error saving:', error);
+      setSaveStatus('error');
+      alert('שגיאה בשמירה: ' + error.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSalesForecastUpdate = (updatedForecast) => {
@@ -617,9 +616,16 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <CardTitle className="text-horizon-text flex items-center gap-2">
+              <CardTitle className="text-horizon-text flex items-center gap-3">
                 <TrendingUp className="w-5 h-5 text-horizon-primary" />
                 תחזית מכירות חודשית - תכנון מול ביצוע
+                <SaveProgressIndicator
+                  onSave={handleSaveProgress}
+                  isSaving={isSaving}
+                  lastSaved={lastSaved}
+                  saveStatus={saveStatus}
+                  compact={true}
+                />
               </CardTitle>
               <p className="text-horizon-accent">הזן את כמויות המכירה המתוכננות והבפועל לכל חודש</p>
             </div>
