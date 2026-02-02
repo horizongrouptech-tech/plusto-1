@@ -522,7 +522,7 @@ export default function ManualForecastCharts({ profitLossData, yearlyTotals, sal
                 <TrendingUp className="w-5 h-5 text-white" />
               </div>
               <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent font-bold">
-                מגמת רווחיות
+                מגמת רווחיות עם הוצאות מימון
               </span>
             </CardTitle>
             <p className="text-sm text-horizon-accent mr-12">
