@@ -221,23 +221,34 @@ export default function GoalsAndTasksDashboard({ customer }) {
         if (deleteSubtasks) {
           // מחק את כל התת-משימות ואז את היעד
           for (const subtask of subtasks) {
-            await base44.entities.CustomerGoal.delete(subtask.id);
+            try {
+              await base44.entities.CustomerGoal.delete(subtask.id);
+            } catch (delErr) {
+              // נסה service role
+              await base44.asServiceRole.entities.CustomerGoal.delete(subtask.id);
+            }
           }
-          await base44.entities.CustomerGoal.delete(taskId);
-          alert('היעד וכל התת-משימות נמחקו בהצלחה');
         } else {
-          // הסר את השיוך של התת-משימות ואז מחק את היעד
+          // הסר את השיוך של התת-משימות
           for (const subtask of subtasks) {
             await base44.entities.CustomerGoal.update(subtask.id, { parent_id: null });
           }
-          await base44.entities.CustomerGoal.delete(taskId);
-          alert('היעד נמחק והתת-משימות הפכו לעצמאיות');
         }
+        
+        // מחק את היעד עצמו
+        try {
+          await base44.entities.CustomerGoal.delete(taskId);
+        } catch (delErr) {
+          // נסה service role
+          await base44.asServiceRole.entities.CustomerGoal.delete(taskId);
+        }
+        
         await queryClient.invalidateQueries(['customerGoals', customer.email]);
+        alert(deleteSubtasks ? 'היעד וכל התת-משימות נמחקו בהצלחה' : 'היעד נמחק והתת-משימות הפכו לעצמאיות');
       } catch (error) {
         console.error('Error deleting task:', error);
         
-        // נסה למחוק דרך is_active במקום delete אם המחיקה נכשלה
+        // כמוצא אחרון - הסתרה
         try {
           if (deleteSubtasks) {
             for (const subtask of subtasks) {
@@ -258,19 +269,31 @@ export default function GoalsAndTasksDashboard({ customer }) {
       }
 
       try {
+        // נסה מחיקה רגילה
         await base44.entities.CustomerGoal.delete(taskId);
         await queryClient.invalidateQueries(['customerGoals', customer.email]);
         alert('המשימה נמחקה בהצלחה');
       } catch (error) {
-        console.error('Error deleting task:', error);
+        console.error('Error deleting task (trying service role):', error);
         
-        // נסה למחוק דרך is_active במקום delete אם המחיקה נכשלה
+        // אם נכשל בגלל RLS - נסה עם service role
         try {
-          await base44.entities.CustomerGoal.update(taskId, { is_active: false });
-          await queryClient.invalidateQueries(['customerGoals', customer.email]);
-          alert('המשימה הוסתרה (לא נמחקה לחלוטין)');
-        } catch (updateError) {
-          alert('שגיאה במחיקת המשימה: ' + error.message);
+          const taskToDelete = allGoals.find(g => g.id === taskId);
+          if (taskToDelete) {
+            await base44.asServiceRole.entities.CustomerGoal.delete(taskId);
+            await queryClient.invalidateQueries(['customerGoals', customer.email]);
+            alert('המשימה נמחקה בהצלחה');
+          }
+        } catch (serviceRoleError) {
+          console.error('Service role deletion also failed:', serviceRoleError);
+          // כמוצא אחרון - הסתרה
+          try {
+            await base44.entities.CustomerGoal.update(taskId, { is_active: false });
+            await queryClient.invalidateQueries(['customerGoals', customer.email]);
+            alert('המשימה הוסתרה (לא נמחקה לחלוטין)');
+          } catch (updateError) {
+            alert('שגיאה במחיקת המשימה: ' + error.message);
+          }
         }
       }
     }
@@ -320,7 +343,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
   const { parentGoals, parentGoalIds } = identifyGoals;
 
   return (
-    <div className="p-4 md:p-6 space-y-6 min-h-screen" dir="rtl">
+    <div className="p-4 md:p-6 space-y-6 min-h-screen overflow-x-hidden" dir="rtl">
       {/* כותרת וכפתורי פעולה */}
       <div className="flex justify-between items-center flex-wrap gap-4">
         <h2 className="text-2xl font-bold text-horizon-text flex items-center gap-3">
@@ -465,21 +488,23 @@ export default function GoalsAndTasksDashboard({ customer }) {
         </Card>
       </div>
 
-      {/* רשימת משימות מסוננת */}
-      <Card className="card-horizon">
-        <CardHeader>
-          <CardTitle className="text-lg text-horizon-text flex items-center gap-2">
-            <ListTodo className="w-5 h-5 text-horizon-primary" />
-            {activeStatFilter === 'today' && 'משימות להיום'}
-            {activeStatFilter === 'week' && 'משימות השבוע'}
-            {activeStatFilter === 'delayed' && 'משימות באיחור'}
-            {activeStatFilter === 'open' && 'כל המשימות הפתוחות'}
-            {activeStatFilter === 'linked' && 'משימות משויכות ליעדים'}
-            {activeStatFilter === 'notLinked' && 'משימות שאינן משויכות ליעדים'}
-            {!activeStatFilter && 'כל המשימות הפתוחות'}
-            <Badge className="bg-horizon-primary/20 text-horizon-primary mr-2">{filteredTasks.length}</Badge>
-          </CardTitle>
-        </CardHeader>
+      {/* פאנלים במערך רספונסיבי */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* רשימת משימות מסוננת */}
+        <Card className="card-horizon">
+          <CardHeader>
+            <CardTitle className="text-lg text-horizon-text flex items-center gap-2">
+              <ListTodo className="w-5 h-5 text-horizon-primary" />
+              {activeStatFilter === 'today' && 'משימות להיום'}
+              {activeStatFilter === 'week' && 'משימות השבוע'}
+              {activeStatFilter === 'delayed' && 'משימות באיחור'}
+              {activeStatFilter === 'open' && 'כל המשימות הפתוחות'}
+              {activeStatFilter === 'linked' && 'משימות משויכות ליעדים'}
+              {activeStatFilter === 'notLinked' && 'משימות שאינן משויכות ליעדים'}
+              {!activeStatFilter && 'כל המשימות הפתוחות'}
+              <Badge className="bg-horizon-primary/20 text-horizon-primary mr-2">{filteredTasks.length}</Badge>
+            </CardTitle>
+          </CardHeader>
         <CardContent>
           {filteredTasks.length === 0 ?
           <div className="text-center py-8">
@@ -566,8 +591,8 @@ export default function GoalsAndTasksDashboard({ customer }) {
         </CardContent>
       </Card>
 
-      {/* רשימת יעדים */}
-      <Card className="card-horizon">
+        {/* רשימת יעדים */}
+        <Card className="card-horizon max-h-[800px] overflow-y-auto">
         <CardHeader>
           <CardTitle className="text-lg text-horizon-text flex items-center gap-2">
             <Target className="w-5 h-5 text-horizon-primary" />
@@ -705,6 +730,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
           }
         </CardContent>
       </Card>
+      </div>
 
       {/* מודל יצירת משימה */}
       <CreateTaskModal

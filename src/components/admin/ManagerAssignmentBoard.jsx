@@ -13,6 +13,7 @@ export default function ManagerAssignmentBoard({ clients, financialManagers, onA
     const [showAssignToExistingModal, setShowAssignToExistingModal] = useState(false);
     const [managerForExisting, setManagerForExisting] = useState(null);
     const [existingClientsSearch, setExistingClientsSearch] = useState('');
+    const [showOnlyUnassigned, setShowOnlyUnassigned] = useState(false);
 
     const unassignedClients = useMemo(() => {
         return clients.filter(c => !c.raw?.assigned_financial_manager_email && c.isActive);
@@ -127,10 +128,21 @@ export default function ManagerAssignmentBoard({ clients, financialManagers, onA
             {/* Unassigned Clients Pool */}
             <Card className="card-horizon">
                 <CardHeader className="border-b border-horizon">
-                    <CardTitle className="text-lg text-horizon-text flex items-center gap-2">
-                        <UserX className="w-5 h-5 text-red-400" />
-                        לקוחות ללא שיוך ({unassignedClients.length})
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg text-horizon-text flex items-center gap-2">
+                            <UserX className="w-5 h-5 text-red-400" />
+                            לקוחות ללא שיוך ({unassignedClients.length})
+                        </CardTitle>
+                        <Button
+                            size="sm"
+                            variant={showOnlyUnassigned ? 'default' : 'outline'}
+                            onClick={() => setShowOnlyUnassigned(!showOnlyUnassigned)}
+                            className={showOnlyUnassigned ? 'bg-red-500 text-white' : 'border-red-400 text-red-400'}
+                        >
+                            {showOnlyUnassigned ? '✓ רק ממתינים לשיוך' : 'הצג רק ממתינים לשיוך'}
+                        </Button>
+                    </div>
+                </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
                     <div className="mb-4">
@@ -183,8 +195,8 @@ export default function ManagerAssignmentBoard({ clients, financialManagers, onA
             </Card>
 
             {/* Managers with their clients */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {financialManagers.map(manager => {
+            <div className={`grid grid-cols-1 ${showOnlyUnassigned ? '' : 'lg:grid-cols-2'} gap-6`}>
+                {!showOnlyUnassigned && financialManagers.map(manager => {
                     const primaryClients = clients.filter(c => 
                         c.raw?.assigned_financial_manager_email === manager.email && c.isActive
                     );

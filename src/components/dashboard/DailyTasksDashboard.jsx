@@ -87,7 +87,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const [groupFilter, setGroupFilter] = useState('all');
   const [customerFilter, setCustomerFilter] = useState('all');
   const [showCompletedModal, setShowCompletedModal] = useState(false);
-  const [isClientsExpanded, setIsClientsExpanded] = useState(true);
+  const [isClientsExpanded, setIsClientsExpanded] = useState(false);
   const [showGoalBankModal, setShowGoalBankModal] = useState(false);
 
   const todayWorkGroup = getTodayWorkGroup();
@@ -213,6 +213,9 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     if (groupFilter !== 'all') {
       filtered = filtered.filter((task) => {
         const customer = allCustomers.find((c) => c.email === task.customer_email);
+        if (groupFilter === 'no_group') {
+          return !customer?.customer_group || customer.customer_group === '';
+        }
         return customer?.customer_group === groupFilter;
       });
     }
@@ -608,6 +611,14 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                 className={groupFilter === 'B' ? 'bg-[#fc9f67] text-white' : 'border-[#fc9f67] text-[#fc9f67]'}>
 
                 קבוצה B
+              </Button>
+              <Button
+                size="sm"
+                variant={groupFilter === 'no_group' ? 'default' : 'outline'}
+                onClick={() => setGroupFilter('no_group')}
+                className={groupFilter === 'no_group' ? 'bg-gray-500 text-white' : 'border-gray-400 text-gray-400'}>
+
+                ללא שיוך
               </Button>
             </div>
 
