@@ -419,8 +419,8 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
         z_report_detail_id: zReportDetail.id  // ✅ רק reference!
       };
 
-      const existingReports = forecastData.z_reports_uploaded || [];
-      const updatedReports = [...existingReports, uploadRecord];
+      const currentReports = forecastData.z_reports_uploaded || [];
+      const updatedReports = [...currentReports, uploadRecord];
 
       const completeUpdates = {
         sales_forecast_onetime: updated,
