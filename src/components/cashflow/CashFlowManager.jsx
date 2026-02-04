@@ -164,21 +164,36 @@ export default function CashFlowManager({ customer }) {
       });
 
       if (response.data.success) {
-        // שמירת הקובץ ל-FileUpload entity
+        // שמירת הקובץ ל-FileUpload entity - תמיד
         try {
+          // קביעת data_category מדויק לפי סוג הקובץ
+          let dataCategory = 'bank_statement'; // ברירת מחדל
+          
+          if (file.name.toLowerCase().includes('credit') || file.name.toLowerCase().includes('כרטיס')) {
+            dataCategory = 'credit_card_report';
+          } else if (file.name.toLowerCase().includes('bizibox')) {
+            dataCategory = 'bank_statement';
+          }
+          
           await base44.entities.FileUpload.create({
             customer_email: customer.email,
             filename: file.name,
             file_url: file_url,
             file_type: file.name.split('.').pop()?.toLowerCase() || 'unknown',
-            status: 'processed',
-            data_category: 'cashflow',
+            status: 'analyzed',
+            data_category: dataCategory,
             analysis_notes: `נוספו ${response.data.processed || response.data.cashFlowEntries || 0} תנועות`,
-            customer_email: customer.email
+            products_count: response.data.processed || response.data.cashFlowEntries || 0,
+            parsed_data: {
+              summary: `${response.data.processed || 0} תנועות, ${response.data.categories?.length || 0} קטגוריות`,
+              dateRange: response.data.dateRange,
+              categories: response.data.categories || []
+            }
           });
+          toast.success('הקובץ נשמר בהצלחה בלשונית "קבצים"');
         } catch (saveError) {
           console.error('Error saving file record:', saveError);
-          // לא נכשיל את התהליך
+          toast.warning('הקובץ עובד אך לא נשמר ברשימת הקבצים');
         }
 
         queryClient.invalidateQueries(['cashFlow', customer.email]);
