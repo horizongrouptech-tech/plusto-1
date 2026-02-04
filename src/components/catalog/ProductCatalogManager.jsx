@@ -910,45 +910,11 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                     קטלוג חדש
                 </Button>
                 {selectedCatalogId && catalogs.find(c => c.id === selectedCatalogId) && (
-                  <SetDefaultCatalogButton
-                    catalog={catalogs.find(c => c.id === selectedCatalogId)}
-                    customerEmail={customer.email}
-                    onSuccess={loadCatalogs}
-                  />
-                )}
-                {selectedCatalogId && (
-                    <Button 
-                        onClick={async () => {
-                            try {
-                                // בטל את כל הקטלוגים האחרים
-                                const allCatalogs = await Catalog.filter({ customer_email: customer.email });
-                                await Promise.all(
-                                    allCatalogs.map(cat => 
-                                        Catalog.update(cat.id, { is_default: cat.id === selectedCatalogId })
-                                    )
-                                );
-                                
-                                // עדכן את הקטלוג הנוכחי
-                                await Catalog.update(selectedCatalogId, { 
-                                    is_default: true,
-                                    catalog_name: 'קטלוג רשמי'
-                                });
-                                
-                                await loadCatalogs();
-                                toast.success('הקטלוג הוגדר כקטלוג רשמי ושמו שונה ל"קטלוג רשמי"');
-                            } catch (error) {
-                                console.error('Error setting default catalog:', error);
-                                toast.error('שגיאה בהגדרת קטלוג רשמי');
-                            }
-                        }}
-                        size="sm"
-                        variant="outline"
-                        disabled={disableAllActions || catalogs.find(c => c.id === selectedCatalogId)?.is_default}
-                        className="border-horizon-primary text-horizon-primary"
-                    >
-                        <Star className="w-4 h-4 ml-1" />
-                        הגדר כקטלוג רשמי
-                    </Button>
+                 <SetDefaultCatalogButton
+                   catalog={catalogs.find(c => c.id === selectedCatalogId)}
+                   customerEmail={customer.email}
+                   onSuccess={loadCatalogs}
+                 />
                 )}
             </div>
             
