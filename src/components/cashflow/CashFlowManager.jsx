@@ -31,6 +31,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { format } from 'date-fns';
 import RecurringExpensesTable from './RecurringExpensesTable';
 import FailedRowsEditor from './FailedRowsEditor';
+import RecurringTransactionsTab from './RecurringTransactionsTab';
+import CreditCardsTab from './CreditCardsTab';
+import { toast } from 'sonner';
 
 const ITEMS_PER_PAGE = 25;
 
@@ -588,45 +591,44 @@ export default function CashFlowManager({ customer }) {
                               {item.payment_type || '-'}
                             </TableCell>
                             <TableCell className="text-right">
-                              {editingCategoryId === item.id ? (
-                                <Select
-                                  value={item.category || ''}
-                                  onValueChange={async (value) => {
-                                    try {
-                                      await base44.entities.CashFlow.update(item.id, { category: value });
-                                      queryClient.invalidateQueries(['cashFlow', customer.email]);
-                                      queryClient.invalidateQueries(['cashFlowCategories', customer.email]);
-                                      setEditingCategoryId(null);
-                                    } catch (error) {
-                                      console.error('Error updating category:', error);
-                                      alert('שגיאה בעדכון קטגוריה');
+                              <Select
+                                value={item.category || ''}
+                                onValueChange={async (value) => {
+                                  try {
+                                    // בדיקה אם התנועה בעבר - אזהרה לשיוך עתידי בלבד
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    const itemDate = new Date(item.date);
+                                    
+                                    if (itemDate < today) {
+                                      toast.warning('שים לב: שיוך קטגוריה חדש יחול רק על תנועות מהיום והלאה');
                                     }
-                                  }}
-                                  onOpenChange={(open) => {
-                                    if (!open) {
-                                      setEditingCategoryId(null);
-                                    }
-                                  }}
-                                >
-                                  <SelectTrigger className="w-full min-w-[150px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {allCategories.map(cat => (
-                                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <div 
-                                  className="cursor-pointer hover:bg-horizon-card/50 p-1 rounded inline-block"
-                                  onClick={() => setEditingCategoryId(item.id)}
-                                >
-                                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
-                                    {item.category || 'ללא קטגוריה'}
-                                  </Badge>
-                                </div>
-                              )}
+                                    
+                                    await base44.entities.CashFlow.update(item.id, { 
+                                      category: value,
+                                      category_assignment_date: new Date().toISOString()
+                                    });
+                                    queryClient.invalidateQueries(['cashFlow', customer.email]);
+                                    queryClient.invalidateQueries(['cashFlowCategories', customer.email]);
+                                    toast.success('קטגוריה עודכנה');
+                                  } catch (error) {
+                                    console.error('Error updating category:', error);
+                                    toast.error('שגיאה בעדכון קטגוריה');
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="w-[140px] h-8 bg-horizon-dark border-horizon text-horizon-text text-sm">
+                                  <SelectValue placeholder="בחר קטגוריה" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {allCategories.map(cat => (
+                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                  ))}
+                                  <SelectItem value="__new__" className="text-horizon-primary">
+                                    + הוסף קטגוריה חדשה
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
                             </TableCell>
                             <TableCell className="text-right text-horizon-accent text-sm">
                               {item.reference_number || '-'}
@@ -743,14 +745,7 @@ export default function CashFlowManager({ customer }) {
         </TabsContent>
 
         <TabsContent value="recurring-transactions">
-          <Card className="card-horizon">
-            <CardHeader>
-              <CardTitle className="text-horizon-text">תנועות קבועות</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-horizon-accent">תנועות קבועות - תכונה זו תתווסף בקרוב</p>
-            </CardContent>
-          </Card>
+          <RecurringTransactionsTab customer={customer} dateRange={dateRange} />
         </TabsContent>
 
         <TabsContent value="recurring">
@@ -761,14 +756,7 @@ export default function CashFlowManager({ customer }) {
         </TabsContent>
 
         <TabsContent value="credit-cards">
-          <Card className="card-horizon">
-            <CardHeader>
-              <CardTitle className="text-horizon-text">כרטיסי אשראי</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-horizon-accent">ניהול כרטיסי אשראי - תכונה זו תתווסף בקרוב</p>
-            </CardContent>
-          </Card>
+          <CreditCardsTab customer={customer} dateRange={dateRange} />
         </TabsContent>
       </Tabs>
 
@@ -907,10 +895,10 @@ export default function CashFlowManager({ customer }) {
                   queryClient.invalidateQueries(['cashFlow', customer.email]);
                   setShowAddExpectedModal(false);
                   setExpectedTransaction({ type: 'expense', category: '', amount: 0, date: '', description: '' });
-                  alert('התנועה הצפויה נוספה בהצלחה!');
+                  toast.success('התנועה הצפויה נוספה בהצלחה');
                 } catch (error) {
                   console.error('Error adding expected transaction:', error);
-                  alert('שגיאה בהוספת התנועה: ' + error.message);
+                  toast.error('שגיאה בהוספת התנועה: ' + error.message);
                 }
               }}
               className="btn-horizon-primary"

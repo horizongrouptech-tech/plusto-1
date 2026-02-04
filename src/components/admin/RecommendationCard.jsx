@@ -122,6 +122,32 @@ export default function RecommendationCard({
             </div>
           )}
 
+          {/* מקור ההמלצה */}
+          {recommendation.source && (
+            <div className="mt-2 text-xs text-horizon-accent text-right flex items-center gap-1 justify-end">
+              <span>📊</span>
+              <span>מקור: {
+                recommendation.source === 'admin_generated' ? 'נוצר ע"י מנהל' :
+                recommendation.source === 'whatsapp_request' ? 'בקשת וואטסאפ' :
+                recommendation.source === 'automatic_engine' ? 'מנוע אוטומטי' :
+                recommendation.source === 'goal_oriented' ? 'מונחה יעדים' :
+                recommendation.source
+              }</span>
+            </div>
+          )}
+          
+          {recommendation.trigger_condition && (
+            <div className="mt-1 text-xs text-horizon-accent text-right">
+              💡 טריגר: {
+                recommendation.trigger_condition === 'margin_too_low' ? 'מרווח רווח נמוך' :
+                recommendation.trigger_condition === 'sales_decline' ? 'ירידה במכירות' :
+                recommendation.trigger_condition === 'inventory_high' ? 'מלאי גבוה' :
+                recommendation.trigger_condition === 'supplier_price_change' ? 'שינוי מחיר ספק' :
+                recommendation.trigger_condition
+              }
+            </div>
+          )}
+
           {/* Admin Rating Widget */}
           <div className="mt-3">
             <AdminRatingWidget 
