@@ -1,9 +1,9 @@
-
-import React from 'react'; // useState is no longer needed in the new structure unless for AdminRatingWidget internal state
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Archive, Edit3, Eye } from "lucide-react";
+import { Archive, Edit3, Eye, Send } from "lucide-react";
+import { toast } from "sonner";
 // Assuming User and Recommendation entities are still needed for broader context if not explicitly removed,
 // though their direct use in this component's new logic (handleSendWhatsApp) is gone.
 // For now, keeping them as they were in the original file, just in case they are used elsewhere
@@ -74,14 +74,15 @@ export default function RecommendationCard({
   onView, 
   onArchive,
   onRatingUpdate,
+  onSendWhatsApp,
   isUpdating = false 
 }) {
   return (
-    <Card className="card-horizon hover:shadow-lg transition-all duration-300">
-      <CardHeader className="pb-3">
+    <Card className="card-horizon hover:shadow-lg transition-all duration-300 min-h-[280px] flex flex-col">
+      <CardHeader className="pb-3 flex-shrink-0">
         <div className="flex justify-between items-start">
           <div className="flex-1">
-            <CardTitle className="text-lg text-horizon-text text-right mb-2">
+            <CardTitle className="text-lg text-horizon-text text-right mb-2 line-clamp-2">
               {recommendation.title}
             </CardTitle>
             <div className="flex flex-wrap gap-2 justify-end">
@@ -104,59 +105,86 @@ export default function RecommendationCard({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        <p className="text-sm text-horizon-accent text-right line-clamp-3">
-          {recommendation.description}
-        </p>
+      <CardContent className="space-y-4 flex-1 flex flex-col">
+        <div className="flex-1">
+          <p className="text-sm text-horizon-accent text-right line-clamp-3">
+            {recommendation.description}
+          </p>
 
-        {recommendation.expected_profit && (
-          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-400">
-                {formatCurrency(recommendation.expected_profit)}
+          {recommendation.expected_profit && (
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 mt-3">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-400">
+                  {formatCurrency(recommendation.expected_profit)}
+                </div>
+                <p className="text-xs text-green-300">רווח צפוי</p>
               </div>
-              <p className="text-xs text-green-300">רווח צפוי</p>
             </div>
+          )}
+
+          {/* Admin Rating Widget */}
+          <div className="mt-3">
+            <AdminRatingWidget 
+              recommendation={recommendation}
+              onRatingUpdate={onRatingUpdate}
+              isUpdating={isUpdating}
+            />
           </div>
-        )}
+        </div>
 
-        {/* Admin Rating Widget */}
-        <AdminRatingWidget 
-          recommendation={recommendation}
-          onRatingUpdate={onRatingUpdate}
-          isUpdating={isUpdating}
-        />
+        {/* Action Buttons - Always at bottom */}
+        <div className="mt-auto pt-3 border-t border-horizon space-y-2">
+          <div className="flex gap-2 justify-end flex-wrap">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onView(recommendation)}
+              className="border-horizon text-horizon-text hover:bg-horizon-card"
+            >
+              <Eye className="w-4 h-4 ml-1" />
+              צפה
+            </Button>
+            
+            {onSendWhatsApp && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onSendWhatsApp(recommendation)}
+                className="border-green-500 text-green-400 hover:bg-green-500/10"
+              >
+                <Send className="w-4 h-4 ml-1" />
+                וואטסאפ
+              </Button>
+            )}
+            
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onUpgrade(recommendation)}
+              className="border-blue-500 text-blue-400 hover:bg-blue-500/10"
+            >
+              <Edit3 className="w-4 h-4 ml-1" />
+              שדרג
+            </Button>
 
-        {/* Action Buttons */}
-        <div className="flex gap-2 justify-end pt-3 border-t border-horizon">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onView(recommendation)}
-            className="border-horizon text-horizon-text hover:bg-horizon-card"
-          >
-            <Eye className="w-4 h-4 ml-1" />
-            צפה
-          </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onArchive(recommendation)}
+              className="border-orange-500 text-orange-400 hover:bg-orange-500/10"
+            >
+              <Archive className="w-4 h-4 ml-1" />
+              ארכיון
+            </Button>
+          </div>
           
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onUpgrade(recommendation)}
-            className="border-blue-500 text-blue-400 hover:bg-blue-500/10"
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => onView(recommendation)}
+            className="w-full text-horizon-primary hover:text-horizon-primary/80"
           >
-            <Edit3 className="w-4 h-4 ml-1" />
-            שדרג
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onArchive(recommendation)}
-            className="border-orange-500 text-orange-400 hover:bg-orange-500/10"
-          >
-            <Archive className="w-4 h-4 ml-1" />
-            ארכיון
+            לחץ לצפייה מלאה
           </Button>
         </div>
       </CardContent>
