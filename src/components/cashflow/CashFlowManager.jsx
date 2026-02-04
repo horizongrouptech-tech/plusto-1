@@ -31,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { format } from 'date-fns';
 import RecurringExpensesTable from './RecurringExpensesTable';
 import FailedRowsEditor from './FailedRowsEditor';
+import { toast } from 'sonner';
 
 const ITEMS_PER_PAGE = 25;
 
@@ -216,13 +217,10 @@ export default function CashFlowManager({ customer }) {
             setShowFailedEditor(true);
           }
         } else {
-          alert(
-            `הקובץ נותח בהצלחה!\n\n` +
-            `✅ נוספו: ${response.data.processed || response.data.cashFlowEntries} תנועות חדשות\n` +
-            `🔄 כפילויות: ${response.data.duplicates || 0} שורות (דולגו)\n` +
-            `📁 קטגוריות: ${response.data.categories?.length || 0}\n` +
-            `📅 טווח: ${response.data.dateRange || ''}`
-          );
+          toast.success('הקובץ נותח בהצלחה!', {
+            description: `נוספו ${response.data.processed || response.data.cashFlowEntries} תנועות חדשות, ${response.data.categories?.length || 0} קטגוריות`,
+            duration: 4000
+          });
         }
       } else {
         // אם יש details, שמור אותם להצגה
@@ -296,7 +294,7 @@ export default function CashFlowManager({ customer }) {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error exporting:', error);
-      alert('שגיאה בייצוא הקובץ: ' + error.message);
+      toast.error('שגיאה בייצוא הקובץ: ' + error.message);
     }
   };
 
@@ -346,7 +344,7 @@ export default function CashFlowManager({ customer }) {
       setEditingItem(null);
     } catch (error) {
       console.error('Error updating:', error);
-      alert('שגיאה בעדכון: ' + error.message);
+      toast.error('שגיאה בעדכון: ' + error.message);
     } finally {
       setIsSaving(false);
     }
@@ -430,9 +428,9 @@ export default function CashFlowManager({ customer }) {
                       await base44.entities.CashFlow.delete(entry.id);
                     }
                     queryClient.invalidateQueries(['cashFlow', customer.email]);
-                    alert('כל נתוני התזרים נמחקו בהצלחה');
+                    toast.success('כל נתוני התזרים נמחקו בהצלחה');
                   } catch (error) {
-                    alert('שגיאה במחיקה: ' + error.message);
+                    toast.error('שגיאה במחיקה: ' + error.message);
                   }
                 }}
                 variant="outline"
@@ -599,7 +597,7 @@ export default function CashFlowManager({ customer }) {
                                       setEditingCategoryId(null);
                                     } catch (error) {
                                       console.error('Error updating category:', error);
-                                      alert('שגיאה בעדכון קטגוריה');
+                                      toast.error('שגיאה בעדכון קטגוריה');
                                     }
                                   }}
                                   onOpenChange={(open) => {
@@ -907,10 +905,10 @@ export default function CashFlowManager({ customer }) {
                   queryClient.invalidateQueries(['cashFlow', customer.email]);
                   setShowAddExpectedModal(false);
                   setExpectedTransaction({ type: 'expense', category: '', amount: 0, date: '', description: '' });
-                  alert('התנועה הצפויה נוספה בהצלחה!');
+                  toast.success('התנועה הצפויה נוספה בהצלחה!');
                 } catch (error) {
                   console.error('Error adding expected transaction:', error);
-                  alert('שגיאה בהוספת התנועה: ' + error.message);
+                  toast.error('שגיאה בהוספת התנועה: ' + error.message);
                 }
               }}
               className="btn-horizon-primary"
@@ -1074,10 +1072,10 @@ export default function CashFlowManager({ customer }) {
                   }
                   queryClient.invalidateQueries(['cashFlow', customer.email]);
                   setShowOpeningBalanceDialog(false);
-                  alert('יתרת הפתיחה עודכנה בהצלחה!');
+                  toast.success('יתרת הפתיחה עודכנה בהצלחה!');
                 } catch (error) {
                   console.error('Error updating opening balance:', error);
-                  alert('שגיאה בעדכון יתרת פתיחה: ' + error.message);
+                  toast.error('שגיאה בעדכון יתרת פתיחה: ' + error.message);
                 }
               }}
               className="btn-horizon-primary"
