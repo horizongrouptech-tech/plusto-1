@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -90,7 +89,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const [customerFilter, setCustomerFilter] = useState('all');
   const [financialManagerFilter, setFinancialManagerFilter] = useState('all'); // Added new state for financial manager filter
   const [showCompletedModal, setShowCompletedModal] = useState(false);
-  const [isClientsExpanded, setIsClientsExpanded] = useState(false);
+  const [isClientsExpanded, setIsClientsExpanded] = useState(false); // Default: collapsed
   const [showGoalBankModal, setShowGoalBankModal] = useState(false);
 
   const todayWorkGroup = getTodayWorkGroup();
@@ -613,9 +612,14 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         </CardContent>
       </Card>
 
-      {/* טבלת לקוחות לעבודה היום */}
-      {todaysClients.length > 0 &&
-      <Card className="card-horizon bg-white border-2 border-[#e1e8ed]">
+      {/* לוח Kanban */}
+      {tasksLoading ?
+      <div className="text-center py-12">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto text-horizon-primary mb-4" />
+          <p className="text-horizon-accent">טוען לוח משימות...</p>
+        </div> :
+
+      <DragDropContext onDragEnd={handleDragEnd}>
           <CardHeader className="border-b border-[#e1e8ed] bg-gradient-to-l from-[#32acc1]/5 to-[#fc9f67]/5">
             <CardTitle className="text-horizon-text flex items-center justify-between text-right">
               <div className="flex items-center gap-2">

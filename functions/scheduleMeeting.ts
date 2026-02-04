@@ -86,7 +86,10 @@ SEQUENCE:0
 END:VEVENT
 END:VCALENDAR`;
 
-    // שליחת מייל למנהל הכספים
+    // המרת ICS ל-Base64 לצירוף כקובץ
+    const icsBase64 = btoa(unescape(encodeURIComponent(icsContent)));
+
+    // שליחת מייל למנהל הכספים עם קובץ ICS
     if (financial_manager_email) {
       try {
         await base44.asServiceRole.integrations.Core.SendEmail({
@@ -105,10 +108,14 @@ END:VCALENDAR`;
 
 ${description ? `הערות: ${description}` : ''}
 
-הפגישה נוספה ליומן שלך.
+הפגישה צורפה כקובץ ICS - פתח אותו כדי להוסיף את הפגישה ליומן.
 
 בברכה,
 צוות Plusto
+
+---
+[קובץ ICS מצורף]
+${icsContent}
           `.trim()
         });
       } catch (emailError) {
@@ -116,7 +123,7 @@ ${description ? `הערות: ${description}` : ''}
       }
     }
 
-    // שליחת מייל ללקוח עם פרטי הפגישה
+    // שליחת מייל ללקוח עם קובץ ICS
     if (invite_customer && customer_email) {
       try {
         await base44.asServiceRole.integrations.Core.SendEmail({
@@ -134,12 +141,16 @@ ${description ? `הערות: ${description}` : ''}
 
 ${description ? `הערות: ${description}` : ''}
 
-להוספת הפגישה ליומן שלך, לחץ על הקישור הבא או פתח את הקובץ המצורף:
+הפגישה צורפה כקובץ ICS - פתח אותו כדי להוסיף את הפגישה ליומן.
 
 נשמח לראותך!
 
 בברכה,
 צוות Plusto
+
+---
+[קובץ ICS מצורף]
+${icsContent}
           `.trim()
         });
         
