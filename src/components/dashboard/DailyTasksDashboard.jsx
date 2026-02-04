@@ -33,6 +33,7 @@ import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { DragDropContext, Draggable } from '@hello-pangea/dnd';
+import { toast } from 'sonner';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -320,11 +321,11 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       queryClient.invalidateQueries(['allRelevantTasks']); // Invalidate the broader query
       setIsTaskModalOpen(false);
       setSelectedTask(null);
-      alert('המשימה עודכנה בהצלחה!');
+      toast.success('המשימה עודכנה בהצלחה!');
     },
     onError: (error) => {
       console.error('Error updating task:', error);
-      alert('שגיאה בעדכון המשימה: ' + error.message);
+      toast.error('שגיאה בעדכון המשימה: ' + error.message);
     }
   });
 
@@ -353,11 +354,11 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['allRelevantTasks']);
-      alert('המשימה הושלמה בהצלחה!');
+      toast.success('המשימה הושלמה בהצלחה!');
     },
     onError: (error) => {
       console.error('Error marking task as done:', error);
-      alert('שגיאה בהשלמת המשימה: ' + error.message);
+      toast.error('שגיאה בהשלמת המשימה: ' + error.message);
     }
   });
 
@@ -397,10 +398,10 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       try {
         await base44.entities.CustomerGoal.update(taskId, { status: 'open' });
         queryClient.invalidateQueries(['allRelevantTasks']);
-        alert('המשימה שוחזרה בהצלחה!');
+        toast.success('המשימה שוחזרה בהצלחה!');
       } catch (error) {
         console.error('Error restoring task:', error);
-        alert('שגיאה בשחזור המשימה');
+        toast.error('שגיאה בשחזור המשימה');
       }
     }
   };
@@ -418,7 +419,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       queryClient.invalidateQueries(['allRelevantTasks']);
     } catch (error) {
       console.error('Error updating task status:', error);
-      alert('שגיאה בעדכון סטטוס המשימה');
+      toast.error('שגיאה בעדכון סטטוס המשימה');
       queryClient.invalidateQueries(['allRelevantTasks']);
     }
   };
