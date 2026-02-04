@@ -17,7 +17,7 @@ import {
   CheckCircle2,
   Clock,
   AlertTriangle,
-  Calendar,
+  Calendar as CalendarIcon,
   ListTodo,
   LayoutGrid,
   Link as LinkIcon,
@@ -366,7 +366,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
                 <p className="text-sm text-horizon-accent">משימות להיום</p>
                 <p className="text-2xl font-bold text-horizon-primary">{stats.tasksToday}</p>
               </div>
-              <Calendar className="w-8 h-8 text-horizon-primary" />
+              <CalendarIcon className="w-8 h-8 text-horizon-primary" />
             </div>
           </CardContent>
         </Card>
@@ -515,8 +515,8 @@ export default function GoalsAndTasksDashboard({ customer }) {
                           </Badge>
                           {task.end_date &&
                         <Badge variant="outline" className="border-horizon-accent text-horizon-accent">
-                              <Calendar className="w-3 h-3 ml-1" />
-                              {format(new Date(task.end_date), 'dd/MM/yyyy', { locale: he })}
+                            <CalendarIcon className="w-3 h-3 ml-1" />
+                            {format(new Date(task.end_date), 'dd/MM/yyyy', { locale: he })}
                             </Badge>
                         }
                           {parentGoal &&
@@ -621,7 +621,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
                           </div>
                           {(goal.start_date || goal.end_date) &&
                         <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4" />
+                              <CalendarIcon className="w-4 h-4" />
                               <span>
                                 {goal.start_date ? format(new Date(goal.start_date), 'dd/MM/yy', { locale: he }) : '?'} - {goal.end_date ? format(new Date(goal.end_date), 'dd/MM/yy', { locale: he }) : '?'}
                               </span>
@@ -945,7 +945,7 @@ function CreateTaskModal_OLD({ isOpen, onClose, customer, currentUser, allGoals,
                     ) : (
                       <span className="text-horizon-accent">בחר תאריך</span>
                     )}
-                    <Calendar className="w-4 h-4 mr-2" />
+                    <CalendarIcon className="w-4 h-4 mr-2" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 bg-horizon-card border-horizon" align="end">
@@ -977,7 +977,7 @@ function CreateTaskModal_OLD({ isOpen, onClose, customer, currentUser, allGoals,
                     ) : (
                       <span className="text-horizon-accent">בחר תאריך</span>
                     )}
-                    <Calendar className="w-4 h-4 mr-2" />
+                    <CalendarIcon className="w-4 h-4 mr-2" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 bg-horizon-card border-horizon" align="end">
