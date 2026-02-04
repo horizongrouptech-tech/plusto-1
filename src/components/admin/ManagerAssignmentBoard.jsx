@@ -142,7 +142,6 @@ export default function ManagerAssignmentBoard({ clients, financialManagers, onA
                             {showOnlyUnassigned ? '✓ רק ממתינים לשיוך' : 'הצג רק ממתינים לשיוך'}
                         </Button>
                     </div>
-                </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
                     <div className="mb-4">
