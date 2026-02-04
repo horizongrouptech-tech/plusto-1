@@ -31,6 +31,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Progress } from "@/components/ui/progress";
 import { base44 } from '@/api/base44Client';
 import { cleanCatalogSmartly } from "@/functions/cleanCatalogSmartly";
+import { toast } from 'sonner';
 import { processCatalogUpload } from "@/functions/processCatalogUpload";
 import { cancelCatalogGeneration } from "@/functions/cancelCatalogGeneration";
 import { UploadFile } from "@/integrations/Core";
@@ -926,10 +927,10 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                                 });
                                 
                                 await loadCatalogs();
-                                alert('הקטלוג הוגדר כקטלוג רשמי');
+                                toast.success('הקטלוג הוגדר כקטלוג רשמי ושמו שונה ל"קטלוג רשמי"');
                             } catch (error) {
                                 console.error('Error setting default catalog:', error);
-                                alert('שגיאה בהגדרת קטלוג רשמי');
+                                toast.error('שגיאה בהגדרת קטלוג רשמי');
                             }
                         }}
                         size="sm"

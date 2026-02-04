@@ -203,29 +203,19 @@ export default function CashFlowManager({ customer }) {
         
         // הצג התראה עם סיכום
         const hasIssues = (response.data.failed || 0) > 0 || (response.data.skipped || 0) > 5;
-        
+
         if (hasIssues) {
-          const shouldEdit = window.confirm(
-            `הקובץ נותח בהצלחה!\n\n` +
-            `✅ נוספו: ${response.data.processed || response.data.cashFlowEntries} תנועות חדשות\n` +
-            `🔄 כפילויות: ${response.data.duplicates || 0} שורות (דולגו)\n` +
-            `⚠️ דולגו: ${response.data.skipped || 0} שורות\n` +
-            `❌ נכשלו: ${response.data.failed || 0} שורות\n` +
-            `📁 קטגוריות: ${response.data.categories?.length || 0}\n\n` +
-            `האם לפתוח את עורך השורות הבעייתיות?`
-          );
-          
-          if (shouldEdit) {
-            setShowFailedEditor(true);
-          }
+          toast.warning(`נוספו ${response.data.processed || 0} תנועות, אך יש ${response.data.failed || 0} שורות בעייתיות`, {
+            duration: 5000,
+            action: {
+              label: 'ערוך שורות',
+              onClick: () => setShowFailedEditor(true)
+            }
+          });
         } else {
-          alert(
-            `הקובץ נותח בהצלחה!\n\n` +
-            `✅ נוספו: ${response.data.processed || response.data.cashFlowEntries} תנועות חדשות\n` +
-            `🔄 כפילויות: ${response.data.duplicates || 0} שורות (דולגו)\n` +
-            `📁 קטגוריות: ${response.data.categories?.length || 0}\n` +
-            `📅 טווח: ${response.data.dateRange || ''}`
-          );
+          toast.success(`הקובץ יובא בהצלחה! ${response.data.processed || 0} תנועות נוספו`, {
+            duration: 4000
+          });
         }
       } else {
         // אם יש details, שמור אותם להצגה
@@ -270,7 +260,9 @@ export default function CashFlowManager({ customer }) {
       }
       
       // הודעה ידידותית למשתמש
-      alert('⚠️ הקובץ לא הועלה בהצלחה\n\nהקובץ הועבר לטיפול מנהל המערכת ונבדק בהקדם.\nתוכל לראות את הסטטוס בעדכונים שיישלחו אליך.');
+      toast.error('הקובץ לא הועלה בהצלחה. הקובץ הועבר לטיפול מנהל המערכת', {
+        duration: 5000
+      });
     } finally {
       setIsUploading(false);
       // איפוס שדה הקובץ
@@ -299,7 +291,7 @@ export default function CashFlowManager({ customer }) {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error exporting:', error);
-      alert('שגיאה בייצוא הקובץ: ' + error.message);
+      toast.error('שגיאה בייצוא הקובץ: ' + error.message);
     }
   };
 
@@ -326,6 +318,18 @@ export default function CashFlowManager({ customer }) {
 
   // פונקציות עריכה ומחיקה
   const handleEditClick = (item) => {
+    // בדוק אם התנועה עתידית
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const itemDate = new Date(item.date);
+    
+    if (itemDate < today && !item.is_expected) {
+      const confirmEdit = confirm('תנועה זו בעבר. האם אתה בטוח שברצונך לערוך אותה?\n\nשים לב: עריכה מומלצת רק לתנועות עתידיות.');
+      if (!confirmEdit) {
+        return;
+      }
+    }
+    
     setEditingItem({ ...item });
     setIsEditDialogOpen(true);
   };
@@ -349,7 +353,7 @@ export default function CashFlowManager({ customer }) {
       setEditingItem(null);
     } catch (error) {
       console.error('Error updating:', error);
-      alert('שגיאה בעדכון: ' + error.message);
+      toast.error('שגיאה בעדכון: ' + error.message);
     } finally {
       setIsSaving(false);
     }
@@ -362,7 +366,7 @@ export default function CashFlowManager({ customer }) {
       setDeleteConfirmId(null);
     } catch (error) {
       console.error('Error deleting:', error);
-      alert('שגיאה במחיקה: ' + error.message);
+      toast.error('שגיאה במחיקה: ' + error.message);
     }
   };
 
@@ -433,9 +437,9 @@ export default function CashFlowManager({ customer }) {
                       await base44.entities.CashFlow.delete(entry.id);
                     }
                     queryClient.invalidateQueries(['cashFlow', customer.email]);
-                    alert('כל נתוני התזרים נמחקו בהצלחה');
+                    toast.success('כל נתוני התזרים נמחקו בהצלחה');
                   } catch (error) {
-                    alert('שגיאה במחיקה: ' + error.message);
+                    toast.error('שגיאה במחיקה: ' + error.message);
                   }
                 }}
                 variant="outline"
@@ -595,13 +599,25 @@ export default function CashFlowManager({ customer }) {
                                 value={item.category || ''}
                                 onValueChange={async (value) => {
                                   try {
+                                    // טיפול בהוספת קטגוריה חדשה
+                                    if (value === '__new__') {
+                                      const newCategory = prompt('הזן שם לקטגוריה החדשה:');
+                                      if (!newCategory?.trim()) {
+                                        return;
+                                      }
+                                      value = newCategory.trim();
+                                    }
+                                    
                                     // בדיקה אם התנועה בעבר - אזהרה לשיוך עתידי בלבד
                                     const today = new Date();
                                     today.setHours(0, 0, 0, 0);
                                     const itemDate = new Date(item.date);
                                     
                                     if (itemDate < today) {
-                                      toast.warning('שים לב: שיוך קטגוריה חדש יחול רק על תנועות מהיום והלאה');
+                                      const confirmPast = confirm('שים לב: תנועה זו מתוארכת לעבר.\n\nשיוך קטגוריה חדש יחול רק על תנועות מהיום והלאה.\n\nהאם להמשיך?');
+                                      if (!confirmPast) {
+                                        return;
+                                      }
                                     }
                                     
                                     await base44.entities.CashFlow.update(item.id, { 
@@ -1062,10 +1078,10 @@ export default function CashFlowManager({ customer }) {
                   }
                   queryClient.invalidateQueries(['cashFlow', customer.email]);
                   setShowOpeningBalanceDialog(false);
-                  alert('יתרת הפתיחה עודכנה בהצלחה!');
+                  toast.success('יתרת הפתיחה עודכנה בהצלחה');
                 } catch (error) {
                   console.error('Error updating opening balance:', error);
-                  alert('שגיאה בעדכון יתרת פתיחה: ' + error.message);
+                  toast.error('שגיאה בעדכון יתרת פתיחה: ' + error.message);
                 }
               }}
               className="btn-horizon-primary"
