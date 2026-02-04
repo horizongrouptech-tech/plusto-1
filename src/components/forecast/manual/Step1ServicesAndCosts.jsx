@@ -48,6 +48,10 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
   const [availableCatalogs, setAvailableCatalogs] = useState([]);
   const [isLoadingCatalogs, setIsLoadingCatalogs] = useState(false);
   const [isLoadingCatalogProducts, setIsLoadingCatalogProducts] = useState(false);
+  
+  // ⭐ State לטעינת כל המוצרים מכל הקטלוגים (לשיוך שירותים)
+  const [allCatalogProducts, setAllCatalogProducts] = useState([]);
+  const [isLoadingAllProducts, setIsLoadingAllProducts] = useState(false);
 
   useEffect(() => {
     const servicesFromData = forecastData.services || [];
@@ -153,6 +157,53 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
   useEffect(() => {
     loadCatalogs();
   }, [loadCatalogs]);
+
+  // ⭐ טעינת כל המוצרים מכל הקטלוגים (לשיוך שירותים)
+  const loadAllCatalogProducts = useCallback(async () => {
+    if (!forecastData?.customer_email || availableCatalogs.length === 0) {
+      return;
+    }
+
+    setIsLoadingAllProducts(true);
+    try {
+      const allProducts = [];
+      
+      // טען מוצרים מכל הקטלוגים
+      for (const catalog of availableCatalogs) {
+        try {
+          const products = await base44.entities.ProductCatalog.filter({
+            catalog_id: catalog.id,
+            is_active: true
+          });
+          
+          // הוסף metadata של הקטלוג לכל מוצר
+          products.forEach(product => {
+            allProducts.push({
+              ...product,
+              catalog_name: catalog.catalog_name,
+              catalog_id: catalog.id
+            });
+          });
+        } catch (error) {
+          console.error(`Error loading products from catalog ${catalog.id}:`, error);
+        }
+      }
+      
+      setAllCatalogProducts(allProducts);
+      console.log(`✅ Loaded ${allProducts.length} products from ${availableCatalogs.length} catalogs`);
+    } catch (error) {
+      console.error('❌ Error loading all catalog products:', error);
+      setAllCatalogProducts([]);
+    } finally {
+      setIsLoadingAllProducts(false);
+    }
+  }, [forecastData?.customer_email, availableCatalogs]);
+
+  useEffect(() => {
+    if (availableCatalogs.length > 0) {
+      loadAllCatalogProducts();
+    }
+  }, [availableCatalogs, loadAllCatalogProducts]);
 
   // ⭐ טעינת מוצרים מקטלוג
   const handleLoadCatalog = async () => {
@@ -297,6 +348,55 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
     
     // ✅ FIX: חישוב מחדש אחרי כל שינוי במחיר
     recalculateServiceProfitability(updated, index);
+    
+    setServices(updated);
+    if (onUpdateForecast) {
+      onUpdateForecast({ services: updated });
+    }
+  };
+
+  // ⭐ שיוך שירות למוצר מהקטלוג
+  const linkServiceToCatalogProduct = (serviceIndex, productId) => {
+    if (!productId || productId === 'none') {
+      // הסרת שיוך
+      const updated = [...services];
+      updated[serviceIndex] = { ...updated[serviceIndex], linked_catalog_product_id: null };
+      setServices(updated);
+      if (onUpdateForecast) {
+        onUpdateForecast({ services: updated });
+      }
+      return;
+    }
+
+    const product = allCatalogProducts.find(p => p.id === productId);
+    if (!product) {
+      alert('מוצר לא נמצא');
+      return;
+    }
+
+    const updated = [...services];
+    const sellingPrice = parseFloat(product.selling_price || product.consumer_price || 0);
+    const costPrice = parseFloat(product.cost_price || 0);
+    
+    // עדכן את השירות עם נתוני המוצר
+    updated[serviceIndex] = {
+      ...updated[serviceIndex],
+      service_name: product.product_name,
+      price: sellingPrice,
+      has_vat: true,
+      linked_catalog_product_id: productId,
+      costs: costPrice > 0 ? [{
+        cost_name: `עלות קנייה${product.supplier ? ` - ${product.supplier}` : ''}`,
+        amount: costPrice,
+        has_vat: true,
+        is_percentage: false,
+        percentage_of_price: 0
+      }] : updated[serviceIndex].costs || [],
+      loaded_from_catalog: true
+    };
+    
+    // חשב מחדש רווחיות
+    recalculateServiceProfitability(updated, serviceIndex);
     
     setServices(updated);
     if (onUpdateForecast) {
@@ -652,18 +752,45 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                          <Package className="w-4 h-4 text-horizon-primary" />
                                          שם השירות/מוצר *
                                        </Label>
-                                       <Input
-                                         value={service.service_name}
-                                         onChange={(e) => updateService(actualIndex, 'service_name', e.target.value)}
-                                         placeholder="לדוגמה: שירות ייעוץ, מוצר X"
-                                         className="bg-horizon-card border-horizon text-horizon-text h-11 text-base"
-                                       />
-                                       {service.loaded_from_catalog && (
-                                         <Badge variant="outline" className="mt-2 border-blue-500/50 text-blue-400 text-xs bg-blue-500/10">
-                                           <Package className="w-3 h-3 ml-1" />
-                                           נטען מקטלוג
-                                         </Badge>
-                                       )}
+                                       <div className="space-y-2">
+                                         {allCatalogProducts.length > 0 && (
+                                           <Select
+                                             value={service.linked_catalog_product_id || 'none'}
+                                             onValueChange={(productId) => linkServiceToCatalogProduct(actualIndex, productId)}
+                                             disabled={isLoadingAllProducts}
+                                           >
+                                             <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text h-9 text-sm mb-2">
+                                               <SelectValue placeholder="שייך למוצר מהקטלוג (אופציונלי)" />
+                                             </SelectTrigger>
+                                             <SelectContent className="bg-horizon-dark border-horizon max-h-[300px]">
+                                               <SelectItem value="none">ללא שיוך לקטלוג</SelectItem>
+                                               {allCatalogProducts.map((product) => (
+                                                 <SelectItem key={product.id} value={product.id}>
+                                                   📦 {product.product_name} {product.catalog_name ? `(${product.catalog_name})` : ''}
+                                                 </SelectItem>
+                                               ))}
+                                             </SelectContent>
+                                           </Select>
+                                         )}
+                                         <Input
+                                           value={service.service_name}
+                                           onChange={(e) => updateService(actualIndex, 'service_name', e.target.value)}
+                                           placeholder="לדוגמה: שירות ייעוץ, מוצר X"
+                                           className="bg-horizon-card border-horizon text-horizon-text h-11 text-base"
+                                         />
+                                         {service.loaded_from_catalog && (
+                                           <Badge variant="outline" className="mt-2 border-blue-500/50 text-blue-400 text-xs bg-blue-500/10">
+                                             <Package className="w-3 h-3 ml-1" />
+                                             נטען מקטלוג
+                                           </Badge>
+                                         )}
+                                         {service.linked_catalog_product_id && (
+                                           <Badge variant="outline" className="mt-2 border-green-500/50 text-green-400 text-xs bg-green-500/10">
+                                             <Package className="w-3 h-3 ml-1" />
+                                             משויך לקטלוג
+                                           </Badge>
+                                         )}
+                                       </div>
                                      </div>
 
                                      {/* מחיר מכירה - 3 עמודות */}

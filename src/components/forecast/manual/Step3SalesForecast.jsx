@@ -13,7 +13,6 @@ import ZReportMonthSummary from './ZReportMonthSummary';
 import { base44 } from "@/api/base44Client";
 import ServiceCategoryGroup from './ServiceCategoryGroup';
 import AggregatePlanning from './AggregatePlanning';
-import FutureRevenueUploader from './FutureRevenueUploader';
 import { Progress } from "@/components/ui/progress";
 import SaveProgressIndicator from './SaveProgressIndicator';
 
@@ -254,37 +253,157 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       
       console.log('✅ Products file uploaded:', productsFileUrl);
 
-      // ✅ שלב 4: יצירת ZReportDetails entity (ללא detailed_products!)
+      // ✅ שלב 4: בדיקה אם יש כבר דוח Z לאותו חודש - איחוד במקום יצירה חדשה
       setImportProgress(60);
-      setImportStatusText('יוצר רשומת דוח Z...');
-      console.log('💾 Creating ZReportDetails entity...');
+      setImportStatusText('בודק דוחות קיימים...');
+      console.log('🔍 Checking for existing Z reports for month:', pendingZData.month);
       
-      const zReportDetail = await Promise.race([
-        base44.entities.ZReportDetails.create({
-          forecast_id: forecastId,
-          customer_email: customer?.email || forecastData.customer_email,
-          month_assigned: pendingZData.month,
-          file_name: pendingZData.file_name,
-          file_url: pendingZData.file_url,
-          upload_date: new Date().toISOString(),
-          products_count: detailedProducts.length,
-          total_revenue: pendingZData.summary.total_revenue_with_vat,
-          detailed_products: []  // ✅ ריק - המוצרים בקובץ נפרד!
-        }),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('יצירת ZReportDetails לקחה יותר מדי זמן')), 30000)
-        )
-      ]);
-
-      console.log('✅ ZReportDetails created:', zReportDetail.id);
-
-      // ✅ שלב 5: עדכון ה-entity עם קישור לקובץ המוצרים
-      setImportProgress(70);
-      await base44.entities.ZReportDetails.update(zReportDetail.id, {
-        detailed_products_file_url: productsFileUrl
+      const existingReports = await base44.entities.ZReportDetails.filter({
+        forecast_id: forecastId,
+        month_assigned: pendingZData.month,
+        customer_email: customer?.email || forecastData.customer_email
       });
       
-      console.log('✅ Products file URL saved to ZReportDetails');
+      let zReportDetail;
+      let mergedProducts = [...detailedProducts];
+      let mergedProductsFileUrl = productsFileUrl;
+      
+      if (existingReports.length > 0) {
+        // יש דוח קיים - נאחד את הנתונים
+        console.log(`✅ Found ${existingReports.length} existing Z report(s) for month ${pendingZData.month}, merging...`);
+        setImportStatusText('מאחד דוחות Z...');
+        
+        // טעינת מוצרים מדוחות קיימים
+        const existingProducts = [];
+        for (const existingReport of existingReports) {
+          if (existingReport.detailed_products_file_url) {
+            try {
+              const response = await fetch(existingReport.detailed_products_file_url);
+              const products = await response.json();
+              existingProducts.push(...products);
+            } catch (error) {
+              console.error('Error loading existing products:', error);
+              // Fallback - נסה מה-entity ישירות
+              if (existingReport.detailed_products && existingReport.detailed_products.length > 0) {
+                existingProducts.push(...existingReport.detailed_products);
+              }
+            }
+          } else if (existingReport.detailed_products && existingReport.detailed_products.length > 0) {
+            existingProducts.push(...existingReport.detailed_products);
+          }
+        }
+        
+        // איחוד מוצרים - חיבור כמויות והכנסות למוצרים זהים
+        const productMap = new Map();
+        
+        // הוסף מוצרים קיימים
+        existingProducts.forEach(product => {
+          const key = (product.product_name || '').toLowerCase().trim();
+          if (key) {
+            productMap.set(key, {
+              product_name: product.product_name,
+              barcode: product.barcode || '',
+              quantity_sold: product.quantity_sold || 0,
+              revenue_with_vat: product.revenue_with_vat || 0,
+              revenue_without_vat: product.revenue_without_vat || 0
+            });
+          }
+        });
+        
+        // הוסף/אחד מוצרים חדשים
+        detailedProducts.forEach(product => {
+          const key = (product.product_name || '').toLowerCase().trim();
+          if (key) {
+            if (productMap.has(key)) {
+              // איחוד - חיבור כמויות והכנסות
+              const existing = productMap.get(key);
+              existing.quantity_sold += (product.quantity_sold || 0);
+              existing.revenue_with_vat += (product.revenue_with_vat || 0);
+              existing.revenue_without_vat += (product.revenue_without_vat || 0);
+            } else {
+              // מוצר חדש
+              productMap.set(key, {
+                product_name: product.product_name,
+                barcode: product.barcode || '',
+                quantity_sold: product.quantity_sold || 0,
+                revenue_with_vat: product.revenue_with_vat || 0,
+                revenue_without_vat: product.revenue_without_vat || 0
+              });
+            }
+          }
+        });
+        
+        mergedProducts = Array.from(productMap.values());
+        
+        // שמור את המוצרים המאוחדים לקובץ חדש
+        const mergedProductsJson = JSON.stringify(mergedProducts, null, 2);
+        const mergedProductsBlob = new Blob([mergedProductsJson], { type: 'application/json' });
+        const mergedProductsFile = new File(
+          [mergedProductsBlob],
+          `z_report_products_merged_${forecastId}_month_${pendingZData.month}_${Date.now()}.json`,
+          { type: 'application/json' }
+        );
+        
+        const { file_url: mergedFileUrl } = await base44.integrations.Core.UploadFile({ file: mergedProductsFile });
+        mergedProductsFileUrl = mergedFileUrl;
+        
+        // עדכן את הדוח הקיים הראשון (או צור חדש אם אין)
+        const existingReport = existingReports[0];
+        const totalRevenue = mergedProducts.reduce((sum, p) => sum + (p.revenue_with_vat || 0), 0);
+        
+        zReportDetail = await base44.entities.ZReportDetails.update(existingReport.id, {
+          file_name: `${existingReport.file_name} + ${pendingZData.file_name}`,
+          file_url: pendingZData.file_url, // שמור את הקובץ החדש
+          upload_date: new Date().toISOString(),
+          products_count: mergedProducts.length,
+          total_revenue: totalRevenue,
+          detailed_products_file_url: mergedProductsFileUrl
+        });
+        
+        // מחק דוחות נוספים אם יש (נשאר רק אחד מאוחד)
+        if (existingReports.length > 1) {
+          for (let i = 1; i < existingReports.length; i++) {
+            try {
+              await base44.entities.ZReportDetails.delete(existingReports[i].id);
+            } catch (error) {
+              console.error('Error deleting duplicate report:', error);
+            }
+          }
+        }
+        
+        console.log('✅ Z reports merged successfully:', zReportDetail.id);
+      } else {
+        // אין דוח קיים - צור חדש
+        setImportStatusText('יוצר רשומת דוח Z...');
+        console.log('💾 Creating new ZReportDetails entity...');
+        
+        zReportDetail = await Promise.race([
+          base44.entities.ZReportDetails.create({
+            forecast_id: forecastId,
+            customer_email: customer?.email || forecastData.customer_email,
+            month_assigned: pendingZData.month,
+            file_name: pendingZData.file_name,
+            file_url: pendingZData.file_url,
+            upload_date: new Date().toISOString(),
+            products_count: detailedProducts.length,
+            total_revenue: pendingZData.summary.total_revenue_with_vat,
+            detailed_products: []  // ✅ ריק - המוצרים בקובץ נפרד!
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('יצירת ZReportDetails לקחה יותר מדי זמן')), 30000)
+          )
+        ]);
+
+        console.log('✅ ZReportDetails created:', zReportDetail.id);
+
+        // ✅ שלב 5: עדכון ה-entity עם קישור לקובץ המוצרים
+        setImportProgress(70);
+        await base44.entities.ZReportDetails.update(zReportDetail.id, {
+          detailed_products_file_url: productsFileUrl
+        });
+        
+        console.log('✅ Products file URL saved to ZReportDetails');
+      }
 
       // ✅ שלב 6: עדכון התחזית עם reference בלבד
       setImportProgress(80);
@@ -528,7 +647,30 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   // קיבוץ מוצרים לפי קטגוריה
   const groupServicesByCategory = () => {
     const grouped = {};
-    forecastData.services?.forEach((service, idx) => {
+    const hasZReports = forecastData.z_reports_uploaded && forecastData.z_reports_uploaded.length > 0;
+    
+    // אם יש דוחות Z, נמיין לפי מוצרים שנמכרו קודם
+    let servicesToGroup = [...(forecastData.services || [])];
+    
+    if (hasZReports) {
+      // מצא מוצרים שנמכרו (יש להם actual_monthly_quantities > 0)
+      const soldServices = servicesToGroup.filter(service => {
+        const forecast = salesForecast.find(s => s.service_name === service.service_name);
+        if (!forecast) return false;
+        return forecast.actual_monthly_quantities.some(qty => qty > 0);
+      });
+      
+      const notSoldServices = servicesToGroup.filter(service => {
+        const forecast = salesForecast.find(s => s.service_name === service.service_name);
+        if (!forecast) return true;
+        return !forecast.actual_monthly_quantities.some(qty => qty > 0);
+      });
+      
+      // עדיפות למוצרים שנמכרו
+      servicesToGroup = [...soldServices, ...notSoldServices];
+    }
+    
+    servicesToGroup.forEach((service, idx) => {
       const category = service.category || 'ללא קטגוריה';
       if (!grouped[category]) {
         grouped[category] = { services: [], startIndex: idx };
@@ -604,13 +746,6 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
             customer={customer}
           />
 
-          {/* העלאת קובץ הכנסה עתידי */}
-          <FutureRevenueUploader
-            forecastData={forecastData}
-            onUpdateForecast={onUpdateForecast}
-            salesForecast={salesForecast}
-            onSalesForecastUpdate={setSalesForecast}
-          />
 
       <Card className="card-horizon">
         <CardHeader>
@@ -715,10 +850,29 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                   ref={provided.innerRef}
                   className="space-y-4"
                 >
-                  {salesForecast.map((item, serviceIndex) => (
+                  {(() => {
+                    // אם יש דוחות Z, נמיין לפי מוצרים שנמכרו קודם
+                    const hasZReports = forecastData.z_reports_uploaded && forecastData.z_reports_uploaded.length > 0;
+                    let sortedForecast = [...salesForecast];
+                    
+                    if (hasZReports) {
+                      const soldItems = sortedForecast.filter(item => 
+                        item.actual_monthly_quantities.some(qty => qty > 0)
+                      );
+                      const notSoldItems = sortedForecast.filter(item => 
+                        !item.actual_monthly_quantities.some(qty => qty > 0)
+                      );
+                      sortedForecast = [...soldItems, ...notSoldItems];
+                    }
+                    
+                    return sortedForecast;
+                  })().map((item, serviceIndex) => {
+                    // מצא את האינדקס המקורי
+                    const originalIndex = salesForecast.findIndex(s => s.service_name === item.service_name);
+                    return (
                     <Draggable
-                      key={`sales-${serviceIndex}`}
-                      draggableId={`sales-${serviceIndex}`}
+                      key={`sales-${originalIndex}`}
+                      draggableId={`sales-${originalIndex}`}
                       index={serviceIndex}
                     >
                       {(provided, snapshot) => (
@@ -741,10 +895,10 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => toggleServiceCollapse(serviceIndex)}
+                              onClick={() => toggleServiceCollapse(originalIndex)}
                               className="text-horizon-accent"
                             >
-                              {collapsedServices[serviceIndex] ? (
+                              {collapsedServices[originalIndex] ? (
                                 <Eye className="w-4 h-4" />
                               ) : (
                                 <EyeOff className="w-4 h-4" />
@@ -772,8 +926,11 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                                       <Label className="text-[10px] text-blue-400">תכנון</Label>
                                       <Input
                                         type="number"
-                                        value={item.planned_monthly_quantities[monthIndex]}
-                                        onChange={(e) => updateQuantity(serviceIndex, monthIndex, 'planned', e.target.value)}
+                                        value={item.planned_monthly_quantities[monthIndex] || ''}
+                                        onChange={(e) => {
+                                          const val = e.target.value === '' ? 0 : parseFloat(e.target.value) || 0;
+                                          updateQuantity(originalIndex, monthIndex, 'planned', val);
+                                        }}
                                         className="bg-horizon-card border-blue-400/30 text-horizon-text text-sm h-8"
                                         placeholder="0"
                                       />
@@ -787,8 +944,11 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                                       <Label className="text-[10px] text-green-400">ביצוע</Label>
                                       <Input
                                         type="number"
-                                        value={item.actual_monthly_quantities[monthIndex]}
-                                        onChange={(e) => updateQuantity(serviceIndex, monthIndex, 'actual', e.target.value)}
+                                        value={item.actual_monthly_quantities[monthIndex] || ''}
+                                        onChange={(e) => {
+                                          const val = e.target.value === '' ? 0 : parseFloat(e.target.value) || 0;
+                                          updateQuantity(originalIndex, monthIndex, 'actual', val);
+                                        }}
                                         className="bg-horizon-card border-green-400/30 text-horizon-text text-sm h-8"
                                         placeholder="0"
                                       />
@@ -804,7 +964,8 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                         </div>
                       )}
                     </Draggable>
-                  ))}
+                    );
+                  })}
                   {provided.placeholder}
                 </div>
               )}

@@ -14,7 +14,8 @@ import {
   AlertTriangle,
   Sparkles,
   Download,
-  Filter
+  Filter,
+  Package
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import SmartFileUploader from "../upload/SmartFileUploader";
@@ -102,7 +103,11 @@ export default function CustomerFileUploadManager({ customer, isAdmin = false })
     }
   };
 
+  const [showFileViewer, setShowFileViewer] = useState(false);
+  const [fileToView, setFileToView] = useState(null);
+
   const handleViewFile = (file) => {
+    // אם יש viewer מיוחד - השתמש בו
     if (file.ai_insights && (file.data_category === 'profit_loss' || file.data_category === 'profit_loss_statement' || file.data_category === 'balance_sheet')) {
       setFinancialReportData(file.ai_insights);
       setShowFinancialReportViewer(true);
@@ -171,6 +176,10 @@ export default function CustomerFileUploadManager({ customer, isAdmin = false })
       setShowPromotionsReportViewer(false);
       setSelectedFile(null);
       return;
+    } else if (file.file_url) {
+      // פתיחת קובץ במערכת
+      setFileToView(file);
+      setShowFileViewer(true);
     } else {
       setSelectedFile(file);
       setShowDataViewer(true);
@@ -403,6 +412,34 @@ export default function CustomerFileUploadManager({ customer, isAdmin = false })
                       </Button>
                     )}
                     
+                    {/* כפתור ייבוא Z-report לקטלוג */}
+                    {(file.data_category === 'sales_report' || file.filename?.toLowerCase().includes('z') || file.filename?.toLowerCase().includes('z-report')) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            const response = await base44.functions.invoke('parseZReport', {
+                              fileUrl: file.file_url,
+                              customerEmail: customer.email,
+                              importToCatalog: true
+                            });
+                            if (response.data?.success) {
+                              alert(`נוספו ${response.data.products?.length || 0} מוצרים לקטלוג`);
+                            }
+                          } catch (error) {
+                            console.error('Error importing Z report to catalog:', error);
+                            alert('שגיאה בייבוא לקטלוג');
+                          }
+                        }}
+                        className="text-purple-400 hover:bg-purple-500/20"
+                        title="ייבא לקטלוג"
+                      >
+                        <Package className="w-4 h-4 ml-1" />
+                        ייבא לקטלוג
+                      </Button>
+                    )}
+                    
                     <Button
                       variant="ghost"
                       size="sm"
@@ -530,6 +567,40 @@ export default function CustomerFileUploadManager({ customer, isAdmin = false })
           fileData={fileToAnalyzeDeeper}
           onInsightsUpdated={handleDeeperInsightsUpdated}
         />
+      )}
+
+      {/* מודל צפייה בקובץ */}
+      {showFileViewer && fileToView && (
+        <Dialog open={showFileViewer} onOpenChange={setShowFileViewer}>
+          <DialogContent className="max-w-6xl max-h-[90vh] bg-horizon-dark border-horizon" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="text-xl text-horizon-text">{fileToView.filename}</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4">
+              {fileToView.file_url && (
+                <div className="w-full h-[70vh]">
+                  {fileToView.file_url.toLowerCase().endsWith('.pdf') ? (
+                    <iframe 
+                      src={fileToView.file_url} 
+                      className="w-full h-full border border-horizon rounded"
+                      title={fileToView.filename}
+                    />
+                  ) : fileToView.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                    <img 
+                      src={fileToView.file_url} 
+                      alt={fileToView.filename}
+                      className="max-w-full max-h-full mx-auto"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-horizon-accent">תצוגה מקדימה לא זמינה. לחץ על "הורד" להוריד את הקובץ.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

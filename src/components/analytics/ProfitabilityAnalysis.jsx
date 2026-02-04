@@ -117,9 +117,18 @@ export default function ProfitabilityAnalysis({ categorizedProducts, products = 
                 </Pie>
                 <Tooltip
                   {...RECHARTS_CONFIG.tooltip}
+                  contentStyle={{ backgroundColor: 'var(--horizon-card)', border: '1px solid var(--horizon)', borderRadius: '8px', padding: '12px' }}
                   formatter={(value, name, props) => [
-                    `${value} מוצרים`,
-                    props.payload.name
+                    <div key="tooltip" className="space-y-1">
+                      <div className="font-bold text-horizon-text">{props.payload.name}</div>
+                      <div className="text-sm text-horizon-accent">
+                        כמות מוצרים: <span className="font-semibold text-horizon-primary">{value}</span>
+                      </div>
+                      <div className="text-xs text-horizon-accent mt-1">
+                        אחוז מכלל: {((value / (profitable.length + controversial.length + unprofitable.length + unknown.length)) * 100).toFixed(1)}%
+                      </div>
+                    </div>,
+                    ''
                   ]}
                 />
                 <Legend 

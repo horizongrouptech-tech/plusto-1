@@ -127,13 +127,21 @@ export default function GoalsTimeline({ customer }) {
   const queryClient = useQueryClient();
   const [selectedGoal, setSelectedGoal] = useState(null);
 
-  // טעינת יעדים
+  // טעינת יעדים - מיון לפי תאריך (מקרוב לרחוק)
   const { data: goals = [], isLoading } = useQuery({
     queryKey: ['customerGoals', customer?.email],
-    queryFn: () => base44.entities.CustomerGoal.filter({
-      customer_email: customer.email,
-      is_active: true
-    }, 'start_date'),
+    queryFn: async () => {
+      const allGoals = await base44.entities.CustomerGoal.filter({
+        customer_email: customer.email,
+        is_active: true
+      });
+      // מיון לפי start_date או end_date (מקרוב לרחוק)
+      return allGoals.sort((a, b) => {
+        const dateA = new Date(a.start_date || a.end_date || 0);
+        const dateB = new Date(b.start_date || b.end_date || 0);
+        return dateA - dateB; // קרוב לרחוק
+      });
+    },
     enabled: !!customer?.email
   });
 

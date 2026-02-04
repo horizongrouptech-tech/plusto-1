@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
 import { 
   BarChart3, 
   PieChart as PieChartIcon, 
@@ -31,6 +33,7 @@ export default function CatalogAnalyticsDashboard({ products, customer, selected
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('popularity');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [profitRange, setProfitRange] = useState([0, 100]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
@@ -68,11 +71,23 @@ export default function CatalogAnalyticsDashboard({ products, customer, selected
     setIsRefreshing(false);
   };
 
-  // סינון מוצרים לפי קטגוריה
+  // סינון מוצרים לפי קטגוריה ואחוז רווח
   const filteredProducts = useMemo(() => {
-    if (categoryFilter === 'all' || !products) return products;
-    return products.filter(p => p.category === categoryFilter);
-  }, [products, categoryFilter]);
+    let filtered = products || [];
+    
+    // סינון לפי קטגוריה
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(p => p.category === categoryFilter);
+    }
+    
+    // סינון לפי אחוז רווח
+    filtered = filtered.filter(p => {
+      const profitPercent = p.profit_percentage || 0;
+      return profitPercent >= profitRange[0] && profitPercent <= profitRange[1];
+    });
+    
+    return filtered;
+  }, [products, categoryFilter, profitRange]);
 
   // קטגוריות ייחודיות
   const uniqueCategories = useMemo(() => {
@@ -224,6 +239,22 @@ export default function CatalogAnalyticsDashboard({ products, customer, selected
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              
+              {/* סינון אחוז רווח */}
+              <div className="flex items-center gap-2 w-48">
+                <Label className="text-xs text-horizon-accent whitespace-nowrap">אחוז רווח:</Label>
+                <Slider
+                  value={profitRange}
+                  onValueChange={setProfitRange}
+                  min={0}
+                  max={100}
+                  step={1}
+                  className="flex-1"
+                />
+                <span className="text-xs text-horizon-text w-16 text-left">
+                  {profitRange[0]}% - {profitRange[1]}%
+                </span>
               </div>
               
               {/* רענון */}

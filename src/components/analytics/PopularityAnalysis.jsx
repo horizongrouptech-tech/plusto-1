@@ -78,10 +78,24 @@ export default function PopularityAnalysis({ top10, bottom10, products = [], has
               />
               <Tooltip
                 {...RECHARTS_CONFIG.tooltip}
-                formatter={(value, name) => [
-                  name === 'totalQuantity' ? `${value.toLocaleString()} יחידות` : `₪${formatNumber(value)}`,
-                  name === 'totalQuantity' ? 'כמות' : 'הכנסות'
-                ]}
+                contentStyle={{ backgroundColor: 'var(--horizon-card)', border: '1px solid var(--horizon)', borderRadius: '8px', padding: '12px' }}
+                formatter={(value, name, props) => {
+                  const product = props.payload;
+                  return [
+                    <div key="tooltip" className="space-y-1">
+                      <div className="font-bold text-horizon-text">{product.name}</div>
+                      <div className="text-sm text-horizon-accent">
+                        כמות: <span className="font-semibold text-green-400">{value.toLocaleString()} יחידות</span>
+                      </div>
+                      {product.totalRevenue && (
+                        <div className="text-sm text-horizon-accent">
+                          הכנסות: <span className="font-semibold text-blue-400">₪{formatNumber(product.totalRevenue)}</span>
+                        </div>
+                      )}
+                    </div>,
+                    ''
+                  ];
+                }}
               />
               <Bar dataKey="totalQuantity" fill={HORIZON_COLORS.green} radius={[0, 6, 6, 0]}>
                 <LabelList 
@@ -136,7 +150,24 @@ export default function PopularityAnalysis({ top10, bottom10, products = [], has
               />
               <Tooltip
                 {...RECHARTS_CONFIG.tooltip}
-                formatter={(value) => [`${value.toLocaleString()} יחידות`, 'כמות']}
+                contentStyle={{ backgroundColor: 'var(--horizon-card)', border: '1px solid var(--horizon)', borderRadius: '8px', padding: '12px' }}
+                formatter={(value, name, props) => {
+                  const product = props.payload;
+                  return [
+                    <div key="tooltip" className="space-y-1">
+                      <div className="font-bold text-horizon-text">{product.name}</div>
+                      <div className="text-sm text-horizon-accent">
+                        כמות: <span className="font-semibold text-red-400">{value.toLocaleString()} יחידות</span>
+                      </div>
+                      {product.totalRevenue && (
+                        <div className="text-sm text-horizon-accent">
+                          הכנסות: <span className="font-semibold text-blue-400">₪{formatNumber(product.totalRevenue)}</span>
+                        </div>
+                      )}
+                    </div>,
+                    ''
+                  ];
+                }}
               />
               <Bar dataKey="totalQuantity" fill={HORIZON_COLORS.red} radius={[0, 6, 6, 0]}>
                 <LabelList 

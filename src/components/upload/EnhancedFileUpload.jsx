@@ -29,6 +29,7 @@ export default function EnhancedFileUpload({
   const [dataCategory, setDataCategory] = useState('auto_detect');
   const [mappingModalOpen, setMappingModalOpen] = useState(false);
   const [currentMappingData, setCurrentMappingData] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
 
   const SUPPORTED_CATEGORIES = [
@@ -43,8 +44,33 @@ export default function EnhancedFileUpload({
   ];
 
   const handleFileSelect = (event) => {
-    const files = Array.from(event.target.files);
-    setSelectedFiles(prev => [...prev, ...files]);
+    const files = Array.from(event.target.files || []);
+    if (files.length > 0) {
+      setSelectedFiles(prev => [...prev, ...files]);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length > 0) {
+      setSelectedFiles(prev => [...prev, ...files]);
+    }
   };
 
   const handleRemoveFile = (index) => {
@@ -253,12 +279,19 @@ export default function EnhancedFileUpload({
 
           {/* אזור העלאת קבצים */}
           <div
-            className="border-2 border-dashed border-horizon rounded-lg p-8 text-center cursor-pointer hover:border-horizon-primary transition-colors"
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+              isDragging 
+                ? 'border-horizon-primary bg-horizon-primary/10' 
+                : 'border-horizon hover:border-horizon-primary'
+            }`}
             onClick={() => fileInputRef.current?.click()}
           >
-            <Upload className="w-12 h-12 mx-auto mb-4 text-horizon-accent" />
+            <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-horizon-primary' : 'text-horizon-accent'}`} />
             <h3 className="text-lg font-semibold text-horizon-text mb-2">
-              גרור קבצים לכאן או לחץ לבחירה
+              {isDragging ? 'שחרר כאן את הקבצים' : 'גרור קבצים לכאן או לחץ לבחירה'}
             </h3>
             <p className="text-sm text-horizon-accent">
               תומך בכל סוגי הקבצים: Excel, CSV, PDF, תמונות ועוד

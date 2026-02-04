@@ -19,37 +19,72 @@ const RiskScore = ({ score }) => {
 };
 
 export default function CreditReportViewer({ isOpen, onClose, reportData }) {
-    if (!reportData) return null;
+    if (!reportData || !isOpen) return null;
 
     // Handle multiple formats: ai_insights (new), parsed_data (stringified), or direct object (legacy)
     let data;
-    if (reportData.ai_insights) {
-        data = reportData.ai_insights;
-    } else if (reportData.parsed_data) {
-        // Parse stringified data
-        data = {
-            reportMeta: typeof reportData.parsed_data.reportMeta === 'string' 
-                ? JSON.parse(reportData.parsed_data.reportMeta) 
-                : reportData.parsed_data.reportMeta,
-            summary: typeof reportData.parsed_data.summary === 'string'
-                ? JSON.parse(reportData.parsed_data.summary)
-                : reportData.parsed_data.summary,
-            currentAccounts: typeof reportData.parsed_data.currentAccounts === 'string'
-                ? JSON.parse(reportData.parsed_data.currentAccounts)
-                : (reportData.parsed_data.currentAccounts || []),
-            loans: typeof reportData.parsed_data.loans === 'string'
-                ? JSON.parse(reportData.parsed_data.loans)
-                : (reportData.parsed_data.loans || []),
-            mortgages: typeof reportData.parsed_data.mortgages === 'string'
-                ? JSON.parse(reportData.parsed_data.mortgages)
-                : (reportData.parsed_data.mortgages || []),
-            analysis: reportData.ai_insights?.analysis || {}
-        };
-    } else {
-        data = reportData;
+    try {
+        if (reportData.ai_insights) {
+            data = reportData.ai_insights;
+        } else if (reportData.parsed_data) {
+            // Parse stringified data safely
+            try {
+                data = {
+                    reportMeta: typeof reportData.parsed_data.reportMeta === 'string' 
+                        ? JSON.parse(reportData.parsed_data.reportMeta) 
+                        : (reportData.parsed_data.reportMeta || {}),
+                    summary: typeof reportData.parsed_data.summary === 'string'
+                        ? JSON.parse(reportData.parsed_data.summary)
+                        : (reportData.parsed_data.summary || {}),
+                    currentAccounts: typeof reportData.parsed_data.currentAccounts === 'string'
+                        ? JSON.parse(reportData.parsed_data.currentAccounts)
+                        : (reportData.parsed_data.currentAccounts || []),
+                    loans: typeof reportData.parsed_data.loans === 'string'
+                        ? JSON.parse(reportData.parsed_data.loans)
+                        : (reportData.parsed_data.loans || []),
+                    mortgages: typeof reportData.parsed_data.mortgages === 'string'
+                        ? JSON.parse(reportData.parsed_data.mortgages)
+                        : (reportData.parsed_data.mortgages || []),
+                    analysis: reportData.ai_insights?.analysis || {},
+                    creditInquiries: reportData.parsed_data.creditInquiries || [],
+                    directDebitReturned: reportData.parsed_data.directDebitReturned || null
+                };
+            } catch (parseError) {
+                console.error('Error parsing credit report data:', parseError);
+                data = {
+                    reportMeta: {},
+                    summary: {},
+                    currentAccounts: [],
+                    loans: [],
+                    mortgages: [],
+                    analysis: {},
+                    creditInquiries: [],
+                    directDebitReturned: null
+                };
+            }
+        } else {
+            data = reportData;
+        }
+    } catch (error) {
+        console.error('Error processing credit report:', error);
+        return (
+            <Dialog open={isOpen} onOpenChange={onClose}>
+                <DialogContent className="max-w-2xl bg-horizon-dark text-horizon-text border-horizon" dir="rtl">
+                    <DialogHeader>
+                        <DialogTitle className="text-red-400">שגיאה בטעינת דוח אשראי</DialogTitle>
+                        <DialogDescription className="text-horizon-accent">
+                            לא ניתן לטעון את נתוני דוח האשראי. נסה שוב או פנה לתמיכה.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button onClick={onClose} variant="outline">סגור</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        );
     }
 
-    const { reportMeta, summary, currentAccounts, loans, mortgages, analysis } = data;
+    const { reportMeta = {}, summary = {}, currentAccounts = [], loans = [], mortgages = [], analysis = {} } = data;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -332,8 +367,8 @@ export default function CreditReportViewer({ isOpen, onClose, reportData }) {
                         </TabsContent>
 
                         <TabsContent value="inquiries" className="mt-4">
-                            {data.creditInquiries?.length === 0 && <p className="text-center text-horizon-accent">אין פניות לשכות אשראי</p>}
-                            {data.creditInquiries?.length > 0 && (
+                            {(!data.creditInquiries || data.creditInquiries.length === 0) && <p className="text-center text-horizon-accent">אין פניות לשכות אשראי</p>}
+                            {data.creditInquiries && data.creditInquiries.length > 0 && (
                                 <Card className="card-horizon">
                                     <CardHeader>
                                         <CardTitle>פניות לשכות אשראי ({data.creditInquiries.length})</CardTitle>

@@ -22,7 +22,8 @@ import {
   Trash2,
   Pencil,
   X,
-  Check
+  Check,
+  Plus
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -51,8 +52,30 @@ export default function CashFlowManager({ customer }) {
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' = ישן לחדש, 'desc' = חדש לישן
   const [openingBalance, setOpeningBalance] = useState(0);
   const [showOpeningBalanceDialog, setShowOpeningBalanceDialog] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [showAddExpectedModal, setShowAddExpectedModal] = useState(false);
+  const [expectedTransaction, setExpectedTransaction] = useState({
+    type: 'expense',
+    category: '',
+    amount: 0,
+    date: '',
+    description: ''
+  });
   
   const queryClient = useQueryClient();
+
+  // טעינת כל הקטגוריות הקיימות
+  const { data: allCategories = [] } = useQuery({
+    queryKey: ['cashFlowCategories', customer?.email],
+    queryFn: async () => {
+      const entries = await base44.entities.CashFlow.filter({
+        customer_email: customer.email
+      });
+      const categories = [...new Set(entries.map(e => e.category).filter(Boolean))];
+      return categories.sort();
+    },
+    enabled: !!customer?.email
+  });
 
   // טעינת תנועות תזרים
   const { data: rawCashFlowData = [], isLoading } = useQuery({
@@ -138,6 +161,23 @@ export default function CashFlowManager({ customer }) {
       });
 
       if (response.data.success) {
+        // שמירת הקובץ ל-FileUpload entity
+        try {
+          await base44.entities.FileUpload.create({
+            customer_email: customer.email,
+            filename: file.name,
+            file_url: file_url,
+            file_type: file.name.split('.').pop()?.toLowerCase() || 'unknown',
+            status: 'processed',
+            data_category: 'cashflow',
+            analysis_notes: `נוספו ${response.data.processed || response.data.cashFlowEntries || 0} תנועות`,
+            customer_email: customer.email
+          });
+        } catch (saveError) {
+          console.error('Error saving file record:', saveError);
+          // לא נכשיל את התהליך
+        }
+
         queryClient.invalidateQueries(['cashFlow', customer.email]);
         queryClient.invalidateQueries(['recurringExpenses', customer.email]);
         
@@ -367,6 +407,14 @@ export default function CashFlowManager({ customer }) {
                 ייצא לExcel
               </Button>
               <Button
+                onClick={() => setShowAddExpectedModal(true)}
+                variant="outline"
+                className="border-green-500 text-green-400 hover:bg-green-500/10"
+              >
+                <Plus className="w-4 h-4 ml-2" />
+                הוסף הוצאה/הכנסה צפויה
+              </Button>
+              <Button
                 onClick={async () => {
                   if (!window.confirm('האם אתה בטוח שברצונך למחוק את כל נתוני התזרים? פעולה זו בלתי הפיכה!')) {
                     return;
@@ -482,8 +530,14 @@ export default function CashFlowManager({ customer }) {
           <TabsTrigger value="daily" className="data-[state=active]:bg-horizon-primary data-[state=active]:text-white">
             תזרים יומי
           </TabsTrigger>
+          <TabsTrigger value="recurring-transactions" className="data-[state=active]:bg-horizon-primary data-[state=active]:text-white">
+            תנועות קבועות
+          </TabsTrigger>
           <TabsTrigger value="recurring" className="data-[state=active]:bg-horizon-primary data-[state=active]:text-white">
             הוצאות קבועות
+          </TabsTrigger>
+          <TabsTrigger value="credit-cards" className="data-[state=active]:bg-horizon-primary data-[state=active]:text-white">
+            כרטיסי אשראי
           </TabsTrigger>
         </TabsList>
 
@@ -534,9 +588,45 @@ export default function CashFlowManager({ customer }) {
                               {item.payment_type || '-'}
                             </TableCell>
                             <TableCell className="text-right">
-                              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
-                                {item.category}
-                              </Badge>
+                              {editingCategoryId === item.id ? (
+                                <Select
+                                  value={item.category || ''}
+                                  onValueChange={async (value) => {
+                                    try {
+                                      await base44.entities.CashFlow.update(item.id, { category: value });
+                                      queryClient.invalidateQueries(['cashFlow', customer.email]);
+                                      queryClient.invalidateQueries(['cashFlowCategories', customer.email]);
+                                      setEditingCategoryId(null);
+                                    } catch (error) {
+                                      console.error('Error updating category:', error);
+                                      alert('שגיאה בעדכון קטגוריה');
+                                    }
+                                  }}
+                                  onOpenChange={(open) => {
+                                    if (!open) {
+                                      setEditingCategoryId(null);
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="w-full min-w-[150px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {allCategories.map(cat => (
+                                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <div 
+                                  className="cursor-pointer hover:bg-horizon-card/50 p-1 rounded inline-block"
+                                  onClick={() => setEditingCategoryId(item.id)}
+                                >
+                                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                                    {item.category || 'ללא קטגוריה'}
+                                  </Badge>
+                                </div>
+                              )}
                             </TableCell>
                             <TableCell className="text-right text-horizon-accent text-sm">
                               {item.reference_number || '-'}
@@ -652,11 +742,33 @@ export default function CashFlowManager({ customer }) {
           </Card>
         </TabsContent>
 
+        <TabsContent value="recurring-transactions">
+          <Card className="card-horizon">
+            <CardHeader>
+              <CardTitle className="text-horizon-text">תנועות קבועות</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-horizon-accent">תנועות קבועות - תכונה זו תתווסף בקרוב</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="recurring">
           <RecurringExpensesTable 
             customer={customer}
             dateRange={dateRange}
           />
+        </TabsContent>
+
+        <TabsContent value="credit-cards">
+          <Card className="card-horizon">
+            <CardHeader>
+              <CardTitle className="text-horizon-text">כרטיסי אשראי</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-horizon-accent">ניהול כרטיסי אשראי - תכונה זו תתווסף בקרוב</p>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
@@ -697,6 +809,117 @@ export default function CashFlowManager({ customer }) {
           </CardContent>
         </Card>
       )}
+
+      {/* מודל הוספת הוצאה/הכנסה צפויה */}
+      <Dialog open={showAddExpectedModal} onOpenChange={setShowAddExpectedModal}>
+        <DialogContent className="bg-horizon-card border-horizon text-horizon-text max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>הוסף תנועה צפויה</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-horizon-accent">סוג תנועה</Label>
+              <Select 
+                value={expectedTransaction.type}
+                onValueChange={(value) => setExpectedTransaction({ ...expectedTransaction, type: value })}
+              >
+                <SelectTrigger className="bg-horizon-dark border-horizon text-horizon-text">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="expense">הוצאה צפויה</SelectItem>
+                  <SelectItem value="income">הכנסה צפויה</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-horizon-accent">קטגוריה</Label>
+              <Select 
+                value={expectedTransaction.category}
+                onValueChange={(value) => setExpectedTransaction({ ...expectedTransaction, category: value })}
+              >
+                <SelectTrigger className="bg-horizon-dark border-horizon text-horizon-text">
+                  <SelectValue placeholder="בחר קטגוריה" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allCategories.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-horizon-accent">סכום</Label>
+              <Input
+                type="number"
+                value={expectedTransaction.amount}
+                onChange={(e) => setExpectedTransaction({ ...expectedTransaction, amount: parseFloat(e.target.value) || 0 })}
+                className="bg-horizon-dark border-horizon text-horizon-text"
+              />
+            </div>
+
+            <div>
+              <Label className="text-horizon-accent">תאריך צפוי</Label>
+              <Input
+                type="date"
+                value={expectedTransaction.date}
+                onChange={(e) => setExpectedTransaction({ ...expectedTransaction, date: e.target.value })}
+                className="bg-horizon-dark border-horizon text-horizon-text"
+              />
+            </div>
+
+            <div>
+              <Label className="text-horizon-accent">תיאור</Label>
+              <Input
+                value={expectedTransaction.description}
+                onChange={(e) => setExpectedTransaction({ ...expectedTransaction, description: e.target.value })}
+                className="bg-horizon-dark border-horizon text-horizon-text"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAddExpectedModal(false);
+                setExpectedTransaction({ type: 'expense', category: '', amount: 0, date: '', description: '' });
+              }}
+              className="border-horizon text-horizon-text"
+            >
+              ביטול
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  await base44.entities.CashFlow.create({
+                    customer_email: customer.email,
+                    date: expectedTransaction.date,
+                    description: expectedTransaction.description,
+                    category: expectedTransaction.category,
+                    debit: expectedTransaction.type === 'expense' ? expectedTransaction.amount : 0,
+                    credit: expectedTransaction.type === 'income' ? expectedTransaction.amount : 0,
+                    payment_type: 'expected',
+                    is_expected: true
+                  });
+                  
+                  queryClient.invalidateQueries(['cashFlow', customer.email]);
+                  setShowAddExpectedModal(false);
+                  setExpectedTransaction({ type: 'expense', category: '', amount: 0, date: '', description: '' });
+                  alert('התנועה הצפויה נוספה בהצלחה!');
+                } catch (error) {
+                  console.error('Error adding expected transaction:', error);
+                  alert('שגיאה בהוספת התנועה: ' + error.message);
+                }
+              }}
+              className="btn-horizon-primary"
+            >
+              שמור
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* עורך שורות בעייתיות */}
       <FailedRowsEditor

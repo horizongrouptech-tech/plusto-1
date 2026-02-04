@@ -21,6 +21,19 @@ const SUPPLIER_CATEGORIES = [
   'כללי'
 ];
 
+const SUPPLIER_TYPES = [
+  'רואה חשבון',
+  'הנהלת חשבונות',
+  'ספק בשר',
+  'ספק ירקות',
+  'ספק מוצרי ניקיון',
+  'ספק אריזות',
+  'ספק שירותים',
+  'ספק טכנולוגיה',
+  'ספק לוגיסטיקה',
+  'ספק כללי'
+];
+
 export default function AddSupplierModal({ isOpen, onClose, onSupplierAdded, currentUser, customerEmail }) {
   const [formData, setFormData] = useState({
     name: '',
@@ -29,6 +42,7 @@ export default function AddSupplierModal({ isOpen, onClose, onSupplierAdded, cur
     email: '',
     address: '',
     category: '',
+    supplier_type: '',
     payment_terms: '',
     delivery_time: '',
     min_order: '',
@@ -74,6 +88,7 @@ export default function AddSupplierModal({ isOpen, onClose, onSupplierAdded, cur
         email: '',
         address: '',
         category: '',
+        supplier_type: '',
         payment_terms: '',
         delivery_time: '',
         min_order: '',
@@ -160,6 +175,20 @@ export default function AddSupplierModal({ isOpen, onClose, onSupplierAdded, cur
                 <SelectContent>
                   {SUPPLIER_CATEGORIES.map(cat => (
                     <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="supplier_type" className="text-horizon-text">סוג ספק</Label>
+              <Select value={formData.supplier_type} onValueChange={(value) => handleChange('supplier_type', value)}>
+                <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
+                  <SelectValue placeholder="בחר סוג ספק" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPPLIER_TYPES.map(type => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

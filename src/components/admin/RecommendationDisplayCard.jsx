@@ -78,11 +78,11 @@ export default function RecommendationDisplayCard({
 
   return (
     <Card 
-      className="card-horizon hover:shadow-xl transition-all duration-300 border-r-4 cursor-pointer" 
+      className="card-horizon hover:shadow-xl transition-all duration-300 border-r-4 cursor-pointer flex flex-col h-full" 
       style={{ borderRightColor: recommendation.priority === 'high' ? '#ef4444' : '#3b82f6' }}
       onClick={() => onView && onView(recommendation)}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 flex-shrink-0">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
             <CardTitle className="text-lg text-horizon-text text-right mb-2 flex items-center gap-2">
@@ -146,39 +146,41 @@ export default function RecommendationDisplayCard({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3">
-        <p className="text-horizon-accent text-sm text-right line-clamp-3">
-          {recommendation.description}
-        </p>
+      <CardContent className="space-y-3 flex-1 flex flex-col">
+        <div className="flex-1">
+          <p className="text-horizon-accent text-sm text-right line-clamp-3 mb-3">
+            {recommendation.description}
+          </p>
 
-        <div className="grid grid-cols-2 gap-3">
-          {recommendation.expected_profit > 0 && (
-            <div className="bg-green-500/10 p-3 rounded-lg text-center border border-green-500/20">
-              <DollarSign className="w-4 h-4 mx-auto mb-1 text-green-400" />
-              <div className="text-sm text-green-400">רווח צפוי</div>
-              <div className="text-lg font-bold text-green-300">
-                ₪{recommendation.expected_profit.toLocaleString()}
+          <div className="grid grid-cols-2 gap-3">
+            {recommendation.expected_profit > 0 && (
+              <div className="bg-green-500/10 p-3 rounded-lg text-center border border-green-500/20">
+                <DollarSign className="w-4 h-4 mx-auto mb-1 text-green-400" />
+                <div className="text-sm text-green-400">רווח צפוי</div>
+                <div className="text-lg font-bold text-green-300">
+                  ₪{recommendation.expected_profit.toLocaleString()}
+                </div>
               </div>
-            </div>
-          )}
-          
-          {recommendation.profit_percentage > 0 && (
-            <div className="bg-blue-500/10 p-3 rounded-lg text-center border border-blue-500/20">
-              <TrendingUp className="w-4 h-4 mx-auto mb-1 text-blue-400" />
-              <div className="text-sm text-blue-400">שיפור צפוי</div>
-              <div className="text-lg font-bold text-blue-300">
-                {recommendation.profit_percentage}%
+            )}
+            
+            {recommendation.profit_percentage > 0 && (
+              <div className="bg-blue-500/10 p-3 rounded-lg text-center border border-blue-500/20">
+                <TrendingUp className="w-4 h-4 mx-auto mb-1 text-blue-400" />
+                <div className="text-sm text-blue-400">שיפור צפוי</div>
+                <div className="text-lg font-bold text-blue-300">
+                  {recommendation.profit_percentage}%
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center justify-center pt-2">
+        <div className="mt-auto pt-4 border-t border-horizon">
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={(e) => { e.stopPropagation(); onView && onView(recommendation); }}
-            className="text-horizon-primary hover:text-horizon-primary/80"
+            className="w-full text-horizon-primary hover:text-horizon-primary/80 border-horizon-primary hover:bg-horizon-primary/10"
           >
             <Eye className="w-4 h-4 ml-2" />
             לחץ לצפייה מלאה

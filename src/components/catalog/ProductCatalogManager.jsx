@@ -17,7 +17,8 @@ import {
   X,
   AlertTriangle,
   List,
-  Edit3
+  Edit3,
+  Star
 } from "lucide-react";
 import { ProductCatalog } from "@/entities/ProductCatalog";
 import ProductCatalogUpload from "./ProductCatalogUpload";
@@ -154,6 +155,10 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     setCatalogStats(stats);
   }, []);
 
+  const [hasMoreProducts, setHasMoreProducts] = useState(false);
+  const [loadedProductsCount, setLoadedProductsCount] = useState(100);
+  const PRODUCTS_PER_PAGE = 100;
+
   const loadCatalog = useCallback(async () => {
     if (!selectedCatalogId) {
         setIsLoading(false);
@@ -162,60 +167,86 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     try {
       setIsLoading(true);
       
-      // שליפת כל המוצרים עם pagination - Base44 מגביל ל-5000 בבת אחת
-      let allProducts = [];
-      let hasMore = true;
-      let skip = 0;
-      const batchSize = 5000;
+      // טען רק את ה-100 הראשונים
+      const firstBatch = await ProductCatalog.filter(
+        {
+          customer_email: customer.email,
+          catalog_id: selectedCatalogId,
+          is_active: true
+        },
+        '-created_date',
+        PRODUCTS_PER_PAGE,
+        0
+      );
       
-      while (hasMore) {
-        const batch = await ProductCatalog.filter(
-          {
-            customer_email: customer.email,
-            catalog_id: selectedCatalogId,
-            is_active: true
-          },
-          '-created_date',
-          batchSize,
-          skip
-        );
-        
-        if (batch.length > 0) {
-          allProducts = [...allProducts, ...batch];
-          skip += batch.length;
-          
-          // אם קיבלנו פחות מ-batchSize, סיימנו
-          if (batch.length < batchSize) {
-            hasMore = false;
-          }
-        } else {
-          hasMore = false;
-        }
-      }
-
-      setProducts(allProducts);
-      updateCatalogStats(allProducts);
-      setFilteredProducts(allProducts);
+      setProducts(firstBatch);
+      setFilteredProducts(firstBatch);
+      updateCatalogStats(firstBatch);
       
-      // עדכון product_count בישות Catalog אם יש הבדל
-      const selectedCatalog = catalogs.find(c => c.id === selectedCatalogId);
-      if (selectedCatalog && selectedCatalog.product_count !== allProducts.length) {
-        try {
-          await Catalog.update(selectedCatalogId, { product_count: allProducts.length });
-          // עדכון מקומי
-          setCatalogs(prev => prev.map(c => 
-            c.id === selectedCatalogId ? { ...c, product_count: allProducts.length } : c
-          ));
-        } catch (e) {
-          console.warn('לא ניתן לעדכן product_count:', e);
-        }
+      // בדוק אם יש עוד - נשתמש ב-count אם יש
+      try {
+        const totalCount = await ProductCatalog.count({
+          customer_email: customer.email,
+          catalog_id: selectedCatalogId,
+          is_active: true
+        });
+        setHasMoreProducts(totalCount > PRODUCTS_PER_PAGE);
+        setLoadedProductsCount(PRODUCTS_PER_PAGE);
+      } catch (countError) {
+        // אם count לא עובד, נבדוק אם יש עוד לפי הגודל
+        setHasMoreProducts(firstBatch.length === PRODUCTS_PER_PAGE);
+        setLoadedProductsCount(firstBatch.length);
       }
     } catch (error) {
       console.error("Error loading catalog:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [customer.email, selectedCatalogId, updateCatalogStats, catalogs, setCatalogs]);
+  }, [customer.email, selectedCatalogId, updateCatalogStats]);
+
+  // פונקציה לטעינת עוד מוצרים
+  const loadMoreProducts = useCallback(async () => {
+    if (!selectedCatalogId || isLoading) return;
+    
+    try {
+      setIsLoading(true);
+      
+      const nextBatch = await ProductCatalog.filter(
+        {
+          customer_email: customer.email,
+          catalog_id: selectedCatalogId,
+          is_active: true
+        },
+        '-created_date',
+        PRODUCTS_PER_PAGE,
+        loadedProductsCount
+      );
+      
+      if (nextBatch.length > 0) {
+        setProducts(prev => [...prev, ...nextBatch]);
+        setFilteredProducts(prev => [...prev, ...nextBatch]);
+        setLoadedProductsCount(prev => prev + nextBatch.length);
+        
+        // בדוק אם יש עוד
+        try {
+          const totalCount = await ProductCatalog.count({
+            customer_email: customer.email,
+            catalog_id: selectedCatalogId,
+            is_active: true
+          });
+          setHasMoreProducts(loadedProductsCount + nextBatch.length < totalCount);
+        } catch (countError) {
+          setHasMoreProducts(nextBatch.length === PRODUCTS_PER_PAGE);
+        }
+      } else {
+        setHasMoreProducts(false);
+      }
+    } catch (error) {
+      console.error("Error loading more products:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [customer.email, selectedCatalogId, loadedProductsCount, isLoading]);
 
   const loadCatalogs = useCallback(async () => {
       try {
@@ -852,7 +883,12 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                                     : (catalog.product_count || 0);
                                 return (
                                     <SelectItem key={catalog.id} value={catalog.id}>
-                                        {catalog.catalog_name} ({displayCount.toLocaleString()} מוצרים)
+                                        <div className="flex items-center gap-2">
+                                            {catalog.is_default && (
+                                                <Badge className="bg-horizon-primary text-white text-xs">רשמי</Badge>
+                                            )}
+                                            <span>{catalog.catalog_name} ({displayCount.toLocaleString()} מוצרים)</span>
+                                        </div>
                                     </SelectItem>
                                 );
                             })
@@ -867,6 +903,40 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                     <Plus className="w-4 h-4 ml-1" />
                     קטלוג חדש
                 </Button>
+                {selectedCatalogId && (
+                    <Button 
+                        onClick={async () => {
+                            try {
+                                // בטל את כל הקטלוגים האחרים
+                                const allCatalogs = await Catalog.filter({ customer_email: customer.email });
+                                await Promise.all(
+                                    allCatalogs.map(cat => 
+                                        Catalog.update(cat.id, { is_default: cat.id === selectedCatalogId })
+                                    )
+                                );
+                                
+                                // עדכן את הקטלוג הנוכחי
+                                await Catalog.update(selectedCatalogId, { 
+                                    is_default: true,
+                                    catalog_name: 'קטלוג רשמי'
+                                });
+                                
+                                await loadCatalogs();
+                                alert('הקטלוג הוגדר כקטלוג רשמי');
+                            } catch (error) {
+                                console.error('Error setting default catalog:', error);
+                                alert('שגיאה בהגדרת קטלוג רשמי');
+                            }
+                        }}
+                        size="sm"
+                        variant="outline"
+                        disabled={disableAllActions || catalogs.find(c => c.id === selectedCatalogId)?.is_default}
+                        className="border-horizon-primary text-horizon-primary"
+                    >
+                        <Star className="w-4 h-4 ml-1" />
+                        הגדר כקטלוג רשמי
+                    </Button>
+                )}
             </div>
             
             <div className="flex gap-2 ml-auto">

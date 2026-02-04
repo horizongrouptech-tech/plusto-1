@@ -17,12 +17,23 @@ import {
 } from 'lucide-react';
 import { format, isToday, isPast, isFuture, parseISO } from 'date-fns';
 import GoalTemplateSelector from '@/components/trial/GoalTemplateSelector';
+import CreateTaskModal from '@/components/shared/CreateTaskModal';
+import { useQuery } from '@tanstack/react-query';
 
 export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCollapse, onTaskClick, allUsers, currentUser }) {
-  const [newTaskName, setNewTaskName] = useState('');
-  const [isAdding, setIsAdding] = useState(false);
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [showGoalTemplateSelector, setShowGoalTemplateSelector] = useState(false);
   const [filterType, setFilterType] = useState('all'); // 'all', 'goals', 'tasks'
+
+  // טעינת יעדים לצורך שיוך משימה ליעד
+  const { data: allGoals = [] } = useQuery({
+    queryKey: ['customerGoals', customer?.email],
+    queryFn: () => base44.entities.CustomerGoal.filter({
+      customer_email: customer.email,
+      is_active: true
+    }, 'order_index'),
+    enabled: !!customer?.email
+  });
 
   // סינון משימות לפי תאריך התחלה - רק משימות שהתאריך שלהן הגיע
   const relevantTasks = useMemo(() => {
@@ -80,37 +91,6 @@ export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCo
     return { todayTasks, overdueTasks, inProgressTasks, openTasks, completedTasks };
   }, [relevantTasks]);
 
-  const handleAddTask = async (e, currentUser) => {
-    e.preventDefault();
-    if (!newTaskName.trim() || !customer?.email) return;
-
-    setIsAdding(true);
-    try {
-      const startDate = new Date();
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + 14); // ברירת מחדל - 14 יום (שבועיים) מהיום
-
-      await base44.entities.CustomerGoal.create({
-        customer_email: customer.email,
-        name: newTaskName.trim(),
-        status: 'open',
-        task_type: 'one_time',
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0],
-        assignee_email: currentUser?.email,
-        assigned_users: currentUser?.email ? [currentUser.email] : [],
-        is_active: true
-      });
-
-      setNewTaskName('');
-      if (onRefresh) onRefresh();
-    } catch (error) {
-      console.error("Error adding task:", error);
-      alert('שגיאה בהוספת משימה');
-    } finally {
-      setIsAdding(false);
-    }
-  };
 
   const handleMarkDone = async (taskId) => {
     try {
@@ -261,27 +241,15 @@ export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCo
           </Button>
         </div>
 
-        {/* הוספת משימה מהירה */}
-        <form onSubmit={(e) => handleAddTask(e, currentUser)} className="flex gap-2 mb-3">
-          <Input
-            placeholder="משימה חדשה..."
-            value={newTaskName}
-            onChange={(e) => setNewTaskName(e.target.value)}
-            className="flex-1 bg-horizon-dark border-horizon text-horizon-text placeholder:text-horizon-accent text-sm"
-          />
-          <Button
-            type="submit"
-            size="icon"
-            disabled={isAdding || !newTaskName.trim()}
-            className="bg-horizon-primary hover:bg-horizon-primary/90"
-          >
-            {isAdding ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Plus className="w-4 h-4" />
-            )}
-          </Button>
-        </form>
+        {/* כפתור הוספת משימה */}
+        <Button
+          onClick={() => setShowCreateTaskModal(true)}
+          className="w-full bg-horizon-primary hover:bg-horizon-primary/90 text-white mb-3"
+          size="sm"
+        >
+          <Plus className="w-4 h-4 ml-2" />
+          הוסף משימה חדשה
+        </Button>
 
         {/* כפתור בחירה מבנק יעדים */}
         <Button
@@ -356,6 +324,19 @@ export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCo
         onClose={() => setShowGoalTemplateSelector(false)}
         onGoalCreated={() => {
           setShowGoalTemplateSelector(false);
+          if (onRefresh) onRefresh();
+        }}
+      />
+
+      {/* מודל יצירת משימה */}
+      <CreateTaskModal
+        isOpen={showCreateTaskModal}
+        onClose={() => setShowCreateTaskModal(false)}
+        customer={customer}
+        currentUser={currentUser}
+        allGoals={allGoals}
+        onSuccess={() => {
+          setShowCreateTaskModal(false);
           if (onRefresh) onRefresh();
         }}
       />

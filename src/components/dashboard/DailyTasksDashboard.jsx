@@ -37,8 +37,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { CalendarIcon } from 'lucide-react';
 
 import KanbanColumn from './kanban/KanbanColumn';
 import TaskCard from './kanban/TaskCard';
@@ -906,12 +909,35 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
 
               <div>
                 <Label className="text-right block mb-2 text-horizon-text">תאריך יעד</Label>
-                <input
-                type="date"
-                value={editedTaskData.end_date || ''}
-                onChange={(e) => setEditedTaskData({ ...editedTaskData, end_date: e.target.value })}
-                className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text text-right" />
-
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-end text-right bg-horizon-card border-horizon text-horizon-text"
+                    >
+                      {editedTaskData.end_date ? (
+                        format(new Date(editedTaskData.end_date), 'dd/MM/yyyy', { locale: he })
+                      ) : (
+                        <span className="text-horizon-accent">בחר תאריך</span>
+                      )}
+                      <CalendarIcon className="w-4 h-4 mr-2" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-horizon-card border-horizon" align="end">
+                    <Calendar
+                      mode="single"
+                      selected={editedTaskData.end_date ? new Date(editedTaskData.end_date) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          const formatted = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                          setEditedTaskData({ ...editedTaskData, end_date: formatted });
+                        }
+                      }}
+                      locale={he}
+                      className="text-horizon-text"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div>

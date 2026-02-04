@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { base44 } from '@/api/base44Client';
@@ -16,18 +17,26 @@ export default function EditCustomerModal({ isOpen, onClose, customer, onCustome
         full_name: '',
         email: '',
         phone: '',
+        secondary_phone: '',
         business_name: '',
         business_type: '',
         company_size: '',
         monthly_revenue: '',
         business_city: '',
+        address_street: '',
+        address_number: '',
+        address_zip: '',
+        tax_id: '',
+        establishment_date: '',
+        status: 'active',
         main_products_services: '',
         target_audience: '',
         business_goals: '',
         website_url: '',
         customer_group: '',
         assigned_financial_manager_email: '',
-        additional_assigned_financial_manager_emails: []
+        additional_assigned_financial_manager_emails: [],
+        general_notes: ''
     });
     // Removed isSaving state as useMutation provides isLoading
     const [currentUser, setCurrentUser] = useState(null);
@@ -68,18 +77,26 @@ export default function EditCustomerModal({ isOpen, onClose, customer, onCustome
                 full_name: customer.full_name || '',
                 email: customer.email || '',
                 phone: customer.phone || '',
+                secondary_phone: customer.secondary_phone || '',
                 business_name: customer.business_name || '',
                 business_type: customer.business_type || '',
                 company_size: customer.company_size || '',
                 monthly_revenue: customer.monthly_revenue || '',
                 business_city: customer.address?.city || customer.business_city || '',
+                address_street: customer.address?.street || customer.address_street || '',
+                address_number: customer.address?.number || customer.address_number || '',
+                address_zip: customer.address?.zip || customer.address_zip || '',
+                tax_id: customer.tax_id || '',
+                establishment_date: customer.establishment_date || '',
+                status: customer.status || 'active',
                 main_products_services: customer.main_products || customer.main_products_services || '',
                 target_audience: customer.target_customers || customer.target_audience || '',
                 business_goals: customer.business_goals || '',
                 website_url: customer.website_url || '',
                 customer_group: customer.customer_group || '',
                 assigned_financial_manager_email: customer.assigned_financial_manager_email || '',
-                additional_assigned_financial_manager_emails: customer.additional_assigned_financial_manager_emails || []
+                additional_assigned_financial_manager_emails: customer.additional_assigned_financial_manager_emails || [],
+                general_notes: customer.general_notes || ''
             });
             // זיהוי לקוח אונבורדינג - בדוק מספר דרכים
             const isOnboarding = 
@@ -126,18 +143,26 @@ export default function EditCustomerModal({ isOpen, onClose, customer, onCustome
                     full_name: dataToUpdate.full_name,
                     email: dataToUpdate.email,
                     phone: dataToUpdate.phone,
+                    secondary_phone: dataToUpdate.secondary_phone || null,
                     business_name: dataToUpdate.business_name,
                     business_type: dataToUpdate.business_type,
                     company_size: dataToUpdate.company_size,
                     monthly_revenue: dataToUpdate.monthly_revenue ? parseFloat(dataToUpdate.monthly_revenue) : null,
                     business_city: dataToUpdate.business_city,
+                    address_street: dataToUpdate.address_street || null,
+                    address_number: dataToUpdate.address_number || null,
+                    address_zip: dataToUpdate.address_zip || null,
+                    tax_id: dataToUpdate.tax_id || null,
+                    establishment_date: dataToUpdate.establishment_date || null,
+                    status: dataToUpdate.status || 'active',
                     main_products_services: dataToUpdate.main_products_services,
                     target_audience: dataToUpdate.target_audience,
                     business_goals: dataToUpdate.business_goals,
                     website_url: dataToUpdate.website_url,
                     customer_group: dataToUpdate.customer_group || null,
                     assigned_financial_manager_email: dataToUpdate.assigned_financial_manager_email || null,
-                    additional_assigned_financial_manager_emails: dataToUpdate.additional_assigned_financial_manager_emails || []
+                    additional_assigned_financial_manager_emails: dataToUpdate.additional_assigned_financial_manager_emails || [],
+                    general_notes: dataToUpdate.general_notes || null
                 };
                 const updated = await base44.entities.OnboardingRequest.update(recordId, onboardingUpdateData);
                 
@@ -155,6 +180,7 @@ export default function EditCustomerModal({ isOpen, onClose, customer, onCustome
                     full_name: dataToUpdate.full_name,
                     email: dataToUpdate.email,
                     phone: dataToUpdate.phone,
+                    secondary_phone: dataToUpdate.secondary_phone || null,
                     business_name: dataToUpdate.business_name,
                     business_type: dataToUpdate.business_type,
                     customer_group: dataToUpdate.customer_group || null,
@@ -164,10 +190,17 @@ export default function EditCustomerModal({ isOpen, onClose, customer, onCustome
                     business_goals: dataToUpdate.business_goals,
                     target_customers: dataToUpdate.target_audience,
                     website_url: dataToUpdate.website_url,
+                    tax_id: dataToUpdate.tax_id || null,
+                    establishment_date: dataToUpdate.establishment_date || null,
+                    status: dataToUpdate.status || 'active',
+                    general_notes: dataToUpdate.general_notes || null,
                     assigned_financial_manager_email: dataToUpdate.assigned_financial_manager_email || null,
                     additional_assigned_financial_manager_emails: dataToUpdate.additional_assigned_financial_manager_emails || [],
                     address: {
-                        city: dataToUpdate.business_city
+                        city: dataToUpdate.business_city,
+                        street: dataToUpdate.address_street || null,
+                        number: dataToUpdate.address_number || null,
+                        zip: dataToUpdate.address_zip || null
                     }
                 };
                 const updated = await base44.entities.User.update(recordId, userUpdateData);
@@ -458,6 +491,81 @@ export default function EditCustomerModal({ isOpen, onClose, customer, onCustome
                         </div>
 
                         <div>
+                            <Label htmlFor="address_street" className="text-horizon-text text-right block">רחוב</Label>
+                            <Input
+                                id="address_street"
+                                value={formData.address_street}
+                                onChange={(e) => handleInputChange('address_street', e.target.value)}
+                                className="bg-horizon-card border-horizon text-horizon-text"
+                            />
+                        </div>
+
+                        <div>
+                            <Label htmlFor="address_number" className="text-horizon-text text-right block">מספר בית</Label>
+                            <Input
+                                id="address_number"
+                                value={formData.address_number}
+                                onChange={(e) => handleInputChange('address_number', e.target.value)}
+                                className="bg-horizon-card border-horizon text-horizon-text"
+                            />
+                        </div>
+
+                        <div>
+                            <Label htmlFor="address_zip" className="text-horizon-text text-right block">מיקוד</Label>
+                            <Input
+                                id="address_zip"
+                                value={formData.address_zip}
+                                onChange={(e) => handleInputChange('address_zip', e.target.value)}
+                                className="bg-horizon-card border-horizon text-horizon-text"
+                            />
+                        </div>
+
+                        <div>
+                            <Label htmlFor="secondary_phone" className="text-horizon-text text-right block">טלפון נוסף</Label>
+                            <Input
+                                id="secondary_phone"
+                                value={formData.secondary_phone}
+                                onChange={(e) => handleInputChange('secondary_phone', e.target.value)}
+                                className="bg-horizon-card border-horizon text-horizon-text"
+                            />
+                        </div>
+
+                        <div>
+                            <Label htmlFor="tax_id" className="text-horizon-text text-right block">ח.פ/ע.מ</Label>
+                            <Input
+                                id="tax_id"
+                                value={formData.tax_id}
+                                onChange={(e) => handleInputChange('tax_id', e.target.value)}
+                                className="bg-horizon-card border-horizon text-horizon-text"
+                            />
+                        </div>
+
+                        <div>
+                            <Label htmlFor="establishment_date" className="text-horizon-text text-right block">תאריך הקמה</Label>
+                            <Input
+                                id="establishment_date"
+                                type="date"
+                                value={formData.establishment_date}
+                                onChange={(e) => handleInputChange('establishment_date', e.target.value)}
+                                className="bg-horizon-card border-horizon text-horizon-text"
+                            />
+                        </div>
+
+                        <div>
+                            <Label htmlFor="status" className="text-horizon-text text-right block">סטטוס</Label>
+                            <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
+                                <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
+                                    <SelectValue placeholder="בחר סטטוס" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-horizon-dark border-horizon">
+                                    <SelectItem value="active">פעיל</SelectItem>
+                                    <SelectItem value="inactive">לא פעיל</SelectItem>
+                                    <SelectItem value="archived">בארכיון</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div>
                             <Label htmlFor="customer_group" className="text-horizon-text text-right block">קבוצת ניהול</Label>
                             <Select value={formData.customer_group || ''} onValueChange={(value) => handleInputChange('customer_group', value === 'null' ? null : value)}>
                                 <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
@@ -511,6 +619,17 @@ export default function EditCustomerModal({ isOpen, onClose, customer, onCustome
                                 value={formData.website_url}
                                 onChange={(e) => handleInputChange('website_url', e.target.value)}
                                 className="bg-horizon-card border-horizon text-horizon-text"
+                            />
+                        </div>
+
+                        <div>
+                            <Label htmlFor="general_notes" className="text-horizon-text text-right block">הערות כלליות</Label>
+                            <Textarea
+                                id="general_notes"
+                                value={formData.general_notes}
+                                onChange={(e) => handleInputChange('general_notes', e.target.value)}
+                                className="bg-horizon-card border-horizon text-horizon-text min-h-[100px]"
+                                placeholder="הוסף הערות כלליות על הלקוח..."
                             />
                         </div>
                     </div>

@@ -17,6 +17,9 @@ import {
   TrendingUp
 } from "lucide-react";
 import { generateTargetedRecommendation } from "@/components/logic/targetedRecommendationEngine";
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { ProductCatalog } from '@/entities/ProductCatalog';
 
 export default function TargetedRecommendationModal({ customer, isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
@@ -25,10 +28,38 @@ export default function TargetedRecommendationModal({ customer, isOpen, onClose,
     issueReason: ''
   });
   
+  const [selectedProductId, setSelectedProductId] = useState('');
+  const [customProductName, setCustomProductName] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState('');
   const [generationResult, setGenerationResult] = useState(null);
+
+  // טעינת מוצרים מהקטלוג
+  const { data: catalogProducts = [], isLoading: isLoadingProducts } = useQuery({
+    queryKey: ['catalogProducts', customer?.email],
+    queryFn: async () => {
+      // טען את הקטלוג הפעיל
+      const catalogs = await base44.entities.Catalog.filter({
+        created_by: customer.email,
+        is_active: true
+      }, '-created_date');
+      
+      if (catalogs.length === 0) return [];
+      
+      const activeCatalog = catalogs[0];
+      
+      // טען מוצרים מהקטלוג (עד 500 ראשונים)
+      const products = await ProductCatalog.filter({
+        customer_email: customer.email,
+        catalog_id: activeCatalog.id,
+        is_active: true
+      }, '-created_date', 500);
+      
+      return products;
+    },
+    enabled: !!customer?.email && isOpen
+  });
 
   const issueReasons = [
     { value: 'low_profitability', label: 'חוסר רווחיות' },
@@ -43,8 +74,8 @@ export default function TargetedRecommendationModal({ customer, isOpen, onClose,
   ];
 
   const handleGenerate = async () => {
-    if (!formData.productName.trim()) {
-      alert('נא להזין שם מוצר');
+    if (!selectedProductId && !formData.productName.trim()) {
+      alert('נא לבחור מוצר מהקטלוג או להזין שם מוצר');
       return;
     }
 
@@ -86,6 +117,8 @@ export default function TargetedRecommendationModal({ customer, isOpen, onClose,
 
   const handleClose = () => {
     setFormData({ productName: '', productDescription: '', issueReason: '' });
+    setSelectedProductId('');
+    setCustomProductName('');
     setIsGenerating(false);
     setProgress(0);
     setCurrentStep('');
@@ -117,14 +150,53 @@ export default function TargetedRecommendationModal({ customer, isOpen, onClose,
               <CardContent className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-horizon-text mb-2">
-                    שם המוצר *
+                    בחר מוצר מהקטלוג *
                   </label>
-                  <Input
-                    value={formData.productName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, productName: e.target.value }))}
-                    placeholder="לדוגמה: נעלי ספורט אדידס, מחשב נייד דל, שמפו לוריאל..."
-                    className="bg-horizon-card border-horizon text-horizon-text"
-                  />
+                  <Select 
+                    value={selectedProductId} 
+                    onValueChange={(value) => {
+                      setSelectedProductId(value);
+                      if (value === 'custom') {
+                        setCustomProductName('');
+                        setFormData(prev => ({ ...prev, productName: '', productDescription: '' }));
+                      } else {
+                        const product = catalogProducts.find(p => p.id === value);
+                        if (product) {
+                          setFormData(prev => ({
+                            ...prev,
+                            productName: product.product_name,
+                            productDescription: `${product.category || ''} - מחיר: ₪${product.selling_price || 0}`
+                          }));
+                        }
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
+                      <SelectValue placeholder={isLoadingProducts ? "טוען מוצרים..." : "בחר מוצר מהקטלוג"} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-horizon-card border-horizon">
+                      <SelectItem value="custom" className="text-horizon-text">+ הזן מוצר חדש ידנית</SelectItem>
+                      {catalogProducts.map(product => (
+                        <SelectItem key={product.id} value={product.id} className="text-horizon-text">
+                          {product.product_name} {product.category ? `(${product.category})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  {selectedProductId === 'custom' && (
+                    <div className="mt-2">
+                      <Input
+                        value={customProductName}
+                        onChange={(e) => {
+                          setCustomProductName(e.target.value);
+                          setFormData(prev => ({ ...prev, productName: e.target.value }));
+                        }}
+                        placeholder="הזן שם מוצר חדש..."
+                        className="bg-horizon-card border-horizon text-horizon-text"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -257,7 +329,7 @@ export default function TargetedRecommendationModal({ customer, isOpen, onClose,
                 </Button>
                 <Button 
                   onClick={handleGenerate}
-                  disabled={isGenerating || !formData.productName.trim() || !formData.issueReason}
+                  disabled={isGenerating || (!selectedProductId && !formData.productName.trim()) || !formData.issueReason}
                   className="btn-horizon-primary"
                 >
                   {isGenerating ? (

@@ -209,14 +209,25 @@ function ChecklistItemCard({ item, category, onUpdate, isExpanded, onToggleExpan
             </div>
           </div>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onToggleExpand(category.id)}
-            className="text-horizon-accent"
-          >
-            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onShowDetails && onShowDetails(category)}
+              className="text-horizon-primary hover:bg-horizon-primary/10"
+            >
+              <Info className="w-4 h-4 ml-1" />
+              פירוט
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onToggleExpand(category.id)}
+              className="text-horizon-accent"
+            >
+              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </Button>
+          </div>
         </div>
 
         {/* שדה הערות מורחב */}
@@ -667,6 +678,10 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
                     isExpanded={expandedItems.includes(category.id)}
                     onToggleExpand={toggleExpand}
                     isUpdating={updatingItemId === category.id}
+                    onShowDetails={(cat) => {
+                      setSelectedCategoryForDetails(cat);
+                      setShowDetailsModal(true);
+                    }}
                   />
                 );
               })}
@@ -823,6 +838,108 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* מודל פירוט מלא */}
+        <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+          <DialogContent className="max-w-2xl bg-horizon-dark border-horizon" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="text-xl text-horizon-text">
+                פירוט מלא - {selectedCategoryForDetails?.title}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedCategoryForDetails && (
+              <div className="space-y-4 mt-4">
+                <div>
+                  <h4 className="text-horizon-text font-semibold mb-2">תיאור:</h4>
+                  <p className="text-horizon-accent">{selectedCategoryForDetails.description}</p>
+                </div>
+                <div>
+                  <h4 className="text-horizon-text font-semibold mb-2">מצב מצוי:</h4>
+                  <p className="text-horizon-accent">
+                    המצב הנוכחי שלך בתחום זה - תאר בהערות מה הסיטואציה כיום. 
+                    זה כולל את כל הבעיות, האתגרים והמצב הקיים.
+                  </p>
+                </div>
+                <div>
+                  <h4 className="text-horizon-text font-semibold mb-2">מצב רצוי:</h4>
+                  <p className="text-horizon-accent">
+                    המצב האידיאלי שאליו אתה רוצה להגיע. זה כולל את כל המטרות, 
+                    השיפורים והמצב האופטימלי בתחום זה.
+                  </p>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* תיעוד כל הימים בחודש */}
+        {activeTab === 'monthly' && (
+          <Card className="card-horizon mt-4">
+            <CardHeader>
+              <CardTitle className="text-horizon-text flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-horizon-primary" />
+                תיעוד כל הימים בחודש - {MONTH_NAMES[selectedMonth]} {selectedYear}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-7 gap-2">
+                {Array.from({ length: 31 }, (_, i) => i + 1).map(day => {
+                  const dateStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                  const dayData = checklistHistory?.find(d => d.date === dateStr);
+                  const date = new Date(dateStr);
+                  const isValidDate = date.getMonth() === selectedMonth;
+                  
+                  if (!isValidDate) return <div key={day}></div>;
+                  
+                  const dayOfWeek = date.getDay();
+                  const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
+                  const desiredCount = dayData?.items?.filter(i => i.status === 'desired').length || 0;
+                  const currentCount = dayData?.items?.filter(i => i.status === 'current').length || 0;
+                  const totalCount = dayData?.items?.length || 0;
+                  
+                  return (
+                    <div
+                      key={day}
+                      className={`p-2 rounded border text-center ${
+                        isWeekend 
+                          ? 'bg-gray-500/10 border-gray-500/30 opacity-50' 
+                          : dayData 
+                            ? 'bg-horizon-card border-horizon' 
+                            : 'bg-horizon-dark/50 border-horizon/30'
+                      }`}
+                    >
+                      <div className="text-xs text-horizon-accent mb-1">{day}</div>
+                      {dayData && (
+                        <div className="flex flex-col gap-1">
+                          {desiredCount > 0 && (
+                            <div className="w-full h-1 bg-green-500 rounded"></div>
+                          )}
+                          {currentCount > 0 && (
+                            <div className="w-full h-1 bg-blue-500 rounded"></div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex gap-4 mt-4 justify-center">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-green-500 rounded"></div>
+                  <span className="text-xs text-horizon-accent">מצב רצוי</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                  <span className="text-xs text-horizon-accent">מצב מצוי</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-gray-500/30 rounded"></div>
+                  <span className="text-xs text-horizon-accent">לא בוצע</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </DialogContent>
     </Dialog>
   );

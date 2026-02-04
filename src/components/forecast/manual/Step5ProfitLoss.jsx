@@ -366,7 +366,9 @@ export default function Step5ProfitLoss({ forecastData, onUpdateForecast, onSave
         marketing_sales_expenses: monthMarketingExpenses,
         admin_expenses: monthAdminExpenses,
         operating_profit: monthOperatingProfit,
-        operating_margin_percentage: monthRevenue > 0 ? monthOperatingProfit / monthRevenue * 100 : 0,
+        operating_margin_percentage: monthRevenue > 0 
+          ? Math.min(100, Math.max(-100, (monthOperatingProfit / monthRevenue) * 100))
+          : 0,
         financing_expenses: monthFinancingExpenses,
         profit_before_tax: monthProfitBeforeTax,
         tax_amount: monthTaxAmount,

@@ -537,10 +537,22 @@ Deno.serve(async (req) => {
 
     console.log(`New entries to add: ${newEntries.length}, Duplicates skipped: ${duplicates.length}`);
 
-    // שמירה בבסיס הנתונים - רק שורות חדשות
-    if (newEntries.length > 0) {
+    // סינון רק תאריכים מהיום והלאה (עתיד והווה)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const futureEntries = newEntries.filter(entry => {
+      const entryDate = new Date(entry.date);
+      entryDate.setHours(0, 0, 0, 0);
+      return entryDate >= today;
+    });
+
+    console.log(`Filtered to future entries: ${futureEntries.length} (from ${newEntries.length} total)`);
+
+    // שמירה בבסיס הנתונים - רק שורות חדשות עתידיות
+    if (futureEntries.length > 0) {
       console.log('Saving new cash flow entries to database...');
-      await base44.asServiceRole.entities.CashFlow.bulkCreate(newEntries);
+      await base44.asServiceRole.entities.CashFlow.bulkCreate(futureEntries);
       console.log('Cash flow entries saved successfully');
     }
 

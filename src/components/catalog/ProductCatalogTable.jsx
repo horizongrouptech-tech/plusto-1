@@ -92,6 +92,7 @@ export default function ProductCatalogTable({
                   <TableHead className="text-right text-horizon-text">מחיר מכירה</TableHead>
                   <TableHead className="text-right text-horizon-text">רווח גולמי</TableHead>
                   <TableHead className="text-right text-horizon-text">אחוז רווח</TableHead>
+                  <TableHead className="text-right text-horizon-text">רווח גולמי / מחיר מכירה</TableHead>
                   <TableHead className="text-right text-horizon-text">קטגוריה</TableHead>
                   <TableHead className="text-right text-horizon-text">ספק</TableHead>
                   <TableHead className="text-right text-horizon-text">מלאי</TableHead>
@@ -101,19 +102,37 @@ export default function ProductCatalogTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentProducts.map((product) =>
-                <TableRow key={product.id} className="border-b-horizon/50 hover:bg-horizon-card/30">
+                {currentProducts.map((product) => {
+                  const costPrice = parseFloat(product.cost_price) || 0;
+                  const sellingPrice = parseFloat(product.selling_price) || 0;
+                  const grossProfit = sellingPrice - costPrice;
+                  const grossProfitPercent = sellingPrice > 0 
+                    ? ((grossProfit / sellingPrice) * 100).toFixed(1)
+                    : 0;
+                  const hasCostPrice = costPrice > 0;
+                  
+                  return (
+                  <TableRow 
+                    key={product.id} 
+                    className={`border-b-horizon/50 hover:bg-horizon-card/30 ${!hasCostPrice ? 'bg-red-500/5 border-l-4 border-l-red-500' : ''}`}
+                  >
                     <TableCell className="font-medium text-horizon-text">
                       <div className="flex items-center gap-2">
                         <ShoppingCart className="w-4 h-4 text-horizon-primary" />
                         {product.product_name}
+                        {!hasCostPrice && (
+                          <Badge className="bg-red-500/20 text-red-400 border-red-500/50 mr-2">
+                            <AlertTriangle className="w-3 h-3 ml-1" />
+                            חסר מחיר קנייה
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-horizon-accent font-mono text-sm">
                       {product.barcode || '-'}
                     </TableCell>
                     <TableCell className="text-horizon-text font-medium">
-                      ₪{product.cost_price ? product.cost_price.toLocaleString() : '0'}
+                      {hasCostPrice ? `₪${costPrice.toLocaleString()}` : '-'}
                     </TableCell>
                     <TableCell className="text-horizon-text font-medium">
                       ₪{product.selling_price ? product.selling_price.toLocaleString() : '0'}
@@ -128,6 +147,11 @@ export default function ProductCatalogTable({
                           {product.profit_percentage ? `${Math.round(product.profit_percentage)}%` : '0%'}
                         </span>
                       </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span className={grossProfitPercent > 30 ? 'text-green-400' : grossProfitPercent > 15 ? 'text-yellow-400' : 'text-red-400'}>
+                        {grossProfitPercent}%
+                      </span>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-horizon-accent border-horizon">
@@ -173,7 +197,8 @@ export default function ProductCatalogTable({
                       </TableCell>
                   }
                   </TableRow>
-                )}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

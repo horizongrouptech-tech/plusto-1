@@ -24,10 +24,12 @@ import { sendWhatsAppMessage } from "@/functions/sendWhatsAppMessage";
 import CustomerNavigator from '@/components/admin/CustomerNavigator';
 import RecommendationFilters from '@/components/admin/RecommendationFilters';
 import CreateRecommendationButtons from '@/components/admin/CreateRecommendationButtons';
+import AIChatAssistant from '@/components/admin/AIChatAssistant';
 import TargetedRecommendationModal from '@/components/admin/TargetedRecommendationModal';
 import ManualRecommendationModal from '@/components/admin/ManualRecommendationModal';
 import CustomerSuppliersTab from '@/components/admin/CustomerSuppliersTab';
 import CustomerGroupSelector from '../components/admin/CustomerGroupSelector';
+import { useGlobalToast } from '@/hooks/useGlobalToast';
 import EditCustomerModal from '@/components/admin/EditCustomerModal';
 import UnifiedForecastManager from '@/components/forecast/UnifiedForecastManager';
 import FloatingAgentChat from '@/components/admin/FloatingAgentChat';
@@ -379,23 +381,31 @@ export default function CustomerManagement() {
     }
   };
 
+  const { showSuccess, showError } = useGlobalToast();
+
   const handleSendRecommendationWhatsApp = async (recommendation) => {
     if (!customer.phone) {
-      alert('אין מספר טלפון זמין עבור לקוח זה');
+      showError('אין מספר טלפון זמין עבור לקוח זה');
       return;
     }
 
     try {
-      await base44.functions.invoke('sendWhatsAppMessage', {
+      const { data, error } = await base44.functions.invoke('sendWhatsAppMessage', {
         phoneNumber: customer.phone,
         customerEmail: customer.email,
         recommendation: recommendation,
         templateType: 'auto'
       });
-      alert('ההמלצה נשלחה בהצלחה לווטסאפ');
+
+      if (error || !data?.success) {
+        throw new Error(data?.error || 'שגיאה בשליחת הווצאפ');
+      }
+
+      showSuccess('ההמלצה נשלחה בהצלחה לווטסאפ');
+      queryClient.invalidateQueries({ queryKey: ['customerRecommendations', customer.email] });
     } catch (error) {
       console.error('Error sending WhatsApp:', error);
-      alert('שגיאה בשליחת ההמלצה');
+      showError(`שגיאה בשליחת ההמלצה: ${error.message}`);
     }
   };
 
@@ -635,35 +645,13 @@ export default function CustomerManagement() {
             </TabsContent>
 
             <TabsContent value="recommendations">
-              <CreateRecommendationButtons
-                onCreateSystemRecommendations={() => setShowGeneralRecommendationModal(true)}
-                onCreateTargeted={() => setShowTargetedRecommendationModal(true)}
-                onCreateGoalOriented={() => setShowGoalOrientedModal(true)}
-                onCreateManual={() => setShowManualRecommendationModal(true)}
-                isGenerating={isGeneratingRecommendations}
-              />
-
-              <RecommendationFilters
-                categoryFilter={categoryFilter}
-                setCategoryFilter={setCategoryFilter}
-                statusFilter={statusFilter}
-                setStatusFilter={setStatusFilter}
-                priorityFilter={priorityFilter}
-                setPriorityFilter={setPriorityFilter}
-                sourceFilter={sourceFilter}
-                setSourceFilter={setSourceFilter}
-              />
-
-              <StrategicRecommendations
-                recommendations={filteredRecommendations}
-                isLoading={isLoadingRecommendations}
-                onView={handleViewRecommendation}
-                onEdit={handleEditRecommendation}
-                onUpgrade={handleUpgradeRecommendation}
-                onDelete={handleDeleteRecommendation}
-                onArchive={handleArchiveRecommendation}
-                onSendToCustomer={handleSendRecommendationWhatsApp}
-                isAdmin={currentUser?.role === 'admin'}
+              <AIChatAssistant
+                customer={customer}
+                currentUser={currentUser}
+                onRecommendationApproved={(recommendation) => {
+                  queryClient.invalidateQueries({ queryKey: ['customerRecommendations', customer.email] });
+                  showSuccess('המלצה אושרה ונשמרה בהצלחה!');
+                }}
               />
             </TabsContent>
 

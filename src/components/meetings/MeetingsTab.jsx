@@ -17,10 +17,11 @@ import {
   Play, Download, MessageSquare, Sparkles, Wand2, Video,
   Phone, MapPin, CalendarPlus, CalendarCheck, CalendarX,
   ChevronDown, ChevronUp, Target, AlertTriangle, Users,
-  Send, Link as LinkIcon, ExternalLink
+  Send, Link as LinkIcon, ExternalLink, Copy
 } from 'lucide-react';
 import { format, formatDistanceToNow, isAfter, isBefore, isToday, isTomorrow, addDays, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { useGlobalToast } from '@/hooks/useGlobalToast';
 
 // סטטוסים אפשריים לפגישה
 const MEETING_STATUSES = [
@@ -41,6 +42,7 @@ const MEETING_CHANNELS = [
 
 export default function MeetingsTab({ customer, currentUser }) {
   const queryClient = useQueryClient();
+  const { showSuccess, showError, showWarning } = useGlobalToast();
   const [activeSubTab, setActiveSubTab] = useState('upcoming');
   const [showNewMeetingModal, setShowNewMeetingModal] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
@@ -146,15 +148,30 @@ export default function MeetingsTab({ customer, currentUser }) {
   // הפגישה הבאה
   const nextMeeting = categorizedMeetings.future[0];
 
+  // חישוב מספר הפגישה הבאה
+  const getNextMeetingNumber = useMemo(() => {
+    if (!meetings || meetings.length === 0) return 1;
+    
+    // מצא את המספר הגבוה ביותר
+    const numbers = meetings
+      .map(m => {
+        const match = m.subject?.match(/פגישת ניהול כספים מספר (\d+)/);
+        return match ? parseInt(match[1]) : 0;
+      })
+      .filter(n => n > 0);
+    
+    return numbers.length > 0 ? Math.max(...numbers) + 1 : meetings.length + 1;
+  }, [meetings]);
+
   // יצירת פגישה חדשה
   const handleCreateMeeting = async () => {
-    if (!newMeetingForm.subject.trim()) {
-      alert('נא להזין נושא לפגישה');
-      return;
-    }
-
     setIsCreating(true);
     try {
+      // נושא קבוע: פגישת ניהול כספים מספר X, [שם הלקוח]
+      const meetingNumber = getNextMeetingNumber;
+      const defaultSubject = `פגישת ניהול כספים מספר ${meetingNumber}, ${customer.business_name || customer.full_name}`;
+      const finalSubject = newMeetingForm.subject.trim() || defaultSubject;
+
       // בניית אובייקט נתונים נוספים
       const additionalData = {
         start_time: newMeetingForm.start_time,
@@ -175,7 +192,7 @@ export default function MeetingsTab({ customer, currentUser }) {
       // יצירת הפגישה
       const newMeeting = await base44.entities.CustomerGoal.create({
         customer_email: customer.email,
-        name: newMeetingForm.subject.trim(),
+        name: finalSubject,
         task_type: 'meeting',
         start_date: newMeetingForm.start_date,
         end_date: newMeetingForm.end_date,
@@ -190,11 +207,11 @@ export default function MeetingsTab({ customer, currentUser }) {
       // אם צריך לזמן בגוגל קלנדר
       if (newMeetingForm.invite_customer || newMeetingForm.send_reminder) {
         try {
-          const { data: calendarResult } = await base44.functions.invoke('scheduleMeeting', {
+          const { data: calendarResult, error: calendarError } = await base44.functions.invoke('scheduleMeeting', {
             meeting_id: newMeeting.id,
             customer_email: customer.email,
             financial_manager_email: currentUser?.email,
-            subject: newMeetingForm.subject.trim(),
+            subject: finalSubject,
             start_datetime: `${newMeetingForm.start_date}T${newMeetingForm.start_time}:00`,
             end_datetime: `${newMeetingForm.end_date}T${newMeetingForm.end_time}:00`,
             location: newMeetingForm.channel === 'office' ? newMeetingForm.location : newMeetingForm.channel,
@@ -204,8 +221,11 @@ export default function MeetingsTab({ customer, currentUser }) {
             customer_name: customer.business_name || customer.full_name
           });
 
-          // עדכון ה-google_event_id
-          if (calendarResult?.event_id) {
+          if (calendarError) {
+            console.error('Calendar error:', calendarError);
+            // לא נכשיל את יצירת הפגישה, רק נדווח
+          } else if (calendarResult?.event_id) {
+            // עדכון ה-google_event_id
             additionalData.google_event_id = calendarResult.event_id;
             await base44.entities.CustomerGoal.update(newMeeting.id, {
               additional_notes: JSON.stringify(additionalData)
@@ -220,10 +240,10 @@ export default function MeetingsTab({ customer, currentUser }) {
       queryClient.invalidateQueries(['customerMeetings', customer.email]);
       setShowNewMeetingModal(false);
       resetNewMeetingForm();
-      alert('הפגישה נוצרה בהצלחה!');
+      showSuccess('הפגישה נוצרה בהצלחה!');
     } catch (error) {
       console.error('Error creating meeting:', error);
-      alert('שגיאה ביצירת פגישה: ' + error.message);
+      showError('שגיאה ביצירת פגישה: ' + error.message);
     } finally {
       setIsCreating(false);
     }
@@ -283,14 +303,14 @@ export default function MeetingsTab({ customer, currentUser }) {
       setSelectedMeeting(null);
     } catch (error) {
       console.error('Error deleting meeting:', error);
-      alert('שגיאה במחיקת הפגישה');
+      showError('שגיאה במחיקת הפגישה');
     }
   };
 
   // שליחת סיכום לווצאפ
   const handleSendWhatsAppSummary = async () => {
     if (!selectedMeeting?.whatsapp_summary) {
-      alert('נא למלא את סיכום הווצאפ לפני השליחה');
+      showWarning('נא למלא את סיכום הווצאפ לפני השליחה');
       return;
     }
 
@@ -301,10 +321,10 @@ export default function MeetingsTab({ customer, currentUser }) {
         message: selectedMeeting.whatsapp_summary,
         templateType: 'meeting_summary'
       });
-      alert('הסיכום נשלח בהצלחה לווטסאפ!');
+      showSuccess('הסיכום נשלח בהצלחה לווטסאפ!');
     } catch (error) {
       console.error('Error sending WhatsApp:', error);
-      alert('שגיאה בשליחת הסיכום לווצאפ');
+      showError('שגיאה בשליחת הסיכום לווצאפ');
     }
   };
 
@@ -352,6 +372,24 @@ export default function MeetingsTab({ customer, currentUser }) {
         return { ...prev, main_points: points };
       });
     }
+  };
+
+  // יצירת סיכום פגישה בפורמט הנדרש
+  const generateMeetingSummary = (meeting) => {
+    const meetingDate = format(new Date(meeting.start_date), 'dd/MM/yyyy', { locale: he });
+    
+    return `סיכום פגישה מתאריך: ${meetingDate}
+
+נוכחים בפגישה:
+${meeting.participants || 'לא צוין'}
+
+עיקרי הדברים שעלו:
+${(meeting.main_points || ['', '', '', '', '']).map((point, idx) => `${idx + 1}. ${point || ''}`).join('\n')}
+
+משימות:
+${meeting.tasks || 'לא צוין'}
+
+תאריך פגישה הבאה: ${meeting.next_meeting_date ? format(new Date(meeting.next_meeting_date), 'dd/MM/yyyy', { locale: he }) : 'טרם נקבעה'}`;
   };
 
   // קבלת אייקון וצבע סטטוס
@@ -634,7 +672,7 @@ export default function MeetingsTab({ customer, currentUser }) {
               <Input
                 value={newMeetingForm.subject}
                 onChange={(e) => setNewMeetingForm({ ...newMeetingForm, subject: e.target.value })}
-                placeholder={`פגישת ניהול כספים ~ ${currentUser?.full_name || ''} ~ ${customer.business_name || customer.full_name}`}
+                placeholder={`פגישת ניהול כספים מספר ${getNextMeetingNumber}, ${customer.business_name || customer.full_name}`}
                 className="bg-horizon-card border-horizon text-horizon-text"
               />
             </div>
@@ -784,7 +822,7 @@ export default function MeetingsTab({ customer, currentUser }) {
             </Button>
             <Button 
               onClick={handleCreateMeeting}
-              disabled={isCreating || !newMeetingForm.subject.trim()}
+              disabled={isCreating}
               className="bg-orange-500 hover:bg-orange-600 text-white"
             >
               {isCreating ? (
@@ -1034,17 +1072,32 @@ export default function MeetingsTab({ customer, currentUser }) {
                       placeholder="סיכום קצר לשליחה בווצאפ ללקוח..."
                       className="bg-horizon-card border-horizon text-horizon-text mt-1 min-h-[100px]"
                     />
-                    {customer.phone && (
+                    <div className="flex gap-2 mt-2">
                       <Button
                         size="sm"
-                        onClick={handleSendWhatsAppSummary}
-                        className="mt-2 bg-green-600 hover:bg-green-700 text-white"
-                        disabled={!selectedMeeting.whatsapp_summary}
+                        variant="outline"
+                        onClick={() => {
+                          const summary = generateMeetingSummary(selectedMeeting);
+                          navigator.clipboard.writeText(summary);
+                          showSuccess('הסיכום הועתק ללוח');
+                        }}
+                        className="border-horizon text-horizon-text"
                       >
-                        <Send className="w-4 h-4 ml-2" />
-                        שלח לווצאפ
+                        <Copy className="w-4 h-4 ml-2" />
+                        העתק סיכום
                       </Button>
-                    )}
+                      {customer.phone && (
+                        <Button
+                          size="sm"
+                          onClick={handleSendWhatsAppSummary}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          disabled={!selectedMeeting.whatsapp_summary}
+                        >
+                          <Send className="w-4 h-4 ml-2" />
+                          שלח לווצאפ
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
 

@@ -79,29 +79,61 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
     try {
       setIsLoading(true);
 
-      // טעינה מקבילית - ספקי הלקוח וספקים מוצעים במקביל
+      // בדוק cache
+      const cacheKey = `suppliers_${customer.email}`;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < 5 * 60 * 1000) { // 5 דקות
+          setSuppliers(data.customerSuppliers || []);
+          setSuggestedSuppliers(data.suggestedSuppliers || []);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // טעינה מקבילית עם timeout
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 10000)
+      );
+
       const [customerSuppliersResult, suggestedResult] = await Promise.allSettled([
-        // טען ספקים של הלקוח
-        base44.entities.Supplier.filter({
-          customer_emails: [customer.email],
-          is_active: true
-        }),
-        // טען ספקים מוצעים חכמים
-        base44.functions.invoke('getSuggestedSuppliers', {
-          customer_email: customer.email,
-          customer_data: customer
-        })
+        Promise.race([
+          base44.entities.Supplier.filter({
+            customer_emails: [customer.email],
+            is_active: true
+          }),
+          timeoutPromise
+        ]),
+        Promise.race([
+          base44.functions.invoke('getSuggestedSuppliers', {
+            customer_email: customer.email,
+            customer_data: customer
+          }),
+          timeoutPromise
+        ])
       ]);
 
       // עיבוד ספקי הלקוח
+      let customerSuppliers = [];
       if (customerSuppliersResult.status === 'fulfilled') {
-        setSuppliers(customerSuppliersResult.value);
+        customerSuppliers = customerSuppliersResult.value;
+        setSuppliers(customerSuppliers);
       } else {
         console.error('Error loading customer suppliers:', customerSuppliersResult.reason);
-        setSuppliers([]);
+        // נסה לטעון מ-cache אם יש
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const { data } = JSON.parse(cached);
+          customerSuppliers = data.customerSuppliers || [];
+          setSuppliers(customerSuppliers);
+        } else {
+          setSuppliers([]);
+        }
       }
 
       // עיבוד ספקים מוצעים
+      let suggestedSuppliers = [];
       if (suggestedResult.status === 'fulfilled') {
         const { data: suggested, error } = suggestedResult.value;
         if (error) {
@@ -109,10 +141,10 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
           // fallback - טען את כל הספקים שלא משויכים
           try {
             const allSuppliers = await base44.entities.Supplier.filter({ is_active: true });
-            const filteredSuggested = allSuppliers.filter((supplier) =>
+            suggestedSuppliers = allSuppliers.filter((supplier) =>
               !supplier.customer_emails?.includes(customer.email)
             );
-            setSuggestedSuppliers(filteredSuggested);
+            setSuggestedSuppliers(suggestedSuppliers);
           } catch (fallbackError) {
             console.error('Fallback also failed:', fallbackError);
             setSuggestedSuppliers([]);
@@ -120,11 +152,31 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
         } else {
           // תיקון: הפונקציה מחזירה {success, data}, צריך לגשת ל-data
           const suppliersList = suggested?.data || suggested || [];
-          setSuggestedSuppliers(Array.isArray(suppliersList) ? suppliersList : []);
+          suggestedSuppliers = Array.isArray(suppliersList) ? suppliersList : [];
+          setSuggestedSuppliers(suggestedSuppliers);
         }
       } else {
         console.error('Error loading suggested suppliers:', suggestedResult.reason);
-        setSuggestedSuppliers([]);
+        // נסה לטעון מ-cache אם יש
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const { data } = JSON.parse(cached);
+          suggestedSuppliers = data.suggestedSuppliers || [];
+          setSuggestedSuppliers(suggestedSuppliers);
+        } else {
+          setSuggestedSuppliers([]);
+        }
+      }
+
+      // שמירה ב-cache
+      if (customerSuppliersResult.status === 'fulfilled' || suggestedResult.status === 'fulfilled') {
+        localStorage.setItem(cacheKey, JSON.stringify({
+          data: {
+            customerSuppliers,
+            suggestedSuppliers
+          },
+          timestamp: Date.now()
+        }));
       }
 
     } catch (error) {

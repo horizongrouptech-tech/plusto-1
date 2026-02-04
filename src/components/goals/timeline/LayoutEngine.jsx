@@ -72,9 +72,9 @@ export const hierarchicalLayout = (nodes, edges) => {
   return positioned;
 };
 
-// סידור אופקי - זרימה משמאל לימין
+// סידור אופקי - זרימה משמאל לימין (x גדל, y משתנה)
 export const horizontalLayout = (nodes, edges) => {
-  const columns = {};
+  const rows = {};
   const visited = new Set();
   const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
@@ -85,70 +85,6 @@ export const horizontalLayout = (nodes, edges) => {
 
   if (roots.length === 0 && nodes.length > 0) {
     // אם אין roots, קח את כל הצמתים
-    roots.push(nodes[0]);
-  }
-
-  const queue = roots.map((node, i) => ({
-    nodeId: node.id,
-    column: 0,
-    row: i
-  }));
-
-  while (queue.length > 0) {
-    const { nodeId, column, row } = queue.shift();
-
-    if (visited.has(nodeId)) continue;
-    visited.add(nodeId);
-
-    if (!columns[column]) columns[column] = [];
-    columns[column].push({ nodeId, row });
-
-    // מציאת ילדים
-    const childEdges = edges.filter(e => e.source === nodeId);
-    childEdges.forEach((edge, i) => {
-      if (!visited.has(edge.target)) {
-        queue.push({
-          nodeId: edge.target,
-          column: column + 1,
-          row: columns[column + 1]?.length || i
-        });
-      }
-    });
-  }
-
-  // המרה למיקומים
-  const positioned = [];
-  Object.entries(columns).forEach(([column, nodesInColumn]) => {
-    const columnX = 100 + parseInt(column) * 350;
-    
-    nodesInColumn.forEach(({ nodeId, row }) => {
-      const node = nodeMap.get(nodeId);
-      if (node) {
-        positioned.push({
-          ...node,
-          position: {
-            x: columnX,
-            y: 100 + row * 180
-          }
-        });
-      }
-    });
-  });
-
-  return positioned;
-};
-
-// סידור אנכי - זרימה מלמעלה למטה
-export const verticalLayout = (nodes, edges) => {
-  const rows = {};
-  const visited = new Set();
-  const nodeMap = new Map(nodes.map(n => [n.id, n]));
-
-  const roots = nodes.filter(node => 
-    !edges.find(edge => edge.target === node.id)
-  );
-
-  if (roots.length === 0 && nodes.length > 0) {
     roots.push(nodes[0]);
   }
 
@@ -167,6 +103,7 @@ export const verticalLayout = (nodes, edges) => {
     if (!rows[row]) rows[row] = [];
     rows[row].push({ nodeId, column });
 
+    // מציאת ילדים
     const childEdges = edges.filter(e => e.source === nodeId);
     childEdges.forEach((edge, i) => {
       if (!visited.has(edge.target)) {
@@ -179,6 +116,7 @@ export const verticalLayout = (nodes, edges) => {
     });
   }
 
+  // המרה למיקומים - אופקי: x גדל (columns), y משתנה (rows)
   const positioned = [];
   Object.entries(rows).forEach(([row, nodesInRow]) => {
     const rowY = 100 + parseInt(row) * 250;
@@ -193,6 +131,69 @@ export const verticalLayout = (nodes, edges) => {
           position: {
             x: startX + column * 280,
             y: rowY
+          }
+        });
+      }
+    });
+  });
+
+  return positioned;
+};
+
+// סידור אנכי - זרימה מלמעלה למטה (y גדל, x משתנה)
+export const verticalLayout = (nodes, edges) => {
+  const columns = {};
+  const visited = new Set();
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+
+  const roots = nodes.filter(node => 
+    !edges.find(edge => edge.target === node.id)
+  );
+
+  if (roots.length === 0 && nodes.length > 0) {
+    roots.push(nodes[0]);
+  }
+
+  const queue = roots.map((node, i) => ({
+    nodeId: node.id,
+    column: 0,
+    row: i
+  }));
+
+  while (queue.length > 0) {
+    const { nodeId, column, row } = queue.shift();
+
+    if (visited.has(nodeId)) continue;
+    visited.add(nodeId);
+
+    if (!columns[column]) columns[column] = [];
+    columns[column].push({ nodeId, row });
+
+    const childEdges = edges.filter(e => e.source === nodeId);
+    childEdges.forEach((edge, i) => {
+      if (!visited.has(edge.target)) {
+        queue.push({
+          nodeId: edge.target,
+          column: column + 1,
+          row: columns[column + 1]?.length || i
+        });
+      }
+    });
+  }
+
+  // המרה למיקומים - אנכי: y גדל (rows), x משתנה (columns)
+  const positioned = [];
+  Object.entries(columns).forEach(([column, nodesInColumn]) => {
+    const columnX = 100 + parseInt(column) * 350;
+    
+    nodesInColumn.forEach(({ nodeId, row }) => {
+      const node = nodeMap.get(nodeId);
+      if (node) {
+        positioned.push({
+          ...node,
+          position: {
+            x: columnX,
+            y: 100 + row * 180
           }
         });
       }

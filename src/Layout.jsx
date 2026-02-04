@@ -135,12 +135,6 @@ const navigationItems = [
     available: true
   },
   {
-    title: "ניהול לידים",
-    url: createPageUrl("LeadManagement"),
-    icon: Briefcase,
-    available: true
-  },
-  {
     title: "ניהול חשבונות",
     url: createPageUrl("AccountManagement"),
     icon: UserIcon,

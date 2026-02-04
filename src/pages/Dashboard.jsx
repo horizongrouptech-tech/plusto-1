@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import WelcomeSection from '../components/dashboard/WelcomeSection';
 import ClientList from '../components/dashboard/ClientList';
 import DailyTasks from '../components/dashboard/DailyTasks';
@@ -71,17 +72,34 @@ export default function Dashboard() {
         );
     }
 
+    const [isClientsCollapsed, setIsClientsCollapsed] = useState(true);
+
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-6 bg-horizon-dark min-h-screen" dir="rtl">
             <WelcomeSection user={user} />
             
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
+            <div className="space-y-6">
+                {/* משימות למעלה */}
+                <div>
                     <DailyTasks user={user} />
                 </div>
-                <div className="lg:col-span-1">
-                    <ClientList clients={clients} />
+                
+                {/* לקוחות למטה - סגור בדיפולט */}
+                <div className="flex items-center justify-between">
+                    <Button
+                        variant="outline"
+                        onClick={() => setIsClientsCollapsed(!isClientsCollapsed)}
+                        className="border-horizon text-horizon-text"
+                    >
+                        {isClientsCollapsed ? 'הצג לקוחות' : 'הסתר לקוחות'}
+                    </Button>
                 </div>
+                
+                {!isClientsCollapsed && (
+                    <div>
+                        <ClientList clients={clients} />
+                    </div>
+                )}
             </div>
         </div>
     );

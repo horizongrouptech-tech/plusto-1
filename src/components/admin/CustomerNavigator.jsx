@@ -69,10 +69,16 @@ export default function CustomerNavigator({
         customer.assigned_financial_manager_email === managerFilter ||
         (managerFilter === 'unassigned' && !customer.assigned_financial_manager_email);
       
+      // סינון ממתינים לשיוך
+      const matchesPending = !managerFilter || managerFilter === 'all' || 
+        (managerFilter === 'unassigned' && !customer.assigned_financial_manager_email) ||
+        customer.assigned_financial_manager_email === managerFilter;
+      
       const matchesBusinessType = businessTypeFilter === 'all' || 
         customer.business_type === businessTypeFilter;
       
       const matchesGroup = groupFilter === 'all' || 
+        (groupFilter === 'none' && (!customer.customer_group || customer.customer_group === '')) ||
         customer.customer_group === groupFilter;
       
       return matchesSearch && matchesManager && matchesBusinessType && matchesGroup;

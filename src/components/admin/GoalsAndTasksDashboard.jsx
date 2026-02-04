@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Target,
   Plus,
@@ -39,6 +41,7 @@ import { generateGoalsHTML } from '../shared/generateGoalsHTML';
 import { openPrintWindow } from '../shared/printUtils';
 import { syncTaskToFireberry } from '@/functions/syncTaskToFireberry';
 import { useUsers } from '../shared/UsersContext';
+import CreateTaskModalShared from '../shared/CreateTaskModal';
 
 export default function GoalsAndTasksDashboard({ customer }) {
   const [currentUser, setCurrentUser] = useState(null);
@@ -233,7 +236,20 @@ export default function GoalsAndTasksDashboard({ customer }) {
         await queryClient.invalidateQueries(['customerGoals', customer.email]);
       } catch (error) {
         console.error('Error deleting task:', error);
-        alert('שגיאה במחיקת היעד: ' + error.message);
+        
+        // נסה למחוק דרך is_active במקום delete אם המחיקה נכשלה
+        try {
+          if (deleteSubtasks) {
+            for (const subtask of subtasks) {
+              await base44.entities.CustomerGoal.update(subtask.id, { is_active: false });
+            }
+          }
+          await base44.entities.CustomerGoal.update(taskId, { is_active: false });
+          await queryClient.invalidateQueries(['customerGoals', customer.email]);
+          alert('היעד הוסתר (לא נמחק לחלוטין)');
+        } catch (updateError) {
+          alert('שגיאה במחיקת היעד: ' + error.message);
+        }
       }
     } else {
       // אין תת-משימות - מחיקה רגילה
@@ -247,7 +263,15 @@ export default function GoalsAndTasksDashboard({ customer }) {
         alert('המשימה נמחקה בהצלחה');
       } catch (error) {
         console.error('Error deleting task:', error);
-        alert('שגיאה במחיקת המשימה: ' + error.message);
+        
+        // נסה למחוק דרך is_active במקום delete אם המחיקה נכשלה
+        try {
+          await base44.entities.CustomerGoal.update(taskId, { is_active: false });
+          await queryClient.invalidateQueries(['customerGoals', customer.email]);
+          alert('המשימה הוסתרה (לא נמחקה לחלוטין)');
+        } catch (updateError) {
+          alert('שגיאה במחיקת המשימה: ' + error.message);
+        }
       }
     }
   };
@@ -296,7 +320,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
   const { parentGoals, parentGoalIds } = identifyGoals;
 
   return (
-    <div className="p-4 md:p-6 space-y-6" dir="rtl">
+    <div className="p-4 md:p-6 space-y-6 min-h-screen" dir="rtl">
       {/* כותרת וכפתורי פעולה */}
       <div className="flex justify-between items-center flex-wrap gap-4">
         <h2 className="text-2xl font-bold text-horizon-text flex items-center gap-3">
@@ -332,7 +356,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
       </div>
 
       {/* קוביות סטטיסטיקה - סינון מהיר */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card
           className={`card-horizon cursor-pointer transition-all ${activeStatFilter === 'today' ? 'ring-2 ring-horizon-primary' : ''}`}
           onClick={() => setActiveStatFilter(activeStatFilter === 'today' ? null : 'today')}>
@@ -391,7 +415,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
       </div>
 
       {/* סטטיסטיקות יעדים */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card className="card-horizon">
           <CardContent className="p-4">
             <div className="flex justify-between items-center">
@@ -725,8 +749,22 @@ export default function GoalsAndTasksDashboard({ customer }) {
 
 }
 
-// מודל יצירת משימה חדשה
+// מודל יצירת משימה חדשה - שימוש בקומפוננטה משותפת
 function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onSuccess }) {
+  return (
+    <CreateTaskModalShared
+      isOpen={isOpen}
+      onClose={onClose}
+      customer={customer}
+      currentUser={currentUser}
+      allGoals={allGoals}
+      onSuccess={onSuccess}
+    />
+  );
+}
+
+// הקוד הישן נשאר למטה למקרה של צורך בעתיד - ניתן למחוק אחרי בדיקה
+function CreateTaskModal_OLD({ isOpen, onClose, customer, currentUser, allGoals, onSuccess }) {
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
@@ -896,23 +934,67 @@ function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals, onS
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-right block mb-2 text-horizon-text">תאריך התחלה *</Label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="bg-horizon-card border-horizon text-horizon-text"
-                required />
-
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-end text-right bg-horizon-card border-horizon text-horizon-text"
+                  >
+                    {startDate ? (
+                      format(new Date(startDate), 'dd/MM/yyyy', { locale: he })
+                    ) : (
+                      <span className="text-horizon-accent">בחר תאריך</span>
+                    )}
+                    <Calendar className="w-4 h-4 mr-2" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-horizon-card border-horizon" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={startDate ? new Date(startDate) : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        const formatted = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                        setStartDate(formatted);
+                      }
+                    }}
+                    locale={he}
+                    className="text-horizon-text"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label className="text-right block mb-2 text-horizon-text">תאריך סיום *</Label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="bg-horizon-card border-horizon text-horizon-text"
-                required />
-
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-end text-right bg-horizon-card border-horizon text-horizon-text"
+                  >
+                    {endDate ? (
+                      format(new Date(endDate), 'dd/MM/yyyy', { locale: he })
+                    ) : (
+                      <span className="text-horizon-accent">בחר תאריך</span>
+                    )}
+                    <Calendar className="w-4 h-4 mr-2" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-horizon-card border-horizon" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={endDate ? new Date(endDate) : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        const formatted = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                        setEndDate(formatted);
+                      }
+                    }}
+                    locale={he}
+                    className="text-horizon-text"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 

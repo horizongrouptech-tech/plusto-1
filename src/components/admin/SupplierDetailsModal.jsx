@@ -34,6 +34,7 @@ import {
 import SpecificFileUploadBox from "./SpecificFileUploadBox";
 import { PurchaseRecord } from "@/entities/PurchaseRecord";
 import { formatCurrency } from "../utils/currencyFormatter";
+import { base44 } from '@/api/base44Client';
 
 // פונקציית עזר לעיבוד נתוני הגרף לפי חודשים
 const processExpenseDataByMonth = (purchaseRecords) => {
@@ -76,6 +77,8 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showEditSupplierDialog, setShowEditSupplierDialog] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState(null);
   const [manualEntry, setManualEntry] = useState({
     document_type: 'invoice',
     purchase_date: new Date().toISOString().split('T')[0],
@@ -205,10 +208,23 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto dir-rtl bg-horizon-dark border-horizon">
         <DialogHeader>
-          <DialogTitle className="text-2xl text-horizon-text text-right flex items-center gap-3">
-            <Building className="w-6 h-6 text-horizon-primary" />
-            פרטי ספק: {supplier.name}
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-2xl text-horizon-text text-right flex items-center gap-3">
+              <Building className="w-6 h-6 text-horizon-primary" />
+              פרטי ספק: {supplier.name}
+            </DialogTitle>
+            <Button
+              variant="outline"
+              onClick={() => {
+                // פתיחת מודל עריכה
+                setShowEditSupplierDialog(true);
+              }}
+              className="border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10"
+            >
+              <Edit className="w-4 h-4 ml-2" />
+              ערוך ספק
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6 mt-4">
