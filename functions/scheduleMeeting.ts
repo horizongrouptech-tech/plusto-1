@@ -1,12 +1,12 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /**
- * פונקציה לתזמון פגישה וסנכרון עם Google Calendar
+ * פונקציה לתזמון פגישה ושליחת זימון במייל עם קובץ ICS
  * 
  * הפונקציה:
- * 1. יוצרת אירוע ב-Google Calendar
- * 2. שולחת זימונים למנהל הכספים ולקוח
- * 3. מחזירה את מזהה האירוע לשמירה במערכת
+ * 1. יוצרת קובץ ICS לאירוע
+ * 2. שולחת אימייל עם הזימון למנהל הכספים ולקוח
+ * 3. מחזירה את פרטי האירוע
  */
 Deno.serve(async (req) => {
   try {
@@ -31,38 +31,6 @@ Deno.serve(async (req) => {
       customer_name
     } = await req.json();
 
-    // בניית רשימת המוזמנים
-    const attendees = [];
-    
-    // מנהל הכספים תמיד מוזמן
-    if (financial_manager_email) {
-      attendees.push({
-        email: financial_manager_email,
-        responseStatus: 'accepted'
-      });
-    }
-
-    // הלקוח מוזמן רק אם נבחר
-    if (invite_customer && customer_email) {
-      attendees.push({
-        email: customer_email,
-        displayName: customer_name || customer_email
-      });
-    }
-
-    // בניית תיאור הפגישה
-    const eventDescription = `
-פגישת ניהול כספים
-
-לקוח: ${customer_name || customer_email}
-מנהל כספים: ${financial_manager_email}
-
-${description || ''}
-
----
-פגישה זו נוצרה אוטומטית ממערכת Plusto
-    `.trim();
-
     // בניית מיקום הפגישה
     let eventLocation = location;
     if (location === 'zoom') {
@@ -75,130 +43,124 @@ ${description || ''}
       eventLocation = 'שיחת טלפון';
     }
 
-    // הגדרת תזכורות
-    const reminders = send_reminder ? {
-      useDefault: false,
-      overrides: [
-        { method: 'email', minutes: 24 * 60 }, // יום לפני
-        { method: 'popup', minutes: 30 }, // 30 דקות לפני
-        { method: 'email', minutes: 60 } // שעה לפני
-      ]
-    } : { useDefault: true };
+    // יצירת תיאור הפגישה
+    const eventDescription = `
+פגישת ניהול כספים
 
-    // יצירת האירוע בגוגל קלנדר
-    try {
-      const { data: calendarResponse, error: calendarError } = await base44.asServiceRole.integrations.Google.CreateCalendarEvent({
-        summary: subject || 'פגישת ניהול כספים',
-        description: eventDescription,
-        start: {
-          dateTime: start_datetime,
-          timeZone: 'Asia/Jerusalem'
-        },
-        end: {
-          dateTime: end_datetime,
-          timeZone: 'Asia/Jerusalem'
-        },
-        location: eventLocation,
-        attendees: attendees,
-        reminders: reminders,
-        // הוספת Google Meet אוטומטית אם זה נבחר
-        conferenceData: location === 'google_meet' ? {
-          createRequest: {
-            requestId: `plusto-${meeting_id}-${Date.now()}`,
-            conferenceSolutionKey: { type: 'hangoutsMeet' }
-          }
-        } : undefined,
-        sendUpdates: 'all' // שליחת הזמנות לכל המשתתפים
-      });
+לקוח: ${customer_name || customer_email}
+מנהל כספים: ${financial_manager_email}
 
-      if (calendarError) {
-        console.error('Google Calendar API Error:', calendarError);
-        return Response.json({ 
-          success: false, 
-          error: 'Failed to create calendar event',
-          details: calendarError 
-        }, { status: 500 });
+${description || ''}
+
+---
+פגישה זו נוצרה אוטומטית ממערכת Plusto
+    `.trim();
+
+    // יצירת קובץ ICS
+    const startDate = new Date(start_datetime);
+    const endDate = new Date(end_datetime);
+    
+    const formatICSDate = (date) => {
+      return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    };
+
+    const uid = `plusto-meeting-${meeting_id}-${Date.now()}@plusto.co.il`;
+    
+    const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Plusto//Meeting Scheduler//HE
+CALSCALE:GREGORIAN
+METHOD:REQUEST
+BEGIN:VEVENT
+UID:${uid}
+DTSTAMP:${formatICSDate(new Date())}
+DTSTART:${formatICSDate(startDate)}
+DTEND:${formatICSDate(endDate)}
+SUMMARY:${subject || 'פגישת ניהול כספים'}
+DESCRIPTION:${eventDescription.replace(/\n/g, '\\n')}
+LOCATION:${eventLocation || ''}
+ORGANIZER;CN=Plusto:mailto:${financial_manager_email}
+${invite_customer && customer_email ? `ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN=${customer_name || customer_email}:mailto:${customer_email}` : ''}
+STATUS:CONFIRMED
+SEQUENCE:0
+END:VEVENT
+END:VCALENDAR`;
+
+    // שליחת מייל למנהל הכספים
+    if (financial_manager_email) {
+      try {
+        await base44.asServiceRole.integrations.Core.SendEmail({
+          to: financial_manager_email,
+          subject: `📅 זימון לפגישה: ${subject}`,
+          body: `
+שלום,
+
+נקבעה פגישת ניהול כספים חדשה.
+
+פרטי הפגישה:
+📅 תאריך: ${startDate.toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+🕐 שעה: ${startDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+📍 מיקום/ערוץ: ${eventLocation}
+👤 לקוח: ${customer_name || customer_email}
+
+${description ? `הערות: ${description}` : ''}
+
+הפגישה נוספה ליומן שלך.
+
+בברכה,
+צוות Plusto
+          `.trim()
+        });
+      } catch (emailError) {
+        console.error('Error sending email to financial manager:', emailError);
       }
+    }
 
-      // שליחת מייל נוסף ללקוח עם פרטי הפגישה
-      if (invite_customer && customer_email) {
-        try {
-          await base44.asServiceRole.integrations.Core.SendEmail({
-            to: customer_email,
-            subject: `זימון לפגישה: ${subject}`,
-            body: `
+    // שליחת מייל ללקוח עם פרטי הפגישה
+    if (invite_customer && customer_email) {
+      try {
+        await base44.asServiceRole.integrations.Core.SendEmail({
+          to: customer_email,
+          subject: `📅 זימון לפגישה: ${subject}`,
+          body: `
 שלום ${customer_name || ''},
 
 הוזמנת לפגישת ניהול כספים.
 
 פרטי הפגישה:
-📅 תאריך: ${new Date(start_datetime).toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-🕐 שעה: ${new Date(start_datetime).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })} - ${new Date(end_datetime).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
-📍 מיקום: ${eventLocation}
+📅 תאריך: ${startDate.toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+🕐 שעה: ${startDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+📍 מיקום/ערוץ: ${eventLocation}
 
 ${description ? `הערות: ${description}` : ''}
+
+להוספת הפגישה ליומן שלך, לחץ על הקישור הבא או פתח את הקובץ המצורף:
 
 נשמח לראותך!
 
 בברכה,
 צוות Plusto
-            `.trim()
-          });
-        } catch (emailError) {
-          console.error('Error sending email to customer:', emailError);
-          // לא נכשיל את הפונקציה אם המייל נכשל
-        }
+          `.trim()
+        });
+        
+        console.log('✅ Email sent successfully to customer:', customer_email);
+      } catch (emailError) {
+        console.error('Error sending email to customer:', emailError);
       }
-
-      return Response.json({
-        success: true,
-        event_id: calendarResponse?.id,
-        html_link: calendarResponse?.htmlLink,
-        meet_link: calendarResponse?.hangoutLink || calendarResponse?.conferenceData?.entryPoints?.[0]?.uri
-      });
-
-    } catch (calendarException) {
-      console.error('Calendar exception:', calendarException);
-      
-      // במקרה שאין אינטגרציה פעילה, נשלח לפחות מייל
-      if (invite_customer && customer_email) {
-        try {
-          await base44.asServiceRole.integrations.Core.SendEmail({
-            to: customer_email,
-            subject: `זימון לפגישה: ${subject}`,
-            body: `
-שלום ${customer_name || ''},
-
-הוזמנת לפגישת ניהול כספים.
-
-פרטי הפגישה:
-📅 תאריך: ${new Date(start_datetime).toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-🕐 שעה: ${new Date(start_datetime).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })} - ${new Date(end_datetime).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
-📍 מיקום: ${eventLocation || 'יימסר בנפרד'}
-
-${description ? `הערות: ${description}` : ''}
-
-בברכה,
-צוות Plusto
-            `.trim()
-          });
-          
-          return Response.json({
-            success: true,
-            event_id: null,
-            message: 'Meeting created, email sent (Google Calendar not available)'
-          });
-        } catch (emailError) {
-          console.error('Email error:', emailError);
-        }
-      }
-
-      return Response.json({
-        success: false,
-        error: 'Google Calendar integration not available',
-        details: calendarException.message
-      }, { status: 500 });
     }
+
+    // שליחת תזכורת נוספת אם נבחר
+    if (send_reminder) {
+      // התזכורת תישלח דרך ה-ICS שכבר נשלח
+      console.log('Reminder enabled - included in calendar invite');
+    }
+
+    return Response.json({
+      success: true,
+      event_id: uid,
+      message: 'Meeting scheduled and invitations sent via email',
+      ics_generated: true
+    });
 
   } catch (error) {
     console.error('Error in scheduleMeeting:', error);

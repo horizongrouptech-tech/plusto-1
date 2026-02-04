@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { format, formatDistanceToNow, isAfter, isBefore, isToday, isTomorrow, addDays, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { useGlobalToast } from '@/hooks/useGlobalToast';
+import { useGlobalToast } from '@/components/utils/useGlobalToast';
 
 // סטטוסים אפשריים לפגישה
 const MEETING_STATUSES = [
@@ -169,8 +169,8 @@ export default function MeetingsTab({ customer, currentUser }) {
     try {
       // נושא קבוע: פגישת ניהול כספים מספר X, [שם הלקוח]
       const meetingNumber = getNextMeetingNumber;
-      const defaultSubject = `פגישת ניהול כספים מספר ${meetingNumber}, ${customer.business_name || customer.full_name}`;
-      const finalSubject = newMeetingForm.subject.trim() || defaultSubject;
+      // פורמט קבוע - לא ניתן לשינוי
+      const finalSubject = `פגישת ניהול כספים מספר ${meetingNumber}, ${customer.business_name || customer.full_name}`;
 
       // בניית אובייקט נתונים נוספים
       const additionalData = {
@@ -328,6 +328,25 @@ export default function MeetingsTab({ customer, currentUser }) {
     }
   };
 
+  // יצירת תבנית סיכום פגישה
+  const getMeetingSummaryTemplate = () => {
+    const dateStr = new Date().toLocaleDateString('he-IL');
+    return `סיכום פגישה מתאריך: ${dateStr}
+
+נוכחים בפגישה:
+
+עיקרי הדברים שעלו:
+1.
+2.
+3.
+4.
+5.
+
+משימות:
+
+תאריך פגישה הבאה: טרם נקבעה`;
+  };
+
   // איפוס טופס
   const resetNewMeetingForm = () => {
     setNewMeetingForm({
@@ -347,7 +366,7 @@ export default function MeetingsTab({ customer, currentUser }) {
       main_points: ['', '', '', '', ''],
       tasks: '',
       next_meeting_date: '',
-      whatsapp_summary: ''
+      whatsapp_summary: getMeetingSummaryTemplate()
     });
   };
 
@@ -666,15 +685,13 @@ ${meeting.tasks || 'לא צוין'}
           </DialogHeader>
 
           <div className="space-y-6 py-4">
-            {/* נושא */}
+            {/* נושא - פורמט קבוע */}
             <div>
-              <Label className="text-horizon-text mb-2 block font-medium">נושא הפגישה *</Label>
-              <Input
-                value={newMeetingForm.subject}
-                onChange={(e) => setNewMeetingForm({ ...newMeetingForm, subject: e.target.value })}
-                placeholder={`פגישת ניהול כספים מספר ${getNextMeetingNumber}, ${customer.business_name || customer.full_name}`}
-                className="bg-horizon-card border-horizon text-horizon-text"
-              />
+              <Label className="text-horizon-text mb-2 block font-medium">נושא הפגישה</Label>
+              <div className="bg-horizon-card/50 border border-horizon rounded-md p-3 text-horizon-text">
+                {`פגישת ניהול כספים מספר ${getNextMeetingNumber}, ${customer.business_name || customer.full_name}`}
+              </div>
+              <p className="text-xs text-horizon-accent mt-1">הנושא נקבע אוטומטית לפי מספר הפגישה ושם הלקוח</p>
             </div>
 
             {/* תאריך ושעת התחלה */}
@@ -783,8 +800,8 @@ ${meeting.tasks || 'לא צוין'}
                 <Checkbox
                   id="invite_customer"
                   checked={newMeetingForm.invite_customer}
-                  onCheckedChange={(checked) => setNewMeetingForm({ ...newMeetingForm, invite_customer: checked })}
-                  className="border-horizon-primary data-[state=checked]:bg-horizon-primary"
+                  onCheckedChange={(checked) => setNewMeetingForm(prev => ({ ...prev, invite_customer: !!checked }))}
+                  className="border-horizon-primary data-[state=checked]:bg-horizon-primary data-[state=checked]:text-white"
                 />
                 <Label htmlFor="invite_customer" className="text-horizon-text cursor-pointer">
                   שלח זימון ללקוח ({customer.email})
@@ -795,8 +812,8 @@ ${meeting.tasks || 'לא צוין'}
                 <Checkbox
                   id="send_reminder"
                   checked={newMeetingForm.send_reminder}
-                  onCheckedChange={(checked) => setNewMeetingForm({ ...newMeetingForm, send_reminder: checked })}
-                  className="border-horizon-primary data-[state=checked]:bg-horizon-primary"
+                  onCheckedChange={(checked) => setNewMeetingForm(prev => ({ ...prev, send_reminder: !!checked }))}
+                  className="border-horizon-primary data-[state=checked]:bg-horizon-primary data-[state=checked]:text-white"
                 />
                 <Label htmlFor="send_reminder" className="text-horizon-text cursor-pointer">
                   שלח תזכורת לפני הפגישה
@@ -804,7 +821,7 @@ ${meeting.tasks || 'לא צוין'}
               </div>
 
               <p className="text-xs text-horizon-accent">
-                * הזימון יישלח דרך Google Calendar לכתובות המייל של מנהל הכספים והלקוח
+                * הזימון יישלח דרך אימייל לכתובות המייל של מנהל הכספים והלקוח
               </p>
             </div>
           </div>
