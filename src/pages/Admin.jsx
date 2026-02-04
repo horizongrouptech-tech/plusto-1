@@ -2627,9 +2627,9 @@ export default function AdminPage() {
           a.href = url;
           a.download = filename.replace(/"/g, ''); // הסר גרשיים כפולות אם קיימות
           document.body.appendChild(a);
+          document.body.removeChild(a);
           a.click();
-          window.URL.revokeObjectURL(url);
-          a.remove();
+         window.URL.revokeObjectURL(url);
          alert('התוכנית העסקית יוצאה ל-PDF בהצלחה!');
      } catch (error) {
          console.error("Error exporting business plan to PDF:", error);
@@ -3014,7 +3014,7 @@ export default function AdminPage() {
                                               <TableHead className="text-right">איש קשר</TableHead>
                                               <TableHead className="text-right">טלפון</TableHead>
                                               <TableHead className="text-right">אימייל</TableHead>
-                                              <TableHead className="text-right">דירוג</Tableודק אם השדה קיים ואינו ריק, והאם יש ללקוח מזהה ספק </TableHead> {/* חדש */}
+                                              <TableHead className="text-right">דירוג</TableHead>
                                               <TableHead className="text-right">נוסף על ידי</TableHead>
                                               <TableHead className="text-right">סטטוס ספק</TableHead> {/* חדש */}
                                               <TableHead className="text-right">פעולות</TableHead>
