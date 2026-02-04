@@ -87,7 +87,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const [groupFilter, setGroupFilter] = useState('all');
   const [customerFilter, setCustomerFilter] = useState('all');
   const [showCompletedModal, setShowCompletedModal] = useState(false);
-  const [isClientsExpanded, setIsClientsExpanded] = useState(true);
+  const [isClientsExpanded, setIsClientsExpanded] = useState(false);
   const [showGoalBankModal, setShowGoalBankModal] = useState(false);
 
   const todayWorkGroup = getTodayWorkGroup();
@@ -494,6 +494,20 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
             </span>
           </CardContent>
         </Card>
+      }
+
+      {/* לוח Kanban */}
+      {tasksLoading ?
+      <div className="text-center py-12">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto text-horizon-primary mb-4" />
+          <p className="text-horizon-accent">טוען לוח משימות...</p>
+        </div> :
+
+      <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {/* עמודות הקאנבן כאן */}
+          </div>
+        </DragDropContext>
       }
 
       {/* טבלת לקוחות לעבודה היום */}
