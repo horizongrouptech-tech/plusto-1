@@ -484,7 +484,11 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
       filtered = filtered.filter(product => product.category === categoryFilter);
     }
     if (qualityFilter !== "all") {
-      filtered = filtered.filter(product => product.data_quality === qualityFilter);
+      if (qualityFilter === "missing_cost") {
+        filtered = filtered.filter(product => !product.cost_price || product.cost_price === 0);
+      } else {
+        filtered = filtered.filter(product => product.data_quality === qualityFilter);
+      }
     }
     if (sourceFilter !== "all") {
       if (sourceFilter === "existing") {
@@ -1167,6 +1171,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                         <option value="complete">נתונים מלאים</option>
                         <option value="partial">נתונים חלקיים</option>
                         <option value="incomplete">נתונים חסרים</option>
+                        <option value="missing_cost">חסר מחיר קנייה</option>
                       </select>
 
                       <select

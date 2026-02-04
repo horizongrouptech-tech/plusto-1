@@ -114,16 +114,16 @@ export default function ProductCatalogTable({
                   return (
                   <TableRow 
                     key={product.id} 
-                    className={`border-b-horizon/50 hover:bg-horizon-card/30 ${!hasCostPrice ? 'bg-red-500/5 border-l-4 border-l-red-500' : ''}`}
+                    className={`border-b-horizon/50 hover:bg-horizon-card/30 ${!hasCostPrice ? 'bg-yellow-500/10 border-r-4 border-r-yellow-500' : ''}`}
                   >
                     <TableCell className="font-medium text-horizon-text">
                       <div className="flex items-center gap-2">
                         <ShoppingCart className="w-4 h-4 text-horizon-primary" />
                         {product.product_name}
                         {!hasCostPrice && (
-                          <Badge className="bg-red-500/20 text-red-400 border-red-500/50 mr-2">
+                          <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/50 mr-2 animate-pulse">
                             <AlertTriangle className="w-3 h-3 ml-1" />
-                            חסר מחיר קנייה
+                            ⚠️ חסר מחיר קנייה
                           </Badge>
                         )}
                       </div>
