@@ -19,7 +19,26 @@ const RiskScore = ({ score }) => {
 };
 
 export default function CreditReportViewer({ isOpen, onClose, reportData }) {
-    if (!reportData || !isOpen) return null;
+    if (!isOpen) return null;
+    
+    // בדיקה שיש נתונים לפני ניסיון לעבד
+    if (!reportData) {
+        return (
+            <Dialog open={isOpen} onOpenChange={onClose}>
+                <DialogContent className="max-w-2xl bg-horizon-dark text-horizon-text border-horizon" dir="rtl">
+                    <DialogHeader>
+                        <DialogTitle className="text-yellow-400">אין נתוני דוח אשראי</DialogTitle>
+                        <DialogDescription className="text-horizon-accent">
+                            לא נמצאו נתונים לדוח זה.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button onClick={onClose} variant="outline">סגור</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        );
+    }
 
     // Handle multiple formats: ai_insights (new), parsed_data (stringified), or direct object (legacy)
     let data;

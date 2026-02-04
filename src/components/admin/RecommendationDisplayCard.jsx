@@ -78,7 +78,7 @@ export default function RecommendationDisplayCard({
 
   return (
     <Card 
-      className="card-horizon hover:shadow-xl transition-all duration-300 border-r-4 cursor-pointer flex flex-col h-full" 
+      className="card-horizon hover:shadow-xl transition-all duration-300 border-r-4 cursor-pointer flex flex-col min-h-[280px]" 
       style={{ borderRightColor: recommendation.priority === 'high' ? '#ef4444' : '#3b82f6' }}
       onClick={() => onView && onView(recommendation)}
     >
