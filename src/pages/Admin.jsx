@@ -1783,7 +1783,7 @@ export default function AdminPage() {
         const forecastObj = await BusinessForecast.get(forecastId);
         setSelectedForecastForPlan(forecastObj);
              // --- הוסף את הקוד הזה כאן ---
-        // שליפת אובייקט הלקוח המלא.selectedCustomer  כבר מכיל את הנתונים העדכניים.
+        // שליפת אובייקט הלקוח המלא.selectedCustomer  כ כבר מכיל את הנתונים העדכניים.
         const customerObject = selectedCustomer; 
 
         // שליפת אובייקט הקלט האסטרטגי המלא, אם קיים
@@ -2895,15 +2895,7 @@ export default function AdminPage() {
                     ביצועי מנהלי כספים
                   </TabsTrigger>
                 )}
-                {isAdmin && (
-                  <TabsTrigger 
-                    value="leads" 
-                    className="py-3 px-6 text-horizon-accent data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#32acc1] data-[state=active]:to-[#83ddec] data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg font-bold hover-lift"
-                  >
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    לידים
-                  </TabsTrigger>
-                )}
+                
                 {isAdmin && (
                   <TabsTrigger 
                     value="failed-uploads" 
@@ -2948,15 +2940,6 @@ export default function AdminPage() {
                 <TabsContent value="engagement">
                   <Suspense fallback={<div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>}>
                     <EngagementDashboard />
-                  </Suspense>
-                </TabsContent>
-              )}
-
-              {/* Leads Management tab */}
-              {isAdmin && (
-                <TabsContent value="leads">
-                  <Suspense fallback={<div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>}>
-                    <LeadManagementSystem currentUser={currentUser} />
                   </Suspense>
                 </TabsContent>
               )}
@@ -3031,7 +3014,7 @@ export default function AdminPage() {
                                               <TableHead className="text-right">איש קשר</TableHead>
                                               <TableHead className="text-right">טלפון</TableHead>
                                               <TableHead className="text-right">אימייל</TableHead>
-                                              <TableHead className="text-right">דירוג</TableHead> {/* חדש */}
+                                              <TableHead className="text-right">דירוג</Tableודק אם השדה קיים ואינו ריק, והאם יש ללקוח מזהה ספק </TableHead> {/* חדש */}
                                               <TableHead className="text-right">נוסף על ידי</TableHead>
                                               <TableHead className="text-right">סטטוס ספק</TableHead> {/* חדש */}
                                               <TableHead className="text-right">פעולות</TableHead>

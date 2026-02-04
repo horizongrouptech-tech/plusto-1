@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,8 @@ import {
   ChevronDown,
   ChevronUp,
   BookOpen,
-  CalendarIcon
+  CalendarIcon,
+  User as UserIcon // Added User as UserIcon import
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -86,6 +88,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const [editedTaskData, setEditedTaskData] = useState({});
   const [groupFilter, setGroupFilter] = useState('all');
   const [customerFilter, setCustomerFilter] = useState('all');
+  const [financialManagerFilter, setFinancialManagerFilter] = useState('all'); // Added new state for financial manager filter
   const [showCompletedModal, setShowCompletedModal] = useState(false);
   const [isClientsExpanded, setIsClientsExpanded] = useState(false);
   const [showGoalBankModal, setShowGoalBankModal] = useState(false);
@@ -205,7 +208,19 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     });
   }, [goals]);
 
-  // סינון לפי קבוצת לקוחות ולקוח ספציפי
+  // טעינת מנהלי כספים (רק לאדמין)
+  const { data: financialManagers = [] } = useQuery({
+    queryKey: ['financialManagers'],
+    queryFn: async () => {
+      if (!isAdmin) return [];
+      const allUsers = await base44.entities.User.list();
+      return allUsers.filter(u => u.user_type === 'financial_manager');
+    },
+    enabled: isAdmin,
+    staleTime: 10 * 60 * 1000
+  });
+
+  // סינון לפי קבוצת לקוחות, לקוח ספציפי ומנהל כספים
   const filteredTasksByGroup = useMemo(() => {
     let filtered = activeTasks;
 
@@ -225,8 +240,13 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       filtered = filtered.filter((task) => task.customer_email === customerFilter);
     }
 
+    // סינון לפי מנהל כספים (אדמין בלבד)
+    if (isAdmin && financialManagerFilter !== 'all') {
+      filtered = filtered.filter((task) => task.assignee_email === financialManagerFilter);
+    }
+
     return filtered;
-  }, [activeTasks, groupFilter, customerFilter, allCustomers]);
+  }, [activeTasks, groupFilter, customerFilter, financialManagerFilter, allCustomers, isAdmin]);
 
   // חלוקת משימות לפי סטטוס
   const tasksByStatus = useMemo(() => {
@@ -499,6 +519,100 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         </Card>
       }
 
+      {/* פילטרים */}
+      <Card className="card-horizon">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-horizon-primary" />
+              <span className="text-sm font-medium text-horizon-text">סינון לפי קבוצה:</span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant={groupFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => setGroupFilter('all')}
+                className={groupFilter === 'all' ? 'bg-horizon-primary text-white' : 'border-horizon text-horizon-accent'}>
+
+                הכל
+              </Button>
+              <Button
+                size="sm"
+                variant={groupFilter === 'A' ? 'default' : 'outline'}
+                onClick={() => setGroupFilter('A')}
+                className={groupFilter === 'A' ? 'bg-[#32acc1] text-white' : 'border-[#32acc1] text-[#32acc1]'}>
+
+                קבוצה A
+              </Button>
+              <Button
+                size="sm"
+                variant={groupFilter === 'B' ? 'default' : 'outline'}
+                onClick={() => setGroupFilter('B')}
+                className={groupFilter === 'B' ? 'bg-[#fc9f67] text-white' : 'border-[#fc9f67] text-[#fc9f67]'}>
+
+                קבוצה B
+              </Button>
+              <Button
+                size="sm"
+                variant={groupFilter === 'no_group' ? 'default' : 'outline'}
+                onClick={() => setGroupFilter('no_group')}
+                className={groupFilter === 'no_group' ? 'bg-gray-500 text-white' : 'border-gray-400 text-gray-400'}>
+
+                ללא שיוך
+              </Button>
+            </div>
+
+            {/* סינון לפי לקוח */}
+            <div className="flex items-center gap-2 mr-4">
+              <Users className="w-4 h-4 text-horizon-primary" />
+              <span className="text-sm font-medium text-horizon-text">סינון לפי לקוח:</span>
+            </div>
+            <Select value={customerFilter} onValueChange={setCustomerFilter}>
+              <SelectTrigger className="w-[200px] bg-horizon-card border-horizon text-horizon-text">
+                <SelectValue placeholder="כל הלקוחות" />
+              </SelectTrigger>
+              <SelectContent className="bg-horizon-dark border-horizon max-h-[300px]">
+                <SelectItem value="all">כל הלקוחות</SelectItem>
+                {allCustomers
+                  .sort((a, b) => (a.business_name || a.full_name || '').localeCompare(b.business_name || b.full_name || ''))
+                  .map((customer) => (
+                    <SelectItem key={customer.email} value={customer.email}>
+                      {customer.business_name || customer.full_name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+
+            {/* סינון לפי מנהל כספים (אדמין בלבד) */}
+            {isAdmin && financialManagers.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 mr-4">
+                  <UserIcon className="w-4 h-4 text-horizon-primary" />
+                  <span className="text-sm font-medium text-horizon-text">סינון לפי מנהל כספים:</span>
+                </div>
+                <Select value={financialManagerFilter} onValueChange={setFinancialManagerFilter}>
+                  <SelectTrigger className="w-[200px] bg-horizon-card border-horizon text-horizon-text">
+                    <SelectValue placeholder="כל המנהלים" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-horizon-dark border-horizon max-h-[300px]">
+                    <SelectItem value="all">כל המנהלים</SelectItem>
+                    {financialManagers.map((manager) => (
+                      <SelectItem key={manager.email} value={manager.email}>
+                        {manager.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
+
+            <div className="mr-auto text-sm text-horizon-accent">
+              סה"כ משימות פעילות: <span className="font-bold text-horizon-primary">{stats.totalTasks}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* טבלת לקוחות לעבודה היום */}
       {todaysClients.length > 0 &&
       <Card className="card-horizon bg-white border-2 border-[#e1e8ed]">
@@ -578,77 +692,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
           )}
         </Card>
       }
-
-      {/* פילטרים */}
-      <Card className="card-horizon">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Filter className="w-5 h-5 text-horizon-primary" />
-              <span className="text-sm font-medium text-horizon-text">סינון לפי קבוצה:</span>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant={groupFilter === 'all' ? 'default' : 'outline'}
-                onClick={() => setGroupFilter('all')}
-                className={groupFilter === 'all' ? 'bg-horizon-primary text-white' : 'border-horizon text-horizon-accent'}>
-
-                הכל
-              </Button>
-              <Button
-                size="sm"
-                variant={groupFilter === 'A' ? 'default' : 'outline'}
-                onClick={() => setGroupFilter('A')}
-                className={groupFilter === 'A' ? 'bg-[#32acc1] text-white' : 'border-[#32acc1] text-[#32acc1]'}>
-
-                קבוצה A
-              </Button>
-              <Button
-                size="sm"
-                variant={groupFilter === 'B' ? 'default' : 'outline'}
-                onClick={() => setGroupFilter('B')}
-                className={groupFilter === 'B' ? 'bg-[#fc9f67] text-white' : 'border-[#fc9f67] text-[#fc9f67]'}>
-
-                קבוצה B
-              </Button>
-              <Button
-                size="sm"
-                variant={groupFilter === 'no_group' ? 'default' : 'outline'}
-                onClick={() => setGroupFilter('no_group')}
-                className={groupFilter === 'no_group' ? 'bg-gray-500 text-white' : 'border-gray-400 text-gray-400'}>
-
-                ללא שיוך
-              </Button>
-            </div>
-
-            {/* סינון לפי לקוח */}
-            <div className="flex items-center gap-2 mr-4">
-              <Users className="w-4 h-4 text-horizon-primary" />
-              <span className="text-sm font-medium text-horizon-text">סינון לפי לקוח:</span>
-            </div>
-            <Select value={customerFilter} onValueChange={setCustomerFilter}>
-              <SelectTrigger className="w-[200px] bg-horizon-card border-horizon text-horizon-text">
-                <SelectValue placeholder="כל הלקוחות" />
-              </SelectTrigger>
-              <SelectContent className="bg-horizon-dark border-horizon max-h-[300px]">
-                <SelectItem value="all">כל הלקוחות</SelectItem>
-                {allCustomers
-                  .sort((a, b) => (a.business_name || a.full_name || '').localeCompare(b.business_name || b.full_name || ''))
-                  .map((customer) => (
-                    <SelectItem key={customer.email} value={customer.email}>
-                      {customer.business_name || customer.full_name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-
-            <div className="mr-auto text-sm text-horizon-accent">
-              סה"כ משימות פעילות: <span className="font-bold text-horizon-primary">{stats.totalTasks}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* לוח Kanban */}
       {tasksLoading ?
