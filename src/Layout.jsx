@@ -62,6 +62,7 @@ import { ThemeProvider, useTheme } from "./components/shared/ThemeContext";
 import { UsersProvider } from "./components/shared/UsersContext";
 import MobileDashboard from "./components/mobile/MobileDashboard";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Toaster } from "@/components/ui/sonner";
 
 const navigationItems = [
   {
@@ -827,6 +828,7 @@ function LayoutContent({ children, currentPageName }) {
     <TooltipProvider>
     <div dir="rtl" className="min-h-screen bg-horizon-dark" data-theme={theme}>
       <GlobalThemeStyles />
+      <Toaster position="bottom-center" richColors dir="rtl" />
 
       <div className="min-h-screen flex">
         {isSidebarOpen && (

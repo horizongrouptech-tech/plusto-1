@@ -49,7 +49,6 @@
  */
 import ActionBank from './pages/ActionBank';
 import AddProduct from './pages/AddProduct';
-import Admin from './pages/Admin';
 import BusinessForecast from './pages/BusinessForecast';
 import CatalogPage from './pages/CatalogPage';
 import Contact from './pages/Contact';
@@ -75,13 +74,13 @@ import TaskManagement from './pages/TaskManagement';
 import WebsiteScan from './pages/WebsiteScan';
 import Welcome from './pages/Welcome';
 import WhatsAppTest from './pages/WhatsAppTest';
+import Admin from './pages/Admin';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "ActionBank": ActionBank,
     "AddProduct": AddProduct,
-    "Admin": Admin,
     "BusinessForecast": BusinessForecast,
     "CatalogPage": CatalogPage,
     "Contact": Contact,
@@ -107,6 +106,7 @@ export const PAGES = {
     "WebsiteScan": WebsiteScan,
     "Welcome": Welcome,
     "WhatsAppTest": WhatsAppTest,
+    "Admin": Admin,
 }
 
 export const pagesConfig = {
