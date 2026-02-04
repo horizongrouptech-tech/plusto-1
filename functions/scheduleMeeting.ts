@@ -31,6 +31,9 @@ Deno.serve(async (req) => {
       customer_name
     } = await req.json();
 
+    // נושא בפורמט אחיד: "פגישת ניהול כספים מספר X, [שם הלקוח]"
+    const meetingSubject = subject || `פגישת ניהול כספים, ${customer_name || customer_email}`;
+
     // בניית רשימת המוזמנים
     const attendees = [];
     
@@ -88,7 +91,7 @@ ${description || ''}
     // יצירת האירוע בגוגל קלנדר
     try {
       const { data: calendarResponse, error: calendarError } = await base44.asServiceRole.integrations.Google.CreateCalendarEvent({
-        summary: subject || 'פגישת ניהול כספים',
+        summary: meetingSubject,
         description: eventDescription,
         start: {
           dateTime: start_datetime,
