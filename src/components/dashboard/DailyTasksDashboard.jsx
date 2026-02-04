@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import {
-  Calendar,
+  Calendar as CalendarLucide,
   Users,
   CheckCircle2,
   AlertTriangle,
@@ -25,7 +25,8 @@ import {
   XCircle,
   ChevronDown,
   ChevronUp,
-  BookOpen
+  BookOpen,
+  CalendarIcon
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -41,7 +42,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { CalendarIcon } from 'lucide-react';
 
 import KanbanColumn from './kanban/KanbanColumn';
 import TaskCard from './kanban/TaskCard';
@@ -488,7 +488,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       {!isAdmin && todayWorkGroup.groups.length > 0 &&
       <Card className="card-horizon bg-white">
           <CardContent className="p-4 flex items-center gap-3">
-            <Calendar className="w-5 h-5 text-horizon-primary" />
+            <CalendarLucide className="w-5 h-5 text-horizon-primary" />
             <span className="text-horizon-text font-medium text-right">
               היום יום עבודה על לקוחות מקבוצה: {todayWorkGroup.groups.join(' ו-')} - יום {getHebrewDayName()}
             </span>
