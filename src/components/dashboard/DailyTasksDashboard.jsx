@@ -619,14 +619,9 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         </CardContent>
       </Card>
 
-      {/* לוח Kanban */}
-      {tasksLoading ?
-      <div className="text-center py-12">
-          <Loader2 className="w-12 h-12 animate-spin mx-auto text-horizon-primary mb-4" />
-          <p className="text-horizon-accent">טוען לוח משימות...</p>
-        </div> :
-
-      <DragDropContext onDragEnd={handleDragEnd}>
+      {/* טבלת לקוחות לעבודה היום */}
+      {todaysClients.length > 0 && (
+        <Card className="card-horizon bg-white border-2 border-[#e1e8ed]">
           <CardHeader className="border-b border-[#e1e8ed] bg-gradient-to-l from-[#32acc1]/5 to-[#fc9f67]/5">
             <CardTitle className="text-horizon-text flex items-center justify-between text-right">
               <div className="flex items-center gap-2">
@@ -648,70 +643,70 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
             </CardTitle>
           </CardHeader>
           {isClientsExpanded && (
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {todaysClients.map((client) =>
-            <div
-              key={client.id}
-              className="bg-white rounded-xl border-2 border-[#e1e8ed] p-4 hover:shadow-md hover:border-[#32acc1]/30 transition-all">
-
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex-1 text-right">
-                      <h4 className="font-bold text-[#121725] text-base">
-                        {client.business_name || client.full_name}
-                      </h4>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {todaysClients.map((client) => (
+                  <div
+                    key={client.id}
+                    className="bg-white rounded-xl border-2 border-[#e1e8ed] p-4 hover:shadow-md hover:border-[#32acc1]/30 transition-all"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1 text-right">
+                        <h4 className="font-bold text-[#121725] text-base">
+                          {client.business_name || client.full_name}
+                        </h4>
+                      </div>
+                      <Badge className={`${getCustomerGroupBadgeColor(client.customer_group)} font-semibold text-sm px-3 py-1`}>
+                        קבוצה {client.customer_group}
+                      </Badge>
                     </div>
-                    <Badge className={`${getCustomerGroupBadgeColor(client.customer_group)} font-semibold text-sm px-3 py-1`}>
-                      קבוצה {client.customer_group}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-[#5a6c7d] mb-2 text-right">{client.email}</p>
-                  <div className="text-xs text-[#5a6c7d] mb-3 text-right">
-                    {client.business_type || 'other'}
-                  </div>
-                  <div className="space-y-2">
-                    <Link to={createPageUrl('CustomerManagementNew') + `?clientId=${client.id}`}>
-                      <Button
-                        size="sm"
-                        className="w-full bg-[#32acc1] hover:bg-[#32acc1]/90 text-white rounded-lg h-9"
-                      >
-                        <ArrowLeft className="w-4 h-4 ml-2" />
-                        מעבר ללקוח
-                      </Button>
-                    </Link>
-                    {client.fireberry_account_id && (
-                      <a
-                        href={`https://plusto.fireberry.com/Account/Account/frm_account_information.aspx?id=${client.fireberry_account_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ display: 'block', width: '100%' }}
-                      >
+                    <p className="text-xs text-[#5a6c7d] mb-2 text-right">{client.email}</p>
+                    <div className="text-xs text-[#5a6c7d] mb-3 text-right">
+                      {client.business_type || 'other'}
+                    </div>
+                    <div className="space-y-2">
+                      <Link to={createPageUrl('CustomerManagementNew') + `?clientId=${client.id}`}>
                         <Button
                           size="sm"
-                          variant="outline"
-                          className="w-full border-[#32acc1] text-[#32acc1] hover:bg-[#32acc1]/10 rounded-lg h-9"
+                          className="w-full bg-[#32acc1] hover:bg-[#32acc1]/90 text-white rounded-lg h-9"
                         >
-                          פתח בפיירברי
+                          <ArrowLeft className="w-4 h-4 ml-2" />
+                          מעבר ללקוח
                         </Button>
-                      </a>
-                    )}
+                      </Link>
+                      {client.fireberry_account_id && (
+                        <a
+                          href={`https://plusto.fireberry.com/Account/Account/frm_account_information.aspx?id=${client.fireberry_account_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ display: 'block', width: '100%' }}
+                        >
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full border-[#32acc1] text-[#32acc1] hover:bg-[#32acc1]/10 rounded-lg h-9"
+                          >
+                            פתח בפיירברי
+                          </Button>
+                        </a>
+                      )}
+                    </div>
                   </div>
-                </div>
-            )}
-            </div>
-          </CardContent>
+                ))}
+              </div>
+            </CardContent>
           )}
         </Card>
-      }
+      )}
 
       {/* לוח Kanban */}
-      {tasksLoading ?
-      <div className="text-center py-12">
+      {tasksLoading ? (
+        <div className="text-center py-12">
           <Loader2 className="w-12 h-12 animate-spin mx-auto text-horizon-primary mb-4" />
           <p className="text-horizon-accent">טוען לוח משימות...</p>
-        </div> :
-
-      <DragDropContext onDragEnd={handleDragEnd}>
+        </div>
+      ) : (
+        <DragDropContext onDragEnd={handleDragEnd}>
           <div className="flex gap-4 overflow-x-auto pb-4">
             {/* עמודה: לביצוע */}
             <KanbanColumn
@@ -889,7 +884,8 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
             </KanbanColumn>
           </div>
         </DragDropContext>
-      }
+      )}
+      
       {/* מודאל משימות שהושלמו */}
       <CompletedTasksModal
         isOpen={showCompletedModal}
