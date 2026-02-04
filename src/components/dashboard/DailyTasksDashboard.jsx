@@ -33,6 +33,7 @@ import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { DragDropContext, Draggable } from '@hello-pangea/dnd';
+import { toast } from 'sonner';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -320,11 +321,11 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       queryClient.invalidateQueries(['allRelevantTasks']); // Invalidate the broader query
       setIsTaskModalOpen(false);
       setSelectedTask(null);
-      alert('המשימה עודכנה בהצלחה!');
+      toast.success('המשימה עודכנה בהצלחה!');
     },
     onError: (error) => {
       console.error('Error updating task:', error);
-      alert('שגיאה בעדכון המשימה: ' + error.message);
+      toast.error('שגיאה בעדכון המשימה: ' + error.message);
     }
   });
 
@@ -353,11 +354,11 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['allRelevantTasks']);
-      alert('המשימה הושלמה בהצלחה!');
+      toast.success('המשימה הושלמה בהצלחה!');
     },
     onError: (error) => {
       console.error('Error marking task as done:', error);
-      alert('שגיאה בהשלמת המשימה: ' + error.message);
+      toast.error('שגיאה בהשלמת המשימה: ' + error.message);
     }
   });
 
@@ -397,10 +398,10 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       try {
         await base44.entities.CustomerGoal.update(taskId, { status: 'open' });
         queryClient.invalidateQueries(['allRelevantTasks']);
-        alert('המשימה שוחזרה בהצלחה!');
+        toast.success('המשימה שוחזרה בהצלחה!');
       } catch (error) {
         console.error('Error restoring task:', error);
-        alert('שגיאה בשחזור המשימה');
+        toast.error('שגיאה בשחזור המשימה');
       }
     }
   };
@@ -418,7 +419,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       queryClient.invalidateQueries(['allRelevantTasks']);
     } catch (error) {
       console.error('Error updating task status:', error);
-      alert('שגיאה בעדכון סטטוס המשימה');
+      toast.error('שגיאה בעדכון סטטוס המשימה');
       queryClient.invalidateQueries(['allRelevantTasks']);
     }
   };
@@ -505,7 +506,180 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
 
       <DragDropContext onDragEnd={handleDragEnd}>
           <div className="flex gap-4 overflow-x-auto pb-4">
-            {/* עמודות הקאנבן כאן */}
+            {/* עמודה: לביצוע */}
+            <KanbanColumn
+            columnId="open"
+            title="לביצוע"
+            tasks={tasksByStatus.open}
+            icon={Circle}
+            color="bg-blue-500 text-white">
+
+              {tasksByStatus.open.map((task, index) => {
+              const customer = allCustomers.find((c) => c.email === task.customer_email);
+              const parentGoal = task.parent_id ? goals.find((g) => g.id === task.parent_id) : null;
+
+              return (
+                <Draggable key={task.id} draggableId={task.id} index={index}>
+                    {(provided, snapshot) =>
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.draggableProps}
+                    {...provided.dragHandleProps}>
+
+                        <TaskCard
+                      task={task}
+                      customer={customer}
+                      parentGoal={parentGoal}
+                      onTaskClick={handleTaskClick}
+                      onMarkAsDone={handleMarkAsDone}
+                      isDragging={snapshot.isDragging} />
+
+                      </div>
+                  }
+                  </Draggable>);
+
+            })}
+            </KanbanColumn>
+
+            {/* עמודה: בביצוע */}
+            <KanbanColumn
+            columnId="in_progress"
+            title="בביצוע"
+            tasks={tasksByStatus.in_progress}
+            icon={Clock}
+            color="bg-yellow-500 text-white">
+
+              {tasksByStatus.in_progress.map((task, index) => {
+              const customer = allCustomers.find((c) => c.email === task.customer_email);
+              const parentGoal = task.parent_id ? goals.find((g) => g.id === task.parent_id) : null;
+
+              return (
+                <Draggable key={task.id} draggableId={task.id} index={index}>
+                    {(provided, snapshot) =>
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.draggableProps}
+                    {...provided.dragHandleProps}>
+
+                        <TaskCard
+                      task={task}
+                      customer={customer}
+                      parentGoal={parentGoal}
+                      onTaskClick={handleTaskClick}
+                      onMarkAsDone={handleMarkAsDone}
+                      isDragging={snapshot.isDragging} />
+
+                      </div>
+                  }
+                  </Draggable>);
+
+            })}
+            </KanbanColumn>
+
+            {/* עמודה: באיחור */}
+            <KanbanColumn
+            columnId="delayed"
+            title="באיחור"
+            tasks={tasksByStatus.delayed}
+            icon={AlertTriangle}
+            color="bg-red-500 text-white">
+
+              {tasksByStatus.delayed.map((task, index) => {
+              const customer = allCustomers.find((c) => c.email === task.customer_email);
+              const parentGoal = task.parent_id ? goals.find((g) => g.id === task.parent_id) : null;
+
+              return (
+                <Draggable key={task.id} draggableId={task.id} index={index}>
+                    {(provided, snapshot) =>
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.draggableProps}
+                    {...provided.dragHandleProps}>
+
+                        <TaskCard
+                      task={task}
+                      customer={customer}
+                      parentGoal={parentGoal}
+                      onTaskClick={handleTaskClick}
+                      onMarkAsDone={handleMarkAsDone}
+                      isDragging={snapshot.isDragging} />
+
+                      </div>
+                  }
+                  </Draggable>);
+
+            })}
+            </KanbanColumn>
+
+            {/* עמודה: הושלם */}
+            <KanbanColumn
+            columnId="done"
+            title="הושלם"
+            tasks={tasksByStatus.done}
+            icon={CheckCircle2}
+            color="bg-green-500 text-white">
+
+              {tasksByStatus.done.map((task, index) => {
+              const customer = allCustomers.find((c) => c.email === task.customer_email);
+              const parentGoal = task.parent_id ? goals.find((g) => g.id === task.parent_id) : null;
+
+              return (
+                <Draggable key={task.id} draggableId={task.id} index={index}>
+                    {(provided, snapshot) =>
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.draggableProps}
+                    {...provided.dragHandleProps}>
+
+                        <TaskCard
+                      task={task}
+                      customer={customer}
+                      parentGoal={parentGoal}
+                      onTaskClick={handleTaskClick}
+                      onMarkAsDone={handleMarkAsDone}
+                      isDragging={snapshot.isDragging} />
+
+                      </div>
+                  }
+                  </Draggable>);
+
+            })}
+            </KanbanColumn>
+
+            {/* עמודה: בוטל */}
+            <KanbanColumn
+            columnId="cancelled"
+            title="בוטל"
+            tasks={tasksByStatus.cancelled}
+            icon={XCircle}
+            color="bg-gray-500 text-white">
+
+              {tasksByStatus.cancelled.map((task, index) => {
+              const customer = allCustomers.find((c) => c.email === task.customer_email);
+              const parentGoal = task.parent_id ? goals.find((g) => g.id === task.parent_id) : null;
+
+              return (
+                <Draggable key={task.id} draggableId={task.id} index={index}>
+                    {(provided, snapshot) =>
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.draggableProps}
+                    {...provided.dragHandleProps}>
+
+                        <TaskCard
+                      task={task}
+                      customer={customer}
+                      parentGoal={parentGoal}
+                      onTaskClick={handleTaskClick}
+                      onMarkAsDone={handleMarkAsDone}
+                      isDragging={snapshot.isDragging} />
+
+                      </div>
+                  }
+                  </Draggable>);
+
+            })}
+            </KanbanColumn>
           </div>
         </DragDropContext>
       }
