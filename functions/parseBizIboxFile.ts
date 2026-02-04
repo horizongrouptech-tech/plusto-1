@@ -404,6 +404,11 @@ Deno.serve(async (req) => {
         }
       }
       
+      // בדיקה אם קטגוריה זו קיימת כבר, אם לא - נוסיף אותה לרשימה
+      if (category && !categorySums[category]) {
+        categorySums[category] = { total: 0, count: 0, months: {} };
+      }
+      
       const reference = findColumnValue(row, [
         'reference', 'אסמכתא', 'Reference', 'מספר אסמכתא', 
         'אסמכתה', 'ref', 'מספר ייחוס', 'reference_number'
@@ -537,22 +542,10 @@ Deno.serve(async (req) => {
 
     console.log(`New entries to add: ${newEntries.length}, Duplicates skipped: ${duplicates.length}`);
 
-    // סינון רק תאריכים מהיום והלאה (עתיד והווה)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const futureEntries = newEntries.filter(entry => {
-      const entryDate = new Date(entry.date);
-      entryDate.setHours(0, 0, 0, 0);
-      return entryDate >= today;
-    });
-
-    console.log(`Filtered to future entries: ${futureEntries.length} (from ${newEntries.length} total)`);
-
-    // שמירה בבסיס הנתונים - רק שורות חדשות עתידיות
-    if (futureEntries.length > 0) {
+    // שמירה בבסיס הנתונים - כל השורות החדשות (כולל עבר)
+    if (newEntries.length > 0) {
       console.log('Saving new cash flow entries to database...');
-      await base44.asServiceRole.entities.CashFlow.bulkCreate(futureEntries);
+      await base44.asServiceRole.entities.CashFlow.bulkCreate(newEntries);
       console.log('Cash flow entries saved successfully');
     }
 
