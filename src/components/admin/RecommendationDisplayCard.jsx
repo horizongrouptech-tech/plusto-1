@@ -173,6 +173,18 @@ export default function RecommendationDisplayCard({
               </div>
             )}
           </div>
+
+          {/* מקור ההמלצה */}
+          {recommendation.trigger_condition && (
+            <div className="mt-2 text-xs text-horizon-accent text-right bg-horizon-card/50 p-2 rounded">
+              💡 <span className="font-medium">מקור ההמלצה:</span>{' '}
+              {recommendation.trigger_condition === 'margin_too_low' ? 'ניתוח מרווחי רווח בקטלוג' :
+               recommendation.trigger_condition === 'sales_decline' ? 'ניתוח מגמות מכירות מדוחות Z' :
+               recommendation.trigger_condition === 'inventory_high' ? 'ניתוח רמות מלאי' :
+               recommendation.trigger_condition === 'supplier_price_change' ? 'השוואת מחירי ספקים' :
+               recommendation.trigger_condition}
+            </div>
+          )}
         </div>
 
         <div className="mt-auto pt-4 border-t border-horizon">
