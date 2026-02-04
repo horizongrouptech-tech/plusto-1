@@ -50,15 +50,27 @@ export default function GoalsTimelineNew({ customer }) {
     return labels[status] || status;
   };
 
-  // טעינת יעדים
-  const { data: goals = [], isLoading } = useQuery({
+  // טעינת יעדים - ממוין לפי תאריך יעד מהקרוב לרחוק
+  const { data: rawGoals = [], isLoading } = useQuery({
     queryKey: ['customerGoals', customer?.email],
-    queryFn: () => base44.entities.CustomerGoal.filter({
-      customer_email: customer.email,
-      is_active: true
-    }, 'order_index'),
+    queryFn: async () => {
+      const allGoals = await base44.entities.CustomerGoal.filter({
+        customer_email: customer.email,
+        is_active: true
+      });
+      
+      // מיון לפי תאריך יעד: קרוב ← רחוק (nulls בסוף)
+      return allGoals.sort((a, b) => {
+        if (!a.end_date && !b.end_date) return 0;
+        if (!a.end_date) return 1;
+        if (!b.end_date) return -1;
+        return new Date(a.end_date) - new Date(b.end_date);
+      });
+    },
     enabled: !!customer?.email
   });
+  
+  const goals = rawGoals;
 
   // סינון יעדים
   const filteredGoals = useMemo(() => {

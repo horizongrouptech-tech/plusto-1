@@ -561,6 +561,13 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
               </Button>
             </div>
 
+            <div className="flex items-center gap-2 mr-4">
+              <span className="text-sm font-medium text-horizon-text">מיון יעדים:</span>
+            </div>
+            <p className="text-xs text-horizon-accent">
+              יעדים ממוינים מהקרוב לרחוק לפי תאריך סיום
+            </p>
+
             {/* סינון לפי לקוח */}
             <div className="flex items-center gap-2 mr-4">
               <Users className="w-4 h-4 text-horizon-primary" />

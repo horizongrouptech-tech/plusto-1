@@ -38,6 +38,7 @@ import { UploadFile } from "@/integrations/Core";
 import { ProcessStatus } from '@/entities/ProcessStatus';
 import CatalogProgressTracker from "./CatalogProgressTracker";
 import CatalogGenerationProgressBar from "./CatalogGenerationProgressBar";
+import SetDefaultCatalogButton from "../admin/SetDefaultCatalogButton";
 
 import { Catalog } from "@/entities/Catalog";
 import {
@@ -908,6 +909,13 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                     <Plus className="w-4 h-4 ml-1" />
                     קטלוג חדש
                 </Button>
+                {selectedCatalogId && catalogs.find(c => c.id === selectedCatalogId) && (
+                  <SetDefaultCatalogButton
+                    catalog={catalogs.find(c => c.id === selectedCatalogId)}
+                    customerEmail={customer.email}
+                    onSuccess={loadCatalogs}
+                  />
+                )}
                 {selectedCatalogId && (
                     <Button 
                         onClick={async () => {
