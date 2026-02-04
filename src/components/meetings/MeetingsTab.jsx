@@ -286,7 +286,7 @@ export default function MeetingsTab({ customer, currentUser }) {
       setSelectedMeeting(null);
     } catch (error) {
       console.error('Error updating meeting:', error);
-      showError('שגיאה בעדכון פגישה');
+      alert('שגיאה בעדכון פגישה');
     } finally {
       setIsSaving(false);
     }

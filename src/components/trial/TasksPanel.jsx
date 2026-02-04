@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { base44 } from '@/api/base44Client';
-import { toast } from 'sonner';
 import {
   ChevronLeft,
   Plus,
@@ -96,11 +95,10 @@ export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCo
   const handleMarkDone = async (taskId) => {
     try {
       await base44.entities.CustomerGoal.update(taskId, { status: 'done' });
-      toast.success('המשימה סומנה כהושלמה');
       if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Error marking task done:", error);
-      toast.error('שגיאה בעדכון משימה');
+      alert('שגיאה בעדכון משימה');
     }
   };
 

@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+
+import React from 'react'; // useState is no longer needed in the new structure unless for AdminRatingWidget internal state
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Archive, Edit3, Eye, MessageCircle, Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import { base44 } from '@/api/base44Client';
+import { Archive, Edit3, Eye } from "lucide-react";
 // Assuming User and Recommendation entities are still needed for broader context if not explicitly removed,
 // though their direct use in this component's new logic (handleSendWhatsApp) is gone.
 // For now, keeping them as they were in the original file, just in case they are used elsewhere
@@ -75,38 +74,10 @@ export default function RecommendationCard({
   onView, 
   onArchive,
   onRatingUpdate,
-  isUpdating = false,
-  customer
+  isUpdating = false 
 }) {
-  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
-
-  const handleSendWhatsApp = async () => {
-    if (!customer?.phone && !customer?.email) {
-      toast.error('לא נמצא מספר טלפון או אימייל ללקוח');
-      return;
-    }
-
-    setIsSendingWhatsApp(true);
-    try {
-      const message = `*${recommendation.title}*\n\n${recommendation.description}\n\n💰 רווח צפוי: ₪${recommendation.expected_profit?.toLocaleString() || 0}`;
-      
-      await base44.functions.invoke('sendWhatsAppMessage', {
-        to: customer.phone || customer.email,
-        message: message,
-        customerEmail: customer.email
-      });
-      
-      toast.success('ההמלצה נשלחה בהצלחה לוואטסאפ');
-    } catch (error) {
-      console.error('Error sending WhatsApp:', error);
-      toast.error('שגיאה בשליחת ההמלצה');
-    } finally {
-      setIsSendingWhatsApp(false);
-    }
-  };
-
   return (
-    <Card className="card-horizon hover:shadow-lg transition-all duration-300 min-h-[280px] flex flex-col">
+    <Card className="card-horizon hover:shadow-lg transition-all duration-300">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div className="flex-1">
@@ -133,7 +104,7 @@ export default function RecommendationCard({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4 flex-1 flex flex-col">
+      <CardContent className="space-y-4">
         <p className="text-sm text-horizon-accent text-right line-clamp-3">
           {recommendation.description}
         </p>
@@ -157,7 +128,7 @@ export default function RecommendationCard({
         />
 
         {/* Action Buttons */}
-        <div className="flex gap-2 justify-end pt-3 border-t border-horizon mt-auto">
+        <div className="flex gap-2 justify-end pt-3 border-t border-horizon">
           <Button
             size="sm"
             variant="outline"
@@ -166,21 +137,6 @@ export default function RecommendationCard({
           >
             <Eye className="w-4 h-4 ml-1" />
             צפה
-          </Button>
-          
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleSendWhatsApp}
-            disabled={isSendingWhatsApp}
-            className="border-green-500 text-green-400 hover:bg-green-500/10"
-          >
-            {isSendingWhatsApp ? (
-              <Loader2 className="w-4 h-4 ml-1 animate-spin" />
-            ) : (
-              <MessageCircle className="w-4 h-4 ml-1" />
-            )}
-            וואטסאפ
           </Button>
           
           <Button
@@ -202,16 +158,6 @@ export default function RecommendationCard({
             <Archive className="w-4 h-4 ml-1" />
             ארכיון
           </Button>
-        </div>
-
-        {/* לחץ לצפייה מלאה */}
-        <div 
-          className="text-center pt-2 cursor-pointer"
-          onClick={() => onView(recommendation)}
-        >
-          <span className="text-xs text-horizon-accent hover:text-horizon-primary transition-colors">
-            לחץ לצפייה מלאה →
-          </span>
         </div>
       </CardContent>
     </Card>

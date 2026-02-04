@@ -20,7 +20,6 @@ import { generateTargetedRecommendation } from "@/components/logic/targetedRecom
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { ProductCatalog } from '@/entities/ProductCatalog';
-import { toast } from 'sonner';
 
 export default function TargetedRecommendationModal({ customer, isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
@@ -76,7 +75,7 @@ export default function TargetedRecommendationModal({ customer, isOpen, onClose,
 
   const handleGenerate = async () => {
     if (!selectedProductId && !formData.productName.trim()) {
-      toast.error('נא לבחור מוצר מהקטלוג או להזין שם מוצר');
+      alert('נא לבחור מוצר מהקטלוג או להזין שם מוצר');
       return;
     }
 
