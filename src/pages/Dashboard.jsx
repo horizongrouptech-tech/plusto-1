@@ -85,6 +85,13 @@ export default function Dashboard() {
                     <DailyTasks user={user} />
                 </div>
                 
+                {/* Kanban View - משימות בעמודות לפי לקוח */}
+                {user?.role !== 'admin' && clients.length > 0 && (
+                    <div>
+                        <FinancialManagerKanban currentUser={user} clients={clients} />
+                    </div>
+                )}
+                
                 {/* לקוחות למטה - סגור בדיפולט */}
                 <div className="flex items-center justify-between">
                     <Button
