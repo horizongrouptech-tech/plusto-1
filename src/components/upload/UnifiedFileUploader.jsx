@@ -632,6 +632,27 @@ ${rawDataForPrompt}
     fileInputRef.current?.click();
   };
 
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      fileInputRef.current.files = files;
+      const event = new Event('change', { bubbles: true });
+      fileInputRef.current.dispatchEvent(event);
+    }
+  };
+
   const selectedCategoryObj = FILE_CATEGORIES.find(c => c.value === selectedCategory);
   const SelectedIcon = selectedCategoryObj?.icon || Upload;
 
@@ -704,11 +725,19 @@ ${rawDataForPrompt}
             disabled={isUploading || !selectedCategory}
           />
           
-          <Button
-            onClick={triggerFileSelect}
-            disabled={isUploading || !selectedCategory || (selectedCategory === 'other' && !customFileName.trim())}
-            className="btn-horizon-primary w-full h-12"
+          <div
+            onDragOver={handleDragOver}
+            onDragEnter={handleDragEnter}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-lg p-6 transition-all ${
+              isUploading ? 'border-gray-500 bg-gray-500/5' : 'border-horizon-primary/50 hover:border-horizon-primary hover:bg-horizon-primary/5'
+            }`}
           >
+            <Button
+              onClick={triggerFileSelect}
+              disabled={isUploading || !selectedCategory || (selectedCategory === 'other' && !customFileName.trim())}
+              className="btn-horizon-primary w-full h-12"
+            >
             {isUploading && !finalStatus ? (
               <>
                 <RefreshCw className="w-5 h-5 ml-2 animate-spin" />
@@ -720,7 +749,9 @@ ${rawDataForPrompt}
                 העלה קובץ
               </>
             )}
-          </Button>
+            </Button>
+            <p className="text-xs text-horizon-accent text-center mt-2">או גרור קובץ לכאן</p>
+          </div>
 
           {/* Progress Bar */}
           {isUploading && uploadProgress > 0 && (

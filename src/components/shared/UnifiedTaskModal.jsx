@@ -62,8 +62,8 @@ export default function UnifiedTaskModal({
     if (mode === 'edit' && existingTask) {
       setName(existingTask.name || '');
       setNotes(existingTask.notes || '');
-      setStartDate(existingTask.start_date || new Date().toISOString().split('T')[0]);
-      setEndDate(existingTask.end_date || new Date().toISOString().split('T')[0]);
+      setStartDate(existingTask.start_date ? new Date(existingTask.start_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+      setEndDate(existingTask.end_date ? new Date(existingTask.end_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
       setEndTime(existingTask.due_time || '09:00');
       
       if (existingTask.reminder_date) {
