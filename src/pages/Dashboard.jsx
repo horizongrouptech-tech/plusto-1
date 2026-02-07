@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import WelcomeSection from '../components/dashboard/WelcomeSection';
 import ClientList from '../components/dashboard/ClientList';
 import DailyTasks from '../components/dashboard/DailyTasks';
+import FinancialManagerKanban from '../components/dashboard/FinancialManagerKanban';
 
 export default function Dashboard() {
     const { data: user, isLoading: isUserLoading } = useQuery({
