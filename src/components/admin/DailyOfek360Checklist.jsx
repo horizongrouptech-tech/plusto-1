@@ -732,8 +732,6 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
             )}
           </TabsContent>
 
-          </TabsContent>
-
           <TabsContent value="monthly" className="mt-4 space-y-4">
             {/* בורר חודש ושנה */}
             <Card className="card-horizon">
@@ -948,36 +946,3 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
     </Dialog>
   );
 }
-        
-        {/* מודל פירוט מלא */}
-        <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-          <DialogContent className="max-w-2xl bg-horizon-dark border-horizon" dir="rtl">
-            <DialogHeader>
-              <DialogTitle className="text-xl text-horizon-text">
-                פירוט מלא - {selectedCategoryForDetails?.title}
-              </DialogTitle>
-            </DialogHeader>
-            {selectedCategoryForDetails && (
-              <div className="space-y-4 mt-4">
-                <div>
-                  <h4 className="text-horizon-text font-semibold mb-2">תיאור:</h4>
-                  <p className="text-horizon-accent">{selectedCategoryForDetails.description}</p>
-                </div>
-                <div>
-                  <h4 className="text-horizon-text font-semibold mb-2">מצב מצוי:</h4>
-                  <p className="text-horizon-accent">
-                    המצב הנוכחי שלך בתחום זה - תאר בהערות מה הסיטואציה כיום. 
-                    זה כולל את כל הבעיות, האתגרים והמצב הקיים.
-                  </p>
-                </div>
-                <div>
-                  <h4 className="text-horizon-text font-semibold mb-2">מצב רצוי:</h4>
-                  <p className="text-horizon-accent">
-                    המצב האידיאלי שאליו אתה רוצה להגיע. זה כולל את כל המטרות, 
-                    השיפורים והמצב האופטימלי בתחום זה.
-                  </p>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
