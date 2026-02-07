@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import WelcomeSection from '../components/dashboard/WelcomeSection';
 import ClientList from '../components/dashboard/ClientList';
 import DailyTasks from '../components/dashboard/DailyTasks';
-import FinancialManagerKanban from '../components/dashboard/FinancialManagerKanban';
 
 export default function Dashboard() {
     const { data: user, isLoading: isUserLoading } = useQuery({
@@ -84,13 +83,6 @@ export default function Dashboard() {
                 <div>
                     <DailyTasks user={user} />
                 </div>
-                
-                {/* Kanban View - משימות בעמודות לפי לקוח */}
-                {user?.role !== 'admin' && clients.length > 0 && (
-                    <div>
-                        <FinancialManagerKanban currentUser={user} clients={clients} />
-                    </div>
-                )}
                 
                 {/* לקוחות למטה - סגור בדיפולט */}
                 <div className="flex items-center justify-between">
