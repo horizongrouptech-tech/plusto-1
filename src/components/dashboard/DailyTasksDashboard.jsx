@@ -48,6 +48,7 @@ import KanbanColumn from './kanban/KanbanColumn';
 import TaskCard from './kanban/TaskCard';
 import CompletedTasksModal from './kanban/CompletedTasksModal';
 import GoalBankManager from '../admin/GoalBankManager';
+import ManagerCustomersPanel from './ManagerCustomersPanel';
 
 
 // פונקציה לקבלת קבוצת העבודה היומית
