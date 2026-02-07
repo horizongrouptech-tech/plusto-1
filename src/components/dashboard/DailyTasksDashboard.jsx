@@ -799,11 +799,10 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
             </KanbanColumn>
           </div>
         </DragDropContext>
-      </DragDropContext>
       )}
       </div>
       </div>
-      </div>
+
       <CompletedTasksModal
         isOpen={showCompletedModal}
         onClose={() => setShowCompletedModal(false)}
