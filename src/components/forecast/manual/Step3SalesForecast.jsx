@@ -53,6 +53,19 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   const [viewMode, setViewMode] = useState('category'); // 'category' או 'list'
   const [planningMode, setPlanningMode] = useState(forecastData.use_aggregate_planning ? 'aggregate' : 'detailed');
 
+  // ✅ זיהוי אוטומטי של קטלוגים גדולים ומעבר לתכנון כללי
+  useEffect(() => {
+    const catalogSize = forecastData.services?.length || 0;
+    const LARGE_CATALOG_THRESHOLD = 50;
+    
+    // מעבר אוטומטי לתכנון כללי אם הקטלוג גדול (רק בתחזיות חדשות)
+    if (catalogSize > LARGE_CATALOG_THRESHOLD && planningMode === 'detailed' && !forecastData.id) {
+      console.log(`📊 Large catalog detected (${catalogSize} products), auto-switching to aggregate planning`);
+      setPlanningMode('aggregate');
+      onUpdateForecast({ use_aggregate_planning: true });
+    }
+  }, [forecastData.services]);
+
   // ✅ useEffect נשאר רק כ-fallback למקרים מיוחדים
   useEffect(() => {
     // אופטימיזציה: בדיקה אם באמת צריך לחשב מחדש
@@ -724,6 +737,27 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
               <CheckCircle2 className="h-4 w-4 text-green-400" />
               <AlertDescription className="text-horizon-text">
                 מצוין לעסקים עם קטלוג גדול! הזן מחזור מכירות חודשי ואחוז עלות גלם ממוצע - המערכת תחשב הכל אוטומטית.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {forecastData.services?.length > 50 && planningMode === 'detailed' && (
+            <Alert className="mt-4 bg-yellow-500/10 border-yellow-500/30">
+              <Package className="h-4 w-4 text-yellow-400" />
+              <AlertDescription className="text-horizon-text">
+                <div className="flex items-center justify-between gap-3">
+                  <span>
+                    זוהה קטלוג גדול ({forecastData.services.length} מוצרים). 
+                    מומלץ להשתמש בתכנון כללי לביצועים מיטביים.
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={() => handlePlanningModeChange('aggregate')}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    עבור לתכנון כללי
+                  </Button>
+                </div>
               </AlertDescription>
             </Alert>
           )}
