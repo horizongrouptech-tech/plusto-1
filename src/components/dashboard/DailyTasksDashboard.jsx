@@ -87,10 +87,9 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editedTaskData, setEditedTaskData] = useState({});
   const [groupFilter, setGroupFilter] = useState('all');
-  const [customerFilter, setCustomerFilter] = useState('all');
-  const [financialManagerFilter, setFinancialManagerFilter] = useState('all'); // Added new state for financial manager filter
+  const [managerFilter, setManagerFilter] = useState(isAdmin ? 'all' : 'current');
   const [showCompletedModal, setShowCompletedModal] = useState(false);
-  const [isClientsExpanded, setIsClientsExpanded] = useState(false); // Default: collapsed
+  const [isCustomersExpanded, setIsCustomersExpanded] = useState(true);
   const [showGoalBankModal, setShowGoalBankModal] = useState(false);
 
   const todayWorkGroup = getTodayWorkGroup();
