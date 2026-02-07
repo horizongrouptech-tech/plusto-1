@@ -804,15 +804,14 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       </div>
       </div>
       </div>
-      {/* מודאל משימות שהושלמו */}
       <CompletedTasksModal
         isOpen={showCompletedModal}
         onClose={() => setShowCompletedModal(false)}
         completedTasks={completedTasks}
         allCustomers={allCustomers}
         allGoals={goals}
-        onRestoreTask={handleRestoreTask} />
-
+        onRestoreTask={handleRestoreTask}
+      />
 
       {/* מודל בנק יעדים */}
       <Dialog open={showGoalBankModal} onOpenChange={setShowGoalBankModal}>
@@ -829,7 +828,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
 
       {/* מודאל עריכת משימה */}
       {selectedTask &&
-      <Dialog open={isTaskModalOpen} onOpenChange={setIsTaskModalOpen}>
+        <Dialog open={isTaskModalOpen} onOpenChange={setIsTaskModalOpen}>
           <DialogContent className="sm:max-w-lg bg-horizon-dark text-horizon-text border-horizon" dir="rtl">
             <DialogHeader>
               <DialogTitle className="text-right text-xl">עריכת משימה</DialogTitle>
@@ -838,50 +837,50 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
               <div>
                 <Label className="text-right block mb-2 text-horizon-text">שם המשימה</Label>
                 <input
-                type="text"
-                value={editedTaskData.name || ''}
-                onChange={(e) => setEditedTaskData({ ...editedTaskData, name: e.target.value })}
-                className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text text-right" />
-
+                  type="text"
+                  value={editedTaskData.name || ''}
+                  onChange={(e) => setEditedTaskData({ ...editedTaskData, name: e.target.value })}
+                  className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text text-right"
+                />
               </div>
 
               <div>
                 <Label className="text-right block mb-2 text-horizon-text">סטטוס</Label>
                 <Select
-                value={editedTaskData.status}
-                onValueChange={(value) => setEditedTaskData({ ...editedTaskData, status: value })}>
-
+                  value={editedTaskData.status}
+                  onValueChange={(value) => setEditedTaskData({ ...editedTaskData, status: value })}
+                >
                   <SelectTrigger className="w-full bg-horizon-card border-horizon text-horizon-text text-right">
                     <SelectValue>
                       {(() => {
-                      const display = getStatusDisplay(editedTaskData.status);
-                      const StatusIcon = display.icon;
-                      return (
-                        <div className="flex items-center gap-2 justify-end">
+                        const display = getStatusDisplay(editedTaskData.status);
+                        const StatusIcon = display.icon;
+                        return (
+                          <div className="flex items-center gap-2 justify-end">
                             <span className="font-medium">{display.label}</span>
                             <StatusIcon className={`w-5 h-5 ${display.color}`} />
-                          </div>);
-
-                    })()}
+                          </div>
+                        );
+                      })()}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="bg-horizon-dark border-horizon">
                     {['open', 'in_progress', 'done', 'delayed'].map((statusValue) => {
-                    const display = getStatusDisplay(statusValue);
-                    const StatusIcon = display.icon;
-                    return (
-                      <SelectItem
-                        key={statusValue}
-                        value={statusValue}
-                        className={`text-right cursor-pointer ${display.bgColor} hover:opacity-80 transition-opacity`}>
-
+                      const display = getStatusDisplay(statusValue);
+                      const StatusIcon = display.icon;
+                      return (
+                        <SelectItem
+                          key={statusValue}
+                          value={statusValue}
+                          className={`text-right cursor-pointer ${display.bgColor} hover:opacity-80 transition-opacity`}
+                        >
                           <div className="flex items-center gap-3 justify-end w-full py-1">
                             <span className={`font-medium text-base ${display.color}`}>{display.label}</span>
                             <StatusIcon className={`w-5 h-5 ${display.color}`} />
                           </div>
-                        </SelectItem>);
-
-                  })}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -922,46 +921,46 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
               <div>
                 <Label className="text-right block mb-2 text-horizon-text">שעת יעד (אופציונלי)</Label>
                 <input
-                type="time"
-                value={editedTaskData.due_time || ''}
-                onChange={(e) => setEditedTaskData({ ...editedTaskData, due_time: e.target.value })}
-                className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text text-right" />
-
+                  type="time"
+                  value={editedTaskData.due_time || ''}
+                  onChange={(e) => setEditedTaskData({ ...editedTaskData, due_time: e.target.value })}
+                  className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text text-right"
+                />
               </div>
 
               <div>
                 <Label className="text-right block mb-2 text-horizon-text">הערות</Label>
                 <Textarea
-                value={editedTaskData.notes || ''}
-                onChange={(e) => setEditedTaskData({ ...editedTaskData, notes: e.target.value })}
-                className="w-full bg-horizon-card border-horizon text-horizon-text text-right min-h-[100px]"
-                placeholder="הוסף הערות למשימה..." />
-
+                  value={editedTaskData.notes || ''}
+                  onChange={(e) => setEditedTaskData({ ...editedTaskData, notes: e.target.value })}
+                  className="w-full bg-horizon-card border-horizon text-horizon-text text-right min-h-[100px]"
+                  placeholder="הוסף הערות למשימה..."
+                />
               </div>
 
               {selectedTask &&
-            <div className="bg-horizon-card/30 p-3 rounded-lg text-sm text-horizon-accent">
+                <div className="bg-horizon-card/30 p-3 rounded-lg text-sm text-horizon-accent">
                   <p><strong>לקוח:</strong> {selectedTask.customer_email}</p>
                   <p><strong>אחראי:</strong> {selectedTask.assignee_email || 'לא שויך'}</p>
                   <p><strong>נוצר ב:</strong> {format(new Date(selectedTask.created_date), 'dd/MM/yyyy HH:mm', { locale: he })}</p>
                 </div>
-            }
+              }
             </div>
             <DialogFooter className="flex gap-2 justify-end">
               <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsTaskModalOpen(false)}
-              className="border-horizon text-horizon-text">
-
+                type="button"
+                variant="outline"
+                onClick={() => setIsTaskModalOpen(false)}
+                className="border-horizon text-horizon-text"
+              >
                 ביטול
               </Button>
               <Button
-              type="button"
-              onClick={handleSaveTask}
-              disabled={updateTaskMutation.isLoading}
-              className="btn-horizon-primary">
-
+                type="button"
+                onClick={handleSaveTask}
+                disabled={updateTaskMutation.isLoading}
+                className="btn-horizon-primary"
+              >
                 {updateTaskMutation.isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                 שמור שינויים
               </Button>
@@ -969,6 +968,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
           </DialogContent>
         </Dialog>
       }
-    </div>);
-
-}
+      </div>
+      );
+      }
