@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -414,11 +413,11 @@ export function FinancialReportViewer({ reportData, isOpen, onClose, fileData })
                   </div>
                 )}
                 {metadata.generated_date && (
-                  <div>
-                    <span className="text-horizon-accent">תאריך יצירה: </span>
-                    <span className="text-horizon-text font-medium">{metadata.generated_date}</span>
-                  </div>
-                )}
+                   <div>
+                     <span className="text-horizon-accent">תאריך יצירה: </span>
+                     <span className="text-horizon-text font-medium">{metadata.generated_date ? (new Date(metadata.generated_date).getTime() ? new Date(metadata.generated_date).toLocaleDateString('he-IL') : metadata.generated_date) : 'לא זמין'}</span>
+                   </div>
+                 )}
                 {metadata.currency && (
                   <div>
                     <span className="text-horizon-accent">מטבע: </span>

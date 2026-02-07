@@ -3,6 +3,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, TrendingUp, TrendingDown, Info, BarChart2, Calendar, FileText, Landmark } from 'lucide-react';
 import { formatCurrency as currencyFormatter } from '../utils/currencyFormatter';
+import { format } from 'date-fns';
+import { he } from 'date-fns/locale';
+
+// Safe date formatter utility
+const safeFormatDate = (dateValue, fallback = 'לא זמין') => {
+  if (!dateValue) return fallback;
+  
+  try {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return fallback;
+    return format(date, 'dd/MM/yyyy', { locale: he });
+  } catch {
+    return fallback;
+  }
+};
+
 export default function ESNAReportViewer({ fileData }) {
 
   // The main issue is likely here. The component might not be finding the data.
@@ -44,7 +60,7 @@ export default function ESNAReportViewer({ fileData }) {
                 <p className="text-horizon-accent mt-1">{metadata.companyName} | ע.מ: {metadata.businessId}</p>
             </div>
             <div className="text-left">
-                <p className="text-sm text-horizon-accent">הופק ב: {new Date(metadata.generatedDate).toLocaleDateString('he-IL')}</p>
+                <p className="text-sm text-horizon-accent">הופק ב: {safeFormatDate(metadata.generatedDate)}</p>
                 <p className="text-sm text-horizon-accent">משרד מייצג: {metadata.representativeOffice}</p>
             </div>
         </div>
