@@ -967,6 +967,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
           </DialogContent>
         </Dialog>
       }
-      </div>
-      );
-      }
+    </div>
+  );
+}
