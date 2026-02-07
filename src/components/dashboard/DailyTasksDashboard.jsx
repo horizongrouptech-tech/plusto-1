@@ -534,7 +534,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
 
       {/* הודעת יום העבודה */}
       {!isAdmin && todayWorkGroup.groups.length > 0 &&
-      <Card className="card-horizon bg-white">
+        <Card className="card-horizon bg-white">
           <CardContent className="p-4 flex items-center gap-3">
             <CalendarLucide className="w-5 h-5 text-horizon-primary" />
             <span className="text-horizon-text font-medium text-right">
@@ -548,83 +548,16 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       <Card className="card-horizon">
         <CardContent className="p-4">
           <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Filter className="w-5 h-5 text-horizon-primary" />
-              <span className="text-sm font-medium text-horizon-text">סינון לפי קבוצה:</span>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant={groupFilter === 'all' ? 'default' : 'outline'}
-                onClick={() => setGroupFilter('all')}
-                className={groupFilter === 'all' ? 'bg-horizon-primary text-white' : 'border-horizon text-horizon-accent'}>
-
-                הכל
-              </Button>
-              <Button
-                size="sm"
-                variant={groupFilter === 'A' ? 'default' : 'outline'}
-                onClick={() => setGroupFilter('A')}
-                className={groupFilter === 'A' ? 'bg-[#32acc1] text-white' : 'border-[#32acc1] text-[#32acc1]'}>
-
-                קבוצה A
-              </Button>
-              <Button
-                size="sm"
-                variant={groupFilter === 'B' ? 'default' : 'outline'}
-                onClick={() => setGroupFilter('B')}
-                className={groupFilter === 'B' ? 'bg-[#fc9f67] text-white' : 'border-[#fc9f67] text-[#fc9f67]'}>
-
-                קבוצה B
-              </Button>
-              <Button
-                size="sm"
-                variant={groupFilter === 'no_group' ? 'default' : 'outline'}
-                onClick={() => setGroupFilter('no_group')}
-                className={groupFilter === 'no_group' ? 'bg-gray-500 text-white' : 'border-gray-400 text-gray-400'}>
-
-                ללא שיוך
-              </Button>
-            </div>
-
-            <div className="flex items-center gap-2 mr-4">
-              <span className="text-sm font-medium text-horizon-text">מיון יעדים:</span>
-            </div>
-            <p className="text-xs text-horizon-accent">
-              יעדים ממוינים מהקרוב לרחוק לפי תאריך סיום
-            </p>
-
-            {/* סינון לפי לקוח */}
-            <div className="flex items-center gap-2 mr-4">
-              <Users className="w-4 h-4 text-horizon-primary" />
-              <span className="text-sm font-medium text-horizon-text">סינון לפי לקוח:</span>
-            </div>
-            <Select value={customerFilter} onValueChange={setCustomerFilter}>
-              <SelectTrigger className="w-[200px] bg-horizon-card border-horizon text-horizon-text">
-                <SelectValue placeholder="כל הלקוחות" />
-              </SelectTrigger>
-              <SelectContent className="bg-horizon-dark border-horizon max-h-[300px]">
-                <SelectItem value="all">כל הלקוחות</SelectItem>
-                {allCustomers
-                  .sort((a, b) => (a.business_name || a.full_name || '').localeCompare(b.business_name || b.full_name || ''))
-                  .map((customer) => (
-                    <SelectItem key={customer.email} value={customer.email}>
-                      {customer.business_name || customer.full_name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-
-            {/* סינון לפי מנהל כספים (אדמין בלבד) */}
+            {/* Manager Filter (Admin Only) */}
             {isAdmin && financialManagers.length > 0 && (
               <>
-                <div className="flex items-center gap-2 mr-4">
+                <div className="flex items-center gap-2">
                   <UserIcon className="w-4 h-4 text-horizon-primary" />
                   <span className="text-sm font-medium text-horizon-text">סינון לפי מנהל כספים:</span>
                 </div>
-                <Select value={financialManagerFilter} onValueChange={setFinancialManagerFilter}>
+                <Select value={managerFilter} onValueChange={setManagerFilter}>
                   <SelectTrigger className="w-[200px] bg-horizon-card border-horizon text-horizon-text">
-                    <SelectValue placeholder="כל המנהלים" />
+                    <SelectValue placeholder="בחר מנהל" />
                   </SelectTrigger>
                   <SelectContent className="bg-horizon-dark border-horizon max-h-[300px]">
                     <SelectItem value="all">כל המנהלים</SelectItem>
@@ -638,8 +571,44 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
               </>
             )}
 
+            {/* Customer Group Filter */}
+            <div className="flex items-center gap-2 mr-4">
+              <Filter className="w-5 h-5 text-horizon-primary" />
+              <span className="text-sm font-medium text-horizon-text">סינון לפי קבוצה:</span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant={groupFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => setGroupFilter('all')}
+                className={groupFilter === 'all' ? 'bg-horizon-primary text-white' : 'border-horizon text-horizon-accent'}>
+                הכל
+              </Button>
+              <Button
+                size="sm"
+                variant={groupFilter === 'A' ? 'default' : 'outline'}
+                onClick={() => setGroupFilter('A')}
+                className={groupFilter === 'A' ? 'bg-[#32acc1] text-white' : 'border-[#32acc1] text-[#32acc1]'}>
+                קבוצה A
+              </Button>
+              <Button
+                size="sm"
+                variant={groupFilter === 'B' ? 'default' : 'outline'}
+                onClick={() => setGroupFilter('B')}
+                className={groupFilter === 'B' ? 'bg-[#fc9f67] text-white' : 'border-[#fc9f67] text-[#fc9f67]'}>
+                קבוצה B
+              </Button>
+              <Button
+                size="sm"
+                variant={groupFilter === 'no_group' ? 'default' : 'outline'}
+                onClick={() => setGroupFilter('no_group')}
+                className={groupFilter === 'no_group' ? 'bg-gray-500 text-white' : 'border-gray-400 text-gray-400'}>
+                ללא שיוך
+              </Button>
+            </div>
+
             <div className="mr-auto text-sm text-horizon-accent">
-              סה"כ משימות פעילות: <span className="font-bold text-horizon-primary">{stats.totalTasks}</span>
+              סה"כ משימות: <span className="font-bold text-horizon-primary">{stats.totalTasks}</span> | לקוחות: <span className="font-bold text-horizon-primary">{currentManagerCustomers.length}</span>
             </div>
           </div>
         </CardContent>
