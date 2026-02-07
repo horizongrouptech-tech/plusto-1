@@ -84,7 +84,7 @@ const MONTH_NAMES = [
 ];
 
 // קומפוננטת סעיף בודד עם מצב רצוי/מצוי
-function ChecklistItemCard({ item, category, onUpdate, isExpanded, onToggleExpand, isUpdating }) {
+function ChecklistItemCard({ item, category, onUpdate, isExpanded, onToggleExpand, isUpdating, onShowDetails }) {
   const [localNotes, setLocalNotes] = useState(item.notes || '');
   const [notesTimer, setNotesTimer] = useState(null);
   
@@ -361,6 +361,8 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
   const [updatingItemId, setUpdatingItemId] = useState(null);
   const [localGeneralNotes, setLocalGeneralNotes] = useState('');
   const [generalNotesTimer, setGeneralNotesTimer] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedCategoryForDetails, setSelectedCategoryForDetails] = useState(null);
   
   // בדיקת הרשאות: רק אדמין ומנהל מחלקה יכולים לערוך
   const canEdit = currentUser?.role === 'admin' || currentUser?.user_type === 'department_head';
