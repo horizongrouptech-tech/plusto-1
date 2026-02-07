@@ -1,6 +1,4 @@
-
-import { invokeClaude } from '@/functions/invokeClaude';
-import { deepWebCrawler } from '@/functions/deepWebCrawler';
+import { base44 } from '@/api/base44Client';
 
 // סכימה לחילוץ מוצרים מדפי מוצר
 const productExtractionSchema = {
@@ -135,7 +133,7 @@ export const performAdvancedWebsiteScan = async (websiteUrl, scanType = 'compreh
     const maxPages = scanType === 'comprehensive' ? 100 : 30;
     console.log(`Calling deepWebCrawler with max_pages: ${maxPages}`);
     
-    const { data: crawlResult, error: crawlError } = await deepWebCrawler({
+    const crawlResponse = await base44.functions.invoke('deepWebCrawler', {
       url: websiteUrl,
       max_pages: maxPages,
       max_depth: 3,
@@ -143,10 +141,12 @@ export const performAdvancedWebsiteScan = async (websiteUrl, scanType = 'compreh
       follow_external_links: false
     });
 
-    if (crawlError || !crawlResult?.success) {
-      console.error('Deep crawl failed:', crawlError);
-      throw new Error(`Deep crawl failed: ${crawlError?.message || 'Unknown error'}`);
+    if (!crawlResponse.data?.success) {
+      console.error('Deep crawl failed');
+      throw new Error('Deep crawl failed');
     }
+    
+    const crawlResult = crawlResponse.data;
 
     console.log(`Crawl completed: ${crawlResult.pages_crawled} pages, ${crawlResult.page_categories.product_pages} product pages, ${crawlResult.page_categories.service_pages} service pages`);
 
@@ -294,7 +294,7 @@ ${productsText}
 לאחר מכן, כתוב סיכום קצר של אסטרטגיית המחירים והמלצה אחת לשיפור.
     `;
 
-    const { data: ecommerceAnalysis, error: llmError } = await invokeClaude({
+    const claudeResponse = await base44.functions.invoke('invokeClaude', {
       prompt: ecommercePrompt,
       response_json_schema: {
         type: "object",
@@ -319,18 +319,7 @@ ${productsText}
       }
     });
 
-    if (llmError) {
-      console.error('LLM analysis failed for e-commerce:', llmError);
-      return {
-        products: [],
-        business_analysis: {
-          overview: 'ניתוח LLM נכשל',
-          pricing_strategy_analysis: {},
-          strategic_recommendations: {},
-          conclusion: `שגיאה: ${llmError.message || 'Unknown LLM error'}`
-        }
-      };
-    }
+    const ecommerceAnalysis = claudeResponse.data;
 
     console.log(`E-commerce analysis completed: ${ecommerceAnalysis.products?.length || 0} products extracted`);
     return ecommerceAnalysis;
@@ -409,26 +398,12 @@ ${contentText}
 אם זיהית שירותים, רשום אותם.
     `;
 
-    const { data: informationalAnalysis, error: llmError } = await invokeClaude({
+    const claudeResponse = await base44.functions.invoke('invokeClaude', {
       prompt: informationalPrompt,
       response_json_schema: informationalAnalysisSchema
     });
 
-    if (llmError) {
-      console.error('LLM analysis failed for informational site:', llmError);
-      return {
-        services: [],
-        informational_analysis: {
-          overall_effectiveness_score: 50,
-          seo_recommendations: ['ניתוח LLM נכשל'],
-          content_improvement_suggestions: [`שגיאה: ${llmError.message}`]
-        },
-        business_analysis: {
-          overview: 'ניתוח LLM נכשל',
-          conclusion: 'אנא נסה שוב מאוחר יותר'
-        }
-      };
-    }
+    const informationalAnalysis = claudeResponse.data;
 
     console.log(`Informational analysis completed successfully`);
     return informationalAnalysis;
