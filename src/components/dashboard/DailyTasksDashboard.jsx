@@ -511,7 +511,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                 ניהול משימות בסגנון Trello - גרור ושחרר לעדכון סטטוס
               </p>
             </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {(isAdmin || currentUser?.user_type === 'financial_manager') && (
             <Button
               onClick={() => setShowGoalBankModal(true)}
@@ -530,7 +530,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
             משימות שהושלמו ({completedTasks.length})
           </Button>
         </div>
-      </div>
+        </div>
 
       {/* הודעת יום העבודה */}
       {!isAdmin && todayWorkGroup.groups.length > 0 &&
