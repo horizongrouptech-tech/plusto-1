@@ -488,15 +488,29 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   }
 
   return (
-    <div className="space-y-6" dir="rtl">
-      {/* כותרת וכפתורים */}
-      <div className="flex justify-between items-center flex-wrap gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-horizon-text flex items-center gap-2">לוח משימות</h2>
-          <p className="text-horizon-accent mt-1">
-            ניהול משימות בסגנון Trello - גרור ושחרר לעדכון סטטוס
-          </p>
-        </div>
+    <div className="flex h-screen gap-4 bg-horizon-dark" dir="rtl">
+      {/* Left Sidebar: Customers Panel */}
+      <div className="w-80 flex-shrink-0 overflow-hidden">
+        <ManagerCustomersPanel
+          customers={currentManagerCustomers}
+          selectedManager={managerFilter === 'all' ? 'כל המנהלים' : managerFilter === 'current' ? currentUser?.full_name : managerFilter}
+          isCollapsed={!isCustomersExpanded}
+          onCollapse={() => setIsCustomersExpanded(!isCustomersExpanded)}
+          isLoading={customersLoading}
+        />
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="space-y-6 p-6">
+          {/* כותרת וכפתורים */}
+          <div className="flex justify-between items-center flex-wrap gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-horizon-text flex items-center gap-2">לוח משימות</h2>
+              <p className="text-horizon-accent mt-1">
+                ניהול משימות בסגנון Trello - גרור ושחרר לעדכון סטטוס
+              </p>
+            </div>
         <div className="flex gap-2">
           {(isAdmin || currentUser?.user_type === 'financial_manager') && (
             <Button
