@@ -804,7 +804,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       </div>
       </div>
       </div>
-      
       {/* מודאל משימות שהושלמו */}
       <CompletedTasksModal
         isOpen={showCompletedModal}
