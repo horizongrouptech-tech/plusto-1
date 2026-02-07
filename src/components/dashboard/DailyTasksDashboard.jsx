@@ -236,14 +236,14 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     }
   }, [allCustomers, managerFilter, currentUser.email]);
 
-  // סינון לפי קבוצת לקוחות, לקוח ספציפי ומנהל כספים
+  // סינון לפי קבוצת לקוחות ומנהל כספים
   const filteredTasksByGroup = useMemo(() => {
     let filtered = activeTasks;
 
     // סינון לפי קבוצה
     if (groupFilter !== 'all') {
       filtered = filtered.filter((task) => {
-        const customer = allCustomers.find((c) => c.email === task.customer_email);
+        const customer = currentManagerCustomers.find((c) => c.email === task.customer_email);
         if (groupFilter === 'no_group') {
           return !customer?.customer_group || customer.customer_group === '';
         }
@@ -251,18 +251,13 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       });
     }
 
-    // סינון לפי לקוח
-    if (customerFilter !== 'all') {
-      filtered = filtered.filter((task) => task.customer_email === customerFilter);
-    }
-
-    // סינון לפי מנהל כספים (אדמין בלבד)
-    if (isAdmin && financialManagerFilter !== 'all') {
-      filtered = filtered.filter((task) => task.assignee_email === financialManagerFilter);
-    }
+    // סינון לפי לקוחות של המנהל הנוכחי
+    filtered = filtered.filter((task) =>
+      currentManagerCustomers.some(c => c.email === task.customer_email)
+    );
 
     return filtered;
-  }, [activeTasks, groupFilter, customerFilter, financialManagerFilter, allCustomers, isAdmin]);
+  }, [activeTasks, groupFilter, currentManagerCustomers]);
 
   // חלוקת משימות לפי סטטוס
   const tasksByStatus = useMemo(() => {
