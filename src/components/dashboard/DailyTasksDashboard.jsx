@@ -48,7 +48,6 @@ import KanbanColumn from './kanban/KanbanColumn';
 import TaskCard from './kanban/TaskCard';
 import CompletedTasksModal from './kanban/CompletedTasksModal';
 import GoalBankManager from '../admin/GoalBankManager';
-import ManagerCustomersPanel from './ManagerCustomersPanel';
 
 
 // פונקציה לקבלת קבוצת העבודה היומית
@@ -87,9 +86,10 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editedTaskData, setEditedTaskData] = useState({});
   const [groupFilter, setGroupFilter] = useState('all');
-  const [managerFilter, setManagerFilter] = useState(isAdmin ? 'all' : 'current');
+  const [customerFilter, setCustomerFilter] = useState('all');
+  const [financialManagerFilter, setFinancialManagerFilter] = useState('all'); // Added new state for financial manager filter
   const [showCompletedModal, setShowCompletedModal] = useState(false);
-  const [isCustomersExpanded, setIsCustomersExpanded] = useState(true);
+  const [isClientsExpanded, setIsClientsExpanded] = useState(false); // Default: collapsed
   const [showGoalBankModal, setShowGoalBankModal] = useState(false);
 
   const todayWorkGroup = getTodayWorkGroup();
@@ -219,31 +219,14 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     staleTime: 10 * 60 * 1000
   });
 
-  // Compute customers for selected manager
-  const currentManagerCustomers = useMemo(() => {
-    if (managerFilter === 'current') {
-      return allCustomers.filter(c =>
-        c.assigned_financial_manager_email === currentUser.email ||
-        c.additional_assigned_financial_manager_emails?.includes(currentUser.email)
-      );
-    } else if (managerFilter === 'all') {
-      return allCustomers;
-    } else {
-      return allCustomers.filter(c =>
-        c.assigned_financial_manager_email === managerFilter ||
-        c.additional_assigned_financial_manager_emails?.includes(managerFilter)
-      );
-    }
-  }, [allCustomers, managerFilter, currentUser.email]);
-
-  // סינון לפי קבוצת לקוחות ומנהל כספים
+  // סינון לפי קבוצת לקוחות, לקוח ספציפי ומנהל כספים
   const filteredTasksByGroup = useMemo(() => {
     let filtered = activeTasks;
 
     // סינון לפי קבוצה
     if (groupFilter !== 'all') {
       filtered = filtered.filter((task) => {
-        const customer = currentManagerCustomers.find((c) => c.email === task.customer_email);
+        const customer = allCustomers.find((c) => c.email === task.customer_email);
         if (groupFilter === 'no_group') {
           return !customer?.customer_group || customer.customer_group === '';
         }
@@ -251,13 +234,18 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       });
     }
 
-    // סינון לפי לקוחות של המנהל הנוכחי
-    filtered = filtered.filter((task) =>
-      currentManagerCustomers.some(c => c.email === task.customer_email)
-    );
+    // סינון לפי לקוח
+    if (customerFilter !== 'all') {
+      filtered = filtered.filter((task) => task.customer_email === customerFilter);
+    }
+
+    // סינון לפי מנהל כספים (אדמין בלבד)
+    if (isAdmin && financialManagerFilter !== 'all') {
+      filtered = filtered.filter((task) => task.assignee_email === financialManagerFilter);
+    }
 
     return filtered;
-  }, [activeTasks, groupFilter, currentManagerCustomers]);
+  }, [activeTasks, groupFilter, customerFilter, financialManagerFilter, allCustomers, isAdmin]);
 
   // חלוקת משימות לפי סטטוס
   const tasksByStatus = useMemo(() => {
@@ -488,30 +476,16 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   }
 
   return (
-    <div className="flex h-screen gap-4 bg-horizon-dark" dir="rtl">
-      {/* Left Sidebar: Customers Panel */}
-      <div className="w-80 flex-shrink-0 overflow-hidden">
-        <ManagerCustomersPanel
-          customers={currentManagerCustomers}
-          selectedManager={managerFilter === 'all' ? 'כל המנהלים' : managerFilter === 'current' ? currentUser?.full_name : managerFilter}
-          isCollapsed={!isCustomersExpanded}
-          onCollapse={() => setIsCustomersExpanded(!isCustomersExpanded)}
-          isLoading={customersLoading}
-        />
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="space-y-6 p-6">
-          {/* כותרת וכפתורים */}
-          <div className="flex justify-between items-center flex-wrap gap-4">
-            <div>
-              <h2 className="text-2xl font-bold text-horizon-text flex items-center gap-2">לוח משימות</h2>
-              <p className="text-horizon-accent mt-1">
-                ניהול משימות בסגנון Trello - גרור ושחרר לעדכון סטטוס
-              </p>
-            </div>
-        <div className="flex gap-2 flex-wrap">
+    <div className="space-y-6" dir="rtl">
+      {/* כותרת וכפתורים */}
+      <div className="flex justify-between items-center flex-wrap gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-horizon-text flex items-center gap-2">לוח משימות</h2>
+          <p className="text-horizon-accent mt-1">
+            ניהול משימות בסגנון Trello - גרור ושחרר לעדכון סטטוס
+          </p>
+        </div>
+        <div className="flex gap-2">
           {(isAdmin || currentUser?.user_type === 'financial_manager') && (
             <Button
               onClick={() => setShowGoalBankModal(true)}
@@ -530,11 +504,11 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
             משימות שהושלמו ({completedTasks.length})
           </Button>
         </div>
-        </div>
+      </div>
 
       {/* הודעת יום העבודה */}
       {!isAdmin && todayWorkGroup.groups.length > 0 &&
-        <Card className="card-horizon bg-white">
+      <Card className="card-horizon bg-white">
           <CardContent className="p-4 flex items-center gap-3">
             <CalendarLucide className="w-5 h-5 text-horizon-primary" />
             <span className="text-horizon-text font-medium text-right">
@@ -548,16 +522,83 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       <Card className="card-horizon">
         <CardContent className="p-4">
           <div className="flex items-center gap-4 flex-wrap">
-            {/* Manager Filter (Admin Only) */}
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-horizon-primary" />
+              <span className="text-sm font-medium text-horizon-text">סינון לפי קבוצה:</span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant={groupFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => setGroupFilter('all')}
+                className={groupFilter === 'all' ? 'bg-horizon-primary text-white' : 'border-horizon text-horizon-accent'}>
+
+                הכל
+              </Button>
+              <Button
+                size="sm"
+                variant={groupFilter === 'A' ? 'default' : 'outline'}
+                onClick={() => setGroupFilter('A')}
+                className={groupFilter === 'A' ? 'bg-[#32acc1] text-white' : 'border-[#32acc1] text-[#32acc1]'}>
+
+                קבוצה A
+              </Button>
+              <Button
+                size="sm"
+                variant={groupFilter === 'B' ? 'default' : 'outline'}
+                onClick={() => setGroupFilter('B')}
+                className={groupFilter === 'B' ? 'bg-[#fc9f67] text-white' : 'border-[#fc9f67] text-[#fc9f67]'}>
+
+                קבוצה B
+              </Button>
+              <Button
+                size="sm"
+                variant={groupFilter === 'no_group' ? 'default' : 'outline'}
+                onClick={() => setGroupFilter('no_group')}
+                className={groupFilter === 'no_group' ? 'bg-gray-500 text-white' : 'border-gray-400 text-gray-400'}>
+
+                ללא שיוך
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2 mr-4">
+              <span className="text-sm font-medium text-horizon-text">מיון יעדים:</span>
+            </div>
+            <p className="text-xs text-horizon-accent">
+              יעדים ממוינים מהקרוב לרחוק לפי תאריך סיום
+            </p>
+
+            {/* סינון לפי לקוח */}
+            <div className="flex items-center gap-2 mr-4">
+              <Users className="w-4 h-4 text-horizon-primary" />
+              <span className="text-sm font-medium text-horizon-text">סינון לפי לקוח:</span>
+            </div>
+            <Select value={customerFilter} onValueChange={setCustomerFilter}>
+              <SelectTrigger className="w-[200px] bg-horizon-card border-horizon text-horizon-text">
+                <SelectValue placeholder="כל הלקוחות" />
+              </SelectTrigger>
+              <SelectContent className="bg-horizon-dark border-horizon max-h-[300px]">
+                <SelectItem value="all">כל הלקוחות</SelectItem>
+                {allCustomers
+                  .sort((a, b) => (a.business_name || a.full_name || '').localeCompare(b.business_name || b.full_name || ''))
+                  .map((customer) => (
+                    <SelectItem key={customer.email} value={customer.email}>
+                      {customer.business_name || customer.full_name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+
+            {/* סינון לפי מנהל כספים (אדמין בלבד) */}
             {isAdmin && financialManagers.length > 0 && (
               <>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mr-4">
                   <UserIcon className="w-4 h-4 text-horizon-primary" />
                   <span className="text-sm font-medium text-horizon-text">סינון לפי מנהל כספים:</span>
                 </div>
-                <Select value={managerFilter} onValueChange={setManagerFilter}>
+                <Select value={financialManagerFilter} onValueChange={setFinancialManagerFilter}>
                   <SelectTrigger className="w-[200px] bg-horizon-card border-horizon text-horizon-text">
-                    <SelectValue placeholder="בחר מנהל" />
+                    <SelectValue placeholder="כל המנהלים" />
                   </SelectTrigger>
                   <SelectContent className="bg-horizon-dark border-horizon max-h-[300px]">
                     <SelectItem value="all">כל המנהלים</SelectItem>
@@ -571,44 +612,8 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
               </>
             )}
 
-            {/* Customer Group Filter */}
-            <div className="flex items-center gap-2 mr-4">
-              <Filter className="w-5 h-5 text-horizon-primary" />
-              <span className="text-sm font-medium text-horizon-text">סינון לפי קבוצה:</span>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant={groupFilter === 'all' ? 'default' : 'outline'}
-                onClick={() => setGroupFilter('all')}
-                className={groupFilter === 'all' ? 'bg-horizon-primary text-white' : 'border-horizon text-horizon-accent'}>
-                הכל
-              </Button>
-              <Button
-                size="sm"
-                variant={groupFilter === 'A' ? 'default' : 'outline'}
-                onClick={() => setGroupFilter('A')}
-                className={groupFilter === 'A' ? 'bg-[#32acc1] text-white' : 'border-[#32acc1] text-[#32acc1]'}>
-                קבוצה A
-              </Button>
-              <Button
-                size="sm"
-                variant={groupFilter === 'B' ? 'default' : 'outline'}
-                onClick={() => setGroupFilter('B')}
-                className={groupFilter === 'B' ? 'bg-[#fc9f67] text-white' : 'border-[#fc9f67] text-[#fc9f67]'}>
-                קבוצה B
-              </Button>
-              <Button
-                size="sm"
-                variant={groupFilter === 'no_group' ? 'default' : 'outline'}
-                onClick={() => setGroupFilter('no_group')}
-                className={groupFilter === 'no_group' ? 'bg-gray-500 text-white' : 'border-gray-400 text-gray-400'}>
-                ללא שיוך
-              </Button>
-            </div>
-
             <div className="mr-auto text-sm text-horizon-accent">
-              סה"כ משימות: <span className="font-bold text-horizon-primary">{stats.totalTasks}</span> | לקוחות: <span className="font-bold text-horizon-primary">{currentManagerCustomers.length}</span>
+              סה"כ משימות פעילות: <span className="font-bold text-horizon-primary">{stats.totalTasks}</span>
             </div>
           </div>
         </CardContent>
@@ -800,17 +805,96 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
           </div>
         </DragDropContext>
       )}
-      </div>
-      </div>
 
+      {/* טבלת לקוחות לעבודה היום */}
+      {todaysClients.length > 0 && (
+        <Card className="card-horizon bg-white border-2 border-[#e1e8ed]">
+          <CardHeader className="border-b border-[#e1e8ed] bg-gradient-to-l from-[#32acc1]/5 to-[#fc9f67]/5">
+            <CardTitle className="text-horizon-text flex items-center justify-between text-right">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-horizon-primary" />
+                {isAdmin ? `כל הלקוחות (${todaysClients.length})` : `לקוחות לעבודה היום (${todaysClients.length})`}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsClientsExpanded(!isClientsExpanded)}
+                className="text-horizon-accent hover:text-horizon-primary"
+              >
+                {isClientsExpanded ? (
+                  <ChevronUp className="w-5 h-5" />
+                ) : (
+                  <ChevronDown className="w-5 h-5" />
+                )}
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          {isClientsExpanded && (
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {todaysClients.map((client) => (
+                  <div
+                    key={client.id}
+                    className="bg-white rounded-xl border-2 border-[#e1e8ed] p-4 hover:shadow-md hover:border-[#32acc1]/30 transition-all"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1 text-right">
+                        <h4 className="font-bold text-[#121725] text-base">
+                          {client.business_name || client.full_name}
+                        </h4>
+                      </div>
+                      <Badge className={`${getCustomerGroupBadgeColor(client.customer_group)} font-semibold text-sm px-3 py-1`}>
+                        קבוצה {client.customer_group}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-[#5a6c7d] mb-2 text-right">{client.email}</p>
+                    <div className="text-xs text-[#5a6c7d] mb-3 text-right">
+                      {client.business_type || 'other'}
+                    </div>
+                    <div className="space-y-2">
+                      <Link to={createPageUrl('CustomerManagementNew') + `?clientId=${client.id}`}>
+                        <Button
+                          size="sm"
+                          className="w-full bg-[#32acc1] hover:bg-[#32acc1]/90 text-white rounded-lg h-9"
+                        >
+                          <ArrowLeft className="w-4 h-4 ml-2" />
+                          מעבר ללקוח
+                        </Button>
+                      </Link>
+                      {client.fireberry_account_id && (
+                        <a
+                          href={`https://plusto.fireberry.com/Account/Account/frm_account_information.aspx?id=${client.fireberry_account_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ display: 'block', width: '100%' }}
+                        >
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full border-[#32acc1] text-[#32acc1] hover:bg-[#32acc1]/10 rounded-lg h-9"
+                          >
+                            פתח בפיירברי
+                          </Button>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      )}
+      
+      {/* מודאל משימות שהושלמו */}
       <CompletedTasksModal
         isOpen={showCompletedModal}
         onClose={() => setShowCompletedModal(false)}
         completedTasks={completedTasks}
         allCustomers={allCustomers}
         allGoals={goals}
-        onRestoreTask={handleRestoreTask}
-      />
+        onRestoreTask={handleRestoreTask} />
+
 
       {/* מודל בנק יעדים */}
       <Dialog open={showGoalBankModal} onOpenChange={setShowGoalBankModal}>
@@ -827,7 +911,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
 
       {/* מודאל עריכת משימה */}
       {selectedTask &&
-        <Dialog open={isTaskModalOpen} onOpenChange={setIsTaskModalOpen}>
+      <Dialog open={isTaskModalOpen} onOpenChange={setIsTaskModalOpen}>
           <DialogContent className="sm:max-w-lg bg-horizon-dark text-horizon-text border-horizon" dir="rtl">
             <DialogHeader>
               <DialogTitle className="text-right text-xl">עריכת משימה</DialogTitle>
@@ -836,50 +920,50 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
               <div>
                 <Label className="text-right block mb-2 text-horizon-text">שם המשימה</Label>
                 <input
-                  type="text"
-                  value={editedTaskData.name || ''}
-                  onChange={(e) => setEditedTaskData({ ...editedTaskData, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text text-right"
-                />
+                type="text"
+                value={editedTaskData.name || ''}
+                onChange={(e) => setEditedTaskData({ ...editedTaskData, name: e.target.value })}
+                className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text text-right" />
+
               </div>
 
               <div>
                 <Label className="text-right block mb-2 text-horizon-text">סטטוס</Label>
                 <Select
-                  value={editedTaskData.status}
-                  onValueChange={(value) => setEditedTaskData({ ...editedTaskData, status: value })}
-                >
+                value={editedTaskData.status}
+                onValueChange={(value) => setEditedTaskData({ ...editedTaskData, status: value })}>
+
                   <SelectTrigger className="w-full bg-horizon-card border-horizon text-horizon-text text-right">
                     <SelectValue>
                       {(() => {
-                        const display = getStatusDisplay(editedTaskData.status);
-                        const StatusIcon = display.icon;
-                        return (
-                          <div className="flex items-center gap-2 justify-end">
+                      const display = getStatusDisplay(editedTaskData.status);
+                      const StatusIcon = display.icon;
+                      return (
+                        <div className="flex items-center gap-2 justify-end">
                             <span className="font-medium">{display.label}</span>
                             <StatusIcon className={`w-5 h-5 ${display.color}`} />
-                          </div>
-                        );
-                      })()}
+                          </div>);
+
+                    })()}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="bg-horizon-dark border-horizon">
                     {['open', 'in_progress', 'done', 'delayed'].map((statusValue) => {
-                      const display = getStatusDisplay(statusValue);
-                      const StatusIcon = display.icon;
-                      return (
-                        <SelectItem
-                          key={statusValue}
-                          value={statusValue}
-                          className={`text-right cursor-pointer ${display.bgColor} hover:opacity-80 transition-opacity`}
-                        >
+                    const display = getStatusDisplay(statusValue);
+                    const StatusIcon = display.icon;
+                    return (
+                      <SelectItem
+                        key={statusValue}
+                        value={statusValue}
+                        className={`text-right cursor-pointer ${display.bgColor} hover:opacity-80 transition-opacity`}>
+
                           <div className="flex items-center gap-3 justify-end w-full py-1">
                             <span className={`font-medium text-base ${display.color}`}>{display.label}</span>
                             <StatusIcon className={`w-5 h-5 ${display.color}`} />
                           </div>
-                        </SelectItem>
-                      );
-                    })}
+                        </SelectItem>);
+
+                  })}
                   </SelectContent>
                 </Select>
               </div>
@@ -920,46 +1004,46 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
               <div>
                 <Label className="text-right block mb-2 text-horizon-text">שעת יעד (אופציונלי)</Label>
                 <input
-                  type="time"
-                  value={editedTaskData.due_time || ''}
-                  onChange={(e) => setEditedTaskData({ ...editedTaskData, due_time: e.target.value })}
-                  className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text text-right"
-                />
+                type="time"
+                value={editedTaskData.due_time || ''}
+                onChange={(e) => setEditedTaskData({ ...editedTaskData, due_time: e.target.value })}
+                className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text text-right" />
+
               </div>
 
               <div>
                 <Label className="text-right block mb-2 text-horizon-text">הערות</Label>
                 <Textarea
-                  value={editedTaskData.notes || ''}
-                  onChange={(e) => setEditedTaskData({ ...editedTaskData, notes: e.target.value })}
-                  className="w-full bg-horizon-card border-horizon text-horizon-text text-right min-h-[100px]"
-                  placeholder="הוסף הערות למשימה..."
-                />
+                value={editedTaskData.notes || ''}
+                onChange={(e) => setEditedTaskData({ ...editedTaskData, notes: e.target.value })}
+                className="w-full bg-horizon-card border-horizon text-horizon-text text-right min-h-[100px]"
+                placeholder="הוסף הערות למשימה..." />
+
               </div>
 
               {selectedTask &&
-                <div className="bg-horizon-card/30 p-3 rounded-lg text-sm text-horizon-accent">
+            <div className="bg-horizon-card/30 p-3 rounded-lg text-sm text-horizon-accent">
                   <p><strong>לקוח:</strong> {selectedTask.customer_email}</p>
                   <p><strong>אחראי:</strong> {selectedTask.assignee_email || 'לא שויך'}</p>
                   <p><strong>נוצר ב:</strong> {format(new Date(selectedTask.created_date), 'dd/MM/yyyy HH:mm', { locale: he })}</p>
                 </div>
-              }
+            }
             </div>
             <DialogFooter className="flex gap-2 justify-end">
               <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsTaskModalOpen(false)}
-                className="border-horizon text-horizon-text"
-              >
+              type="button"
+              variant="outline"
+              onClick={() => setIsTaskModalOpen(false)}
+              className="border-horizon text-horizon-text">
+
                 ביטול
               </Button>
               <Button
-                type="button"
-                onClick={handleSaveTask}
-                disabled={updateTaskMutation.isLoading}
-                className="btn-horizon-primary"
-              >
+              type="button"
+              onClick={handleSaveTask}
+              disabled={updateTaskMutation.isLoading}
+              className="btn-horizon-primary">
+
                 {updateTaskMutation.isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                 שמור שינויים
               </Button>
@@ -967,6 +1051,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
           </DialogContent>
         </Dialog>
       }
-    </div>
-  );
+    </div>);
+
 }
