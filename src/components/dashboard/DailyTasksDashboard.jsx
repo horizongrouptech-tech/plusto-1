@@ -219,6 +219,23 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     staleTime: 10 * 60 * 1000
   });
 
+  // Compute customers for selected manager
+  const currentManagerCustomers = useMemo(() => {
+    if (managerFilter === 'current') {
+      return allCustomers.filter(c =>
+        c.assigned_financial_manager_email === currentUser.email ||
+        c.additional_assigned_financial_manager_emails?.includes(currentUser.email)
+      );
+    } else if (managerFilter === 'all') {
+      return allCustomers;
+    } else {
+      return allCustomers.filter(c =>
+        c.assigned_financial_manager_email === managerFilter ||
+        c.additional_assigned_financial_manager_emails?.includes(managerFilter)
+      );
+    }
+  }, [allCustomers, managerFilter, currentUser.email]);
+
   // סינון לפי קבוצת לקוחות, לקוח ספציפי ומנהל כספים
   const filteredTasksByGroup = useMemo(() => {
     let filtered = activeTasks;
