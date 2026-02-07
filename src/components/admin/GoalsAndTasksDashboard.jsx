@@ -231,7 +231,12 @@ export default function GoalsAndTasksDashboard({ customer }) {
         } else {
           // הסר את השיוך של התת-משימות
           for (const subtask of subtasks) {
-            await base44.entities.CustomerGoal.update(subtask.id, { parent_id: null });
+            const updateData = { parent_id: null };
+            // וידוא ש-end_date תקין (שדה נדרש)
+            if (!subtask.end_date || subtask.end_date === null) {
+              updateData.end_date = task.end_date || new Date().toISOString().split('T')[0];
+            }
+            await base44.entities.CustomerGoal.update(subtask.id, updateData);
           }
         }
         
@@ -252,7 +257,12 @@ export default function GoalsAndTasksDashboard({ customer }) {
         try {
           if (deleteSubtasks) {
             for (const subtask of subtasks) {
-              await base44.entities.CustomerGoal.update(subtask.id, { is_active: false });
+              const updateData = { is_active: false };
+              // וידוא ש-end_date תקין
+              if (!subtask.end_date) {
+                updateData.end_date = new Date().toISOString().split('T')[0];
+              }
+              await base44.entities.CustomerGoal.update(subtask.id, updateData);
             }
           }
           await base44.entities.CustomerGoal.update(taskId, { is_active: false });
