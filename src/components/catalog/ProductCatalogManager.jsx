@@ -1147,7 +1147,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                       <select
                         value={categoryFilter}
                         onChange={(e) => setCategoryFilter(e.target.value)}
-                        className="px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text"
+                        className="px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text overflow-hidden text-ellipsis whitespace-nowrap"
                         disabled={disableAllActions}
                       >
                         <option value="all">כל הקטגוריות</option>
@@ -1157,10 +1157,10 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                       </select>
 
                       <select
-                        value={qualityFilter}
-                        onChange={(e) => setQualityFilter(e.target.value)}
-                        className="px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text"
-                        disabled={disableAllActions}
+                       value={qualityFilter}
+                       onChange={(e) => setQualityFilter(e.target.value)}
+                       className="px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text overflow-hidden text-ellipsis whitespace-nowrap"
+                       disabled={disableAllActions}
                       >
                         <option value="all">כל איכויות הנתונים</option>
                         <option value="complete">נתונים מלאים</option>
@@ -1172,7 +1172,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                       <select
                         value={sourceFilter}
                         onChange={(e) => setSourceFilter(e.target.value)}
-                        className="px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text"
+                        className="px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text overflow-hidden text-ellipsis whitespace-nowrap"
                         disabled={disableAllActions}
                       >
                         <option value="all">כל המוצרים</option>
