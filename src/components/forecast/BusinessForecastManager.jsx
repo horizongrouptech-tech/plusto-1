@@ -108,7 +108,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
       map.set(entry.service_name, entry);
     });
     return map;
-  }, [salesForecastData.monthly_forecasts]);
+  }, [salesForecastData?.monthly_forecasts]);
 
   const servicesMap = useMemo(() => {
     return new Map((services || []).map(s => [s.service_name, s]));
@@ -130,6 +130,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
   const [error, setError] = useState('');
   const [catalogProducts, setCatalogProducts] = useState([]);
+  const [isLoadingCatalogs, setIsLoadingCatalogs] = useState(false);
 
   // Pagination State
   const [productsCurrentPage, setProductsCurrentPage] = useState(1);
@@ -281,15 +282,24 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
       setNewForecastYearInput(initialForecastData.forecast_year || new Date().getFullYear());
     }
   }, [selectedForecastId, forecasts, initialForecastData]);
+  // ✅ FIX: Only depend on customer.email to prevent infinite loops
   useEffect(() => {
+    if (!customer?.email) return;
+
     loadForecastsList();
     getLatestStrategicInput();
     loadCustomerCatalogs();
     loadCustomerFiles();
 
     const fetchProcesses = async () => {
-      if (customer) {
-        await checkForRunningProcesses(customer.email);
+      if (customer?.email) {
+        const runningProcesses = await ProcessStatus.filter({
+          customer_email: customer.email,
+          status: 'running'
+        });
+        setProcesses(runningProcesses);
+        setRunningProcess(runningProcesses[0] || null);
+        setProcessId(runningProcesses[0]?.id || null);
       }
     };
 
@@ -297,7 +307,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     const intervalId = setInterval(fetchProcesses, 30000);
 
     return () => clearInterval(intervalId);
-  }, [customer, loadForecastsList, getLatestStrategicInput, loadCustomerCatalogs,loadCustomerFiles, checkForRunningProcesses]);
+  }, [customer?.email]);
 
   const calculateEmployeeCosts = useCallback((currentForecast) => {
     let totalSalaries = 0;
@@ -466,15 +476,43 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     }
 
     setIsSaving(true);
+    setIsLoadingCatalogs(true);
     try {
-      const catalogProducts = await ProductCatalog.filter({
-        customer_email: customer.email,
-        is_active: true
-      });
+      // ✅ FIX: Load from specific catalog if selected, otherwise all customer products
+      let catalogProducts = [];
+      
+      if (selectedCatalogToSync?.id) {
+        // Load from specific catalog only
+        catalogProducts = await ProductCatalog.filter({
+          catalog_id: selectedCatalogToSync.id,
+          is_active: true
+        });
+      } else {
+        // Load from all catalogs - but check catalog count first
+        const customerCatalogs = await Catalog.filter({ customer_email: customer.email });
+        
+        if (customerCatalogs.length > 3) {
+          toast({ 
+            title: "בחר קטלוג ספציפי", 
+            description: `יש לך ${customerCatalogs.length} קטלוגים. אנא בחר קטלוג ספציפי לסנכרון כדי למנוע עומס.`, 
+            variant: "destructive" 
+          });
+          setIsSaving(false);
+          setIsLoadingCatalogs(false);
+          return;
+        }
+        
+        // Load all products (safe for <=3 catalogs)
+        catalogProducts = await ProductCatalog.filter({
+          customer_email: customer.email,
+          is_active: true
+        });
+      }
 
       if (catalogProducts.length === 0) {
         toast({ title: "אין מוצרים", description: "לא נמצאו מוצרים פעילים בקטלוג לסנכרון.", variant: "destructive" });
         setIsSaving(false);
+        setIsLoadingCatalogs(false);
         return;
       }
 
@@ -500,9 +538,10 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
     } catch (error) {
       console.error("Error syncing catalog:", error);
-      toast({ title: "שגיאה בסנכרון", description: "אירעה שגיאה בסנכרון המוצרים מהקטלוג.", variant: "destructive" });
+      toast({ title: "שגיאה בסנכרון", description: error.message || "אירעה שגיאה בסנכרון המוצרים מהקטלוג.", variant: "destructive" });
     } finally {
       setIsSaving(false);
+      setIsLoadingCatalogs(false);
     }
   };
 
@@ -534,17 +573,36 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     }
 
     setIsGenerating(true);
+    setIsLoadingCatalogs(true);
     toast({ title: "מכין תוכנית...", description: "מסנכרן מוצרים מהקטלוג הנבחר.", variant: "default" });
 
     try {
-        const productsToSync = await ProductCatalog.filter({
-            catalog_id: selectedCatalogToSync.id,
-            is_active: true
-        });
+        // ✅ FIX: Add retry logic for rate limiting
+        let productsToSync = [];
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        while (retryCount < maxRetries) {
+          try {
+            productsToSync = await ProductCatalog.filter({
+                catalog_id: selectedCatalogToSync.id,
+                is_active: true
+            });
+            break; // Success - exit retry loop
+          } catch (error) {
+            if (error.message?.includes('Rate limit') && retryCount < maxRetries - 1) {
+              retryCount++;
+              await new Promise(resolve => setTimeout(resolve, 2000 * retryCount)); // Wait 2s, 4s, 6s
+              continue;
+            }
+            throw error; // Re-throw if not rate limit or max retries reached
+          }
+        }
 
         if (productsToSync.length === 0) {
             toast({ title: "אין מוצרים בקטלוג", description: `הקטלוג שבחרת (${selectedCatalogToSync.catalog_name}) ריק ממוצרים פעילים. אנא העלה מוצרים או בחר קטלוג אחר.`, variant: "destructive" });
             setIsGenerating(false);
+            setIsLoadingCatalogs(false);
             return;
         }
 
@@ -592,6 +650,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         toast({ title: "שגיאה", description: `אירעה שגיאה: ${error.message}. נסה שוב.`, variant: "destructive" });
     } finally {
         setIsGenerating(false);
+        setIsLoadingCatalogs(false);
     }
   };
   const handleServiceChange = (index, field, value) => {
@@ -1999,15 +2058,19 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
                                 </CardTitle>
                                 <div className="flex gap-2">
                                   <TooltipComponent content={isCatalogSynced ? "מוצרים סונכרנו בהצלחה מהקטלוג" : "סנכרן מוצרים מהקטלוג כדי לכלול אותם בתחזית AI"}>
-                                      <Button
-                                        onClick={handleSyncFromCatalog}
-                                        disabled={isSaving || !forecast?.is_editable}
-                                        className={isCatalogSynced ? "bg-green-600 hover:bg-green-700 text-white" : "btn-horizon-primary"}
-                                      >
-                                        <RefreshCw className="w-4 h-4 ml-2" />
-                                        {isCatalogSynced ? "מסונכרן מקטלוג" : "סנכרן מקטלוג קיים"}
-                                        {isCatalogSynced && <span className="mr-1">✅</span>}
-                                      </Button>
+                                     <Button
+                                       onClick={handleSyncFromCatalog}
+                                       disabled={isSaving || isLoadingCatalogs || !forecast?.is_editable}
+                                       className={isCatalogSynced ? "bg-green-600 hover:bg-green-700 text-white" : "btn-horizon-primary"}
+                                     >
+                                       {isLoadingCatalogs ? (
+                                         <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                                       ) : (
+                                         <RefreshCw className="w-4 h-4 ml-2" />
+                                       )}
+                                       {isLoadingCatalogs ? "טוען..." : isCatalogSynced ? "מסונכרן מקטלוג" : "סנכרן מקטלוג קיים"}
+                                       {isCatalogSynced && !isLoadingCatalogs && <span className="mr-1">✅</span>}
+                                     </Button>
                                   </TooltipComponent>
 
                                   <Button onClick={addService} variant="outline" className="border-horizon-accent text-horizon-accent" disabled={!forecast?.is_editable}>
