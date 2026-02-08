@@ -456,15 +456,37 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
     setIsSaving(true);
     try {
-      const catalogProducts = await ProductCatalog.filter({
-        customer_email: customer.email,
-        is_active: true
-      });
+      // ✅ תיקון: טעינה מוגבלת של מוצרים (500 ראשונים) למניעת קפיאה
+      const MAX_PRODUCTS_TO_SYNC = 500;
+      const catalogProducts = await ProductCatalog.filter(
+        {
+          customer_email: customer.email,
+          is_active: true
+        },
+        '-created_date',
+        MAX_PRODUCTS_TO_SYNC,
+        0
+      );
 
       if (catalogProducts.length === 0) {
         toast({ title: "אין מוצרים", description: "לא נמצאו מוצרים פעילים בקטלוג לסנכרון.", variant: "destructive" });
         setIsSaving(false);
         return;
+      }
+
+      // ✅ התראה אם יש יותר מוצרים
+      if (catalogProducts.length === MAX_PRODUCTS_TO_SYNC) {
+        const totalCount = await ProductCatalog.count({
+          customer_email: customer.email,
+          is_active: true
+        });
+        if (totalCount > MAX_PRODUCTS_TO_SYNC) {
+          toast({ 
+            title: "התראה", 
+            description: `נטענו ${MAX_PRODUCTS_TO_SYNC} מוצרים מתוך ${totalCount} קיימים. מומלץ לסנן לפי קטלוג ספציפי.`, 
+            variant: "default" 
+          });
+        }
       }
 
       const servicesData = catalogProducts.map(p => ({
@@ -526,15 +548,37 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     toast({ title: "מכין תוכנית...", description: "מסנכרן מוצרים מהקטלוג הנבחר.", variant: "default" });
 
     try {
-        const productsToSync = await ProductCatalog.filter({
+        // ✅ תיקון: טעינה מוגבלת של מוצרים (500 ראשונים) למניעת קפיאה
+        const MAX_PRODUCTS_TO_SYNC = 500;
+        const productsToSync = await ProductCatalog.filter(
+          {
             catalog_id: selectedCatalogToSync.id,
             is_active: true
-        });
+          },
+          '-created_date',
+          MAX_PRODUCTS_TO_SYNC,
+          0
+        );
 
         if (productsToSync.length === 0) {
             toast({ title: "אין מוצרים בקטלוג", description: `הקטלוג שבחרת (${selectedCatalogToSync.catalog_name}) ריק ממוצרים פעילים. אנא העלה מוצרים או בחר קטלוג אחר.`, variant: "destructive" });
             setIsGenerating(false);
             return;
+        }
+
+        // ✅ התראה אם יש יותר מוצרים
+        if (productsToSync.length === MAX_PRODUCTS_TO_SYNC) {
+          const totalCount = await ProductCatalog.count({
+            catalog_id: selectedCatalogToSync.id,
+            is_active: true
+          });
+          if (totalCount > MAX_PRODUCTS_TO_SYNC) {
+            toast({ 
+              title: "התראה", 
+              description: `נטענו ${MAX_PRODUCTS_TO_SYNC} מוצרים מתוך ${totalCount} קיימים בקטלוג.`, 
+              variant: "default" 
+            });
+          }
         }
 
         const servicesData = productsToSync.map(p => ({

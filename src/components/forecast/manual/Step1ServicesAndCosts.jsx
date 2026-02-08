@@ -167,14 +167,21 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
     setIsLoadingAllProducts(true);
     try {
       const allProducts = [];
+      const MAX_PRODUCTS_PER_CATALOG = 200; // ✅ הגבלה למניעת קפיאה
       
-      // טען מוצרים מכל הקטלוגים
+      // טען מוצרים מכל הקטלוגים (מוגבל)
       for (const catalog of availableCatalogs) {
         try {
-          const products = await base44.entities.ProductCatalog.filter({
-            catalog_id: catalog.id,
-            is_active: true
-          });
+          // ✅ תיקון: טעינה מוגבלת של מוצרים מכל קטלוג
+          const products = await base44.entities.ProductCatalog.filter(
+            {
+              catalog_id: catalog.id,
+              is_active: true
+            },
+            '-created_date',
+            MAX_PRODUCTS_PER_CATALOG,
+            0
+          );
           
           // הוסף metadata של הקטלוג לכל מוצר
           products.forEach(product => {
@@ -190,7 +197,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
       }
       
       setAllCatalogProducts(allProducts);
-      console.log(`✅ Loaded ${allProducts.length} products from ${availableCatalogs.length} catalogs`);
+      console.log(`✅ Loaded ${allProducts.length} products from ${availableCatalogs.length} catalogs (limited to ${MAX_PRODUCTS_PER_CATALOG} per catalog)`);
     } catch (error) {
       console.error('❌ Error loading all catalog products:', error);
       setAllCatalogProducts([]);
@@ -223,13 +230,34 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
       
       console.log('📦 Loading products from catalog:', selectedCatalogForLoad.id);
       
-      // ✅ שימוש ב-ProductCatalog לטעינת המוצרים
-      const products = await base44.entities.ProductCatalog.filter({
-        catalog_id: selectedCatalogForLoad.id,
-        is_active: true
-      });
+      // ✅ תיקון: טעינה מוגבלת של מוצרים (500 ראשונים) למניעת קפיאה
+      const MAX_PRODUCTS_TO_LOAD = 500;
+      const products = await base44.entities.ProductCatalog.filter(
+        {
+          catalog_id: selectedCatalogForLoad.id,
+          is_active: true
+        },
+        '-created_date',
+        MAX_PRODUCTS_TO_LOAD,
+        0
+      );
       
       console.log('✅ Found products:', products.length);
+      
+      // ✅ התראה אם יש יותר מוצרים
+      if (products.length === MAX_PRODUCTS_TO_LOAD) {
+        try {
+          const totalCount = await base44.entities.ProductCatalog.count({
+            catalog_id: selectedCatalogForLoad.id,
+            is_active: true
+          });
+          if (totalCount > MAX_PRODUCTS_TO_LOAD) {
+            alert(`⚠️ נטענו ${MAX_PRODUCTS_TO_LOAD} מוצרים מתוך ${totalCount} קיימים בקטלוג.\n\nמומלץ לסנן או לחלק את הקטלוג לקטלוגים קטנים יותר.`);
+          }
+        } catch (countError) {
+          console.warn('Could not get total count:', countError);
+        }
+      }
       
       if (products.length === 0) {
         alert('הקטלוג ריק - אין מוצרים לטעינה');

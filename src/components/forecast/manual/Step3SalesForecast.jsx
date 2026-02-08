@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +52,10 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   const [pendingZData, setPendingZData] = useState(null);
   const [viewMode, setViewMode] = useState('category'); // 'category' או 'list'
   const [planningMode, setPlanningMode] = useState(forecastData.use_aggregate_planning ? 'aggregate' : 'detailed');
+  
+  // ✅ Pagination למניעת קפיאה בקטלוגים גדולים
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 50; // הצג 50 מוצרים בכל פעם
 
   // ✅ זיהוי אוטומטי של קטלוגים גדולים ומעבר לתכנון כללי
   useEffect(() => {
@@ -66,35 +70,38 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     }
   }, [forecastData.services]);
 
-  // ✅ useEffect נשאר רק כ-fallback למקרים מיוחדים
+  // ✅ useEffect נשאר רק כ-fallback למקרים מיוחדים - אופטימיזציה למניעת קפיאה
   useEffect(() => {
     // אופטימיזציה: בדיקה אם באמת צריך לחשב מחדש
     if (!forecastData.services) return;
 
-    // עדכון רק אם יש שינויים במוצרים או בנתוני התחזית
-    const updatedForecast = (forecastData.services || []).map((service) => {
-      const existingForecast = (forecastData.sales_forecast_onetime || []).find(
-        (f) => f.service_name === service.service_name
-      );
-      return existingForecast || {
-        service_name: service.service_name,
-        planned_monthly_quantities: Array(12).fill(0),
-        actual_monthly_quantities: Array(12).fill(0),
-        planned_monthly_revenue: Array(12).fill(0),
-        actual_monthly_revenue: Array(12).fill(0)
-      };
-    });
+    // ✅ תיקון: בדיקה מהירה יותר ללא JSON.stringify (כבד מאוד עם אלפי מוצרים)
+    const servicesCount = forecastData.services.length;
+    const salesForecastCount = salesForecast.length;
     
-    // שימוש ב-timeout קצר כדי לא לחסום את ה-UI אם יש עדכונים תכופים
-    const timeoutId = setTimeout(() => {
-        const hasChanges = JSON.stringify(updatedForecast) !== JSON.stringify(salesForecast);
-        if (hasChanges) {
-          setSalesForecast(updatedForecast);
-        }
-    }, 10);
+    // אם מספר המוצרים שונה - צריך לעדכן
+    if (servicesCount !== salesForecastCount) {
+      const updatedForecast = (forecastData.services || []).map((service) => {
+        const existingForecast = (forecastData.sales_forecast_onetime || []).find(
+          (f) => f.service_name === service.service_name
+        );
+        return existingForecast || {
+          service_name: service.service_name,
+          planned_monthly_quantities: Array(12).fill(0),
+          actual_monthly_quantities: Array(12).fill(0),
+          planned_monthly_revenue: Array(12).fill(0),
+          actual_monthly_revenue: Array(12).fill(0)
+        };
+      });
+      
+      // שימוש ב-timeout קצר כדי לא לחסום את ה-UI
+      const timeoutId = setTimeout(() => {
+        setSalesForecast(updatedForecast);
+      }, 10);
 
-    return () => clearTimeout(timeoutId);
-  }, [forecastData.services, forecastData.sales_forecast_onetime]);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [forecastData.services?.length, forecastData.sales_forecast_onetime?.length]);
 
   const handleDragEnd = (result) => {
     if (!result.destination) return;
@@ -657,26 +664,32 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     }
   };
 
-  // קיבוץ מוצרים לפי קטגוריה
-  const groupServicesByCategory = () => {
+  // ✅ קיבוץ מוצרים לפי קטגוריה - עם useMemo למניעת חישוב מחדש בכל render
+  const categorizedServices = useMemo(() => {
     const grouped = {};
     const hasZReports = forecastData.z_reports_uploaded && forecastData.z_reports_uploaded.length > 0;
+    
+    // ✅ אופטימיזציה: עבור קטלוגים גדולים, נשתמש ב-Map למהירות
+    const salesForecastMap = new Map();
+    salesForecast.forEach(sf => {
+      salesForecastMap.set(sf.service_name, sf);
+    });
     
     // אם יש דוחות Z, נמיין לפי מוצרים שנמכרו קודם
     let servicesToGroup = [...(forecastData.services || [])];
     
-    if (hasZReports) {
-      // מצא מוצרים שנמכרו (יש להם actual_monthly_quantities > 0)
-      const soldServices = servicesToGroup.filter(service => {
-        const forecast = salesForecast.find(s => s.service_name === service.service_name);
-        if (!forecast) return false;
-        return forecast.actual_monthly_quantities.some(qty => qty > 0);
-      });
+    if (hasZReports && servicesToGroup.length > 0) {
+      // ✅ אופטימיזציה: חלוקה מהירה יותר עם Map
+      const soldServices = [];
+      const notSoldServices = [];
       
-      const notSoldServices = servicesToGroup.filter(service => {
-        const forecast = salesForecast.find(s => s.service_name === service.service_name);
-        if (!forecast) return true;
-        return !forecast.actual_monthly_quantities.some(qty => qty > 0);
+      servicesToGroup.forEach(service => {
+        const forecast = salesForecastMap.get(service.service_name);
+        if (forecast && forecast.actual_monthly_quantities.some(qty => qty > 0)) {
+          soldServices.push(service);
+        } else {
+          notSoldServices.push(service);
+        }
       });
       
       // עדיפות למוצרים שנמכרו
@@ -691,9 +704,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       grouped[category].services.push(service);
     });
     return grouped;
-  };
-
-  const categorizedServices = groupServicesByCategory();
+  }, [forecastData.services, salesForecast, forecastData.z_reports_uploaded]);
 
   const handlePlanningModeChange = (mode) => {
     setPlanningMode(mode);
@@ -860,20 +871,62 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
               </div>
 
           {viewMode === 'category' ? (
-            // תצוגה לפי קטגוריות
-            <div className="space-y-4">
-              {Object.entries(categorizedServices).map(([categoryName, { services, startIndex }]) => (
-                <ServiceCategoryGroup
-                  key={categoryName}
-                  categoryName={categoryName}
-                  services={services}
-                  salesData={salesForecast}
-                  monthNames={monthNames}
-                  onUpdateQuantity={updateQuantity}
-                  startIndex={startIndex}
-                />
-              ))}
-            </div>
+            // תצוגה לפי קטגוריות - עם pagination למניעת קפיאה
+            <>
+              <div className="space-y-4">
+                {(() => {
+                  // ✅ Pagination: הצג רק קטגוריות מהעמוד הנוכחי
+                  const categoriesArray = Object.entries(categorizedServices);
+                  const totalCategories = categoriesArray.length;
+                  const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+                  const endIdx = startIdx + ITEMS_PER_PAGE;
+                  const categoriesToShow = categoriesArray.slice(startIdx, endIdx);
+                  
+                  return categoriesToShow.map(([categoryName, { services, startIndex }]) => (
+                    <ServiceCategoryGroup
+                      key={categoryName}
+                      categoryName={categoryName}
+                      services={services}
+                      salesData={salesForecast}
+                      monthNames={monthNames}
+                      onUpdateQuantity={updateQuantity}
+                      startIndex={startIndex}
+                    />
+                  ));
+                })()}
+              </div>
+              
+              {/* Pagination Controls for Category View */}
+              {Object.keys(categorizedServices).length > ITEMS_PER_PAGE && (
+                <div className="flex items-center justify-between pt-4 border-t border-horizon">
+                  <div className="text-sm text-horizon-accent">
+                    מציג {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, Object.keys(categorizedServices).length)}-{Math.min(currentPage * ITEMS_PER_PAGE, Object.keys(categorizedServices).length)} מתוך {Object.keys(categorizedServices).length} קטגוריות
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="border-horizon text-horizon-text"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                      קודם
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => p + 1)}
+                      disabled={currentPage * ITEMS_PER_PAGE >= Object.keys(categorizedServices).length}
+                      className="border-horizon text-horizon-text"
+                    >
+                      הבא
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             // תצוגה רגילה - רשימה
             <DragDropContext onDragEnd={handleDragEnd}>
@@ -899,7 +952,10 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                       sortedForecast = [...soldItems, ...notSoldItems];
                     }
                     
-                    return sortedForecast;
+                    // ✅ Pagination: הצג רק מוצרים מהעמוד הנוכחי
+                    const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+                    const endIdx = startIdx + ITEMS_PER_PAGE;
+                    return sortedForecast.slice(startIdx, endIdx);
                   })().map((item, serviceIndex) => {
                     // מצא את האינדקס המקורי
                     const originalIndex = salesForecast.findIndex(s => s.service_name === item.service_name);
@@ -1005,6 +1061,37 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
               )}
             </Droppable>
           </DragDropContext>
+          
+          {/* Pagination Controls for List View */}
+          {salesForecast.length > ITEMS_PER_PAGE && (
+            <div className="flex items-center justify-between pt-4 border-t border-horizon">
+              <div className="text-sm text-horizon-accent">
+                מציג {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, salesForecast.length)}-{Math.min(currentPage * ITEMS_PER_PAGE, salesForecast.length)} מתוך {salesForecast.length} מוצרים
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="border-horizon text-horizon-text"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                  קודם
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => p + 1)}
+                  disabled={currentPage * ITEMS_PER_PAGE >= salesForecast.length}
+                  className="border-horizon text-horizon-text"
+                >
+                  הבא
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
           )}
             </>
           )}
