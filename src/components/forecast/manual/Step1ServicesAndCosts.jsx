@@ -1115,27 +1115,25 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
 
                     {/* ✅ Pagination controls */}
                     {(searchTerm ? filteredServices : services).length > ITEMS_PER_PAGE && (
-                    <div className="mt-6 flex justify-center">
-                    <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                    />
+                      <div className="mt-6 flex justify-center">
+                        <Pagination
+                          currentPage={currentPage}
+                          totalPages={totalPages}
+                          onPageChange={setCurrentPage}
+                        />
+                      </div>
+                    )}
                     </div>
                     )}
 
-                    <div className="mt-4">
                     <Button
                     onClick={addService}
                     variant="outline"
-                    className="w-full border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10"
+                    className="w-full border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10 mt-4"
                     >
                     <Plus className="w-4 h-4 ml-2" />
                     הוסף שירות/מוצר ידנית
                     </Button>
-                    </div>
-                    </div>
-                    )}
                     </CardContent>
                     </Card>
 
