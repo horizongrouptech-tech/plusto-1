@@ -776,8 +776,9 @@ function LayoutContent({ children, currentPageName }) {
   }
 
   if (user && user.role === 'admin' || user.user_type == 'financial_manager') {
-    // הצגת ממשק מובייל כשנכנסים מטלפון
-    if (isMobile && showMobileView) {
+    // הצגת ממשק מובייל רק אם המשתמש בעמוד הבית או Admin
+    const isHomePage = location.pathname === '/' || location.pathname === '/Admin' || location.pathname === '/Dashboard';
+    if (isMobile && showMobileView && isHomePage) {
       return (
         <div data-theme={theme}>
           <GlobalThemeStyles />
