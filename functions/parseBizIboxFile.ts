@@ -580,12 +580,66 @@ Deno.serve(async (req) => {
       customer_email: customerEmail
     });
 
+    // ✅ רשימת קטגוריות בקובץ החדש
+    const categoriesInNewFile = new Set(recurringExpenses.map(e => e.category));
+
     for (const newExpense of recurringExpenses) {
       const existingExpense = existingExpenses.find(e => e.category === newExpense.category);
       if (existingExpense) {
-        await base44.asServiceRole.entities.RecurringExpense.update(existingExpense.id, newExpense);
+        // ✅ שמירה על שיוכים קיימים לתחזית בעדכון
+        const updatedMonthlyAmounts = newExpense.monthly_amounts.map(newMonth => {
+          // חפש חודש תואם בהוצאה הקיימת
+          const existingMonth = existingExpense.monthly_amounts?.find(
+            em => em.month === newMonth.month && em.year === newMonth.year
+          );
+          // שמור על שיוכים קיימים אם יש
+          if (existingMonth && existingMonth.linked_to_forecast) {
+            return {
+              ...newMonth,
+              linked_to_forecast: existingMonth.linked_to_forecast,
+              linked_forecast_id: existingMonth.linked_forecast_id,
+              linked_expense_category: existingMonth.linked_expense_category
+            };
+          }
+          return newMonth;
+        });
+        
+        await base44.asServiceRole.entities.RecurringExpense.update(existingExpense.id, {
+          ...newExpense,
+          monthly_amounts: updatedMonthlyAmounts,
+          // שמור על שיוכים ברמת ההוצאה אם יש
+          linked_forecast_id: existingExpense.linked_forecast_id || newExpense.linked_forecast_id,
+          linked_expense_category: existingExpense.linked_expense_category || newExpense.linked_expense_category
+        });
       } else {
         await base44.asServiceRole.entities.RecurringExpense.create(newExpense);
+      }
+    }
+
+    // ✅ מחיקת הוצאות קבועות של קטגוריות שלא קיימות בקובץ החדש
+    // (רק אם אין שיוכים לתחזית - כדי לא לאבד נתונים חשובים)
+    for (const existingExpense of existingExpenses) {
+      if (!categoriesInNewFile.has(existingExpense.category)) {
+        // בדוק אם יש שיוכים לתחזית
+        const hasForecastLinks = existingExpense.linked_forecast_id || 
+          existingExpense.monthly_amounts?.some(m => m.linked_to_forecast);
+        
+        if (!hasForecastLinks) {
+          // אין שיוכים - בטוח למחוק
+          console.log(`Deleting recurring expense category "${existingExpense.category}" - not found in new file`);
+          await base44.asServiceRole.entities.RecurringExpense.delete(existingExpense.id);
+        } else {
+          // יש שיוכים - עדכן את הסכומים ל-0 במקום למחוק
+          console.log(`Updating recurring expense category "${existingExpense.category}" to zero - has forecast links`);
+          await base44.asServiceRole.entities.RecurringExpense.update(existingExpense.id, {
+            monthly_amounts: existingExpense.monthly_amounts?.map(m => ({
+              ...m,
+              amount: 0
+            })) || [],
+            average_monthly: 0,
+            total_in_range: 0
+          });
+        }
       }
     }
 

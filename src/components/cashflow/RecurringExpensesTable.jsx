@@ -138,6 +138,9 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
         customer_email: customer.email
       });
 
+      // ✅ רשימת קטגוריות שנמצאו בתנועות התזרים
+      const categoriesInCashFlow = new Set(Object.keys(categorySums));
+
       for (const [category, data] of Object.entries(categorySums)) {
         const monthlyAmounts = Object.entries(data.months).map(([monthKey, amount]) => {
           const [year, month] = monthKey.split('-').map(Number);
@@ -158,9 +161,60 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
 
         const existingExpense = existingExpenses.find(e => e.category === category);
         if (existingExpense) {
-          await base44.entities.RecurringExpense.update(existingExpense.id, expenseData);
+          // ✅ שמירה על שיוכים קיימים לתחזית בעדכון
+          const updatedMonthlyAmounts = monthlyAmounts.map(newMonth => {
+            // חפש חודש תואם בהוצאה הקיימת
+            const existingMonth = existingExpense.monthly_amounts?.find(
+              em => em.month === newMonth.month && em.year === newMonth.year
+            );
+            // שמור על שיוכים קיימים אם יש
+            if (existingMonth && existingMonth.linked_to_forecast) {
+              return {
+                ...newMonth,
+                linked_to_forecast: existingMonth.linked_to_forecast,
+                linked_forecast_id: existingMonth.linked_forecast_id,
+                linked_expense_category: existingMonth.linked_expense_category
+              };
+            }
+            return newMonth;
+          });
+          
+          await base44.entities.RecurringExpense.update(existingExpense.id, {
+            ...expenseData,
+            monthly_amounts: updatedMonthlyAmounts,
+            // שמור על שיוכים ברמת ההוצאה אם יש
+            linked_forecast_id: existingExpense.linked_forecast_id || expenseData.linked_forecast_id,
+            linked_expense_category: existingExpense.linked_expense_category || expenseData.linked_expense_category
+          });
         } else {
           await base44.entities.RecurringExpense.create(expenseData);
+        }
+      }
+
+      // ✅ מחיקת הוצאות קבועות של קטגוריות שלא נמצאו בתנועות התזרים
+      // (רק אם אין שיוכים לתחזית - כדי לא לאבד נתונים חשובים)
+      for (const existingExpense of existingExpenses) {
+        if (!categoriesInCashFlow.has(existingExpense.category)) {
+          // בדוק אם יש שיוכים לתחזית
+          const hasForecastLinks = existingExpense.linked_forecast_id || 
+            existingExpense.monthly_amounts?.some(m => m.linked_to_forecast);
+          
+          if (!hasForecastLinks) {
+            // אין שיוכים - בטוח למחוק
+            console.log(`Deleting recurring expense category "${existingExpense.category}" - not found in cash flow entries`);
+            await base44.entities.RecurringExpense.delete(existingExpense.id);
+          } else {
+            // יש שיוכים - עדכן את הסכומים ל-0 במקום למחוק
+            console.log(`Updating recurring expense category "${existingExpense.category}" to zero - has forecast links`);
+            await base44.entities.RecurringExpense.update(existingExpense.id, {
+              monthly_amounts: existingExpense.monthly_amounts?.map(m => ({
+                ...m,
+                amount: 0
+              })) || [],
+              average_monthly: 0,
+              total_in_range: 0
+            });
+          }
         }
       }
 
