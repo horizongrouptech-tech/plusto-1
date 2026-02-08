@@ -1111,8 +1111,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                 )}
               </Droppable>
             </DragDropContext>
-            
-            {/* ✅ Pagination controls */}
+
             {(searchTerm ? filteredServices : services).length > ITEMS_PER_PAGE && (
               <div className="mt-6 flex justify-center">
                 <Pagination
@@ -1122,7 +1121,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                 />
               </div>
             )}
-          )}
+            )}
 
           <Button
             onClick={addService}
