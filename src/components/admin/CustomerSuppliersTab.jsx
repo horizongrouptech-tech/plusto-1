@@ -227,7 +227,10 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
         customer_emails: updatedEmails
       });
 
-      loadSuppliers();
+      // ✅ נקה cache לפני טעינה מחדש
+      const cacheKey = `suppliers_${customer.email}`;
+      localStorage.removeItem(cacheKey);
+      await loadSuppliers(false);
     } catch (error) {
       console.error("Error assigning supplier:", error);
     }
@@ -241,7 +244,10 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
         customer_emails: updatedEmails
       });
 
-      loadSuppliers();
+      // ✅ נקה cache לפני טעינה מחדש
+      const cacheKey = `suppliers_${customer.email}`;
+      localStorage.removeItem(cacheKey);
+      await loadSuppliers(false);
     } catch (error) {
       console.error("Error removing supplier:", error);
     }
@@ -537,8 +543,11 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
       <AddSupplierModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onSupplierAdded={() => {
-          loadSuppliers();
+        onSupplierAdded={async () => {
+          // ✅ נקה cache לפני טעינה מחדש כדי לראות את הספק החדש
+          const cacheKey = `suppliers_${customer.email}`;
+          localStorage.removeItem(cacheKey);
+          await loadSuppliers(false); // כפה טעינה מחדש ללא cache
           setShowAddModal(false);
         }}
         currentUser={currentUser}
@@ -562,8 +571,11 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
         onClose={() => setShowFindAlternativeModal(false)}
         customerEmail={customer.email}
         currentUser={currentUser}
-        onSupplierAdded={() => {
-          loadSuppliers();
+        onSupplierAdded={async () => {
+          // ✅ נקה cache לפני טעינה מחדש כדי לראות את הספק החדש
+          const cacheKey = `suppliers_${customer.email}`;
+          localStorage.removeItem(cacheKey);
+          await loadSuppliers(false); // כפה טעינה מחדש ללא cache
           setShowFindAlternativeModal(false);
         }} />
 
