@@ -986,7 +986,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
           )}
 
           {planningMode === 'detailed' && (
-            <>
+            <div>
               {/* מקרא */}
               <div className="flex gap-4 mb-4 p-3 bg-horizon-card/30 rounded-lg border border-horizon">
                 <div className="flex items-center gap-2">
@@ -999,7 +999,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                 </div>
               </div>
 
-          {viewMode === 'category' ? (
+              {viewMode === 'category' ? (
             // תצוגה לפי קטגוריות עם lazy loading
             <div className="space-y-4">
               {Object.entries(categorizedServices).map(([categoryName, { services, startIndex }]) => (
@@ -1191,6 +1191,8 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
               )}
               </Droppable>
             </DragDropContext>
+          </div>
+          )}
             </div>
           )}
         </CardContent>
