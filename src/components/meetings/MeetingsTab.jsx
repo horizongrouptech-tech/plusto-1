@@ -707,6 +707,7 @@ ${meeting.tasks || 'לא צוין'}
                     end_date: e.target.value // עדכון אוטומטי של תאריך סיום
                   })}
                   className="bg-horizon-card border-horizon text-horizon-text"
+                  style={{ colorScheme: 'dark' }}
                 />
               </div>
               <div>

@@ -480,14 +480,16 @@ export default function CashFlowManager({ customer }) {
                 type="date"
                 value={dateRange.start}
                 onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                className="w-40 bg-horizon-dark border-blue-500/50 text-horizon-text"
+                className="w-40 bg-horizon-card border-horizon text-horizon-text color-scheme-dark"
+                style={{ colorScheme: 'dark' }}
               />
               <span className="text-horizon-accent">עד</span>
               <Input
                 type="date"
                 value={dateRange.end}
                 onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                className="w-40 bg-horizon-dark border-blue-500/50 text-horizon-text"
+                className="w-40 bg-horizon-card border-horizon text-horizon-text color-scheme-dark"
+                style={{ colorScheme: 'dark' }}
               />
               <div className="flex items-center gap-2 mr-4">
                 <span className="text-sm text-blue-400">מיון:</span>
