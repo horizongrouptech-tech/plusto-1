@@ -1190,9 +1190,8 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                 </div>
               )}
               </Droppable>
-              </DragDropContext>
+            </DragDropContext>
             </div>
-            </>
           )}
         </CardContent>
       </Card>
