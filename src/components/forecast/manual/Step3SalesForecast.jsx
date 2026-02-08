@@ -1190,12 +1190,14 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
               </DragDropContext>
             </div>
           )}
-        </CardContent>
-      </Card>
-        </>
-      )}
+           </>
+          )}
+          </CardContent>
+          </Card>
+          </>
+          )}
 
-      <div className="flex justify-between">
+          <div className="flex justify-between">
         <Button onClick={onBack} variant="outline" className="border-horizon text-horizon-text">
           <ChevronRight className="w-4 h-4 ml-2" />
           חזור
