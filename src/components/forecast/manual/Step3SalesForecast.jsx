@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ChevronRight, ChevronLeft, GripVertical, Eye, EyeOff, TrendingUp, Calendar, Upload, FileSpreadsheet, CheckCircle2, Package, BarChart3, Calculator, Loader2, Save } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ChevronRight, ChevronLeft, GripVertical, Eye, EyeOff, TrendingUp, Calendar, Upload, FileSpreadsheet, CheckCircle2, Package, BarChart3, Calculator, Loader2, Save, AlertTriangle, Zap } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { FixedSizeList as List } from 'react-window';
 import { formatCurrency, formatNumber } from './utils/numberFormatter';
 import ZReportUploader from './ZReportUploader';
 import ZReportProductMapper from './ZReportProductMapper';
@@ -50,21 +52,34 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   const [showZReportUploader, setShowZReportUploader] = useState(false);
   const [showProductMapper, setShowProductMapper] = useState(false);
   const [pendingZData, setPendingZData] = useState(null);
-  const [viewMode, setViewMode] = useState('category'); // 'category' או 'list'
+  const [viewMode, setViewMode] = useState('category'); // 'category' או 'list' או 'virtual'
   const [planningMode, setPlanningMode] = useState(forecastData.use_aggregate_planning ? 'aggregate' : 'detailed');
+  
+  // ✅ Virtual scrolling configuration
+  const LARGE_CATALOG_THRESHOLD = 100;
+  const VIRTUAL_ITEM_HEIGHT = 520; // גובה כל מוצר בפיקסלים
+  const isLargeCatalog = (forecastData.services?.length || 0) > LARGE_CATALOG_THRESHOLD;
+  const shouldUseVirtualScrolling = isLargeCatalog && viewMode === 'virtual';
 
-  // ✅ זיהוי אוטומטי של קטלוגים גדולים ומעבר לתכנון כללי
+  // ✅ זיהוי אוטומטי של קטלוגים גדולים
   useEffect(() => {
     const catalogSize = forecastData.services?.length || 0;
-    const LARGE_CATALOG_THRESHOLD = 50;
     
-    // מעבר אוטומטי לתכנון כללי אם הקטלוג גדול (רק בתחזיות חדשות)
-    if (catalogSize > LARGE_CATALOG_THRESHOLD && planningMode === 'detailed' && !forecastData.id) {
-      console.log(`📊 Large catalog detected (${catalogSize} products), auto-switching to aggregate planning`);
-      setPlanningMode('aggregate');
-      onUpdateForecast({ use_aggregate_planning: true });
+    if (catalogSize > LARGE_CATALOG_THRESHOLD) {
+      console.log(`📊 Large catalog detected (${catalogSize} products)`);
+      
+      // אם זה תחזית חדשה, הציע מעבר לתכנון כללי
+      if (!forecastData.id && planningMode === 'detailed') {
+        console.log('💡 Suggesting aggregate planning for new forecast with large catalog');
+      }
+      
+      // אם במצב list, עבור אוטומטית ל-virtual scrolling
+      if (viewMode === 'list') {
+        console.log('🔄 Auto-switching to virtual scrolling for large catalog');
+        setViewMode('virtual');
+      }
     }
-  }, [forecastData.services]);
+  }, [forecastData.services?.length]);
 
   // ✅ FIX #6: Remove expensive JSON.stringify - use shallow comparison
   useEffect(() => {
@@ -700,6 +715,88 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     });
   };
 
+  // ✅ Virtual scrolling - row renderer
+  const VirtualRow = useCallback(({ index, style }) => {
+    const item = salesForecast[index];
+    if (!item) return null;
+    
+    return (
+      <div style={style} className="px-4">
+        <div className="bg-horizon-card/30 border border-horizon rounded-lg p-4 mb-4">
+          <div className="flex items-center gap-3 mb-3">
+            <h4 className="font-semibold text-horizon-text flex-1">
+              {item.service_name}
+            </h4>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => toggleServiceCollapse(index)}
+              className="text-horizon-accent"
+            >
+              {collapsedServices[index] ? (
+                <Eye className="w-4 h-4" />
+              ) : (
+                <EyeOff className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+
+          {!collapsedServices[index] && (
+            <div className="grid grid-cols-6 gap-3">
+              {monthNames.map((month, monthIndex) => (
+                <div key={monthIndex} className="space-y-2">
+                  <div className="flex flex-col items-center">
+                    <Label className="text-xs text-horizon-accent block text-center">{month}</Label>
+                    {item.actual_monthly_quantities[monthIndex] > 0 && (
+                      <div className="flex items-center gap-1 mt-0.5 bg-green-100 px-1.5 py-0.5 rounded-full border border-green-200 shadow-sm">
+                        <CheckCircle2 className="w-3 h-3 text-green-600" />
+                        <span className="text-[10px] text-green-700 font-medium">נקלט</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-blue-400">תכנון</Label>
+                    <Input
+                      type="number"
+                      value={item.planned_monthly_quantities[monthIndex] || ''}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? 0 : parseFloat(e.target.value) || 0;
+                        updateQuantity(index, monthIndex, 'planned', val);
+                      }}
+                      className="bg-horizon-card border-blue-400/30 text-horizon-text text-sm h-8"
+                      placeholder="0"
+                    />
+                    <div className="text-[10px] text-blue-400 text-center">
+                      {formatCurrency(item.planned_monthly_revenue[monthIndex], 0)}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-green-400">ביצוע</Label>
+                    <Input
+                      type="number"
+                      value={item.actual_monthly_quantities[monthIndex] || ''}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? 0 : parseFloat(e.target.value) || 0;
+                        updateQuantity(index, monthIndex, 'actual', val);
+                      }}
+                      className="bg-horizon-card border-green-400/30 text-horizon-text text-sm h-8"
+                      placeholder="0"
+                    />
+                    <div className="text-[10px] text-green-400 text-center">
+                      {formatCurrency(item.actual_monthly_revenue[monthIndex], 0)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }, [salesForecast, collapsedServices, monthNames, updateQuantity, toggleServiceCollapse]);
+
   return (
     <div className="space-y-6" dir="rtl">
       {/* בחירת מצב תכנון */}
@@ -739,22 +836,46 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
             </Alert>
           )}
           
-          {forecastData.services?.length > 50 && planningMode === 'detailed' && (
-            <Alert className="mt-4 bg-yellow-500/10 border-yellow-500/30">
-              <Package className="h-4 w-4 text-yellow-400" />
+          {isLargeCatalog && planningMode === 'detailed' && (
+            <Alert className="mt-4 bg-orange-500/10 border-orange-500/30">
+              <AlertTriangle className="h-4 w-4 text-orange-400" />
               <AlertDescription className="text-horizon-text">
-                <div className="flex items-center justify-between gap-3">
-                  <span>
-                    זוהה קטלוג גדול ({forecastData.services.length} מוצרים). 
-                    מומלץ להשתמש בתכנון כללי לביצועים מיטביים.
-                  </span>
-                  <Button
-                    size="sm"
-                    onClick={() => handlePlanningModeChange('aggregate')}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    עבור לתכנון כללי
-                  </Button>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex-1">
+                    <div className="font-semibold text-orange-400 mb-1">
+                      קטלוג גדול מאוד - {forecastData.services.length.toLocaleString('he-IL')} מוצרים
+                    </div>
+                    <div className="text-sm">
+                      {isLargeCatalog && viewMode === 'virtual' && (
+                        <span className="text-green-400 flex items-center gap-1">
+                          <Zap className="w-3 h-3" />
+                          Virtual Scrolling פעיל - ביצועים מיטביים
+                        </span>
+                      )}
+                      {isLargeCatalog && viewMode !== 'virtual' && (
+                        <span>מומלץ מאוד תכנון כללי או תצוגה וירטואלית לביצועים טובים</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => handlePlanningModeChange('aggregate')}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      תכנון כללי
+                    </Button>
+                    {viewMode !== 'virtual' && (
+                      <Button
+                        size="sm"
+                        onClick={() => setViewMode('virtual')}
+                        variant="outline"
+                        className="border-blue-500 text-blue-400"
+                      >
+                        תצוגה וירטואלית
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </AlertDescription>
             </Alert>
@@ -797,6 +918,12 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
               <p className="text-horizon-accent">הזן את כמויות המכירה המתוכננות והבפועל לכל חודש</p>
             </div>
             <div className="flex items-center gap-2">
+              {isLargeCatalog && (
+                <Badge variant="outline" className="border-orange-500 text-orange-400">
+                  {forecastData.services.length.toLocaleString('he-IL')} מוצרים
+                </Badge>
+              )}
+              
               <div className="flex bg-horizon-card/50 rounded-lg p-1 border border-horizon">
                 <Button
                   size="sm"
@@ -805,17 +932,30 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                   className={viewMode === 'category' ? 'btn-horizon-primary' : 'text-horizon-text'}
                 >
                   <Package className="w-4 h-4 ml-1" />
-                  לפי קטגוריה
+                  קטגוריות
                 </Button>
                 <Button
                   size="sm"
                   variant={viewMode === 'list' ? 'default' : 'ghost'}
                   onClick={() => setViewMode('list')}
                   className={viewMode === 'list' ? 'btn-horizon-primary' : 'text-horizon-text'}
+                  disabled={isLargeCatalog}
+                  title={isLargeCatalog ? 'לא זמין לקטלוגים גדולים' : ''}
                 >
                   <GripVertical className="w-4 h-4 ml-1" />
                   רשימה
                 </Button>
+                {isLargeCatalog && (
+                  <Button
+                    size="sm"
+                    variant={viewMode === 'virtual' ? 'default' : 'ghost'}
+                    onClick={() => setViewMode('virtual')}
+                    className={viewMode === 'virtual' ? 'btn-horizon-primary' : 'text-horizon-text'}
+                  >
+                    <Zap className="w-4 h-4 ml-1" />
+                    וירטואלי
+                  </Button>
+                )}
               </div>
               {planningMode === 'detailed' && (
                 <Button
@@ -858,7 +998,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
               </div>
 
           {viewMode === 'category' ? (
-            // תצוגה לפי קטגוריות
+            // תצוגה לפי קטגוריות עם lazy loading
             <div className="space-y-4">
               {Object.entries(categorizedServices).map(([categoryName, { services, startIndex }]) => (
                 <ServiceCategoryGroup
@@ -872,10 +1012,53 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                 />
               ))}
             </div>
+          ) : viewMode === 'virtual' ? (
+            // ✅ Virtual Scrolling לקטלוגים גדולים
+            <div className="space-y-4">
+              <Alert className="bg-blue-500/10 border-blue-500/30">
+                <Zap className="h-4 w-4 text-blue-400" />
+                <AlertDescription className="text-horizon-text">
+                  <strong>תצוגה וירטואלית פעילה</strong> - רק מוצרים נראים נטענים לזיכרון.
+                  גלילה חלקה עם {salesForecast.length.toLocaleString('he-IL')} מוצרים.
+                  {isLargeCatalog && (
+                    <div className="mt-1 text-xs text-blue-300">
+                      💡 Drag & Drop מבוטל לביצועים מיטביים
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+              
+              <div className="border border-horizon rounded-lg overflow-hidden">
+                <List
+                  height={600}
+                  itemCount={salesForecast.length}
+                  itemSize={VIRTUAL_ITEM_HEIGHT}
+                  width="100%"
+                  className="bg-horizon-dark/20"
+                >
+                  {VirtualRow}
+                </List>
+              </div>
+              
+              <div className="text-center text-sm text-horizon-accent">
+                מציג {salesForecast.length.toLocaleString('he-IL')} מוצרים בצורה וירטואלית
+              </div>
+            </div>
           ) : (
-            // תצוגה רגילה - רשימה
-            <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="sales-forecast-list">
+            // תצוגה רגילה - רשימה (רק לקטלוגים קטנים)
+            <div>
+              {isLargeCatalog && (
+                <Alert className="mb-4 bg-red-500/10 border-red-500/30">
+                  <AlertTriangle className="h-4 w-4 text-red-400" />
+                  <AlertDescription className="text-horizon-text">
+                    <strong>אזהרה:</strong> תצוגת רשימה לא מומלצת לקטלוגים גדולים. 
+                    עבור לתצוגה וירטואלית או לפי קטגוריות.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="sales-forecast-list">
               {(provided) => (
                 <div
                   {...provided.droppableProps}
@@ -1001,8 +1184,9 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                   {provided.placeholder}
                 </div>
               )}
-            </Droppable>
-          </DragDropContext>
+              </Droppable>
+              </DragDropContext>
+            </div>
           )}
             </>
           )}
