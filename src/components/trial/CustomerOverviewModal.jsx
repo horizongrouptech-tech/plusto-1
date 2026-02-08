@@ -28,6 +28,7 @@ import {
 import { formatCurrency } from '@/components/forecast/manual/utils/numberFormatter';
 import Ofek360Modal from '@/components/admin/Ofek360Modal';
 import GoalBankManager from '@/components/admin/GoalBankManager';
+import InlineEditableCustomerDetails from '@/components/admin/InlineEditableCustomerDetails';
 
 export default function CustomerOverviewModal({ 
   customer, 
@@ -140,103 +141,64 @@ export default function CustomerOverviewModal({
 
         <div className="space-y-6">
           {/* כפתורים עליונים */}
-          <div className="flex justify-center gap-3">
+          <div className="flex justify-center gap-3 flex-wrap">
             <Button
               onClick={() => setOfek360Open(true)}
-              className="bg-gradient-to-r from-horizon-primary to-horizon-secondary hover:from-horizon-primary/90 hover:to-horizon-secondary/90 text-white h-12 flex-1 max-w-xs"
+              className="bg-gradient-to-r from-horizon-primary to-horizon-secondary hover:from-horizon-primary/90 hover:to-horizon-secondary/90 text-white h-12 flex-1 min-w-[200px]"
             >
               <Target className="w-5 h-5 ml-2" />
-              צ'ק ליסט יומי - אופק 360
+              אופק 360 - צ'ק ליסט יומי
             </Button>
             <Button
               onClick={() => setGoalBankOpen(true)}
               variant="outline"
-              className="border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10 h-12 flex-1 max-w-xs"
+              className="border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10 h-12 flex-1 min-w-[200px]"
             >
               <BookOpen className="w-5 h-5 ml-2" />
               בנק יעדים
             </Button>
           </div>
 
-          {/* פרטי לקוח */}
-          <Card className="card-horizon">
-            <CardHeader>
-              <CardTitle className="text-horizon-text text-right">פרטי לקוח</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4 text-right" dir="rtl">
-                <div>
-                  <p className="text-sm text-horizon-accent">שם העסק</p>
-                  <p className="font-medium text-horizon-text">{customer.business_name || 'לא צוין'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-horizon-accent">שם המנהל</p>
-                  <p className="font-medium text-horizon-text">{customer.full_name || customer.email}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-horizon-accent">אימייל</p>
-                  <p className="font-medium text-horizon-text break-words">{customer.email}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-horizon-accent">טלפון</p>
-                  <p className="font-medium text-horizon-text">{customer.phone || 'לא צוין'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-horizon-accent">סוג עסק</p>
-                  <p className="font-medium text-horizon-text">{customer.business_type || 'לא צוין'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-horizon-accent">גודל חברה</p>
-                  <p className="font-medium text-horizon-text">{customer.company_size || 'לא צוין'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-horizon-accent">מחזור חודשי</p>
-                  <p className="font-medium text-horizon-text">
-                    {customer.monthly_revenue ? `₪${customer.monthly_revenue.toLocaleString()}` : 'לא צוין'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-horizon-accent">עיר</p>
-                  <p className="font-medium text-horizon-text">{customer.business_city || 'לא צוין'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-horizon-accent">אתר אינטרנט</p>
-                  <p className="font-medium text-horizon-text">{customer.website_url || 'לא צוין'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-horizon-accent">קבוצה</p>
-                  <Badge className={`text-xs ${
-                    customer.customer_group === 'A' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
-                    customer.customer_group === 'B' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
-                    'bg-orange-500/20 text-orange-400 border-orange-500/30'
-                  }`}>
-                    קבוצה {customer.customer_group || '-'}
-                  </Badge>
-                </div>
-              </div>
+          {/* פרטי לקוח עם עריכה משולבת */}
+          <InlineEditableCustomerDetails 
+            customer={customer}
+            onUpdate={(updated) => {
+              // אופציונלי: רענון נתונים
+            }}
+          />
 
-              {customer.main_products_services && (
-                <div className="pt-4 mt-4 border-t border-horizon text-right">
-                  <p className="text-sm text-horizon-accent mb-1">מוצרים ושירותים עיקריים</p>
-                  <p className="text-horizon-text whitespace-pre-line">{customer.main_products_services}</p>
-                </div>
-              )}
+          {customer.main_products_services && (
+            <Card className="card-horizon mt-4">
+              <CardHeader>
+                <CardTitle className="text-sm text-horizon-text">מוצרים ושירותים עיקריים</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-horizon-text whitespace-pre-line text-sm">{customer.main_products_services}</p>
+              </CardContent>
+            </Card>
+          )}
 
-              {customer.business_goals && (
-                <div className="pt-4 mt-4 border-t border-horizon text-right">
-                  <p className="text-sm text-horizon-accent mb-1">יעדים עסקיים</p>
-                  <p className="text-horizon-text">{customer.business_goals}</p>
-                </div>
-              )}
+          {customer.business_goals && (
+            <Card className="card-horizon mt-4">
+              <CardHeader>
+                <CardTitle className="text-sm text-horizon-text">יעדים עסקיים</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-horizon-text text-sm">{customer.business_goals}</p>
+              </CardContent>
+            </Card>
+          )}
 
-              {customer.target_audience && (
-                <div className="pt-4 mt-4 border-t border-horizon text-right">
-                  <p className="text-sm text-horizon-accent mb-1">קהל יעד</p>
-                  <p className="text-horizon-text">{customer.target_audience}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {customer.target_audience && (
+            <Card className="card-horizon mt-4">
+              <CardHeader>
+                <CardTitle className="text-sm text-horizon-text">קהל יעד</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-horizon-text text-sm">{customer.target_audience}</p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* כפתורי פעולה מהירה */}
           <div className="space-y-3" dir="rtl">
