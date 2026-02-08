@@ -1124,16 +1124,18 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
             )}
           )}
 
-          <Button
-            onClick={addService}
-            variant="outline"
-            className="w-full border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10"
-          >
-            <Plus className="w-4 h-4 ml-2" />
-            הוסף שירות/מוצר ידנית
-          </Button>
-        </CardContent>
-      </Card>
+          <div className="mt-4">
+            <Button
+              onClick={addService}
+              variant="outline"
+              className="w-full border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10"
+            >
+              <Plus className="w-4 h-4 ml-2" />
+              הוסף שירות/מוצר ידנית
+            </Button>
+            </div>
+            </CardContent>
+            </Card>
 
       {/* כפתורי ניווט */}
       <div className="flex justify-between pt-6">
