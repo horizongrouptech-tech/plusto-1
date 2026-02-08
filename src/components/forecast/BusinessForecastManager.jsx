@@ -2216,7 +2216,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
                                     </thead>
                                     <tbody>
                                      {paginatedServicesForSales.map((service, serviceIndex) => {
-                                       const forecastEntry = (salesForecastData.monthly_forecasts || []).find(f => f.service_name === service.service_name) || {
+                                       const forecastEntry = forecastMap.get(service.service_name) || {
                                          service_name: service.service_name,
                                          ...MONTHS.reduce((acc, month) => ({ ...acc, [month.key]: 0 }), {}),
                                          total_yearly: 0
