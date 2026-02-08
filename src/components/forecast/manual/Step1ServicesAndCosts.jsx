@@ -762,367 +762,366 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
               </AlertDescription>
             </Alert>
           ) : (
-            <>
-              <DragDropContext onDragEnd={handleDragEnd}>
-                <Droppable droppableId="services-list">
-                  {(provided) => (
-                    <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
-                      {searchTerm && filteredServices.length === 0 && (
-                        <div className="text-center py-8 text-horizon-accent">
-                          <Search className="w-8 h-8 mx-auto mb-2" />
-                          לא נמצאו תוצאות עבור "{searchTerm}"
-                        </div>
-                      )}
-                      {paginatedServices.map((service, serviceIndex) => {
-                        const actualIndex = services.indexOf(service);
-                        return (
-                        <Draggable key={`service-${actualIndex}`} draggableId={`service-${actualIndex}`} index={actualIndex} isDragDisabled={!!searchTerm}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              className={`transition-all ${snapshot.isDragging ? 'z-50' : ''}`}
-                            >
-                              <Card className="bg-horizon-card/50 border-horizon">
-                                <CardContent className="p-4">
-                                  <div className="flex items-start gap-3">
-                                    <div {...provided.dragHandleProps} className="mt-2 cursor-grab active:cursor-grabbing">
-                                      <GripVertical className="w-5 h-5 text-horizon-accent" />
-                                    </div>
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="services-list">
+                {(provided) => (
+                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                    {searchTerm && filteredServices.length === 0 && (
+                      <div className="text-center py-8 text-horizon-accent">
+                        <Search className="w-8 h-8 mx-auto mb-2" />
+                        לא נמצאו תוצאות עבור "{searchTerm}"
+                      </div>
+                    )}
+                    {paginatedServices.map((service, serviceIndex) => {
+                      const actualIndex = services.indexOf(service);
+                      return (
+                      <Draggable key={`service-${actualIndex}`} draggableId={`service-${actualIndex}`} index={actualIndex} isDragDisabled={!!searchTerm}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className={`transition-all ${snapshot.isDragging ? 'z-50' : ''}`}
+                          >
+                            <Card className="bg-horizon-card/50 border-horizon">
+                              <CardContent className="p-4">
+                                <div className="flex items-start gap-3">
+                                  <div {...provided.dragHandleProps} className="mt-2 cursor-grab active:cursor-grabbing">
+                                    <GripVertical className="w-5 h-5 text-horizon-accent" />
+                                  </div>
 
-                                    <div className="flex-1 space-y-5">
-                                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                                       <Button
-                                         onClick={() => toggleServiceCollapse(actualIndex)}
-                                         variant="ghost"
-                                         size="sm"
-                                         className="md:col-span-12 h-8 text-horizon-accent hover:text-horizon-primary justify-start"
-                                       >
-                                         {collapsedServices[actualIndex] ? (
-                                           <ChevronDown className="w-4 h-4 ml-1" />
-                                         ) : (
-                                           <ChevronUp className="w-4 h-4 ml-1" />
+                                  <div className="flex-1 space-y-5">
+                                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                                     <Button
+                                       onClick={() => toggleServiceCollapse(actualIndex)}
+                                       variant="ghost"
+                                       size="sm"
+                                       className="md:col-span-12 h-8 text-horizon-accent hover:text-horizon-primary justify-start"
+                                     >
+                                       {collapsedServices[actualIndex] ? (
+                                         <ChevronDown className="w-4 h-4 ml-1" />
+                                       ) : (
+                                         <ChevronUp className="w-4 h-4 ml-1" />
+                                       )}
+                                       {collapsedServices[actualIndex] ? 'הצג פרטים' : 'הסתר פרטים'}
+                                     </Button>
+                                     {/* שם המוצר - 5 עמודות */}
+                                     <div className="md:col-span-5">
+                                       <Label className="text-horizon-text flex items-center gap-2 mb-2 font-semibold">
+                                         <Package className="w-4 h-4 text-horizon-primary" />
+                                         שם השירות/מוצר *
+                                       </Label>
+                                       <div className="space-y-2">
+                                         {allCatalogProducts.length > 0 && (
+                                           <Select
+                                             value={service.linked_catalog_product_id || 'none'}
+                                             onValueChange={(productId) => linkServiceToCatalogProduct(actualIndex, productId)}
+                                             disabled={isLoadingAllProducts}
+                                           >
+                                             <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text h-9 text-sm mb-2">
+                                               <SelectValue placeholder="שייך למוצר מהקטלוג (אופציונלי)" />
+                                             </SelectTrigger>
+                                             <SelectContent className="bg-horizon-dark border-horizon max-h-[300px]">
+                                               <SelectItem value="none">ללא שיוך לקטלוג</SelectItem>
+                                               {allCatalogProducts.map((product) => (
+                                                 <SelectItem key={product.id} value={product.id}>
+                                                   📦 {product.product_name} {product.catalog_name ? `(${product.catalog_name})` : ''}
+                                                 </SelectItem>
+                                               ))}
+                                             </SelectContent>
+                                           </Select>
                                          )}
-                                         {collapsedServices[actualIndex] ? 'הצג פרטים' : 'הסתר פרטים'}
+                                         <Input
+                                           value={service.service_name}
+                                           onChange={(e) => updateService(actualIndex, 'service_name', e.target.value)}
+                                           placeholder="לדוגמה: שירות ייעוץ, מוצר X"
+                                           className="bg-horizon-card border-horizon text-horizon-text h-11 text-base"
+                                         />
+                                         {service.loaded_from_catalog && (
+                                           <Badge variant="outline" className="mt-2 border-blue-500/50 text-blue-400 text-xs bg-blue-500/10">
+                                             <Package className="w-3 h-3 ml-1" />
+                                             נטען מקטלוג
+                                           </Badge>
+                                         )}
+                                         {service.linked_catalog_product_id && (
+                                           <Badge variant="outline" className="mt-2 border-green-500/50 text-green-400 text-xs bg-green-500/10">
+                                             <Package className="w-3 h-3 ml-1" />
+                                             משויך לקטלוג
+                                           </Badge>
+                                         )}
+                                       </div>
+                                     </div>
+
+                                     {/* מחיר מכירה - 3 עמודות */}
+                                     <div className="md:col-span-3">
+                                       <Label className="text-horizon-text flex items-center gap-2 mb-2 font-semibold">
+                                         <DollarSign className="w-4 h-4 text-green-400" />
+                                         מחיר מכירה *
+                                       </Label>
+                                       <div className="relative">
+                                         <Input
+                                           type="number"
+                                           value={service.price}
+                                           onChange={(e) => updateService(actualIndex, 'price', parseFloat(e.target.value) || 0)}
+                                           className="bg-horizon-card border-green-400/30 text-horizon-text h-11 text-base pr-8 font-semibold"
+                                           placeholder="0"
+                                         />
+                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-400 font-bold pointer-events-none">₪</span>
+                                       </div>
+                                     </div>
+
+                                     {/* מע"מ - 2 עמודות */}
+                                     <div className="md:col-span-2">
+                                       <Label className="text-horizon-text mb-2 block opacity-0 pointer-events-none">מע"מ</Label>
+                                       <Button
+                                         type="button"
+                                         variant="ghost"
+                                         onClick={() => updateService(actualIndex, 'has_vat', !service.has_vat)}
+                                         className={`w-full h-11 border rounded-lg flex items-center justify-center gap-2 transition-all ${
+                                           service.has_vat 
+                                             ? 'bg-horizon-primary/20 border-horizon-primary text-horizon-primary' 
+                                             : 'bg-horizon-dark/30 border-horizon text-horizon-accent hover:border-horizon-primary/50'
+                                         }`}
+                                       >
+                                         <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
+                                           service.has_vat 
+                                             ? 'bg-horizon-primary border-horizon-primary' 
+                                             : 'border-horizon-accent'
+                                         }`}>
+                                           {service.has_vat && (
+                                             <CheckCircle className="w-3 h-3 text-white" />
+                                           )}
+                                         </div>
+                                         <span className="text-sm font-medium whitespace-nowrap">
+                                           כולל מע"מ
+                                         </span>
                                        </Button>
-                                       {/* שם המוצר - 5 עמודות */}
-                                       <div className="md:col-span-5">
-                                         <Label className="text-horizon-text flex items-center gap-2 mb-2 font-semibold">
-                                           <Package className="w-4 h-4 text-horizon-primary" />
-                                           שם השירות/מוצר *
-                                         </Label>
-                                         <div className="space-y-2">
-                                           {allCatalogProducts.length > 0 && (
-                                             <Select
-                                               value={service.linked_catalog_product_id || 'none'}
-                                               onValueChange={(productId) => linkServiceToCatalogProduct(actualIndex, productId)}
-                                               disabled={isLoadingAllProducts}
-                                             >
-                                               <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text h-9 text-sm mb-2">
-                                                 <SelectValue placeholder="שייך למוצר מהקטלוג (אופציונלי)" />
-                                               </SelectTrigger>
-                                               <SelectContent className="bg-horizon-dark border-horizon max-h-[300px]">
-                                                 <SelectItem value="none">ללא שיוך לקטלוג</SelectItem>
-                                                 {allCatalogProducts.map((product) => (
-                                                   <SelectItem key={product.id} value={product.id}>
-                                                     📦 {product.product_name} {product.catalog_name ? `(${product.catalog_name})` : ''}
-                                                   </SelectItem>
-                                                 ))}
-                                               </SelectContent>
-                                             </Select>
-                                           )}
-                                           <Input
-                                             value={service.service_name}
-                                             onChange={(e) => updateService(actualIndex, 'service_name', e.target.value)}
-                                             placeholder="לדוגמה: שירות ייעוץ, מוצר X"
-                                             className="bg-horizon-card border-horizon text-horizon-text h-11 text-base"
-                                           />
-                                           {service.loaded_from_catalog && (
-                                             <Badge variant="outline" className="mt-2 border-blue-500/50 text-blue-400 text-xs bg-blue-500/10">
-                                               <Package className="w-3 h-3 ml-1" />
-                                               נטען מקטלוג
-                                             </Badge>
-                                           )}
-                                           {service.linked_catalog_product_id && (
-                                             <Badge variant="outline" className="mt-2 border-green-500/50 text-green-400 text-xs bg-green-500/10">
-                                               <Package className="w-3 h-3 ml-1" />
-                                               משויך לקטלוג
-                                             </Badge>
-                                           )}
-                                         </div>
-                                       </div>
+                                     </div>
 
-                                       {/* מחיר מכירה - 3 עמודות */}
-                                       <div className="md:col-span-3">
-                                         <Label className="text-horizon-text flex items-center gap-2 mb-2 font-semibold">
-                                           <DollarSign className="w-4 h-4 text-green-400" />
-                                           מחיר מכירה *
-                                         </Label>
-                                         <div className="relative">
-                                           <Input
-                                             type="number"
-                                             value={service.price}
-                                             onChange={(e) => updateService(actualIndex, 'price', parseFloat(e.target.value) || 0)}
-                                             className="bg-horizon-card border-green-400/30 text-horizon-text h-11 text-base pr-8 font-semibold"
-                                             placeholder="0"
-                                           />
-                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-400 font-bold pointer-events-none">₪</span>
-                                         </div>
-                                       </div>
+                                     {/* מחק - 2 עמודות */}
+                                     <div className="md:col-span-2">
+                                       <Label className="text-horizon-text mb-2 block opacity-0 pointer-events-none">מחק</Label>
+                                       <Button
+                                         onClick={() => removeService(actualIndex)}
+                                         variant="ghost"
+                                         className="w-full h-11 text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20"
+                                       >
+                                         <Trash2 className="w-4 h-4 ml-2" />
+                                         מחק
+                                       </Button>
+                                     </div>
+                                     </div>
 
-                                       {/* מע"מ - 2 עמודות */}
-                                       <div className="md:col-span-2">
-                                         <Label className="text-horizon-text mb-2 block opacity-0 pointer-events-none">מע"מ</Label>
-                                         <Button
-                                           type="button"
-                                           variant="ghost"
-                                           onClick={() => updateService(actualIndex, 'has_vat', !service.has_vat)}
-                                           className={`w-full h-11 border rounded-lg flex items-center justify-center gap-2 transition-all ${
-                                             service.has_vat 
-                                               ? 'bg-horizon-primary/20 border-horizon-primary text-horizon-primary' 
-                                               : 'bg-horizon-dark/30 border-horizon text-horizon-accent hover:border-horizon-primary/50'
-                                           }`}
-                                         >
-                                           <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-                                             service.has_vat 
-                                               ? 'bg-horizon-primary border-horizon-primary' 
-                                               : 'border-horizon-accent'
-                                           }`}>
-                                             {service.has_vat && (
-                                               <CheckCircle className="w-3 h-3 text-white" />
-                                             )}
-                                           </div>
-                                           <span className="text-sm font-medium whitespace-nowrap">
-                                             כולל מע"מ
-                                           </span>
-                                         </Button>
-                                       </div>
+                                     {!collapsedServices[actualIndex] && (
+                                     <>
+                                     <div className="bg-gradient-to-l from-orange-500/5 to-transparent border-r-2 border-orange-500/30 pr-4 py-3 rounded-lg">
+                                      <div className="flex items-center justify-between mb-3">
+                                        <Label className="text-horizon-text flex items-center gap-2 font-semibold">
+                                          <DollarSign className="w-4 h-4 text-orange-400" />
+                                          עלויות גלם ומשתנות
+                                        </Label>
+                                        <Button
+                                          onClick={() => addCost(actualIndex)}
+                                          size="sm"
+                                          className="bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30"
+                                        >
+                                          <Plus className="w-3 h-3 ml-1" />
+                                          הוסף עלות
+                                        </Button>
+                                      </div>
 
-                                       {/* מחק - 2 עמודות */}
-                                       <div className="md:col-span-2">
-                                         <Label className="text-horizon-text mb-2 block opacity-0 pointer-events-none">מחק</Label>
-                                         <Button
-                                           onClick={() => removeService(actualIndex)}
-                                           variant="ghost"
-                                           className="w-full h-11 text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20"
-                                         >
-                                           <Trash2 className="w-4 h-4 ml-2" />
-                                           מחק
-                                         </Button>
-                                       </div>
-                                       </div>
+                                      <div className="space-y-3">
+                                        {(service.costs || []).map((cost, costIndex) => (
+                                          <div key={costIndex} className="bg-horizon-card/80 border border-horizon rounded-lg p-3 hover:border-orange-400/30 transition-all">
+                                            <div className="grid grid-cols-12 gap-3 items-center">
+                                              {/* שם העלות - 4 עמודות */}
+                                              <div className="col-span-4">
+                                                <Label className="text-xs text-horizon-accent mb-1 block">שם העלות</Label>
+                                                <Input
+                                                  value={cost.cost_name}
+                                                  onChange={(e) => updateCost(actualIndex, costIndex, 'cost_name', e.target.value)}
+                                                  placeholder="לדוגמה: חומר גלם"
+                                                  className="bg-horizon-dark border-horizon text-horizon-text h-9 text-sm"
+                                                />
+                                              </div>
 
-                                       {!collapsedServices[actualIndex] && (
-                                       <>
-                                       <div className="bg-gradient-to-l from-orange-500/5 to-transparent border-r-2 border-orange-500/30 pr-4 py-3 rounded-lg">
-                                        <div className="flex items-center justify-between mb-3">
-                                          <Label className="text-horizon-text flex items-center gap-2 font-semibold">
-                                            <DollarSign className="w-4 h-4 text-orange-400" />
-                                            עלויות גלם ומשתנות
-                                          </Label>
-                                          <Button
-                                            onClick={() => addCost(actualIndex)}
-                                            size="sm"
-                                            className="bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30"
-                                          >
-                                            <Plus className="w-3 h-3 ml-1" />
-                                            הוסף עלות
-                                          </Button>
-                                        </div>
+                                              {/* סוג עלות - 3 עמודות */}
+                                              <div className="col-span-3">
+                                                <Label className="text-xs text-horizon-accent mb-1 block">סוג</Label>
+                                                <Select
+                                                  value={cost.is_percentage ? 'percentage' : 'fixed'}
+                                                  onValueChange={(value) => {
+                                                    const isPercentage = value === 'percentage';
+                                                    updateCost(actualIndex, costIndex, 'is_percentage', isPercentage);
+                                                    if (isPercentage) {
+                                                      updateCost(actualIndex, costIndex, 'amount', 0);
+                                                    } else {
+                                                      updateCost(actualIndex, costIndex, 'percentage_of_price', 0);
+                                                    }
+                                                  }}
+                                                >
+                                                  <SelectTrigger className="bg-horizon-dark border-horizon text-horizon-text h-9 text-xs">
+                                                    <SelectValue />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    <SelectItem value="fixed">
+                                                      <div className="flex items-center gap-1.5">
+                                                        <DollarSign className="w-3 h-3 text-green-400" />
+                                                        <span>₪ קבוע</span>
+                                                      </div>
+                                                    </SelectItem>
+                                                    <SelectItem value="percentage">
+                                                      <div className="flex items-center gap-1.5">
+                                                        <Percent className="w-3 h-3 text-blue-400" />
+                                                        <span>% אחוז</span>
+                                                      </div>
+                                                    </SelectItem>
+                                                  </SelectContent>
+                                                </Select>
+                                              </div>
 
-                                        <div className="space-y-3">
-                                          {(service.costs || []).map((cost, costIndex) => (
-                                            <div key={costIndex} className="bg-horizon-card/80 border border-horizon rounded-lg p-3 hover:border-orange-400/30 transition-all">
-                                              <div className="grid grid-cols-12 gap-3 items-center">
-                                                {/* שם העלות - 4 עמודות */}
-                                                <div className="col-span-4">
-                                                  <Label className="text-xs text-horizon-accent mb-1 block">שם העלות</Label>
-                                                  <Input
-                                                    value={cost.cost_name}
-                                                    onChange={(e) => updateCost(actualIndex, costIndex, 'cost_name', e.target.value)}
-                                                    placeholder="לדוגמה: חומר גלם"
-                                                    className="bg-horizon-dark border-horizon text-horizon-text h-9 text-sm"
-                                                  />
-                                                </div>
+                                              {/* ערך - 2 עמודות */}
+                                              <div className="col-span-2">
+                                                <Label className="text-xs text-horizon-accent mb-1 block">ערך</Label>
+                                                {cost.is_percentage ? (
+                                                  <div className="relative">
+                                                    <Input
+                                                      type="number"
+                                                      value={cost.percentage_of_price || 0}
+                                                      onChange={(e) => updateCost(actualIndex, costIndex, 'percentage_of_price', parseFloat(e.target.value) || 0)}
+                                                      placeholder="0"
+                                                      className="bg-horizon-dark border-blue-400/30 text-horizon-text h-9 text-sm pr-6 font-semibold"
+                                                      min="0"
+                                                      max="100"
+                                                      step="0.1"
+                                                    />
+                                                    <Percent className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-blue-400 pointer-events-none" />
+                                                  </div>
+                                                ) : (
+                                                  <div className="relative">
+                                                    <Input
+                                                      type="number"
+                                                      value={cost.amount || 0}
+                                                      onChange={(e) => updateCost(actualIndex, costIndex, 'amount', parseFloat(e.target.value) || 0)}
+                                                      placeholder="0"
+                                                      className="bg-horizon-dark border-orange-400/30 text-horizon-text h-9 text-sm pr-6 font-semibold"
+                                                    />
+                                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-orange-400 pointer-events-none font-bold">₪</span>
+                                                  </div>
+                                                )}
+                                              </div>
 
-                                                {/* סוג עלות - 3 עמודות */}
-                                                <div className="col-span-3">
-                                                  <Label className="text-xs text-horizon-accent mb-1 block">סוג</Label>
-                                                  <Select
-                                                    value={cost.is_percentage ? 'percentage' : 'fixed'}
-                                                    onValueChange={(value) => {
-                                                      const isPercentage = value === 'percentage';
-                                                      updateCost(actualIndex, costIndex, 'is_percentage', isPercentage);
-                                                      if (isPercentage) {
-                                                        updateCost(actualIndex, costIndex, 'amount', 0);
-                                                      } else {
-                                                        updateCost(actualIndex, costIndex, 'percentage_of_price', 0);
-                                                      }
-                                                    }}
-                                                  >
-                                                    <SelectTrigger className="bg-horizon-dark border-horizon text-horizon-text h-9 text-xs">
-                                                      <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                      <SelectItem value="fixed">
-                                                        <div className="flex items-center gap-1.5">
-                                                          <DollarSign className="w-3 h-3 text-green-400" />
-                                                          <span>₪ קבוע</span>
-                                                        </div>
-                                                      </SelectItem>
-                                                      <SelectItem value="percentage">
-                                                        <div className="flex items-center gap-1.5">
-                                                          <Percent className="w-3 h-3 text-blue-400" />
-                                                          <span>% אחוז</span>
-                                                        </div>
-                                                      </SelectItem>
-                                                    </SelectContent>
-                                                  </Select>
-                                                </div>
+                                              {/* מע"מ - 2 עמודות */}
+                                              <div className="col-span-2">
+                                                <Label className="text-xs text-horizon-accent mb-1 block">מע"מ</Label>
+                                                <Button
+                                                  type="button"
+                                                  variant="ghost"
+                                                  onClick={() => updateCost(actualIndex, costIndex, 'has_vat', !cost.has_vat)}
+                                                  className={`w-full h-9 border rounded flex items-center justify-center gap-1.5 transition-all ${
+                                                    cost.has_vat 
+                                                      ? 'bg-horizon-primary/20 border-horizon-primary text-horizon-primary' 
+                                                      : 'bg-horizon-dark/50 border-horizon text-horizon-accent hover:border-horizon-primary/50'
+                                                  }`}
+                                                >
+                                                  <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center transition-all ${
+                                                    cost.has_vat 
+                                                      ? 'bg-horizon-primary border-horizon-primary' 
+                                                      : 'border-horizon-accent'
+                                                  }`}>
+                                                    {cost.has_vat && (
+                                                      <CheckCircle className="w-2.5 h-2.5 text-white" />
+                                                    )}
+                                                  </div>
+                                                  <span className="text-xs">כן</span>
+                                                </Button>
+                                              </div>
 
-                                                {/* ערך - 2 עמודות */}
-                                                <div className="col-span-2">
-                                                  <Label className="text-xs text-horizon-accent mb-1 block">ערך</Label>
-                                                  {cost.is_percentage ? (
-                                                    <div className="relative">
-                                                      <Input
-                                                        type="number"
-                                                        value={cost.percentage_of_price || 0}
-                                                        onChange={(e) => updateCost(actualIndex, costIndex, 'percentage_of_price', parseFloat(e.target.value) || 0)}
-                                                        placeholder="0"
-                                                        className="bg-horizon-dark border-blue-400/30 text-horizon-text h-9 text-sm pr-6 font-semibold"
-                                                        min="0"
-                                                        max="100"
-                                                        step="0.1"
-                                                      />
-                                                      <Percent className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-blue-400 pointer-events-none" />
-                                                    </div>
-                                                  ) : (
-                                                    <div className="relative">
-                                                      <Input
-                                                        type="number"
-                                                        value={cost.amount || 0}
-                                                        onChange={(e) => updateCost(actualIndex, costIndex, 'amount', parseFloat(e.target.value) || 0)}
-                                                        placeholder="0"
-                                                        className="bg-horizon-dark border-orange-400/30 text-horizon-text h-9 text-sm pr-6 font-semibold"
-                                                      />
-                                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-orange-400 pointer-events-none font-bold">₪</span>
-                                                    </div>
-                                                  )}
-                                                </div>
-
-                                                {/* מע"מ - 2 עמודות */}
-                                                <div className="col-span-2">
-                                                  <Label className="text-xs text-horizon-accent mb-1 block">מע"מ</Label>
-                                                  <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    onClick={() => updateCost(actualIndex, costIndex, 'has_vat', !cost.has_vat)}
-                                                    className={`w-full h-9 border rounded flex items-center justify-center gap-1.5 transition-all ${
-                                                      cost.has_vat 
-                                                        ? 'bg-horizon-primary/20 border-horizon-primary text-horizon-primary' 
-                                                        : 'bg-horizon-dark/50 border-horizon text-horizon-accent hover:border-horizon-primary/50'
-                                                    }`}
-                                                  >
-                                                    <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center transition-all ${
-                                                      cost.has_vat 
-                                                        ? 'bg-horizon-primary border-horizon-primary' 
-                                                        : 'border-horizon-accent'
-                                                    }`}>
-                                                      {cost.has_vat && (
-                                                        <CheckCircle className="w-2.5 h-2.5 text-white" />
-                                                      )}
-                                                    </div>
-                                                    <span className="text-xs">כן</span>
-                                                  </Button>
-                                                </div>
-
-                                                {/* מחק - 1 עמודה */}
-                                                <div className="col-span-1">
-                                                  <Label className="text-xs text-horizon-accent mb-1 block opacity-0">X</Label>
-                                                  <Button
-                                                    onClick={() => removeCost(actualIndex, costIndex)}
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    className="h-9 w-9 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                                                  >
-                                                    <Trash2 className="w-4 h-4" />
-                                                  </Button>
-                                                </div>
+                                              {/* מחק - 1 עמודה */}
+                                              <div className="col-span-1">
+                                                <Label className="text-xs text-horizon-accent mb-1 block opacity-0">X</Label>
+                                                <Button
+                                                  onClick={() => removeCost(actualIndex, costIndex)}
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  className="h-9 w-9 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                                >
+                                                  <Trash2 className="w-4 h-4" />
+                                                </Button>
                                               </div>
                                             </div>
-                                          ))}
-
-                                          {(service.costs || []).length === 0 && (
-                                            <div className="text-center py-6 text-horizon-accent text-sm border border-dashed border-horizon rounded-lg">
-                                              לחץ "הוסף עלות" להוספת עלויות גלם ומשתנות
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      {/* ✅ תצוגת חישובים - משופרת וצבעונית! */}
-                                      <div className="grid grid-cols-3 gap-4">
-                                        {/* עלות מכר */}
-                                        <div className="bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/30 rounded-xl p-4 text-center hover:shadow-lg hover:border-orange-500/50 transition-all">
-                                          <div className="flex items-center justify-center gap-2 mb-2">
-                                            <DollarSign className="w-4 h-4 text-orange-400" />
-                                            <p className="text-xs font-semibold text-orange-400">עלות מכר</p>
                                           </div>
-                                          <p className="text-2xl font-bold text-horizon-text">
-                                            {formatCurrency(service.calculated?.cost_of_sale || 0)}
-                                          </p>
-                                        </div>
-
-                                        {/* רווח גולמי */}
-                                        <div className={`bg-gradient-to-br ${(service.calculated?.gross_profit || 0) >= 0 ? 'from-green-500/10 to-green-500/5 border-green-500/30' : 'from-red-500/10 to-red-500/5 border-red-500/30'} border rounded-xl p-4 text-center hover:shadow-lg transition-all`}>
-                                          <div className="flex items-center justify-center gap-2 mb-2">
-                                            <TrendingUp className={`w-4 h-4 ${(service.calculated?.gross_profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`} />
-                                            <p className={`text-xs font-semibold ${(service.calculated?.gross_profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>רווח גולמי</p>
+                                        ))}
+                                        
+                                        {(service.costs || []).length === 0 && (
+                                          <div className="text-center py-6 text-horizon-accent text-sm border border-dashed border-horizon rounded-lg">
+                                            לחץ "הוסף עלות" להוספת עלויות גלם ומשתנות
                                           </div>
-                                          <p className={`text-2xl font-bold ${(service.calculated?.gross_profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                            {formatCurrency(service.calculated?.gross_profit || 0)}
-                                          </p>
-                                        </div>
+                                        )}
+                                      </div>
+                                    </div>
 
-                                        {/* אחוז רווח */}
-                                        <div className={`bg-gradient-to-br ${(service.calculated?.gross_margin_percentage || 0) >= 0 ? 'from-blue-500/10 to-blue-500/5 border-blue-500/30' : 'from-red-500/10 to-red-500/5 border-red-500/30'} border rounded-xl p-4 text-center hover:shadow-lg transition-all`}>
-                                          <div className="flex items-center justify-center gap-2 mb-2">
-                                            <Percent className={`w-4 h-4 ${(service.calculated?.gross_margin_percentage || 0) >= 0 ? 'text-blue-400' : 'text-red-400'}`} />
-                                            <p className={`text-xs font-semibold ${(service.calculated?.gross_margin_percentage || 0) >= 0 ? 'text-blue-400' : 'text-red-400'}`}>אחוז רווח</p>
-                                          </div>
-                                          <p className={`text-2xl font-bold ${(service.calculated?.gross_margin_percentage || 0) >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
-                                            {(service.calculated?.gross_margin_percentage || 0).toFixed(1)}%
-                                          </p>
+                                    {/* ✅ תצוגת חישובים - משופרת וצבעונית! */}
+                                    <div className="grid grid-cols-3 gap-4">
+                                      {/* עלות מכר */}
+                                      <div className="bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/30 rounded-xl p-4 text-center hover:shadow-lg hover:border-orange-500/50 transition-all">
+                                        <div className="flex items-center justify-center gap-2 mb-2">
+                                          <DollarSign className="w-4 h-4 text-orange-400" />
+                                          <p className="text-xs font-semibold text-orange-400">עלות מכר</p>
                                         </div>
+                                        <p className="text-2xl font-bold text-horizon-text">
+                                          {formatCurrency(service.calculated?.cost_of_sale || 0)}
+                                        </p>
                                       </div>
-                                      </>
-                                      )}
-                                      </div>
-                                      </div>
-                                      </CardContent>
-                                      </Card>
-                        </div>
-                      )}
-                    </Draggable>
-                  );
-                  })}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
 
-          {(searchTerm ? filteredServices : services).length > ITEMS_PER_PAGE && (
-            <div className="mt-6 flex justify-center">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-            </div>
-          )}
-            </>
+                                      {/* רווח גולמי */}
+                                      <div className={`bg-gradient-to-br ${(service.calculated?.gross_profit || 0) >= 0 ? 'from-green-500/10 to-green-500/5 border-green-500/30' : 'from-red-500/10 to-red-500/5 border-red-500/30'} border rounded-xl p-4 text-center hover:shadow-lg transition-all`}>
+                                        <div className="flex items-center justify-center gap-2 mb-2">
+                                          <TrendingUp className={`w-4 h-4 ${(service.calculated?.gross_profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`} />
+                                          <p className={`text-xs font-semibold ${(service.calculated?.gross_profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>רווח גולמי</p>
+                                        </div>
+                                        <p className={`text-2xl font-bold ${(service.calculated?.gross_profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                          {formatCurrency(service.calculated?.gross_profit || 0)}
+                                        </p>
+                                      </div>
+
+                                      {/* אחוז רווח */}
+                                      <div className={`bg-gradient-to-br ${(service.calculated?.gross_margin_percentage || 0) >= 0 ? 'from-blue-500/10 to-blue-500/5 border-blue-500/30' : 'from-red-500/10 to-red-500/5 border-red-500/30'} border rounded-xl p-4 text-center hover:shadow-lg transition-all`}>
+                                        <div className="flex items-center justify-center gap-2 mb-2">
+                                          <Percent className={`w-4 h-4 ${(service.calculated?.gross_margin_percentage || 0) >= 0 ? 'text-blue-400' : 'text-red-400'}`} />
+                                          <p className={`text-xs font-semibold ${(service.calculated?.gross_margin_percentage || 0) >= 0 ? 'text-blue-400' : 'text-red-400'}`}>אחוז רווח</p>
+                                        </div>
+                                        <p className={`text-2xl font-bold ${(service.calculated?.gross_margin_percentage || 0) >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                                          {(service.calculated?.gross_margin_percentage || 0).toFixed(1)}%
+                                        </p>
+                                        </div>
+                                        </div>
+                                        </>
+                                        )}
+                                        </div>
+                                        </div>
+                                        </CardContent>
+                                        </Card>
+                          </div>
+                        )}
+                      </Draggable>
+                    );
+                    })}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+            
+            {/* ✅ Pagination controls */}
+            {(searchTerm ? filteredServices : services).length > ITEMS_PER_PAGE && (
+              <div className="mt-6 flex justify-center">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
           )}
 
           <Button
