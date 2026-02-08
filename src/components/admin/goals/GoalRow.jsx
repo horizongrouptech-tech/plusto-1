@@ -162,7 +162,15 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
             
             try {
                 console.log('🗑️ Deleting subtask:', goal.id, goal.name);
-                await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
+                
+                // ✅ FIX: Ensure end_date is valid before update
+                const deletePayload = { is_active: false };
+                if (!goal.end_date || goal.end_date === '' || goal.end_date === 'null' || goal.end_date === 'undefined') {
+                    deletePayload.end_date = goal.start_date || new Date().toISOString().split('T')[0];
+                    console.log('⚠️ Missing end_date, using fallback:', deletePayload.end_date);
+                }
+                
+                await base44.entities.CustomerGoal.update(goal.id, deletePayload);
                 await refreshData();
                 console.log('✅ Subtask deleted successfully');
             } catch (error) {
@@ -187,12 +195,22 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                 
                 // מחיקת כל התת-משימות
                 for (const subtask of subtasks) {
-                    await base44.entities.CustomerGoal.update(subtask.id, { is_active: false });
+                    const subtaskPayload = { is_active: false };
+                    if (!subtask.end_date || subtask.end_date === '' || subtask.end_date === 'null' || subtask.end_date === 'undefined') {
+                        subtaskPayload.end_date = subtask.start_date || new Date().toISOString().split('T')[0];
+                        console.log('  ⚠️ Subtask missing end_date, using fallback:', subtaskPayload.end_date);
+                    }
+                    await base44.entities.CustomerGoal.update(subtask.id, subtaskPayload);
                     console.log('  ↳ Deleted subtask:', subtask.id, subtask.name);
                 }
                 
                 // מחיקת היעד עצמו
-                await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
+                const goalPayload = { is_active: false };
+                if (!goal.end_date || goal.end_date === '' || goal.end_date === 'null' || goal.end_date === 'undefined') {
+                    goalPayload.end_date = goal.start_date || new Date().toISOString().split('T')[0];
+                    console.log('⚠️ Goal missing end_date, using fallback:', goalPayload.end_date);
+                }
+                await base44.entities.CustomerGoal.update(goal.id, goalPayload);
                 console.log('✅ Goal and all subtasks deleted successfully');
                 
                 await refreshData();
@@ -209,7 +227,15 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
 
             try {
                 console.log('🗑️ Deleting goal without subtasks:', goal.id, goal.name);
-                await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
+                
+                // ✅ FIX: Ensure end_date is valid before update
+                const deletePayload = { is_active: false };
+                if (!goal.end_date || goal.end_date === '' || goal.end_date === 'null' || goal.end_date === 'undefined') {
+                    deletePayload.end_date = goal.start_date || new Date().toISOString().split('T')[0];
+                    console.log('⚠️ Missing end_date, using fallback:', deletePayload.end_date);
+                }
+                
+                await base44.entities.CustomerGoal.update(goal.id, deletePayload);
                 await refreshData();
                 console.log('✅ Goal deleted successfully');
             } catch (error) {
