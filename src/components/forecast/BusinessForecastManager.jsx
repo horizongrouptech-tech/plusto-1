@@ -1505,18 +1505,49 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     }
  }, [runningProcess, toast, handleSelectForecast]);
 
-  // Pagination State
-  const totalProductPages = Math.ceil(services.length / ITEMS_PER_PAGE);
-  const paginatedServices = services.slice(
-    (productsCurrentPage - 1) * ITEMS_PER_PAGE,
-    productsCurrentPage * ITEMS_PER_PAGE
-  );
+  // ✅ Pagination - עם useMemo למניעת חישובים מיותרים
+  const totalProductPages = useMemo(() => {
+    return Math.ceil(services.length / ITEMS_PER_PAGE);
+  }, [services.length]);
 
-  const paginatedServicesForSales = services.slice(
-    (salesForecastCurrentPage - 1) * ITEMS_PER_PAGE,
-    salesForecastCurrentPage * ITEMS_PER_PAGE
-  );
-  const totalSalesPages = Math.ceil(services.length / ITEMS_PER_PAGE);
+  const paginatedServices = useMemo(() => {
+    const start = (productsCurrentPage - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    return services.slice(start, end);
+  }, [services, productsCurrentPage]);
+
+  const paginatedServicesForSales = useMemo(() => {
+    const start = (salesForecastCurrentPage - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    return services.slice(start, end);
+  }, [services, salesForecastCurrentPage]);
+
+  const totalSalesPages = useMemo(() => {
+    return Math.ceil(services.length / ITEMS_PER_PAGE);
+  }, [services.length]);
+
+  // ✅ Reset pagination כשהשירותים משתנים או כשעוברים בין טאבים
+  useEffect(() => {
+    if (activeTab === 'products') {
+      setProductsCurrentPage(1);
+    }
+    if (activeTab === 'sales') {
+      setSalesForecastCurrentPage(1);
+    }
+  }, [services.length, activeTab]);
+
+  // ✅ וידוא שהעמוד לא חורג מהטווח
+  useEffect(() => {
+    if (productsCurrentPage > totalProductPages && totalProductPages > 0) {
+      setProductsCurrentPage(totalProductPages);
+    }
+  }, [productsCurrentPage, totalProductPages]);
+
+  useEffect(() => {
+    if (salesForecastCurrentPage > totalSalesPages && totalSalesPages > 0) {
+      setSalesForecastCurrentPage(totalSalesPages);
+    }
+  }, [salesForecastCurrentPage, totalSalesPages]);
 
 
   const renderMonthlyInputs = (expenseType, expenseIndex, currentMonthlyAmounts, disabled = false) => {

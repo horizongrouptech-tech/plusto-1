@@ -28,6 +28,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { formatCurrency } from './utils/numberFormatter';
 import { base44 } from '@/api/base44Client';
 import SaveProgressIndicator from './SaveProgressIndicator';
+import Pagination from '@/components/shared/Pagination';
 
 export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, onNext, onBack }) {
   const [services, setServices] = useState(forecastData.services || []);
@@ -42,6 +43,10 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [saveStatus, setSaveStatus] = useState(null);
+  
+  // ✅ Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 50; // הצג 50 מוצרים בכל פעם
   
   // ⭐ State לבחירת קטלוג
   const [selectedCatalogForLoad, setSelectedCatalogForLoad] = useState(null);
@@ -565,6 +570,31 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
     );
   }, [services, searchTerm]);
 
+  // ✅ Pagination - חישוב מוצרים מוצגים
+  const paginatedServices = useMemo(() => {
+    const servicesToShow = searchTerm ? filteredServices : services;
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    return servicesToShow.slice(start, end);
+  }, [services, filteredServices, searchTerm, currentPage]);
+
+  const totalPages = useMemo(() => {
+    const servicesToShow = searchTerm ? filteredServices : services;
+    return Math.ceil(servicesToShow.length / ITEMS_PER_PAGE);
+  }, [services, filteredServices, searchTerm]);
+
+  // ✅ Reset pagination כשהשירותים משתנים או כשמשנים חיפוש
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [services.length, searchTerm]);
+
+  // ✅ וידוא שהעמוד לא חורג מהטווח
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   return (
     <div className="space-y-6" dir="rtl">
       {/* ⭐ בחירת קטלוג - מוצג תמיד */}
@@ -742,7 +772,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                         לא נמצאו תוצאות עבור "{searchTerm}"
                       </div>
                     )}
-                    {(searchTerm ? filteredServices : services).map((service, serviceIndex) => {
+                    {paginatedServices.map((service, serviceIndex) => {
                       const actualIndex = services.indexOf(service);
                       return (
                       <Draggable key={`service-${actualIndex}`} draggableId={`service-${actualIndex}`} index={actualIndex} isDragDisabled={!!searchTerm}>
@@ -1081,6 +1111,17 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                 )}
               </Droppable>
             </DragDropContext>
+            
+            {/* ✅ Pagination controls */}
+            {(searchTerm ? filteredServices : services).length > ITEMS_PER_PAGE && (
+              <div className="mt-6 flex justify-center">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
           )}
 
           <Button
