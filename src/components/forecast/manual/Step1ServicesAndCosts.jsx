@@ -762,35 +762,36 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
               </AlertDescription>
             </Alert>
           ) : (
-            <DragDropContext onDragEnd={handleDragEnd}>
-              <Droppable droppableId="services-list">
-                {(provided) => (
-                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
-                    {searchTerm && filteredServices.length === 0 && (
-                      <div className="text-center py-8 text-horizon-accent">
-                        <Search className="w-8 h-8 mx-auto mb-2" />
-                        לא נמצאו תוצאות עבור "{searchTerm}"
-                      </div>
-                    )}
-                    {paginatedServices.map((service, serviceIndex) => {
-                      const actualIndex = services.indexOf(service);
-                      return (
-                      <Draggable key={`service-${actualIndex}`} draggableId={`service-${actualIndex}`} index={actualIndex} isDragDisabled={!!searchTerm}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            className={`transition-all ${snapshot.isDragging ? 'z-50' : ''}`}
-                          >
-                            <Card className="bg-horizon-card/50 border-horizon">
-                              <CardContent className="p-4">
-                                <div className="flex items-start gap-3">
-                                  <div {...provided.dragHandleProps} className="mt-2 cursor-grab active:cursor-grabbing">
-                                    <GripVertical className="w-5 h-5 text-horizon-accent" />
-                                  </div>
+            <div>
+              <DragDropContext onDragEnd={handleDragEnd}>
+                <Droppable droppableId="services-list">
+                  {(provided) => (
+                    <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                      {searchTerm && filteredServices.length === 0 && (
+                        <div className="text-center py-8 text-horizon-accent">
+                          <Search className="w-8 h-8 mx-auto mb-2" />
+                          לא נמצאו תוצאות עבור "{searchTerm}"
+                        </div>
+                      )}
+                      {paginatedServices.map((service, serviceIndex) => {
+                        const actualIndex = services.indexOf(service);
+                        return (
+                        <Draggable key={`service-${actualIndex}`} draggableId={`service-${actualIndex}`} index={actualIndex} isDragDisabled={!!searchTerm}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              className={`transition-all ${snapshot.isDragging ? 'z-50' : ''}`}
+                            >
+                              <Card className="bg-horizon-card/50 border-horizon">
+                                <CardContent className="p-4">
+                                  <div className="flex items-start gap-3">
+                                    <div {...provided.dragHandleProps} className="mt-2 cursor-grab active:cursor-grabbing">
+                                      <GripVertical className="w-5 h-5 text-horizon-accent" />
+                                    </div>
 
-                                  <div className="flex-1 space-y-5">
-                                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                                    <div className="flex-1 space-y-5">
+                                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                                      <Button
                                        onClick={() => toggleServiceCollapse(actualIndex)}
                                        variant="ghost"
