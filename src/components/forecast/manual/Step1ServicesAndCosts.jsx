@@ -1108,35 +1108,36 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                     );
                     })}
                     {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
-            
-            {/* ✅ Pagination controls */}
-            {(searchTerm ? filteredServices : services).length > ITEMS_PER_PAGE && (
-              <div className="mt-6 flex justify-center">
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                />
-              </div>
-            )}
-          )}
+                    </div>
+                    )}
+                    </Droppable>
+                    </DragDropContext>
 
-          <div className="mt-4">
-            <Button
-              onClick={addService}
-              variant="outline"
-              className="w-full border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10"
-            >
-              <Plus className="w-4 h-4 ml-2" />
-              הוסף שירות/מוצר ידנית
-            </Button>
-            </div>
-            </CardContent>
-            </Card>
+                    {/* ✅ Pagination controls */}
+                    {(searchTerm ? filteredServices : services).length > ITEMS_PER_PAGE && (
+                    <div className="mt-6 flex justify-center">
+                    <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    />
+                    </div>
+                    )}
+
+                    <div className="mt-4">
+                    <Button
+                    onClick={addService}
+                    variant="outline"
+                    className="w-full border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10"
+                    >
+                    <Plus className="w-4 h-4 ml-2" />
+                    הוסף שירות/מוצר ידנית
+                    </Button>
+                    </div>
+                    </div>
+                    )}
+                    </CardContent>
+                    </Card>
 
       {/* כפתורי ניווט */}
       <div className="flex justify-between pt-6">
