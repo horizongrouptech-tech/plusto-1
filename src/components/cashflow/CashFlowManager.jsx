@@ -378,7 +378,9 @@ export default function CashFlowManager({ customer }) {
     try {
       await base44.entities.CashFlow.delete(id);
       queryClient.invalidateQueries(['cashFlow', customer.email]);
+      queryClient.invalidateQueries(['recurringTransactions', customer.email]);
       setDeleteConfirmId(null);
+      toast.success('התנועה נמחקה בהצלחה');
     } catch (error) {
       console.error('Error deleting:', error);
       toast.error('שגיאה במחיקה: ' + error.message);

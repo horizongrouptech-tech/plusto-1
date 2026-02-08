@@ -85,30 +85,36 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   }, [forecastData.services?.length]);
 
   // ✅ FIX #6: Remove expensive JSON.stringify - use shallow comparison
-  // ✅ אופטימיזציה למניעת קפיאה
+  // ✅ אופטימיזציה למניעת קפיאה - עדכון רק כשצריך
   useEffect(() => {
-    if (!forecastData.services) return;
+    if (!forecastData.services || forecastData.services.length === 0) return;
 
-    const updatedForecast = (forecastData.services || []).map((service) => {
-      const existing = (forecastData.sales_forecast_onetime || []).find(
-        (f) => f.service_name === service.service_name
-      );
-      return existing || {
-        service_name: service.service_name,
-        planned_monthly_quantities: Array(12).fill(0),
-        actual_monthly_quantities: Array(12).fill(0),
-        planned_monthly_revenue: Array(12).fill(0),
-        actual_monthly_revenue: Array(12).fill(0)
-      };
-    });
+    // ✅ בדיקה מהירה: אם מספר המוצרים לא השתנה, בדוק רק את השמות הראשונים
+    const servicesCount = forecastData.services.length;
+    const salesForecastCount = salesForecast.length;
     
-    // Only update if length changed or service names changed
-    const needsUpdate = updatedForecast.length !== salesForecast.length ||
-      updatedForecast.some((updated, idx) => updated.service_name !== salesForecast[idx]?.service_name);
-    
-    if (needsUpdate) {
-          setSalesForecast(updatedForecast);
-        }
+    // אם מספר המוצרים שונה - צריך לעדכן
+    if (servicesCount !== salesForecastCount) {
+      // ✅ יצירת Map למהירות חיפוש
+      const salesForecastMap = new Map();
+      (forecastData.sales_forecast_onetime || []).forEach(sf => {
+        salesForecastMap.set(sf.service_name, sf);
+      });
+      
+      // ✅ עיבוד מהיר עם Map (O(n) במקום O(n²))
+      const updatedForecast = forecastData.services.map((service) => {
+        const existing = salesForecastMap.get(service.service_name);
+        return existing || {
+          service_name: service.service_name,
+          planned_monthly_quantities: Array(12).fill(0),
+          actual_monthly_quantities: Array(12).fill(0),
+          planned_monthly_revenue: Array(12).fill(0),
+          actual_monthly_revenue: Array(12).fill(0)
+        };
+      });
+      
+      setSalesForecast(updatedForecast);
+    }
   }, [forecastData.services?.length, forecastData.sales_forecast_onetime?.length]);
 
   const handleDragEnd = (result) => {
