@@ -253,7 +253,7 @@ export default function CreateTaskModal({ isOpen, onClose, customer, currentUser
               type="time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className="bg-horizon-card border-horizon text-horizon-text"
+              className="bg-horizon-card border-horizon text-horizon-text [color-scheme:dark]"
             />
           </div>
 
@@ -295,7 +295,7 @@ export default function CreateTaskModal({ isOpen, onClose, customer, currentUser
                 type="time"
                 value={reminderTime}
                 onChange={(e) => setReminderTime(e.target.value)}
-                className="bg-horizon-card border-horizon text-horizon-text"
+                className="bg-horizon-card border-horizon text-horizon-text [color-scheme:dark]"
               />
             </div>
           </div>

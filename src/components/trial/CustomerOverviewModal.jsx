@@ -175,7 +175,7 @@ export default function CustomerOverviewModal({
                 </div>
                 <div>
                   <p className="text-sm text-horizon-accent">אימייל</p>
-                  <p className="font-medium text-horizon-text">{customer.email}</p>
+                  <p className="font-medium text-horizon-text break-words">{customer.email}</p>
                 </div>
                 <div>
                   <p className="text-sm text-horizon-accent">טלפון</p>
