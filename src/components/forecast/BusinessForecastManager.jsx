@@ -101,6 +101,19 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
   const [detailedExpenses, setDetailedExpenses] = useState({ marketing_sales: [], admin_general: [] });
   const [salesForecastData, setSalesForecastData] = useState({ working_days_per_month: 22, monthly_forecasts: [] });
 
+  // ✅ FIX #2: Create Map once for fast lookups across component
+  const forecastMap = useMemo(() => {
+    const map = new Map();
+    (salesForecastData?.monthly_forecasts || []).forEach(entry => {
+      map.set(entry.service_name, entry);
+    });
+    return map;
+  }, [salesForecastData.monthly_forecasts]);
+
+  const servicesMap = useMemo(() => {
+    return new Map((services || []).map(s => [s.service_name, s]));
+  }, [services]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false); // For saving individual forecast data
   const [isGenerating, setIsGenerating] = useState(false); // General AI generation state
@@ -2203,16 +2216,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
                                     </thead>
                                     <tbody>
                                      {paginatedServicesForSales.map((service, serviceIndex) => {
-                                       // ✅ FIX #2: Use Map for O(1) lookup
-                                       const forecastMap = useMemo(() => {
-                                         const map = new Map();
-                                         (salesForecastData.monthly_forecasts || []).forEach(entry => {
-                                           map.set(entry.service_name, entry);
-                                         });
-                                         return map;
-                                       }, [salesForecastData.monthly_forecasts]);
-
-                                       const forecastEntry = forecastMap.get(service.service_name) || {
+                                       const forecastEntry = (salesForecastData.monthly_forecasts || []).find(f => f.service_name === service.service_name) || {
                                          service_name: service.service_name,
                                          ...MONTHS.reduce((acc, month) => ({ ...acc, [month.key]: 0 }), {}),
                                          total_yearly: 0
@@ -2285,51 +2289,52 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
                                 </div>
                               )}
 
-                              {(salesForecastData?.monthly_forecasts || []).length > 0 && (
-                                <div className="mt-6 p-4 bg-horizon-card/30 rounded-lg">
-                                  <h4 className="text-horizon-text font-medium mb-3">סיכום תחזית שנתית</h4>
-                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
-                                    <div>
-                                      <div className="text-2xl font-bold text-horizon-text">
-                                        {(salesForecastData?.monthly_forecasts || []).reduce((sum, forecastEntry) =>
-                                          sum + MONTHS.reduce((monthSum, month) => monthSum + (forecastEntry[month.key] || 0), 0), 0
-                                        ).toLocaleString()}
+                              {(salesForecastData?.monthly_forecasts || []).length > 0 && (() => {
+                                // ✅ FIX #3: Pre-calculate all summary stats once
+                                const salesSummary = (salesForecastData?.monthly_forecasts || []).reduce((acc, forecastEntry) => {
+                                  const service = servicesMap.get(forecastEntry.service_name);
+                                  const totalUnits = MONTHS.reduce((sum, month) => sum + (forecastEntry[month.key] || 0), 0);
+                                  
+                                  acc.totalUnits += totalUnits;
+                                  acc.totalRevenue += totalUnits * (service?.selling_price || 0);
+                                  acc.totalCost += totalUnits * (service?.cost_price || 0);
+                                  acc.totalProfit += totalUnits * ((service?.selling_price || 0) - (service?.cost_price || 0));
+                                  
+                                  return acc;
+                                }, { totalUnits: 0, totalRevenue: 0, totalCost: 0, totalProfit: 0 });
+
+                                return (
+                                  <div className="mt-6 p-4 bg-horizon-card/30 rounded-lg">
+                                    <h4 className="text-horizon-text font-medium mb-3">סיכום תחזית שנתית</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+                                      <div>
+                                        <div className="text-2xl font-bold text-horizon-text">
+                                          {salesSummary.totalUnits.toLocaleString()}
+                                        </div>
+                                        <div className="text-sm text-horizon-accent">יחידות שנתיות</div>
                                       </div>
-                                      <div className="text-sm text-horizon-accent">יחידות שנתיות</div>
-                                    </div>
-                                    <div>
-                                      <div className="text-2xl font-bold text-green-400">
-                                        {formatCurrency((salesForecastData?.monthly_forecasts || []).reduce((sum, forecastEntry) => {
-                                          const service = (services || []).find(s => s.service_name === forecastEntry.service_name);
-                                          const totalUnits = MONTHS.reduce((monthSum, month) => monthSum + (forecastEntry[month.key] || 0), 0);
-                                          return sum + (totalUnits * (service?.selling_price || 0));
-                                        }, 0))}
+                                      <div>
+                                        <div className="text-2xl font-bold text-green-400">
+                                          {formatCurrency(salesSummary.totalRevenue)}
+                                        </div>
+                                        <div className="text-sm text-horizon-accent">הכנסות שנתיות</div>
                                       </div>
-                                      <div className="text-sm text-horizon-accent">הכנסות שנתיות</div>
-                                    </div>
-                                    <div>
-                                      <div className="text-2xl font-bold text-blue-400">
-                                        {formatCurrency((salesForecastData?.monthly_forecasts || []).reduce((sum, forecastEntry) => {
-                                          const service = (services || []).find(s => s.service_name === forecastEntry.service_name);
-                                          const totalUnits = MONTHS.reduce((monthSum, month) => monthSum + (forecastEntry[month.key] || 0), 0);
-                                          return sum + (totalUnits * (service?.cost_price || 0));
-                                        }, 0))}
+                                      <div>
+                                        <div className="text-2xl font-bold text-blue-400">
+                                          {formatCurrency(salesSummary.totalCost)}
+                                        </div>
+                                        <div className="text-sm text-horizon-accent">עלות גלם</div>
                                       </div>
-                                      <div className="text-sm text-horizon-accent">עלות גלם</div>
-                                    </div>
-                                    <div>
-                                      <div className="text-2xl font-bold text-yellow-400">
-                                        {formatCurrency((salesForecastData?.monthly_forecasts || []).reduce((sum, forecastEntry) => {
-                                          const service = (services || []).find(s => s.service_name === forecastEntry.service_name);
-                                          const totalUnits = MONTHS.reduce((monthSum, month) => monthSum + (forecastEntry[month.key] || 0), 0);
-                                          return sum + (totalUnits * ((service?.selling_price || 0) - (service?.cost_price || 0)));
-                                        }, 0))}
+                                      <div>
+                                        <div className="text-2xl font-bold text-yellow-400">
+                                          {formatCurrency(salesSummary.totalProfit)}
+                                        </div>
+                                        <div className="text-sm text-horizon-accent">רווח גולמי</div>
                                       </div>
-                                      <div className="text-sm text-horizon-accent">רווח גולמי</div>
                                     </div>
                                   </div>
-                                </div>
-                              )}
+                                );
+                              })()}
                             </CardContent>
                           </Card>
                         </TabsContent>
