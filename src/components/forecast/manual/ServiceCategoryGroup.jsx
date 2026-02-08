@@ -25,11 +25,11 @@ export default function ServiceCategoryGroup({
 
     services.forEach((service, serviceIdx) => {
       const serviceData = salesData[startIndex + serviceIdx];
-      if (serviceData) {
-        totalPlannedRevenue += serviceData.planned_monthly_revenue.reduce((sum, val) => sum + val, 0);
-        totalActualRevenue += serviceData.actual_monthly_revenue.reduce((sum, val) => sum + val, 0);
-        totalPlannedQuantity += serviceData.planned_monthly_quantities.reduce((sum, val) => sum + val, 0);
-        totalActualQuantity += serviceData.actual_monthly_quantities.reduce((sum, val) => sum + val, 0);
+      if (serviceData && serviceData.planned_monthly_revenue && serviceData.actual_monthly_revenue) {
+        totalPlannedRevenue += (serviceData.planned_monthly_revenue || []).reduce((sum, val) => sum + (val || 0), 0);
+        totalActualRevenue += (serviceData.actual_monthly_revenue || []).reduce((sum, val) => sum + (val || 0), 0);
+        totalPlannedQuantity += (serviceData.planned_monthly_quantities || []).reduce((sum, val) => sum + (val || 0), 0);
+        totalActualQuantity += (serviceData.actual_monthly_quantities || []).reduce((sum, val) => sum + (val || 0), 0);
       }
     });
 
@@ -195,13 +195,17 @@ export default function ServiceCategoryGroup({
                         <Label className="text-[10px] text-blue-400">תכנון</Label>
                         <Input
                           type="number"
-                          value={serviceData.planned_monthly_quantities[monthIndex]}
-                          onChange={(e) => onUpdateQuantity(startIndex + serviceIdx, monthIndex, 'planned', e.target.value)}
+                          value={serviceData?.planned_monthly_quantities?.[monthIndex] ?? ''}
+                          onChange={(e) => {
+                            if (serviceData) {
+                              onUpdateQuantity(startIndex + serviceIdx, monthIndex, 'planned', e.target.value);
+                            }
+                          }}
                           className="bg-horizon-card border-blue-400/30 text-horizon-text text-sm h-8"
                           placeholder="0"
                         />
                         <div className="text-[10px] text-blue-400 text-center">
-                          {formatCurrency(serviceData.planned_monthly_revenue[monthIndex], 0)}
+                          {formatCurrency(serviceData?.planned_monthly_revenue?.[monthIndex] ?? 0, 0)}
                         </div>
                       </div>
 
@@ -210,13 +214,17 @@ export default function ServiceCategoryGroup({
                         <Label className="text-[10px] text-green-400">ביצוע</Label>
                         <Input
                           type="number"
-                          value={serviceData.actual_monthly_quantities[monthIndex]}
-                          onChange={(e) => onUpdateQuantity(startIndex + serviceIdx, monthIndex, 'actual', e.target.value)}
+                          value={serviceData?.actual_monthly_quantities?.[monthIndex] ?? ''}
+                          onChange={(e) => {
+                            if (serviceData) {
+                              onUpdateQuantity(startIndex + serviceIdx, monthIndex, 'actual', e.target.value);
+                            }
+                          }}
                           className="bg-horizon-card border-green-400/30 text-horizon-text text-sm h-8"
                           placeholder="0"
                         />
                         <div className="text-[10px] text-green-400 text-center">
-                          {formatCurrency(serviceData.actual_monthly_revenue[monthIndex], 0)}
+                          {formatCurrency(serviceData?.actual_monthly_revenue?.[monthIndex] ?? 0, 0)}
                         </div>
                       </div>
                     </div>

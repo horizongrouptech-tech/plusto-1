@@ -685,10 +685,19 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     
     servicesToGroup.forEach((service, idx) => {
       const category = service.category || 'ללא קטגוריה';
-      if (!grouped[category]) {
-        grouped[category] = { services: [], startIndex: idx };
+      const salesDataItem = salesForecast.find(s => s.service_name === service.service_name);
+      
+      // ✅ רק הוסף אם יש נתוני מכירות תקינים למוצר זה
+      if (salesDataItem && 
+          salesDataItem.planned_monthly_quantities && 
+          salesDataItem.actual_monthly_quantities &&
+          Array.isArray(salesDataItem.planned_monthly_quantities) &&
+          Array.isArray(salesDataItem.actual_monthly_quantities)) {
+        if (!grouped[category]) {
+          grouped[category] = { services: [], startIndex: idx };
+        }
+        grouped[category].services.push(service);
       }
-      grouped[category].services.push(service);
     });
     return grouped;
   };
