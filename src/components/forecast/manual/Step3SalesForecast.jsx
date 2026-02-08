@@ -66,17 +66,13 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     }
   }, [forecastData.services]);
 
-  // ✅ useEffect נשאר רק כ-fallback למקרים מיוחדים
+  // ✅ FIX #6: Remove expensive JSON.stringify - use shallow comparison
   useEffect(() => {
-    // אופטימיזציה: בדיקה אם באמת צריך לחשב מחדש
     if (!forecastData.services) return;
 
-    // עדכון רק אם יש שינויים במוצרים או בנתוני התחזית
     const updatedForecast = (forecastData.services || []).map((service) => {
-      const existingForecast = (forecastData.sales_forecast_onetime || []).find(
-        (f) => f.service_name === service.service_name
-      );
-      return existingForecast || {
+      const existing = salesForecast.find(f => f.service_name === service.service_name);
+      return existing || {
         service_name: service.service_name,
         planned_monthly_quantities: Array(12).fill(0),
         actual_monthly_quantities: Array(12).fill(0),
@@ -85,16 +81,14 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       };
     });
     
-    // שימוש ב-timeout קצר כדי לא לחסום את ה-UI אם יש עדכונים תכופים
-    const timeoutId = setTimeout(() => {
-        const hasChanges = JSON.stringify(updatedForecast) !== JSON.stringify(salesForecast);
-        if (hasChanges) {
-          setSalesForecast(updatedForecast);
-        }
-    }, 10);
-
-    return () => clearTimeout(timeoutId);
-  }, [forecastData.services, forecastData.sales_forecast_onetime]);
+    // Only update if length changed or service names changed
+    const needsUpdate = updatedForecast.length !== salesForecast.length ||
+      updatedForecast.some((updated, idx) => updated.service_name !== salesForecast[idx]?.service_name);
+    
+    if (needsUpdate) {
+      setSalesForecast(updatedForecast);
+    }
+  }, [forecastData.services?.length]);
 
   const handleDragEnd = (result) => {
     if (!result.destination) return;
@@ -657,37 +651,34 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     }
   };
 
-  // קיבוץ מוצרים לפי קטגוריה
-  const groupServicesByCategory = () => {
+  // ✅ FIX #7: Memoize groupServicesByCategory
+  const categorizedServices = useMemo(() => {
     const grouped = {};
     const hasZReports = forecastData.z_reports_uploaded && forecastData.z_reports_uploaded.length > 0;
+    const salesMap = new Map(salesForecast.map(s => [s.service_name, s]));
     
-    // אם יש דוחות Z, נמיין לפי מוצרים שנמכרו קודם
     let servicesToGroup = [...(forecastData.services || [])];
     
     if (hasZReports) {
-      // מצא מוצרים שנמכרו (יש להם actual_monthly_quantities > 0)
       const soldServices = servicesToGroup.filter(service => {
-        const forecast = salesForecast.find(s => s.service_name === service.service_name);
+        const forecast = salesMap.get(service.service_name);
         if (!forecast) return false;
         return forecast.actual_monthly_quantities.some(qty => qty > 0);
       });
       
       const notSoldServices = servicesToGroup.filter(service => {
-        const forecast = salesForecast.find(s => s.service_name === service.service_name);
+        const forecast = salesMap.get(service.service_name);
         if (!forecast) return true;
         return !forecast.actual_monthly_quantities.some(qty => qty > 0);
       });
       
-      // עדיפות למוצרים שנמכרו
       servicesToGroup = [...soldServices, ...notSoldServices];
     }
     
     servicesToGroup.forEach((service, idx) => {
       const category = service.category || 'ללא קטגוריה';
-      const salesDataItem = salesForecast.find(s => s.service_name === service.service_name);
+      const salesDataItem = salesMap.get(service.service_name);
       
-      // ✅ רק הוסף אם יש נתוני מכירות תקינים למוצר זה
       if (salesDataItem && 
           salesDataItem.planned_monthly_quantities && 
           salesDataItem.actual_monthly_quantities &&
@@ -700,9 +691,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       }
     });
     return grouped;
-  };
-
-  const categorizedServices = groupServicesByCategory();
+  }, [forecastData.services, salesForecast, forecastData.z_reports_uploaded]);
 
   const handlePlanningModeChange = (mode) => {
     setPlanningMode(mode);

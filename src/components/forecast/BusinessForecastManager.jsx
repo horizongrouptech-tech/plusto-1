@@ -100,7 +100,6 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
   const [employees, setEmployees] = useState([]); // Combined global and planned employees
   const [detailedExpenses, setDetailedExpenses] = useState({ marketing_sales: [], admin_general: [] });
   const [salesForecastData, setSalesForecastData] = useState({ working_days_per_month: 22, monthly_forecasts: [] });
-  const [summary, setSummary] = useState(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false); // For saving individual forecast data
@@ -169,12 +168,12 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
     setDetailedExpenses(forecastObj.detailed_expenses || { marketing_sales: [], admin_general: [] });
 
-    setSummary(forecastObj.profit_loss_summary || null);
+    // ✅ Removed setSummary - now calculated via useMemo
 
     setBusinessPlanText(forecastObj.business_plan_text || "");
     setEditedPlanText(forecastObj.business_plan_text || "");
     setIsCatalogSynced(forecastObj.services_data?.length > 0 && (forecastObj.is_system_generated || forecastObj.synced_from_catalog));
-  }, [setForecast, setForecastNameInput, setServices, setEmployees, setSalesForecastData, setDetailedExpenses, setSummary, setBusinessPlanText, setEditedPlanText, setIsCatalogSynced]);
+  }, []);
 
   const handleSelectForecast = useCallback((forecastObj) => {
     loadForecast(forecastObj);
@@ -246,7 +245,6 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         setEmployees([]);
         setDetailedExpenses({ marketing_sales: [], admin_general: [] });
         setSalesForecastData({ working_days_per_month: 22, monthly_forecasts: [] });
-        setSummary(null);
         setIsCatalogSynced(false);
       }
     } catch (error) {
@@ -255,23 +253,21 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     } finally {
       setIsLoading(false);
     }
-  }, [customer?.email, handleSelectForecast, setForecasts, setForecast, setServices, setEmployees, setDetailedExpenses, setSalesForecastData, setSummary, setIsCatalogSynced, setIsLoading, setError]);
+  }, [customer?.email, handleSelectForecast]);
 
+  // ✅ FIX #10: Fix dependency hell - only load if actually different
   useEffect(() => {
     if (selectedForecastId && forecasts.length > 0) {
-      const forecast = forecasts.find(f => f.id === selectedForecastId);
-      if (forecast) {
-        loadForecast(forecast); // השתמש בפונקציה loadForecast הקיימת
+      const forecastToLoad = forecasts.find(f => f.id === selectedForecastId);
+      if (forecastToLoad && forecastToLoad.id !== forecast?.id) {
+        loadForecast(forecastToLoad);
       }
     } else if (initialForecastData && !selectedForecastId && !forecast && !isLoading) {
-      // אם יש initialForecastData ואין תחזית נבחרת או טעונה, פתח את מודאל היצירה
-      // זה יופעל רק אם אין תחזיות קיימות או לא נבחרה אחת
-      // נשתמש בזה כדי להפעיל את תהליך היצירה החדש
       setShowInitialCreationModal(true);
       setNewForecastNameInput(initialForecastData.forecast_name || '');
       setNewForecastYearInput(initialForecastData.forecast_year || new Date().getFullYear());
     }
-  }, [selectedForecastId, forecasts, initialForecastData, loadForecast, forecast, isLoading]);
+  }, [selectedForecastId, forecasts, initialForecastData]);
   useEffect(() => {
     loadForecastsList();
     getLatestStrategicInput();
@@ -340,12 +336,15 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     const currentDetailedExpenses = detailedExpenses;
     const currentOtherCosts = currentForecastObj.other_costs || { admin_general: 0, marketing_sales: 0, tax_rate: 23 };
 
+    // ✅ FIX #2: Convert to Map for O(1) lookup instead of O(n) find()
+    const servicesMap = new Map((currentServices || []).map(s => [s.service_name, s]));
+
     const totalRevenue = (currentSalesForecastData?.monthly_forecasts || []).reduce((sum, forecastEntry) => {
       const monthlyQuantity = MONTHS.reduce((monthSum, month) => {
         return monthSum + (forecastEntry[month.key] || 0);
       }, 0);
 
-      const serviceItem = (currentServices || []).find(s => s.service_name === forecastEntry.service_name);
+      const serviceItem = servicesMap.get(forecastEntry.service_name);
       return sum + (monthlyQuantity * (serviceItem?.selling_price || 0));
     }, 0);
 
@@ -354,7 +353,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         return monthSum + (forecastEntry[month.key] || 0);
       }, 0);
 
-      const serviceItem = (currentServices || []).find(s => s.service_name === forecastEntry.service_name);
+      const serviceItem = servicesMap.get(forecastEntry.service_name);
       return sum + (monthlyQuantity * (serviceItem?.cost_price || 0));
     }, 0);
 
@@ -751,23 +750,22 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     setDetailedExpenses(updatedExpenses);
   };
 
-  const calculateTotals = useCallback(() => {
-    if (!forecast) return;
-    const currentSummary = calculateProfitLoss(forecast);
-    setSummary(currentSummary);
-  }, [forecast, calculateProfitLoss, setSummary]);
-
-  useEffect(() => {
-    calculateTotals();
-  }, [calculateTotals]);
+  // ✅ FIX #1: Replace useEffect + useCallback with useMemo to prevent infinite loops
+  const summary = useMemo(() => {
+    if (!forecast) return null;
+    return calculateProfitLoss(forecast);
+  }, [forecast, calculateProfitLoss]);
 
 
-  const generateSalesChartData = () => {
+  // ✅ FIX #4: Memoize chart data generation
+  const salesChartData = useMemo(() => {
     if (!forecast) return [];
+    const serviceMap = new Map((services || []).map(s => [s.service_name, s]));
+    
     return MONTHS.map(month => {
       const monthlyRevenue = (salesForecastData?.monthly_forecasts || []).reduce((sum, forecastEntry) => {
         const quantity = forecastEntry[month.key] || 0;
-        const service = (services || []).find(s => s.service_name === forecastEntry.service_name);
+        const service = serviceMap.get(forecastEntry.service_name);
         return sum + (quantity * (service?.selling_price || 0));
       }, 0);
 
@@ -776,9 +774,9 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         revenue: monthlyRevenue,
       };
     });
-  };
+  }, [forecast, salesForecastData.monthly_forecasts, services]);
 
-  const generateExpensesPieData = useCallback(() => {
+  const expensesPieData = useMemo(() => {
     if (!summary) return [];
     const { totalSalaries } = calculateEmployeeCosts(forecast);
 
@@ -799,20 +797,21 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     return data;
   }, [summary, forecast, detailedExpenses, calculateEmployeeCosts]);
 
-  const generateProfitabilityData = useCallback(() => {
+  const profitabilityData = useMemo(() => {
     if (!forecast) return [];
     const { monthlyEmployeeCosts } = calculateEmployeeCosts(forecast);
+    const serviceMap = new Map((services || []).map(s => [s.service_name, s]));
 
     return MONTHS.map((month, monthIndex) => {
       const monthlyRevenue = (salesForecastData?.monthly_forecasts || []).reduce((sum, forecastEntry) => {
         const quantity = forecastEntry[month.key] || 0;
-        const service = (services || []).find(s => s.service_name === forecastEntry.service_name);
+        const service = serviceMap.get(forecastEntry.service_name);
         return sum + (quantity * (service?.selling_price || 0));
       }, 0);
 
       const monthlyCogs = (salesForecastData?.monthly_forecasts || []).reduce((sum, forecastEntry) => {
         const quantity = forecastEntry[month.key] || 0;
-        const service = (services || []).find(s => s.service_name === forecastEntry.service_name);
+        const service = serviceMap.get(forecastEntry.service_name);
         return sum + (quantity * (service?.cost_price || 0));
       }, 0);
 
@@ -831,7 +830,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         profit: monthlyProfit
       };
     });
-  }, [forecast, salesForecastData, services, detailedExpenses, calculateEmployeeCosts]);
+  }, [forecast, salesForecastData.monthly_forecasts, services, detailedExpenses, calculateEmployeeCosts]);
 
   const generateForecastVersion = async (forecastType) => {
     if (!forecast) {
@@ -1357,7 +1356,6 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     setEmployees([]);
     setSalesForecastData({ working_days_per_month: 22, monthly_forecasts: [] });
     setDetailedExpenses({ marketing_sales: [], admin_general: [] });
-    setSummary(null);
     setBusinessPlanText("");
     setEditedPlanText("");
     setIsCatalogSynced(false);
@@ -1871,7 +1869,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
                               מגמות מכירות חודשיות
                             </h4>
                             <ResponsiveContainer width="100%" height={200}>
-                              <LineChart data={generateSalesChartData()} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                              <LineChart data={salesChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                                 <XAxis dataKey="month" tick={{ fill: '#9CA3AF', fontSize: 12 }} />
                                 <YAxis tick={{ fill: '#9CA3AF', fontSize: 12 }} formatter={formatCurrency}/>
@@ -1906,7 +1904,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
                               <RechartsPieChart>
                                 <Pie
                                   dataKey="value"
-                                  data={generateExpensesPieData()}
+                                  data={expensesPieData}
                                   cx="50%"
                                   cy="40%"
                                   outerRadius={70}
@@ -1914,7 +1912,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
                                   labelLine={false}
                                   label={false}
                                 >
-                                  {generateExpensesPieData().map((entry, index) => (
+                                  {expensesPieData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.color} />
                                   ))}
                                 </Pie>
@@ -1943,8 +1941,8 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
                                     textAlign: 'center'
                                   }}
                                   formatter={(value, entry) => {
-                                    const data = generateExpensesPieData().find(item => item.name === value);
-                                    const total = generateExpensesPieData().reduce((sum, item) => sum + item.value, 0);
+                                    const data = expensesPieData.find(item => item.name === value);
+                                    const total = expensesPieData.reduce((sum, item) => sum + item.value, 0);
                                     const percentage = data ? ((data.value / total) * 100).toFixed(0) : '0';
                                     return `${value} - ${percentage}%`;
                                   }}
@@ -2204,12 +2202,21 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
                                       </TableRow>
                                     </thead>
                                     <tbody>
-                                      {paginatedServicesForSales.map((service, serviceIndex) => {
-                                        const forecastEntry = (salesForecastData.monthly_forecasts || []).find(f => f.service_name === service.service_name) || {
-                                          service_name: service.service_name,
-                                          ...MONTHS.reduce((acc, month) => ({ ...acc, [month.key]: 0 }), {}),
-                                          total_yearly: 0
-                                        };
+                                     {paginatedServicesForSales.map((service, serviceIndex) => {
+                                       // ✅ FIX #2: Use Map for O(1) lookup
+                                       const forecastMap = useMemo(() => {
+                                         const map = new Map();
+                                         (salesForecastData.monthly_forecasts || []).forEach(entry => {
+                                           map.set(entry.service_name, entry);
+                                         });
+                                         return map;
+                                       }, [salesForecastData.monthly_forecasts]);
+
+                                       const forecastEntry = forecastMap.get(service.service_name) || {
+                                         service_name: service.service_name,
+                                         ...MONTHS.reduce((acc, month) => ({ ...acc, [month.key]: 0 }), {}),
+                                         total_yearly: 0
+                                       };
 
                                         const totalYearly = MONTHS.reduce((sum, month) => sum + (forecastEntry[month.key] || 0), 0);
                                         const totalRevenue = totalYearly * service.selling_price;
