@@ -615,6 +615,7 @@ export default function CashFlowManager({ customer }) {
                             </TableCell>
                             <TableCell className="text-right">
                               <Select
+                                key={`category-${item.id}-${item.category}`}
                                 value={item.category || ''}
                                 onValueChange={async (value) => {
                                   try {
