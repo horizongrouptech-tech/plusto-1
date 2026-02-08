@@ -29,15 +29,22 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   const saveTimeoutRef = useRef(null);
   
   // ✅ תיקון: טוען נתונים קיימים מיד בהתחלה, לא אפסים!
+  // ✅ אופטימיזציה: Map במקום find - O(n) במקום O(n²)
   const [salesForecast, setSalesForecast] = useState(() => {
-    return (forecastData.services || []).map((service) => {
-      // מחפש אם יש נתונים קיימים למוצר הזה
-      const existingForecast = (forecastData.sales_forecast_onetime || []).find(
-        (f) => f.service_name === service.service_name
-      );
-      
-      // אם יש נתונים קיימים - משתמש בהם, אחרת - יוצר אפסים
-      return existingForecast || {
+    if (!forecastData.services || forecastData.services.length === 0) return [];
+    
+    // ✅ יצירת Map פעם אחת - O(n) במקום O(n²)
+    const existingForecastMap = new Map();
+    (forecastData.sales_forecast_onetime || []).forEach(f => {
+      if (f.service_name) {
+        existingForecastMap.set(f.service_name, f);
+      }
+    });
+    
+    // ✅ עכשיו map הוא O(n) במקום O(n²)
+    return forecastData.services.map((service) => {
+      const existing = existingForecastMap.get(service.service_name);
+      return existing || {
         service_name: service.service_name,
         planned_monthly_quantities: Array(12).fill(0),
         actual_monthly_quantities: Array(12).fill(0),
@@ -58,6 +65,10 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
   // ✅ Pagination למניעת קפיאה בקטלוגים גדולים
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 50; // הצג 50 מוצרים בכל פעם
+  
+  // ✅ Pagination של קטגוריות למניעת קריסה עם קטלוגים גדולים
+  const [categoryPage, setCategoryPage] = useState(1);
+  const CATEGORIES_PER_PAGE = 5; // הצג 5 קטגוריות בכל פעם
   
   // ✅ Virtual scrolling configuration (for future use)
   const LARGE_CATALOG_THRESHOLD = 100;
@@ -1006,19 +1017,59 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
               </div>
 
               {viewMode === 'category' ? (
-            // תצוגה לפי קטגוריות עם lazy loading
+            // ✅ תצוגה לפי קטגוריות עם pagination למניעת קריסה
             <div className="space-y-4">
-              {Object.entries(categorizedServices).map(([categoryName, { services, startIndex }]) => (
-                <ServiceCategoryGroup
-                  key={categoryName}
-                  categoryName={categoryName}
-                  services={services}
-                  salesData={salesForecast}
-                  monthNames={monthNames}
-                  onUpdateQuantity={updateQuantity}
-                  startIndex={startIndex}
-                />
-              ))}
+              {(() => {
+                const categoryEntries = Object.entries(categorizedServices);
+                const totalCategories = categoryEntries.length;
+                const startCategoryIdx = (categoryPage - 1) * CATEGORIES_PER_PAGE;
+                const endCategoryIdx = startCategoryIdx + CATEGORIES_PER_PAGE;
+                const displayedCategories = categoryEntries.slice(startCategoryIdx, endCategoryIdx);
+                const totalPages = Math.ceil(totalCategories / CATEGORIES_PER_PAGE);
+                
+                return (
+                  <>
+                    {displayedCategories.map(([categoryName, { services, startIndex }]) => (
+                      <ServiceCategoryGroup
+                        key={categoryName}
+                        categoryName={categoryName}
+                        services={services}
+                        salesData={salesForecast}
+                        monthNames={monthNames}
+                        onUpdateQuantity={updateQuantity}
+                        startIndex={startIndex}
+                      />
+                    ))}
+                    
+                    {/* Pagination controls */}
+                    {totalCategories > CATEGORIES_PER_PAGE && (
+                      <div className="flex items-center justify-center gap-4 pt-4 border-t border-horizon">
+                        <Button
+                          onClick={() => setCategoryPage(p => Math.max(1, p - 1))}
+                          disabled={categoryPage === 1}
+                          variant="outline"
+                          className="border-horizon text-horizon-text"
+                        >
+                          <ChevronRight className="w-4 h-4 ml-2" />
+                          קודם
+                        </Button>
+                        <span className="text-horizon-text">
+                          עמוד {categoryPage} מתוך {totalPages} ({totalCategories} קטגוריות)
+                        </span>
+                        <Button
+                          onClick={() => setCategoryPage(p => Math.min(totalPages, p + 1))}
+                          disabled={categoryPage >= totalPages}
+                          variant="outline"
+                          className="border-horizon text-horizon-text"
+                        >
+                          הבא
+                          <ChevronLeft className="w-4 h-4 mr-2" />
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           ) : viewMode === 'virtual' ? (
             // ✅ Virtual Scrolling לקטלוגים גדולים

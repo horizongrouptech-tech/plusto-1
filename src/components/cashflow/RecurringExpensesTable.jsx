@@ -78,8 +78,13 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
     enabled: !!customer?.email
   });
 
-  // אתחול מצב השיוכים
+  // ✅ אתחול מצב השיוכים - מתעדכן גם כשטוענים את הנתונים מחדש
   React.useEffect(() => {
+    if (!recurringExpenses || recurringExpenses.length === 0) {
+      setLinkStatus({});
+      return;
+    }
+    
     const initialStatus = {};
     recurringExpenses.forEach(expense => {
       if (expense.date_range_start && !lastCalcDate) {
@@ -94,8 +99,9 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
         };
       });
     });
+    // ✅ תמיד מעדכן את linkStatus כדי לוודא שהתצוגה מעודכנת גם כשנכנסים ויוצאים מהתזרים
     setLinkStatus(initialStatus);
-  }, [recurringExpenses]);
+  }, [recurringExpenses, availableForecasts]); // ✅ הוספת availableForecasts כדי לעדכן כשהתחזיות משתנות
 
   // עדכון הוצאות קבועות ידני
   const handleRecalculate = async () => {

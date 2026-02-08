@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { generateGoalsHTML } from '../shared/generateGoalsHTML';
 import { openPrintWindow } from '../shared/printUtils';
 import GoalTemplateSelector from '../trial/GoalTemplateSelector';
+import { useUsers } from '../shared/UsersContext';
 
 export default function CustomerGoalsGantt({ customer }) {
     const [goals, setGoals] = useState([]);
@@ -165,6 +166,9 @@ export default function CustomerGoalsGantt({ customer }) {
         }
     };
 
+    // ✅ טעינת כל המשתמשים (עובדים, שותפים וכו') דרך UsersContext
+    const { allUsers = [] } = useUsers();
+    
     const assignableUsers = useMemo(() => {
         if (!currentUser || !customer) return [];
         
@@ -181,8 +185,20 @@ export default function CustomerGoalsGantt({ customer }) {
             });
         }
         
+        // ✅ הוספת כל המשתמשים מהמערכת (עובדים, שותפים וכו')
+        // סינון משתמשים שכבר קיימים ברשימה
+        const existingEmails = new Set(users.map(u => u.email));
+        allUsers.forEach(user => {
+            if (!existingEmails.has(user.email) && user.email && user.full_name) {
+                users.push({
+                    email: user.email,
+                    full_name: user.full_name
+                });
+            }
+        });
+        
         return users;
-    }, [currentUser, customer, financialManager]);
+    }, [currentUser, customer, financialManager, allUsers]);
 
     const summaryStats = useMemo(() => {
         const allSubtasks = Object.values(subtasksByGoal).flat();

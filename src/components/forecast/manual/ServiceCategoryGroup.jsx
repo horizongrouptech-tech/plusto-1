@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,15 +31,24 @@ export default function ServiceCategoryGroup({
   
   const hasMore = currentPage < totalPages;
 
-  // חישוב סטטיסטיקות הקטגוריה
-  const calculateCategoryStats = () => {
+  // ✅ Memoization של חישוב סטטיסטיקות הקטגוריה - רק כשהנתונים משתנים
+  const stats = useMemo(() => {
     let totalPlannedRevenue = 0;
     let totalActualRevenue = 0;
     let totalPlannedQuantity = 0;
     let totalActualQuantity = 0;
 
-    services.forEach((service, serviceIdx) => {
-      const serviceData = salesData[startIndex + serviceIdx];
+    // ✅ יצירת Map למהירות חיפוש - O(1) במקום O(n)
+    const salesDataMap = new Map();
+    salesData.forEach((data) => {
+      if (data && data.service_name) {
+        salesDataMap.set(data.service_name, data);
+      }
+    });
+
+    services.forEach((service) => {
+      // ✅ חיפוש לפי service_name במקום startIndex - יותר מדויק
+      const serviceData = salesDataMap.get(service.service_name);
       if (serviceData && serviceData.planned_monthly_revenue && serviceData.actual_monthly_revenue) {
         totalPlannedRevenue += (serviceData.planned_monthly_revenue || []).reduce((sum, val) => sum + (val || 0), 0);
         totalActualRevenue += (serviceData.actual_monthly_revenue || []).reduce((sum, val) => sum + (val || 0), 0);
@@ -70,9 +79,7 @@ export default function ServiceCategoryGroup({
       avgMargin,
       productCount: services.length
     };
-  };
-
-  const stats = calculateCategoryStats();
+  }, [services, salesData]); // ✅ רק כשהנתונים משתנים
   
   const handleLoadMore = () => {
     setIsLoadingMore(true);
@@ -189,11 +196,15 @@ export default function ServiceCategoryGroup({
           )}
           
           {displayedServices.map((service, serviceIdx) => {
-            const serviceData = salesData[startIndex + serviceIdx];
+            // ✅ חיפוש לפי service_name במקום startIndex - יותר מדויק ואמין
+            const serviceData = salesData.find(s => s.service_name === service.service_name);
             if (!serviceData) return null;
 
+            // ✅ מצא את האינדקס הנכון ב-salesForecast לעדכון
+            const actualIndex = salesData.findIndex(s => s.service_name === service.service_name);
+
             return (
-              <div key={serviceIdx} className="bg-horizon-card/20 border border-horizon rounded-lg p-4">
+              <div key={service.service_name || serviceIdx} className="bg-horizon-card/20 border border-horizon rounded-lg p-4">
                 <h4 className="font-semibold text-horizon-text mb-3 flex items-center gap-2">
                   <Package className="w-4 h-4 text-horizon-primary" />
                   {service.service_name}
@@ -242,8 +253,8 @@ export default function ServiceCategoryGroup({
                           type="number"
                           value={serviceData?.planned_monthly_quantities?.[monthIndex] ?? ''}
                           onChange={(e) => {
-                            if (serviceData) {
-                              onUpdateQuantity(startIndex + serviceIdx, monthIndex, 'planned', e.target.value);
+                            if (serviceData && actualIndex !== -1) {
+                              onUpdateQuantity(actualIndex, monthIndex, 'planned', e.target.value);
                             }
                           }}
                           className="bg-horizon-card border-blue-400/30 text-horizon-text text-sm h-8"
@@ -261,8 +272,8 @@ export default function ServiceCategoryGroup({
                           type="number"
                           value={serviceData?.actual_monthly_quantities?.[monthIndex] ?? ''}
                           onChange={(e) => {
-                            if (serviceData) {
-                              onUpdateQuantity(startIndex + serviceIdx, monthIndex, 'actual', e.target.value);
+                            if (serviceData && actualIndex !== -1) {
+                              onUpdateQuantity(actualIndex, monthIndex, 'actual', e.target.value);
                             }
                           }}
                           className="bg-horizon-card border-green-400/30 text-horizon-text text-sm h-8"
