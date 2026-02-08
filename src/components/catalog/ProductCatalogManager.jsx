@@ -157,20 +157,20 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     setCatalogStats(stats);
   }, []);
 
-  const [hasMoreProducts, setHasMoreProducts] = useState(false);
-  const [loadedProductsCount, setLoadedProductsCount] = useState(100);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
   const PRODUCTS_PER_PAGE = 100;
 
-  const loadCatalog = useCallback(async () => {
+  const loadCatalog = useCallback(async (pageNum = 1) => {
     if (!selectedCatalogId) {
         setIsLoading(false);
         return;
     }
     try {
       setIsLoading(true);
+      const skip = (pageNum - 1) * PRODUCTS_PER_PAGE;
       
-      // טען רק את ה-100 הראשונים
-      const firstBatch = await ProductCatalog.filter(
+      const batch = await ProductCatalog.filter(
         {
           customer_email: customer.email,
           catalog_id: selectedCatalogId,
@@ -178,26 +178,23 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
         },
         '-created_date',
         PRODUCTS_PER_PAGE,
-        0
+        skip
       );
       
-      setProducts(firstBatch);
-      setFilteredProducts(firstBatch);
-      updateCatalogStats(firstBatch);
+      setProducts(batch);
+      setFilteredProducts(batch);
+      setCurrentPage(pageNum);
       
-      // בדוק אם יש עוד - נשתמש ב-count אם יש
       try {
         const totalCount = await ProductCatalog.count({
           customer_email: customer.email,
           catalog_id: selectedCatalogId,
           is_active: true
         });
-        setHasMoreProducts(totalCount > PRODUCTS_PER_PAGE);
-        setLoadedProductsCount(PRODUCTS_PER_PAGE);
+        setTotalProducts(totalCount);
+        updateCatalogStats(batch);
       } catch (countError) {
-        // אם count לא עובד, נבדוק אם יש עוד לפי הגודל
-        setHasMoreProducts(firstBatch.length === PRODUCTS_PER_PAGE);
-        setLoadedProductsCount(firstBatch.length);
+        console.error("Error counting products:", countError);
       }
     } catch (error) {
       console.error("Error loading catalog:", error);
@@ -206,49 +203,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     }
   }, [customer.email, selectedCatalogId, updateCatalogStats]);
 
-  // פונקציה לטעינת עוד מוצרים
-  const loadMoreProducts = useCallback(async () => {
-    if (!selectedCatalogId || isLoading) return;
-    
-    try {
-      setIsLoading(true);
-      
-      const nextBatch = await ProductCatalog.filter(
-        {
-          customer_email: customer.email,
-          catalog_id: selectedCatalogId,
-          is_active: true
-        },
-        '-created_date',
-        PRODUCTS_PER_PAGE,
-        loadedProductsCount
-      );
-      
-      if (nextBatch.length > 0) {
-        setProducts(prev => [...prev, ...nextBatch]);
-        setFilteredProducts(prev => [...prev, ...nextBatch]);
-        setLoadedProductsCount(prev => prev + nextBatch.length);
-        
-        // בדוק אם יש עוד
-        try {
-          const totalCount = await ProductCatalog.count({
-            customer_email: customer.email,
-            catalog_id: selectedCatalogId,
-            is_active: true
-          });
-          setHasMoreProducts(loadedProductsCount + nextBatch.length < totalCount);
-        } catch (countError) {
-          setHasMoreProducts(nextBatch.length === PRODUCTS_PER_PAGE);
-        }
-      } else {
-        setHasMoreProducts(false);
-      }
-    } catch (error) {
-      console.error("Error loading more products:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [customer.email, selectedCatalogId, loadedProductsCount, isLoading]);
+
 
   const loadCatalogs = useCallback(async () => {
       try {
@@ -303,7 +258,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
               setCleaningResults(process.result_data);
               setIsCleanResultsOpen(true);
             }
-            await loadCatalog();
+            await loadCatalog(1);
           } else if (process?.status === 'failed') {
              const errorMsg = process.error_message || 'תהליך נכשל';
              if (processType === 'upload') setProcessingStatus(`שגיאה: ${errorMsg}`);
@@ -459,6 +414,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
         });
         setIsGenerating(true);
         setGenerationProcessId(process.id);
+        setCurrentPage(1);
       } else {
         setCatalogGenerationProcessId(null);
         setCatalogGenerationStatus(null);
@@ -518,7 +474,8 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
 
   useEffect(() => {
     if (selectedCatalogId) {
-        loadCatalog();
+        setCurrentPage(1);
+        loadCatalog(1);
         checkForActiveProcesses(); 
         checkForActiveCatalogGeneration();
     } else {
@@ -527,7 +484,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
         updateCatalogStats([]);
         setIsLoading(false);
     }
-  }, [selectedCatalogId, loadCatalog, checkForActiveProcesses, checkForActiveCatalogGeneration, updateCatalogStats, setProducts, setFilteredProducts, setIsLoading]);
+  }, [selectedCatalogId, checkForActiveProcesses, checkForActiveCatalogGeneration, updateCatalogStats]);
 
   useEffect(() => {
     filterProducts();
@@ -563,7 +520,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
   const handleProductUpdate = async (updatedProduct) => {
     try {
       await ProductCatalog.update(updatedProduct.id, updatedProduct);
-      await loadCatalog();
+      await loadCatalog(currentPage);
       setShowEditModal(false);
       setEditingProduct(null);
     } catch (error) {
@@ -576,7 +533,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     if (!confirm("האם אתה בטוח שברצונך למחוק את המוצר?")) return;
     try {
       await ProductCatalog.update(productId, { is_active: false });
-      await loadCatalog();
+      await loadCatalog(currentPage);
     } catch (error) {
       console.error("Error deleting product:", error);
       alert("שגיאה במחיקת המוצר");
@@ -1207,15 +1164,73 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                 </Card>
 
                 <ProductCatalogTable
-                  products={filteredProducts}
-                  onEdit={(product) => {
-                    setEditingProduct(product);
-                    setShowEditModal(true);
-                  }}
-                  onDelete={handleProductDelete}
-                  isAdmin={isAdmin}
-                  disableActions={disableAllActions}
-                />
+                   products={filteredProducts}
+                   onEdit={(product) => {
+                     setEditingProduct(product);
+                     setShowEditModal(true);
+                   }}
+                   onDelete={handleProductDelete}
+                   isAdmin={isAdmin}
+                   disableActions={disableAllActions}
+                 />
+
+                {/* Pagination Controls */}
+                <Card className="card-horizon">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="text-sm text-horizon-accent">
+                        {totalProducts > 0 ? (
+                          <>
+                            מוצרים {((currentPage - 1) * PRODUCTS_PER_PAGE) + 1}-{Math.min(currentPage * PRODUCTS_PER_PAGE, totalProducts)} מתוך {totalProducts}
+                          </>
+                        ) : (
+                          'לא נמצאו מוצרים'
+                        )}
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => loadCatalog(1)}
+                          disabled={currentPage === 1 || isLoading || disableAllActions}
+                          className="border-horizon text-horizon-text"
+                        >
+                          ראשון
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => loadCatalog(currentPage - 1)}
+                          disabled={currentPage === 1 || isLoading || disableAllActions}
+                          className="border-horizon text-horizon-text"
+                        >
+                          הקודם
+                        </Button>
+                        <span className="px-4 text-sm font-medium text-horizon-text">
+                          דף {currentPage} מתוך {Math.ceil(totalProducts / PRODUCTS_PER_PAGE) || 1}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => loadCatalog(currentPage + 1)}
+                          disabled={currentPage >= Math.ceil(totalProducts / PRODUCTS_PER_PAGE) || isLoading || disableAllActions}
+                          className="border-horizon text-horizon-text"
+                        >
+                          הבא
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => loadCatalog(Math.ceil(totalProducts / PRODUCTS_PER_PAGE))}
+                          disabled={currentPage >= Math.ceil(totalProducts / PRODUCTS_PER_PAGE) || isLoading || disableAllActions}
+                          className="border-horizon text-horizon-text"
+                        >
+                          אחרון
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             )}
           </TabsContent>
