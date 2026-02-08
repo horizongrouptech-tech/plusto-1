@@ -738,7 +738,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
             setCatalogGenerationStatus(null);
             setIsGenerating(false);
             setGenerationProcessId(null);
-            loadCatalog();
+            loadCatalog(1);
           }, 3000);
         }
       } else {
