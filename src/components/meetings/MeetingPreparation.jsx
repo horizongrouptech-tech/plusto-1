@@ -3,15 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { 
   ClipboardList, Calendar, CheckCircle2, Circle, AlertCircle,
   FileText, Target, Loader2, ChevronDown, ChevronUp, ListChecks,
-  Clock, TrendingUp, AlertTriangle, ArrowLeft, Plus, RefreshCw
+  Clock, TrendingUp, AlertTriangle, ArrowLeft, Plus, RefreshCw, Zap
 } from 'lucide-react';
 import { format, formatDistanceToNow, differenceInDays, isAfter } from 'date-fns';
 import { he } from 'date-fns/locale';
+import SystemCredentialsForm from './SystemCredentialsForm';
+import ProductCatalogSection from './ProductCatalogSection';
 
 // משימות דפולטיביות לפגישה ראשונה
 const DEFAULT_FIRST_MEETING_TASKS = [
@@ -39,6 +41,8 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
   const [expandedSections, setExpandedSections] = useState(['previousMeeting', 'tasks', 'checklist', 'alerts']);
   const [checkedTasks, setCheckedTasks] = useState({});
   const [isMarkingFirstMeeting, setIsMarkingFirstMeeting] = useState(false);
+  const [preparationModal, setPreparationModal] = useState(null);
+  const [isLoadingPreparation, setIsLoadingPreparation] = useState(false);
 
   // בדיקה אם יש פגישה ראשונה (לפי סוג הפגישה או אם אין פגישות בכלל)
   const hasFirstMeeting = meetings.some(m => m.meeting_type === 'first');
@@ -157,6 +161,22 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
     }));
   };
 
+  // Generate Financial Manager Preparation (Issue #6)
+  const handleGeneratePreparation = async () => {
+    setIsLoadingPreparation(true);
+    try {
+      const response = await base44.functions.invoke('generateFinancialManagerPreparation', {
+        customerEmail: customer.email
+      });
+      setPreparationModal(response);
+    } catch (error) {
+      console.error('Error generating preparation:', error);
+      alert('שגיאה בייצור הכנה. אנא נסו שוב.');
+    } finally {
+      setIsLoadingPreparation(false);
+    }
+  };
+
   const getStatusBadge = (status) => {
     const statusConfig = {
       open: { label: 'פתוח', className: 'bg-gray-500/20 text-gray-400 border-gray-500/50' },
@@ -267,6 +287,38 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
           )}
         </Card>
 
+        {/* System Credentials Section (Issue #7) */}
+        <SystemCredentialsForm customer={customer} onClose={() => {}} />
+
+        {/* Product Catalog Section (Issue #8) */}
+        <ProductCatalogSection customer={customer} />
+
+        {/* Financial Manager Preparation Button (Issue #6) */}
+        <Card className="card-horizon bg-gradient-to-l from-blue-500/10 to-transparent">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-semibold text-horizon-text text-sm">הכנה למנהל כלכלי</h4>
+                <p className="text-xs text-horizon-accent mt-1">הכן סיכום פעילויות וניתוח לפגישה הקרובה</p>
+              </div>
+              <Button
+                onClick={handleGeneratePreparation}
+                disabled={isLoadingPreparation}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isLoadingPreparation ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4 ml-2" />
+                    הכן עכשיו
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* כפתור יצירת סיכום */}
         <Card className="card-horizon bg-gradient-to-l from-horizon-primary/10 to-transparent">
           <CardContent className="p-4">
@@ -281,9 +333,71 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
             </div>
           </CardContent>
         </Card>
-      </div>
-    );
-  }
+
+        {/* Preparation Modal (Issue #6) */}
+        {preparationModal && (
+          <Card className="card-horizon bg-gradient-to-l from-purple-500/10 to-transparent border-l-4 border-l-purple-500">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-horizon-text">הכנת מנהל כלכלי</CardTitle>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setPreparationModal(null)}
+                  className="text-horizon-accent"
+                >
+                  סגור
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-3 bg-horizon-card/50 rounded-lg">
+                <h4 className="font-semibold text-horizon-text mb-2">📋 סיכום פעילויות</h4>
+                <p className="text-sm text-horizon-accent">{preparationModal.executive_summary}</p>
+              </div>
+
+              {preparationModal.open_tasks_summary?.total_count > 0 && (
+                <div className="p-3 bg-horizon-card/50 rounded-lg">
+                  <h4 className="font-semibold text-horizon-text mb-2">
+                    📌 {preparationModal.open_tasks_summary.total_count} משימות פתוחות
+                  </h4>
+                  <ul className="text-sm text-horizon-accent space-y-1">
+                    {preparationModal.open_tasks_summary.tasks?.slice(0, 5).map((t, i) => (
+                      <li key={i}>• {t.name} ({t.status})</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {preparationModal.recent_progress?.tasks?.length > 0 && (
+                <div className="p-3 bg-horizon-card/50 rounded-lg">
+                  <h4 className="font-semibold text-horizon-text mb-2">
+                    ✅ {preparationModal.recent_progress.completed_this_month} משימות הושלמו
+                  </h4>
+                  <ul className="text-sm text-horizon-accent space-y-1">
+                    {preparationModal.recent_progress.tasks?.map((t, i) => (
+                      <li key={i}>• {t.name}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {preparationModal.discussion_points?.length > 0 && (
+                <div className="p-3 bg-horizon-card/50 rounded-lg">
+                  <h4 className="font-semibold text-horizon-text mb-2">💬 נקודות דיון</h4>
+                  <ul className="text-sm text-horizon-accent space-y-1">
+                    {preparationModal.discussion_points.map((p, i) => (
+                      <li key={i}>• <strong>{p.topic}:</strong> {p.detail}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        </div>
+        );
+        }
 
   // טעינת נתונים דינמיים לפגישה החוזרת
   const { data: cashflowData } = useQuery({

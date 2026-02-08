@@ -19,7 +19,25 @@ const RiskScore = ({ score }) => {
 };
 
 export default function CreditReportViewer({ isOpen, onClose, reportData }) {
-    if (!reportData || !isOpen) return null;
+    if (!isOpen) return null;
+
+    if (!reportData) {
+        return (
+            <Dialog open={isOpen} onOpenChange={onClose}>
+                <DialogContent className="max-w-2xl bg-horizon-dark text-horizon-text border-horizon" dir="rtl">
+                    <DialogHeader>
+                        <DialogTitle className="text-red-400">שגיאה בטעינת דוח אשראי</DialogTitle>
+                        <DialogDescription className="text-horizon-accent">
+                            לא ניתן לטעון את נתוני דוח האשראי. נסה שוב או פנה לתמיכה.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button onClick={onClose} variant="outline">סגור</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        );
+    }
 
     // Handle multiple formats: ai_insights (new), parsed_data (stringified), or direct object (legacy)
     let data;

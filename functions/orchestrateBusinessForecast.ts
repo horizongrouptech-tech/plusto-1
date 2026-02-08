@@ -1,5 +1,4 @@
-
-import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 // פונקציית עזר לחישוב סכום חודשי
 const getMonthlyAmount = (item, monthIndex) => {
@@ -278,13 +277,19 @@ Deno.serve(async (req) => {
         });
         
         try {
-            const salesResponse = await base44.asServiceRole.functions.invoke('generateSalesForecastAI', { 
-                customer_email, 
-                user, 
-                forecastType, 
-                strategicInput,
-                services_data 
-            });
+            const AI_CALL_TIMEOUT = 90000; // 90 seconds
+            const salesResponse = await Promise.race([
+                base44.asServiceRole.functions.invoke('generateSalesForecastAI', { 
+                    customer_email, 
+                    user, 
+                    forecastType, 
+                    strategicInput,
+                    services_data 
+                }),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('תחזית מכירות AI - הזמן הקצוב עבר, נסה שוב')), AI_CALL_TIMEOUT)
+                )
+            ]);
             
             console.log('Sales forecast response:', {
                 hasData: !!salesResponse?.data,
@@ -315,12 +320,18 @@ Deno.serve(async (req) => {
         });
         
         try {
-            const employeeResponse = await base44.asServiceRole.functions.invoke('generateEmployeeForecastAI', { 
-                customer_email, 
-                user, 
-                forecastType, 
-                strategicInput 
-            });
+            const AI_CALL_TIMEOUT = 90000;
+            const employeeResponse = await Promise.race([
+                base44.asServiceRole.functions.invoke('generateEmployeeForecastAI', { 
+                    customer_email, 
+                    user, 
+                    forecastType, 
+                    strategicInput 
+                }),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('תחזית עובדים AI - הזמן הקצוב עבר, נסה שוב')), AI_CALL_TIMEOUT)
+                )
+            ]);
             
             console.log('Employee forecast response:', {
                 hasData: !!employeeResponse?.data,
@@ -351,12 +362,18 @@ Deno.serve(async (req) => {
         });
         
         try {
-            const expenseResponse = await base44.asServiceRole.functions.invoke('generateExpenseForecastAI', { 
-                customer_email, 
-                user, 
-                forecastType, 
-                strategicInput 
-            });
+            const AI_CALL_TIMEOUT = 90000;
+            const expenseResponse = await Promise.race([
+                base44.asServiceRole.functions.invoke('generateExpenseForecastAI', { 
+                    customer_email, 
+                    user, 
+                    forecastType, 
+                    strategicInput 
+                }),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('תחזית הוצאות AI - הזמן הקצוב עבר, נסה שוב')), AI_CALL_TIMEOUT)
+                )
+            ]);
             
             console.log('Expense forecast response:', {
                 hasData: !!expenseResponse?.data,

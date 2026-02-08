@@ -244,42 +244,59 @@ export default function MobileDashboard({ currentUser, onLogout }) {
       const customerEmails = myCustomers.map(c => c.email);
       if (customerEmails.length === 0) return [];
       
-      const summaries = await Promise.all(
-        customerEmails.map(async (email) => {
-          try {
-            const cashflow = await base44.entities.CashFlow?.filter({
-              customer_email: email
-            }, '-date') || [];
-            
-            if (cashflow.length === 0) return null;
-            
-            // חישוב יתרה מצטברת
-            let balance = 0;
-            const sorted = [...cashflow].sort((a, b) => new Date(a.date) - new Date(b.date));
-            sorted.forEach(cf => {
-              balance += (cf.credit || 0) - (cf.debit || 0);
-            });
-            
-            const totalCredit = cashflow.reduce((sum, cf) => sum + (cf.credit || 0), 0);
-            const totalDebit = cashflow.reduce((sum, cf) => sum + (cf.debit || 0), 0);
-            
-            return {
-              customer_email: email,
-              balance,
-              totalCredit,
-              totalDebit,
-              entries: cashflow.length,
-              lastEntryDate: cashflow[0]?.date
-            };
-          } catch (e) {
-            return null;
+      try {
+        // ✅ FIX: טען את כל הרשומות בבת אחת במקום קריאה לכל לקוח בנפרד
+        const allCashflow = await base44.entities.CashFlow?.filter({
+          customer_email: { $in: customerEmails }
+        }, '-date') || [];
+        
+        // חישוב סיכומים לכל לקוח
+        const summaryMap = new Map();
+        
+        customerEmails.forEach(email => {
+          summaryMap.set(email, {
+            customer_email: email,
+            balance: 0,
+            totalCredit: 0,
+            totalDebit: 0,
+            entries: 0,
+            lastEntryDate: null,
+            allEntries: []
+          });
+        });
+        
+        // מיון וסיכום
+        allCashflow.forEach(cf => {
+          const summary = summaryMap.get(cf.customer_email);
+          if (summary) {
+            summary.allEntries.push(cf);
+            summary.totalCredit += (cf.credit || 0);
+            summary.totalDebit += (cf.debit || 0);
+            summary.entries += 1;
           }
-        })
-      );
-      
-      return summaries.filter(s => s !== null);
+        });
+        
+        // חישוב יתרות
+        summaryMap.forEach(summary => {
+          if (summary.allEntries.length > 0) {
+            const sorted = summary.allEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
+            sorted.forEach(cf => {
+              summary.balance += (cf.credit || 0) - (cf.debit || 0);
+            });
+            summary.lastEntryDate = sorted[sorted.length - 1]?.date;
+            delete summary.allEntries; // מחק את הרשומות המלאות לחיסכון בזיכרון
+          }
+        });
+        
+        return Array.from(summaryMap.values()).filter(s => s.entries > 0);
+      } catch (error) {
+        console.error('Error loading cashflow summary:', error);
+        return [];
+      }
     },
-    enabled: !!currentUser?.email && myCustomers.length > 0
+    enabled: !!currentUser?.email && myCustomers.length > 0,
+    staleTime: 5 * 60 * 1000, // Cache למשך 5 דקות
+    cacheTime: 10 * 60 * 1000
   });
 
   // חישוב סיכום תזרים כללי

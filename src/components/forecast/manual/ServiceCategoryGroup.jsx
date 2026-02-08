@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronDown, ChevronUp, TrendingUp, DollarSign, Percent, ShoppingCart, Package } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { ChevronDown, ChevronUp, TrendingUp, DollarSign, Percent, ShoppingCart, Package, Loader2, AlertCircle } from 'lucide-react';
 import { formatCurrency, formatNumber } from './utils/numberFormatter';
 
 export default function ServiceCategoryGroup({ 
@@ -14,7 +15,21 @@ export default function ServiceCategoryGroup({
   onUpdateQuantity,
   startIndex 
 }) {
+  const PRODUCTS_PER_PAGE = 50;
+  const LARGE_CATEGORY_THRESHOLD = 100;
+  
   const [isExpanded, setIsExpanded] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  
+  const isLargeCategory = services.length > LARGE_CATEGORY_THRESHOLD;
+  const totalPages = Math.ceil(services.length / PRODUCTS_PER_PAGE);
+  const displayedServices = useMemo(() => {
+    if (!isLargeCategory) return services;
+    return services.slice(0, currentPage * PRODUCTS_PER_PAGE);
+  }, [services, currentPage, isLargeCategory]);
+  
+  const hasMore = currentPage < totalPages;
 
   // חישוב סטטיסטיקות הקטגוריה
   const calculateCategoryStats = () => {
@@ -25,11 +40,11 @@ export default function ServiceCategoryGroup({
 
     services.forEach((service, serviceIdx) => {
       const serviceData = salesData[startIndex + serviceIdx];
-      if (serviceData) {
-        totalPlannedRevenue += serviceData.planned_monthly_revenue.reduce((sum, val) => sum + val, 0);
-        totalActualRevenue += serviceData.actual_monthly_revenue.reduce((sum, val) => sum + val, 0);
-        totalPlannedQuantity += serviceData.planned_monthly_quantities.reduce((sum, val) => sum + val, 0);
-        totalActualQuantity += serviceData.actual_monthly_quantities.reduce((sum, val) => sum + val, 0);
+      if (serviceData && serviceData.planned_monthly_revenue && serviceData.actual_monthly_revenue) {
+        totalPlannedRevenue += (serviceData.planned_monthly_revenue || []).reduce((sum, val) => sum + (val || 0), 0);
+        totalActualRevenue += (serviceData.actual_monthly_revenue || []).reduce((sum, val) => sum + (val || 0), 0);
+        totalPlannedQuantity += (serviceData.planned_monthly_quantities || []).reduce((sum, val) => sum + (val || 0), 0);
+        totalActualQuantity += (serviceData.actual_monthly_quantities || []).reduce((sum, val) => sum + (val || 0), 0);
       }
     });
 
@@ -58,6 +73,15 @@ export default function ServiceCategoryGroup({
   };
 
   const stats = calculateCategoryStats();
+  
+  const handleLoadMore = () => {
+    setIsLoadingMore(true);
+    // Simulate async loading
+    setTimeout(() => {
+      setCurrentPage(prev => prev + 1);
+      setIsLoadingMore(false);
+    }, 100);
+  };
 
   return (
     <Card className="card-horizon">
@@ -78,9 +102,19 @@ export default function ServiceCategoryGroup({
               <CardTitle className="text-xl text-horizon-text flex items-center gap-2">
                 <ShoppingCart className="w-5 h-5 text-horizon-primary" />
                 {categoryName || 'ללא קטגוריה'}
+                {isLargeCategory && (
+                  <Badge variant="outline" className="text-xs border-orange-500 text-orange-400">
+                    קטגוריה גדולה
+                  </Badge>
+                )}
               </CardTitle>
-              <p className="text-sm text-horizon-accent mt-1">
+              <p className="text-sm text-horizon-accent mt-1 flex items-center gap-2">
                 {stats.productCount} מוצרים/שירותים
+                {isExpanded && isLargeCategory && (
+                  <span className="text-blue-400">
+                    (מציג {displayedServices.length} מתוך {services.length})
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -143,7 +177,18 @@ export default function ServiceCategoryGroup({
 
       {isExpanded && (
         <CardContent className="space-y-4 pt-4 border-t border-horizon">
-          {services.map((service, serviceIdx) => {
+          {isLargeCategory && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-4">
+              <div className="flex items-center gap-2 text-yellow-400">
+                <AlertCircle className="w-4 h-4" />
+                <span className="text-sm">
+                  קטגוריה גדולה - מוצרים נטענים בהדרגה ({displayedServices.length}/{services.length})
+                </span>
+              </div>
+            </div>
+          )}
+          
+          {displayedServices.map((service, serviceIdx) => {
             const serviceData = salesData[startIndex + serviceIdx];
             if (!serviceData) return null;
 
@@ -195,13 +240,17 @@ export default function ServiceCategoryGroup({
                         <Label className="text-[10px] text-blue-400">תכנון</Label>
                         <Input
                           type="number"
-                          value={serviceData.planned_monthly_quantities[monthIndex]}
-                          onChange={(e) => onUpdateQuantity(startIndex + serviceIdx, monthIndex, 'planned', e.target.value)}
+                          value={serviceData?.planned_monthly_quantities?.[monthIndex] ?? ''}
+                          onChange={(e) => {
+                            if (serviceData) {
+                              onUpdateQuantity(startIndex + serviceIdx, monthIndex, 'planned', e.target.value);
+                            }
+                          }}
                           className="bg-horizon-card border-blue-400/30 text-horizon-text text-sm h-8"
                           placeholder="0"
                         />
                         <div className="text-[10px] text-blue-400 text-center">
-                          {formatCurrency(serviceData.planned_monthly_revenue[monthIndex], 0)}
+                          {formatCurrency(serviceData?.planned_monthly_revenue?.[monthIndex] ?? 0, 0)}
                         </div>
                       </div>
 
@@ -210,13 +259,17 @@ export default function ServiceCategoryGroup({
                         <Label className="text-[10px] text-green-400">ביצוע</Label>
                         <Input
                           type="number"
-                          value={serviceData.actual_monthly_quantities[monthIndex]}
-                          onChange={(e) => onUpdateQuantity(startIndex + serviceIdx, monthIndex, 'actual', e.target.value)}
+                          value={serviceData?.actual_monthly_quantities?.[monthIndex] ?? ''}
+                          onChange={(e) => {
+                            if (serviceData) {
+                              onUpdateQuantity(startIndex + serviceIdx, monthIndex, 'actual', e.target.value);
+                            }
+                          }}
                           className="bg-horizon-card border-green-400/30 text-horizon-text text-sm h-8"
                           placeholder="0"
                         />
                         <div className="text-[10px] text-green-400 text-center">
-                          {formatCurrency(serviceData.actual_monthly_revenue[monthIndex], 0)}
+                          {formatCurrency(serviceData?.actual_monthly_revenue?.[monthIndex] ?? 0, 0)}
                         </div>
                       </div>
                     </div>
@@ -225,6 +278,29 @@ export default function ServiceCategoryGroup({
               </div>
             );
           })}
+          
+          {isLargeCategory && hasMore && (
+            <div className="flex justify-center pt-4">
+              <Button
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                variant="outline"
+                className="border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10"
+              >
+                {isLoadingMore ? (
+                  <>
+                    <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                    טוען...
+                  </>
+                ) : (
+                  <>
+                    טען עוד {Math.min(PRODUCTS_PER_PAGE, services.length - displayedServices.length)} מוצרים
+                    ({services.length - displayedServices.length} נותרו)
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </CardContent>
       )}
     </Card>

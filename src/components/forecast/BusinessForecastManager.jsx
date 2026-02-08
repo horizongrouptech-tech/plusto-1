@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -101,7 +100,19 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
   const [employees, setEmployees] = useState([]); // Combined global and planned employees
   const [detailedExpenses, setDetailedExpenses] = useState({ marketing_sales: [], admin_general: [] });
   const [salesForecastData, setSalesForecastData] = useState({ working_days_per_month: 22, monthly_forecasts: [] });
-  const [summary, setSummary] = useState(null);
+
+  // ✅ FIX #2: Create Map once for fast lookups across component
+  const forecastMap = useMemo(() => {
+    const map = new Map();
+    (salesForecastData?.monthly_forecasts || []).forEach(entry => {
+      map.set(entry.service_name, entry);
+    });
+    return map;
+  }, [salesForecastData?.monthly_forecasts]);
+
+  const servicesMap = useMemo(() => {
+    return new Map((services || []).map(s => [s.service_name, s]));
+  }, [services]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false); // For saving individual forecast data
@@ -119,6 +130,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
   const [error, setError] = useState('');
   const [catalogProducts, setCatalogProducts] = useState([]);
+  const [isLoadingCatalogs, setIsLoadingCatalogs] = useState(false);
 
   // Pagination State
   const [productsCurrentPage, setProductsCurrentPage] = useState(1);
@@ -170,12 +182,12 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
     setDetailedExpenses(forecastObj.detailed_expenses || { marketing_sales: [], admin_general: [] });
 
-    setSummary(forecastObj.profit_loss_summary || null);
+    // ✅ Removed setSummary - now calculated via useMemo
 
     setBusinessPlanText(forecastObj.business_plan_text || "");
     setEditedPlanText(forecastObj.business_plan_text || "");
     setIsCatalogSynced(forecastObj.services_data?.length > 0 && (forecastObj.is_system_generated || forecastObj.synced_from_catalog));
-  }, [setForecast, setForecastNameInput, setServices, setEmployees, setSalesForecastData, setDetailedExpenses, setSummary, setBusinessPlanText, setEditedPlanText, setIsCatalogSynced]);
+  }, []);
 
   const handleSelectForecast = useCallback((forecastObj) => {
     loadForecast(forecastObj);
@@ -247,7 +259,6 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         setEmployees([]);
         setDetailedExpenses({ marketing_sales: [], admin_general: [] });
         setSalesForecastData({ working_days_per_month: 22, monthly_forecasts: [] });
-        setSummary(null);
         setIsCatalogSynced(false);
       }
     } catch (error) {
@@ -256,32 +267,39 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     } finally {
       setIsLoading(false);
     }
-  }, [customer?.email, handleSelectForecast, setForecasts, setForecast, setServices, setEmployees, setDetailedExpenses, setSalesForecastData, setSummary, setIsCatalogSynced, setIsLoading, setError]);
+  }, [customer?.email, handleSelectForecast]);
 
+  // ✅ FIX #10: Fix dependency hell - only load if actually different
   useEffect(() => {
     if (selectedForecastId && forecasts.length > 0) {
-      const forecast = forecasts.find(f => f.id === selectedForecastId);
-      if (forecast) {
-        loadForecast(forecast); // השתמש בפונקציה loadForecast הקיימת
+      const forecastToLoad = forecasts.find(f => f.id === selectedForecastId);
+      if (forecastToLoad && forecastToLoad.id !== forecast?.id) {
+        loadForecast(forecastToLoad);
       }
     } else if (initialForecastData && !selectedForecastId && !forecast && !isLoading) {
-      // אם יש initialForecastData ואין תחזית נבחרת או טעונה, פתח את מודאל היצירה
-      // זה יופעל רק אם אין תחזיות קיימות או לא נבחרה אחת
-      // נשתמש בזה כדי להפעיל את תהליך היצירה החדש
       setShowInitialCreationModal(true);
       setNewForecastNameInput(initialForecastData.forecast_name || '');
       setNewForecastYearInput(initialForecastData.forecast_year || new Date().getFullYear());
     }
-  }, [selectedForecastId, forecasts, initialForecastData, loadForecast, forecast, isLoading]);
+  }, [selectedForecastId, forecasts, initialForecastData]);
+  // ✅ FIX: Only depend on customer.email to prevent infinite loops
   useEffect(() => {
+    if (!customer?.email) return;
+
     loadForecastsList();
     getLatestStrategicInput();
     loadCustomerCatalogs();
     loadCustomerFiles();
 
     const fetchProcesses = async () => {
-      if (customer) {
-        await checkForRunningProcesses(customer.email);
+      if (customer?.email) {
+        const runningProcesses = await ProcessStatus.filter({
+          customer_email: customer.email,
+          status: 'running'
+        });
+        setProcesses(runningProcesses);
+        setRunningProcess(runningProcesses[0] || null);
+        setProcessId(runningProcesses[0]?.id || null);
       }
     };
 
@@ -289,7 +307,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     const intervalId = setInterval(fetchProcesses, 30000);
 
     return () => clearInterval(intervalId);
-  }, [customer, loadForecastsList, getLatestStrategicInput, loadCustomerCatalogs,loadCustomerFiles, checkForRunningProcesses]);
+  }, [customer?.email]);
 
   const calculateEmployeeCosts = useCallback((currentForecast) => {
     let totalSalaries = 0;
@@ -341,12 +359,15 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     const currentDetailedExpenses = detailedExpenses;
     const currentOtherCosts = currentForecastObj.other_costs || { admin_general: 0, marketing_sales: 0, tax_rate: 23 };
 
+    // ✅ FIX #2: Convert to Map for O(1) lookup instead of O(n) find()
+    const servicesMap = new Map((currentServices || []).map(s => [s.service_name, s]));
+
     const totalRevenue = (currentSalesForecastData?.monthly_forecasts || []).reduce((sum, forecastEntry) => {
       const monthlyQuantity = MONTHS.reduce((monthSum, month) => {
         return monthSum + (forecastEntry[month.key] || 0);
       }, 0);
 
-      const serviceItem = (currentServices || []).find(s => s.service_name === forecastEntry.service_name);
+      const serviceItem = servicesMap.get(forecastEntry.service_name);
       return sum + (monthlyQuantity * (serviceItem?.selling_price || 0));
     }, 0);
 
@@ -355,7 +376,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         return monthSum + (forecastEntry[month.key] || 0);
       }, 0);
 
-      const serviceItem = (currentServices || []).find(s => s.service_name === forecastEntry.service_name);
+      const serviceItem = servicesMap.get(forecastEntry.service_name);
       return sum + (monthlyQuantity * (serviceItem?.cost_price || 0));
     }, 0);
 
@@ -455,22 +476,55 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     }
 
     setIsSaving(true);
+    setIsLoadingCatalogs(true);
     try {
       // ✅ תיקון: טעינה מוגבלת של מוצרים (500 ראשונים) למניעת קפיאה
+      // ✅ FIX: Load from specific catalog if selected, otherwise all customer products
       const MAX_PRODUCTS_TO_SYNC = 500;
-      const catalogProducts = await ProductCatalog.filter(
-        {
-          customer_email: customer.email,
-          is_active: true
-        },
-        '-created_date',
-        MAX_PRODUCTS_TO_SYNC,
-        0
-      );
+      let catalogProducts = [];
+      
+      if (selectedCatalogToSync?.id) {
+        // Load from specific catalog only - with limit
+        catalogProducts = await ProductCatalog.filter(
+          {
+            catalog_id: selectedCatalogToSync.id,
+            is_active: true
+          },
+          '-created_date',
+          MAX_PRODUCTS_TO_SYNC,
+          0
+        );
+      } else {
+        // Load from all catalogs - but check catalog count first
+        const customerCatalogs = await Catalog.filter({ customer_email: customer.email });
+        
+        if (customerCatalogs.length > 3) {
+          toast({ 
+            title: "בחר קטלוג ספציפי", 
+            description: `יש לך ${customerCatalogs.length} קטלוגים. אנא בחר קטלוג ספציפי לסנכרון כדי למנוע עומס.`, 
+            variant: "destructive" 
+          });
+          setIsSaving(false);
+          setIsLoadingCatalogs(false);
+          return;
+        }
+        
+        // Load all products (safe for <=3 catalogs) - with limit
+        catalogProducts = await ProductCatalog.filter(
+          {
+            customer_email: customer.email,
+            is_active: true
+          },
+          '-created_date',
+          MAX_PRODUCTS_TO_SYNC,
+          0
+        );
+      }
 
       if (catalogProducts.length === 0) {
         toast({ title: "אין מוצרים", description: "לא נמצאו מוצרים פעילים בקטלוג לסנכרון.", variant: "destructive" });
         setIsSaving(false);
+        setIsLoadingCatalogs(false);
         return;
       }
 
@@ -511,9 +565,10 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
     } catch (error) {
       console.error("Error syncing catalog:", error);
-      toast({ title: "שגיאה בסנכרון", description: "אירעה שגיאה בסנכרון המוצרים מהקטלוג.", variant: "destructive" });
+      toast({ title: "שגיאה בסנכרון", description: error.message || "אירעה שגיאה בסנכרון המוצרים מהקטלוג.", variant: "destructive" });
     } finally {
       setIsSaving(false);
+      setIsLoadingCatalogs(false);
     }
   };
 
@@ -545,24 +600,43 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     }
 
     setIsGenerating(true);
+    setIsLoadingCatalogs(true);
     toast({ title: "מכין תוכנית...", description: "מסנכרן מוצרים מהקטלוג הנבחר.", variant: "default" });
 
     try {
         // ✅ תיקון: טעינה מוגבלת של מוצרים (500 ראשונים) למניעת קפיאה
+        // ✅ FIX: Add retry logic for rate limiting
         const MAX_PRODUCTS_TO_SYNC = 500;
-        const productsToSync = await ProductCatalog.filter(
-          {
-            catalog_id: selectedCatalogToSync.id,
-            is_active: true
-          },
-          '-created_date',
-          MAX_PRODUCTS_TO_SYNC,
-          0
-        );
+        let productsToSync = [];
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        while (retryCount < maxRetries) {
+          try {
+            productsToSync = await ProductCatalog.filter(
+              {
+                catalog_id: selectedCatalogToSync.id,
+                is_active: true
+              },
+              '-created_date',
+              MAX_PRODUCTS_TO_SYNC,
+              0
+            );
+            break; // Success - exit retry loop
+          } catch (error) {
+            if (error.message?.includes('Rate limit') && retryCount < maxRetries - 1) {
+              retryCount++;
+              await new Promise(resolve => setTimeout(resolve, 2000 * retryCount)); // Wait 2s, 4s, 6s
+              continue;
+            }
+            throw error; // Re-throw if not rate limit or max retries reached
+          }
+        }
 
         if (productsToSync.length === 0) {
             toast({ title: "אין מוצרים בקטלוג", description: `הקטלוג שבחרת (${selectedCatalogToSync.catalog_name}) ריק ממוצרים פעילים. אנא העלה מוצרים או בחר קטלוג אחר.`, variant: "destructive" });
             setIsGenerating(false);
+            setIsLoadingCatalogs(false);
             return;
         }
 
@@ -625,6 +699,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         toast({ title: "שגיאה", description: `אירעה שגיאה: ${error.message}. נסה שוב.`, variant: "destructive" });
     } finally {
         setIsGenerating(false);
+        setIsLoadingCatalogs(false);
     }
   };
   const handleServiceChange = (index, field, value) => {
@@ -796,23 +871,22 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     setDetailedExpenses(updatedExpenses);
   };
 
-  const calculateTotals = useCallback(() => {
-    if (!forecast) return;
-    const currentSummary = calculateProfitLoss(forecast);
-    setSummary(currentSummary);
-  }, [forecast, calculateProfitLoss, setSummary]);
-
-  useEffect(() => {
-    calculateTotals();
-  }, [calculateTotals]);
+  // ✅ FIX #1: Replace useEffect + useCallback with useMemo to prevent infinite loops
+  const summary = useMemo(() => {
+    if (!forecast) return null;
+    return calculateProfitLoss(forecast);
+  }, [forecast, calculateProfitLoss]);
 
 
-  const generateSalesChartData = () => {
+  // ✅ FIX #4: Memoize chart data generation
+  const salesChartData = useMemo(() => {
     if (!forecast) return [];
+    const serviceMap = new Map((services || []).map(s => [s.service_name, s]));
+    
     return MONTHS.map(month => {
       const monthlyRevenue = (salesForecastData?.monthly_forecasts || []).reduce((sum, forecastEntry) => {
         const quantity = forecastEntry[month.key] || 0;
-        const service = (services || []).find(s => s.service_name === forecastEntry.service_name);
+        const service = serviceMap.get(forecastEntry.service_name);
         return sum + (quantity * (service?.selling_price || 0));
       }, 0);
 
@@ -821,9 +895,9 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         revenue: monthlyRevenue,
       };
     });
-  };
+  }, [forecast, salesForecastData.monthly_forecasts, services]);
 
-  const generateExpensesPieData = useCallback(() => {
+  const expensesPieData = useMemo(() => {
     if (!summary) return [];
     const { totalSalaries } = calculateEmployeeCosts(forecast);
 
@@ -844,20 +918,21 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     return data;
   }, [summary, forecast, detailedExpenses, calculateEmployeeCosts]);
 
-  const generateProfitabilityData = useCallback(() => {
+  const profitabilityData = useMemo(() => {
     if (!forecast) return [];
     const { monthlyEmployeeCosts } = calculateEmployeeCosts(forecast);
+    const serviceMap = new Map((services || []).map(s => [s.service_name, s]));
 
     return MONTHS.map((month, monthIndex) => {
       const monthlyRevenue = (salesForecastData?.monthly_forecasts || []).reduce((sum, forecastEntry) => {
         const quantity = forecastEntry[month.key] || 0;
-        const service = (services || []).find(s => s.service_name === forecastEntry.service_name);
+        const service = serviceMap.get(forecastEntry.service_name);
         return sum + (quantity * (service?.selling_price || 0));
       }, 0);
 
       const monthlyCogs = (salesForecastData?.monthly_forecasts || []).reduce((sum, forecastEntry) => {
         const quantity = forecastEntry[month.key] || 0;
-        const service = (services || []).find(s => s.service_name === forecastEntry.service_name);
+        const service = serviceMap.get(forecastEntry.service_name);
         return sum + (quantity * (service?.cost_price || 0));
       }, 0);
 
@@ -876,7 +951,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         profit: monthlyProfit
       };
     });
-  }, [forecast, salesForecastData, services, detailedExpenses, calculateEmployeeCosts]);
+  }, [forecast, salesForecastData.monthly_forecasts, services, detailedExpenses, calculateEmployeeCosts]);
 
   const generateForecastVersion = async (forecastType) => {
     if (!forecast) {
@@ -907,15 +982,17 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
           forecast_name: `${forecast.forecast_name} - ${forecastType === 'optimistic' ? 'אופטימית' : 'שמרנית'}`,
           forecast_year: forecast.forecast_year,
           forecastType: forecastType,
-          strategicInput: latestStrategicInput,  // <--- שינוי: העברת האובייקט המלא
+          strategicInput: latestStrategicInput,
           services_data: forecast.services_data,
       });
 
-      if (response.success && response.forecast) {
+      console.log('orchestrateBusinessForecast response:', response);
+
+      if (response?.success === true) {
         toast({ title: "התחזית בהכנה", description: "תהליך יצירת התחזית החל ברקע. תקבל עדכון בסיומו.", variant: "default", });
-        checkForRunningProcesses(customer.email);
+        await checkForRunningProcesses(customer.email);
       } else {
-        throw new Error(response.error || 'Failed to start forecast generation.');
+        throw new Error(response?.error || 'שגיאה ביצירת תחזית - אנא נסה שוב');
       }
     } catch (error) {
       console.error(`Error generating ${forecastType} forecast:`, error);
@@ -1351,7 +1428,9 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
       const { data: response } = await base44.functions.invoke('orchestrateBusinessForecast', forecastPayload); 
 
-      if (response.status === 202) {
+      console.log('orchestrateBusinessForecast response:', response);
+
+      if (response?.success === true) {
         toast({
           title: "התחזית בהכנה",
           description: "תהליך יצירת התחזית החל ברקע. תקבל עדכון בסיומו.",
@@ -1365,9 +1444,9 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         setStrategicInputForGeneration(null);
         setForecastTypeForGeneration(null);
         setInitialForecastDraft(null);
-        checkForRunningProcesses(customer.email);
+        await checkForRunningProcesses(customer.email);
       } else {
-        throw new Error(`Unexpected response status: ${response.status}`);
+        throw new Error(response?.error || 'שגיאה ביצירת תחזית - אנא נסה שוב');
       }
 
     } catch (err) {
@@ -1398,7 +1477,6 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     setEmployees([]);
     setSalesForecastData({ working_days_per_month: 22, monthly_forecasts: [] });
     setDetailedExpenses({ marketing_sales: [], admin_general: [] });
-    setSummary(null);
     setBusinessPlanText("");
     setEditedPlanText("");
     setIsCatalogSynced(false);
@@ -1912,7 +1990,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
                               מגמות מכירות חודשיות
                             </h4>
                             <ResponsiveContainer width="100%" height={200}>
-                              <LineChart data={generateSalesChartData()} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                              <LineChart data={salesChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                                 <XAxis dataKey="month" tick={{ fill: '#9CA3AF', fontSize: 12 }} />
                                 <YAxis tick={{ fill: '#9CA3AF', fontSize: 12 }} formatter={formatCurrency}/>
@@ -1947,7 +2025,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
                               <RechartsPieChart>
                                 <Pie
                                   dataKey="value"
-                                  data={generateExpensesPieData()}
+                                  data={expensesPieData}
                                   cx="50%"
                                   cy="40%"
                                   outerRadius={70}
@@ -1955,7 +2033,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
                                   labelLine={false}
                                   label={false}
                                 >
-                                  {generateExpensesPieData().map((entry, index) => (
+                                  {expensesPieData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.color} />
                                   ))}
                                 </Pie>
@@ -1984,8 +2062,8 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
                                     textAlign: 'center'
                                   }}
                                   formatter={(value, entry) => {
-                                    const data = generateExpensesPieData().find(item => item.name === value);
-                                    const total = generateExpensesPieData().reduce((sum, item) => sum + item.value, 0);
+                                    const data = expensesPieData.find(item => item.name === value);
+                                    const total = expensesPieData.reduce((sum, item) => sum + item.value, 0);
                                     const percentage = data ? ((data.value / total) * 100).toFixed(0) : '0';
                                     return `${value} - ${percentage}%`;
                                   }}
@@ -2029,15 +2107,19 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
                                 </CardTitle>
                                 <div className="flex gap-2">
                                   <TooltipComponent content={isCatalogSynced ? "מוצרים סונכרנו בהצלחה מהקטלוג" : "סנכרן מוצרים מהקטלוג כדי לכלול אותם בתחזית AI"}>
-                                      <Button
-                                        onClick={handleSyncFromCatalog}
-                                        disabled={isSaving || !forecast?.is_editable}
-                                        className={isCatalogSynced ? "bg-green-600 hover:bg-green-700 text-white" : "btn-horizon-primary"}
-                                      >
-                                        <RefreshCw className="w-4 h-4 ml-2" />
-                                        {isCatalogSynced ? "מסונכרן מקטלוג" : "סנכרן מקטלוג קיים"}
-                                        {isCatalogSynced && <span className="mr-1">✅</span>}
-                                      </Button>
+                                     <Button
+                                       onClick={handleSyncFromCatalog}
+                                       disabled={isSaving || isLoadingCatalogs || !forecast?.is_editable}
+                                       className={isCatalogSynced ? "bg-green-600 hover:bg-green-700 text-white" : "btn-horizon-primary"}
+                                     >
+                                       {isLoadingCatalogs ? (
+                                         <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                                       ) : (
+                                         <RefreshCw className="w-4 h-4 ml-2" />
+                                       )}
+                                       {isLoadingCatalogs ? "טוען..." : isCatalogSynced ? "מסונכרן מקטלוג" : "סנכרן מקטלוג קיים"}
+                                       {isCatalogSynced && !isLoadingCatalogs && <span className="mr-1">✅</span>}
+                                     </Button>
                                   </TooltipComponent>
 
                                   <Button onClick={addService} variant="outline" className="border-horizon-accent text-horizon-accent" disabled={!forecast?.is_editable}>
@@ -2245,12 +2327,12 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
                                       </TableRow>
                                     </thead>
                                     <tbody>
-                                      {paginatedServicesForSales.map((service, serviceIndex) => {
-                                        const forecastEntry = (salesForecastData.monthly_forecasts || []).find(f => f.service_name === service.service_name) || {
-                                          service_name: service.service_name,
-                                          ...MONTHS.reduce((acc, month) => ({ ...acc, [month.key]: 0 }), {}),
-                                          total_yearly: 0
-                                        };
+                                     {paginatedServicesForSales.map((service, serviceIndex) => {
+                                       const forecastEntry = forecastMap.get(service.service_name) || {
+                                         service_name: service.service_name,
+                                         ...MONTHS.reduce((acc, month) => ({ ...acc, [month.key]: 0 }), {}),
+                                         total_yearly: 0
+                                       };
 
                                         const totalYearly = MONTHS.reduce((sum, month) => sum + (forecastEntry[month.key] || 0), 0);
                                         const totalRevenue = totalYearly * service.selling_price;
@@ -2319,51 +2401,52 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
                                 </div>
                               )}
 
-                              {(salesForecastData?.monthly_forecasts || []).length > 0 && (
-                                <div className="mt-6 p-4 bg-horizon-card/30 rounded-lg">
-                                  <h4 className="text-horizon-text font-medium mb-3">סיכום תחזית שנתית</h4>
-                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
-                                    <div>
-                                      <div className="text-2xl font-bold text-horizon-text">
-                                        {(salesForecastData?.monthly_forecasts || []).reduce((sum, forecastEntry) =>
-                                          sum + MONTHS.reduce((monthSum, month) => monthSum + (forecastEntry[month.key] || 0), 0), 0
-                                        ).toLocaleString()}
+                              {(salesForecastData?.monthly_forecasts || []).length > 0 && (() => {
+                                // ✅ FIX #3: Pre-calculate all summary stats once
+                                const salesSummary = (salesForecastData?.monthly_forecasts || []).reduce((acc, forecastEntry) => {
+                                  const service = servicesMap.get(forecastEntry.service_name);
+                                  const totalUnits = MONTHS.reduce((sum, month) => sum + (forecastEntry[month.key] || 0), 0);
+                                  
+                                  acc.totalUnits += totalUnits;
+                                  acc.totalRevenue += totalUnits * (service?.selling_price || 0);
+                                  acc.totalCost += totalUnits * (service?.cost_price || 0);
+                                  acc.totalProfit += totalUnits * ((service?.selling_price || 0) - (service?.cost_price || 0));
+                                  
+                                  return acc;
+                                }, { totalUnits: 0, totalRevenue: 0, totalCost: 0, totalProfit: 0 });
+
+                                return (
+                                  <div className="mt-6 p-4 bg-horizon-card/30 rounded-lg">
+                                    <h4 className="text-horizon-text font-medium mb-3">סיכום תחזית שנתית</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+                                      <div>
+                                        <div className="text-2xl font-bold text-horizon-text">
+                                          {salesSummary.totalUnits.toLocaleString()}
+                                        </div>
+                                        <div className="text-sm text-horizon-accent">יחידות שנתיות</div>
                                       </div>
-                                      <div className="text-sm text-horizon-accent">יחידות שנתיות</div>
-                                    </div>
-                                    <div>
-                                      <div className="text-2xl font-bold text-green-400">
-                                        {formatCurrency((salesForecastData?.monthly_forecasts || []).reduce((sum, forecastEntry) => {
-                                          const service = (services || []).find(s => s.service_name === forecastEntry.service_name);
-                                          const totalUnits = MONTHS.reduce((monthSum, month) => monthSum + (forecastEntry[month.key] || 0), 0);
-                                          return sum + (totalUnits * (service?.selling_price || 0));
-                                        }, 0))}
+                                      <div>
+                                        <div className="text-2xl font-bold text-green-400">
+                                          {formatCurrency(salesSummary.totalRevenue)}
+                                        </div>
+                                        <div className="text-sm text-horizon-accent">הכנסות שנתיות</div>
                                       </div>
-                                      <div className="text-sm text-horizon-accent">הכנסות שנתיות</div>
-                                    </div>
-                                    <div>
-                                      <div className="text-2xl font-bold text-blue-400">
-                                        {formatCurrency((salesForecastData?.monthly_forecasts || []).reduce((sum, forecastEntry) => {
-                                          const service = (services || []).find(s => s.service_name === forecastEntry.service_name);
-                                          const totalUnits = MONTHS.reduce((monthSum, month) => monthSum + (forecastEntry[month.key] || 0), 0);
-                                          return sum + (totalUnits * (service?.cost_price || 0));
-                                        }, 0))}
+                                      <div>
+                                        <div className="text-2xl font-bold text-blue-400">
+                                          {formatCurrency(salesSummary.totalCost)}
+                                        </div>
+                                        <div className="text-sm text-horizon-accent">עלות גלם</div>
                                       </div>
-                                      <div className="text-sm text-horizon-accent">עלות גלם</div>
-                                    </div>
-                                    <div>
-                                      <div className="text-2xl font-bold text-yellow-400">
-                                        {formatCurrency((salesForecastData?.monthly_forecasts || []).reduce((sum, forecastEntry) => {
-                                          const service = (services || []).find(s => s.service_name === forecastEntry.service_name);
-                                          const totalUnits = MONTHS.reduce((monthSum, month) => monthSum + (forecastEntry[month.key] || 0), 0);
-                                          return sum + (totalUnits * ((service?.selling_price || 0) - (service?.cost_price || 0)));
-                                        }, 0))}
+                                      <div>
+                                        <div className="text-2xl font-bold text-yellow-400">
+                                          {formatCurrency(salesSummary.totalProfit)}
+                                        </div>
+                                        <div className="text-sm text-horizon-accent">רווח גולמי</div>
                                       </div>
-                                      <div className="text-sm text-horizon-accent">רווח גולמי</div>
                                     </div>
                                   </div>
-                                </div>
-                              )}
+                                );
+                              })()}
                             </CardContent>
                           </Card>
                         </TabsContent>
