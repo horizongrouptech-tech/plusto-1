@@ -514,6 +514,18 @@ function GlobalThemeStyles() {
           scrollbar-color: var(--horizon-border) var(--horizon-dark);
         }
 
+        /* Input fields - Dark mode support */
+        input[type="date"],
+        input[type="time"],
+        input[type="datetime-local"],
+        input[type="number"],
+        input[type="email"],
+        input[type="tel"],
+        input[type="url"],
+        input[type="text"] {
+          color-scheme: dark;
+        }
+
         /* Theme Toggle Button */
         .theme-toggle-btn {
           display: flex;
