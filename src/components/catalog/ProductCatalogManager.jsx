@@ -426,6 +426,29 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     }
   }, [customer?.email, selectedCatalogId, setCatalogGenerationProcessId, setCatalogGenerationStatus, setIsGenerating, setGenerationProcessId]);
 
+  const handleCheckForActiveCatalogGenerationComplete = useCallback(async () => {
+    if (!customer?.email || !selectedCatalogId) return;
+
+    try {
+      const runningProcesses = await ProcessStatus.filter({
+        customer_email: customer.email,
+        catalog_id: selectedCatalogId,
+        process_type: 'catalog_generation',
+        status: 'running',
+      });
+
+      if (runningProcesses.length === 0) {
+        setCatalogGenerationProcessId(null);
+        setCatalogGenerationStatus(null);
+        setIsGenerating(false);
+        setGenerationProcessId(null);
+        setCurrentPage(1);
+      }
+    } catch (error) {
+      console.error("Error checking for active catalog generation completion:", error);
+    }
+  }, [customer?.email, selectedCatalogId, setCatalogGenerationProcessId, setCatalogGenerationStatus, setIsGenerating, setGenerationProcessId]);
+
   const filterProducts = useCallback(() => {
     let filtered = [...products];
     if (searchTerm) {
