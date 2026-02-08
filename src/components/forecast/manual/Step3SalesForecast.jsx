@@ -1000,52 +1000,63 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
               </div>
 
           {viewMode === 'category' ? (
-            // תצוגה לפי קטגוריות עם lazy loading
-            <div className="space-y-4">
-              {Object.entries(categorizedServices).map(([categoryName, { services, startIndex }]) => (
-                <ServiceCategoryGroup
-                  key={categoryName}
-                  categoryName={categoryName}
-                  services={services}
-                  salesData={salesForecast}
-                  monthNames={monthNames}
-                  onUpdateQuantity={updateQuantity}
-                  startIndex={startIndex}
-                />
-              ))}
-            </div>
-          ) : viewMode === 'virtual' ? (
-            // ✅ Virtual Scrolling לקטלוגים גדולים
-            <div className="space-y-4">
-              <Alert className="bg-blue-500/10 border-blue-500/30">
-                <Zap className="h-4 w-4 text-blue-400" />
-                <AlertDescription className="text-horizon-text">
-                  <strong>תצוגה וירטואלית פעילה</strong> - רק מוצרים נראים נטענים לזיכרון.
-                  גלילה חלקה עם {salesForecast.length.toLocaleString('he-IL')} מוצרים.
-                  {isLargeCatalog && (
-                    <div className="mt-1 text-xs text-blue-300">
-                      💡 Drag & Drop מבוטל לביצועים מיטביים
-                    </div>
-                  )}
-                </AlertDescription>
-              </Alert>
-              
-              <div className="border border-horizon rounded-lg overflow-hidden">
-                <List
-                  height={600}
-                  itemCount={salesForecast.length}
-                  itemSize={VIRTUAL_ITEM_HEIGHT}
-                  width="100%"
-                  className="bg-horizon-dark/20"
-                >
-                  {VirtualRow}
-                </List>
+<<<<<<< HEAD
+            // תצוגה לפי קטגוריות - עם pagination למניעת קפיאה
+            <>
+              <div className="space-y-4">
+                {(() => {
+                  // ✅ Pagination: הצג רק קטגוריות מהעמוד הנוכחי
+                  const categoriesArray = Object.entries(categorizedServices);
+                  const totalCategories = categoriesArray.length;
+                  const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+                  const endIdx = startIdx + ITEMS_PER_PAGE;
+                  const categoriesToShow = categoriesArray.slice(startIdx, endIdx);
+                  
+                  return categoriesToShow.map(([categoryName, { services, startIndex }]) => (
+                    <ServiceCategoryGroup
+                      key={categoryName}
+                      categoryName={categoryName}
+                      services={services}
+                      salesData={salesForecast}
+                      monthNames={monthNames}
+                      onUpdateQuantity={updateQuantity}
+                      startIndex={startIndex}
+                    />
+                  ));
+                })()}
               </div>
               
-              <div className="text-center text-sm text-horizon-accent">
-                מציג {salesForecast.length.toLocaleString('he-IL')} מוצרים בצורה וירטואלית
-              </div>
-            </div>
+              {/* Pagination Controls for Category View */}
+              {Object.keys(categorizedServices).length > ITEMS_PER_PAGE && (
+                <div className="flex items-center justify-between pt-4 border-t border-horizon">
+                  <div className="text-sm text-horizon-accent">
+                    מציג {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, Object.keys(categorizedServices).length)}-{Math.min(currentPage * ITEMS_PER_PAGE, Object.keys(categorizedServices).length)} מתוך {Object.keys(categorizedServices).length} קטגוריות
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="border-horizon text-horizon-text"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                      קודם
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => p + 1)}
+                      disabled={currentPage * ITEMS_PER_PAGE >= Object.keys(categorizedServices).length}
+                      className="border-horizon text-horizon-text"
+                    >
+                      הבא
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             // תצוגה רגילה - רשימה (רק לקטלוגים קטנים)
             <div>
@@ -1059,8 +1070,8 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                 </Alert>
               )}
               
-              <DragDropContext onDragEnd={handleDragEnd}>
-              <Droppable droppableId="sales-forecast-list">
+            <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="sales-forecast-list">
               {(provided) => (
                 <div
                   {...provided.droppableProps}
@@ -1082,7 +1093,10 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                       sortedForecast = [...soldItems, ...notSoldItems];
                     }
                     
-                    return sortedForecast;
+                    // ✅ Pagination: הצג רק מוצרים מהעמוד הנוכחי
+                    const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+                    const endIdx = startIdx + ITEMS_PER_PAGE;
+                    return sortedForecast.slice(startIdx, endIdx);
                   })().map((item, serviceIndex) => {
                     // מצא את האינדקס המקורי
                     const originalIndex = salesForecast.findIndex(s => s.service_name === item.service_name);
@@ -1186,18 +1200,48 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
                   {provided.placeholder}
                 </div>
               )}
-              </Droppable>
-              </DragDropContext>
+            </Droppable>
+          </DragDropContext>
+          
+          {/* Pagination Controls for List View */}
+          {salesForecast.length > ITEMS_PER_PAGE && (
+            <div className="flex items-center justify-between pt-4 border-t border-horizon">
+              <div className="text-sm text-horizon-accent">
+                מציג {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, salesForecast.length)}-{Math.min(currentPage * ITEMS_PER_PAGE, salesForecast.length)} מתוך {salesForecast.length} מוצרים
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="border-horizon text-horizon-text"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                  קודם
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => p + 1)}
+                  disabled={currentPage * ITEMS_PER_PAGE >= salesForecast.length}
+                  className="border-horizon text-horizon-text"
+                >
+                  הבא
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           )}
-           </>
           )}
-          </CardContent>
-          </Card>
-          </>
+            </>
           )}
+        </CardContent>
+      </Card>
+        </>
+      )}
 
-          <div className="flex justify-between">
+      <div className="flex justify-between">
         <Button onClick={onBack} variant="outline" className="border-horizon text-horizon-text">
           <ChevronRight className="w-4 h-4 ml-2" />
           חזור
