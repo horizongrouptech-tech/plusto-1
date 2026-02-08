@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -863,15 +862,17 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
           forecast_name: `${forecast.forecast_name} - ${forecastType === 'optimistic' ? 'אופטימית' : 'שמרנית'}`,
           forecast_year: forecast.forecast_year,
           forecastType: forecastType,
-          strategicInput: latestStrategicInput,  // <--- שינוי: העברת האובייקט המלא
+          strategicInput: latestStrategicInput,
           services_data: forecast.services_data,
       });
 
-      if (response.success && response.forecast) {
+      console.log('orchestrateBusinessForecast response:', response);
+
+      if (response?.success === true) {
         toast({ title: "התחזית בהכנה", description: "תהליך יצירת התחזית החל ברקע. תקבל עדכון בסיומו.", variant: "default", });
-        checkForRunningProcesses(customer.email);
+        await checkForRunningProcesses(customer.email);
       } else {
-        throw new Error(response.error || 'Failed to start forecast generation.');
+        throw new Error(response?.error || 'שגיאה ביצירת תחזית - אנא נסה שוב');
       }
     } catch (error) {
       console.error(`Error generating ${forecastType} forecast:`, error);
@@ -1307,7 +1308,9 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
       const { data: response } = await base44.functions.invoke('orchestrateBusinessForecast', forecastPayload); 
 
-      if (response.status === 202) {
+      console.log('orchestrateBusinessForecast response:', response);
+
+      if (response?.success === true) {
         toast({
           title: "התחזית בהכנה",
           description: "תהליך יצירת התחזית החל ברקע. תקבל עדכון בסיומו.",
@@ -1321,9 +1324,9 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         setStrategicInputForGeneration(null);
         setForecastTypeForGeneration(null);
         setInitialForecastDraft(null);
-        checkForRunningProcesses(customer.email);
+        await checkForRunningProcesses(customer.email);
       } else {
-        throw new Error(`Unexpected response status: ${response.status}`);
+        throw new Error(response?.error || 'שגיאה ביצירת תחזית - אנא נסה שוב');
       }
 
     } catch (err) {

@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 // פונקציית עזר לקריאה ל-AI עם מנגנון ניסיון חוזר
 async function invokeLLMWithRetry(base44, prompt, schema, maxRetries = 3) {
