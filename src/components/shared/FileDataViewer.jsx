@@ -63,7 +63,12 @@ export default function FileDataViewer({ isOpen, onClose, file }) {
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !localFile) return null;
+
+  // בדוק אם זה קובץ שצריך להופיע בדיאלוג בלבד (מודאל)
+  const isModalOnly = ['pdf', 'image/jpeg', 'image/png'].some(type => 
+    localFile?.file_type?.includes(type) || localFile?.file_url?.includes(type)
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

@@ -937,7 +937,27 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                 )}
               </Button>
               <Button
-                onClick={exportCatalog}
+                onClick={async () => {
+                  try {
+                    const response = await base44.functions.invoke('exportCatalogToExcel', {
+                      customer_email: customer.email,
+                      catalog_id: selectedCatalogId
+                    });
+                    if (response.data && typeof response.data === 'string') {
+                      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+                      const link = document.createElement('a');
+                      link.href = URL.createObjectURL(blob);
+                      link.download = `catalog_${new Date().toISOString().split('T')[0]}.csv`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      toast.success('קטלוג יוצא בהצלחה');
+                    }
+                  } catch (error) {
+                    console.error('Export error:', error);
+                    toast.error('שגיאה בייצוא לאקסל');
+                  }
+                }}
                 variant="outline"
                 size="sm"
                 disabled={filteredProducts.length === 0 || disableAllActions || noCatalogSelected}
