@@ -69,7 +69,7 @@ export default function EnhancedFileUpload({
     
     const files = Array.from(e.dataTransfer.files || []);
     if (files.length > 0) {
-      setSelectedFiles(prev => [...prev, ...files]);
+    setSelectedFiles(prev => [...prev, ...files]);
     }
   };
 

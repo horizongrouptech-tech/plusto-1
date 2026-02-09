@@ -242,14 +242,14 @@ export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCo
         </div>
 
         {/* כפתור הוספת משימה */}
-        <Button
+          <Button
           onClick={() => setShowCreateTaskModal(true)}
           className="w-full bg-horizon-primary hover:bg-horizon-primary/90 text-white mb-3"
           size="sm"
         >
           <Plus className="w-4 h-4 ml-2" />
           הוסף משימה חדשה
-        </Button>
+          </Button>
 
         {/* כפתור בחירה מבנק יעדים */}
         <Button

@@ -132,8 +132,8 @@ export default function GoalsTimeline({ customer }) {
     queryKey: ['customerGoals', customer?.email],
     queryFn: async () => {
       const allGoals = await base44.entities.CustomerGoal.filter({
-        customer_email: customer.email,
-        is_active: true
+      customer_email: customer.email,
+      is_active: true
       });
       // מיון לפי start_date או end_date (מקרוב לרחוק)
       return allGoals.sort((a, b) => {

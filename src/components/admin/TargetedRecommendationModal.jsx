@@ -186,15 +186,15 @@ export default function TargetedRecommendationModal({ customer, isOpen, onClose,
                   
                   {selectedProductId === 'custom' && (
                     <div className="mt-2">
-                      <Input
+                  <Input
                         value={customProductName}
                         onChange={(e) => {
                           setCustomProductName(e.target.value);
                           setFormData(prev => ({ ...prev, productName: e.target.value }));
                         }}
                         placeholder="הזן שם מוצר חדש..."
-                        className="bg-horizon-card border-horizon text-horizon-text"
-                      />
+                    className="bg-horizon-card border-horizon text-horizon-text"
+                  />
                     </div>
                   )}
                 </div>
