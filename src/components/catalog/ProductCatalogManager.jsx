@@ -183,25 +183,17 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
 
       // Add quality filter if set
       if (qualityFilter === 'missing_cost') {
-        filterQuery.$or = [
-          { cost_price: { $exists: false } },
-          { cost_price: null },
-          { cost_price: 0 }
-        ];
+        filterQuery.cost_price = { $lte: 0 };
       } else if (qualityFilter !== 'all') {
         filterQuery.data_quality = qualityFilter;
       }
 
       // Add source filter
       if (sourceFilter === 'ai_suggested') {
-        filterQuery.$or = [
-          { is_suggested: true },
-          { data_source: 'ai_suggestion' },
-          { is_recommended: true }
-        ];
+        // Use separate fields instead of $or to avoid conflicts
+        filterQuery.is_suggested = true;
       } else if (sourceFilter === 'existing') {
         filterQuery.is_suggested = { $ne: true };
-        filterQuery.data_source = { $ne: 'ai_suggestion' };
         filterQuery.is_recommended = { $ne: true };
       }
       
