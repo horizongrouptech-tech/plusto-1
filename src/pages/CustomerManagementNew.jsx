@@ -326,7 +326,9 @@ export default function CustomerManagementNew() {
             await base44.entities.OnboardingRequest.update(customer.id, {
               is_archived: true,
               archived_date: new Date().toISOString(),
-              archived_by: user?.email
+              archived_by: user?.email,
+              bestselling_products: typeof customer.bestselling_products === 'string' ? customer.bestselling_products : '',
+              unwanted_products: typeof customer.unwanted_products === 'string' ? customer.unwanted_products : ''
             });
             queryClient.invalidateQueries(['activeCustomers']);
             setOverviewModalOpen(false);
