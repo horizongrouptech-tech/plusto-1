@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Edit, Trash2, ShoppingCart, Package, TrendingUp, AlertTriangle, CheckCircle } from "lucide-react";
-import Pagination from "../shared/Pagination";
 
 export default function ProductCatalogTable({
   products,
@@ -13,20 +12,6 @@ export default function ProductCatalogTable({
   isAdmin = false,
   disableActions = false
 }) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 100; // הגדלנו ל-100 לתצוגה טובה יותר
-
-  // חישוב עמודים
-  const totalPages = Math.ceil(products.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentProducts = products.slice(startIndex, endIndex);
-
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    // גלילה לראש הטבלה
-    document.querySelector('.product-catalog-table')?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   const getDataQualityBadge = (quality) => {
     switch (quality) {
@@ -77,7 +62,7 @@ export default function ProductCatalogTable({
               קטלוג מוצרים
             </div>
             <div className="text-sm text-horizon-accent">
-              מציג {startIndex + 1}-{Math.min(endIndex, products.length)} מתוך {products.length.toLocaleString()} מוצרים (עמוד {currentPage} מתוך {totalPages})
+              מציג {products.length.toLocaleString()} מוצרים
             </div>
           </CardTitle>
         </CardHeader>
@@ -102,7 +87,7 @@ export default function ProductCatalogTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentProducts.map((product) => {
+                {products.map((product) => {
                   const costPrice = parseFloat(product.cost_price) || 0;
                   const sellingPrice = parseFloat(product.selling_price) || 0;
                   const grossProfit = sellingPrice - costPrice;
@@ -204,16 +189,6 @@ export default function ProductCatalogTable({
           </div>
         </CardContent>
       </Card>
-
-      {totalPages > 1 &&
-      <div className="flex justify-center">
-          <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={handlePageChange} />
-
-        </div>
-      }
     </div>);
 
 }

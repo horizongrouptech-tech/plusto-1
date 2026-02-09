@@ -170,12 +170,43 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
       setIsLoading(true);
       const skip = (pageNum - 1) * PRODUCTS_PER_PAGE;
       
+      const filterQuery = {
+        customer_email: customer.email,
+        catalog_id: selectedCatalogId,
+        is_active: true
+      };
+
+      // Add category filter if set
+      if (categoryFilter !== 'all') {
+        filterQuery.category = categoryFilter;
+      }
+
+      // Add quality filter if set
+      if (qualityFilter === 'missing_cost') {
+        filterQuery.$or = [
+          { cost_price: { $exists: false } },
+          { cost_price: null },
+          { cost_price: 0 }
+        ];
+      } else if (qualityFilter !== 'all') {
+        filterQuery.data_quality = qualityFilter;
+      }
+
+      // Add source filter
+      if (sourceFilter === 'ai_suggested') {
+        filterQuery.$or = [
+          { is_suggested: true },
+          { data_source: 'ai_suggestion' },
+          { is_recommended: true }
+        ];
+      } else if (sourceFilter === 'existing') {
+        filterQuery.is_suggested = { $ne: true };
+        filterQuery.data_source = { $ne: 'ai_suggestion' };
+        filterQuery.is_recommended = { $ne: true };
+      }
+      
       const batch = await ProductCatalog.filter(
-        {
-          customer_email: customer.email,
-          catalog_id: selectedCatalogId,
-          is_active: true
-        },
+        filterQuery,
         '-created_date',
         PRODUCTS_PER_PAGE,
         skip
@@ -186,11 +217,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
       setCurrentPage(pageNum);
       
       try {
-        const totalCount = await ProductCatalog.count({
-          customer_email: customer.email,
-          catalog_id: selectedCatalogId,
-          is_active: true
-        });
+        const totalCount = await ProductCatalog.count(filterQuery);
         setTotalProducts(totalCount);
         updateCatalogStats(batch);
       } catch (countError) {
@@ -201,7 +228,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     } finally {
       setIsLoading(false);
     }
-  }, [customer.email, selectedCatalogId, updateCatalogStats]);
+  }, [customer.email, selectedCatalogId, categoryFilter, qualityFilter, sourceFilter, updateCatalogStats]);
 
 
 
@@ -507,7 +534,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
         updateCatalogStats([]);
         setIsLoading(false);
     }
-  }, [selectedCatalogId, checkForActiveProcesses, checkForActiveCatalogGeneration, updateCatalogStats]);
+  }, [selectedCatalogId, categoryFilter, qualityFilter, sourceFilter, loadCatalog, checkForActiveProcesses, checkForActiveCatalogGeneration, updateCatalogStats]);
 
   useEffect(() => {
     filterProducts();
