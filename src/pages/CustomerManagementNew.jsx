@@ -219,7 +219,7 @@ export default function CustomerManagementNew() {
           <CustomerListPanel
             customers={filteredCustomers}
             selectedCustomer={selectedCustomer}
-            onSelectCustomer={setSelectedCustomer}
+            onSelectCustomer={handleSelectCustomer}
             customerFilter={customerFilter}
             onFilterChange={setCustomerFilter}
             onOpenSettings={() => setSettingsDrawerOpen(true)}

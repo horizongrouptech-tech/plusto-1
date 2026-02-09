@@ -47,9 +47,10 @@ export default function InlineEditableField({
     };
   }, [isEditing, editValue]);
 
-  const handleSave = async () => {
-    if (editValue !== value) {
-      await onSave(editValue);
+  const handleSave = async (valueToSave) => {
+    const finalValue = valueToSave !== undefined ? valueToSave : editValue;
+    if (finalValue !== value) {
+      await onSave(finalValue);
     }
     setIsEditing(false);
   };
@@ -99,8 +100,7 @@ export default function InlineEditableField({
                 if (date) {
                   const formatted = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                   setEditValue(formatted);
-                  onSave(formatted);
-                  setIsEditing(false);
+                  handleSave(formatted);
                 }
               }}
               locale={he}

@@ -286,7 +286,30 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
 
     const handleQuickSave = async (field, value) => {
         try {
-            const updateData = { [field]: field.includes('date') ? normalizeDate(value) : value };
+            // תיקון: נורמליזציה של תאריכים לפורמט ISO
+            let finalValue = value;
+            if (field.includes('date') && value) {
+                finalValue = normalizeDate(value);
+                
+                // ולידציה: תאריך התחלה חייב להיות לפני תאריך סיום
+                if (field === 'start_date' && goal.end_date) {
+                    const startDate = new Date(finalValue);
+                    const endDate = new Date(goal.end_date);
+                    if (startDate > endDate) {
+                        alert('תאריך התחלה חייב להיות לפני תאריך הסיום');
+                        return;
+                    }
+                } else if (field === 'end_date' && goal.start_date) {
+                    const startDate = new Date(goal.start_date);
+                    const endDate = new Date(finalValue);
+                    if (endDate < startDate) {
+                        alert('תאריך סיום חייב להיות אחרי תאריך ההתחלה');
+                        return;
+                    }
+                }
+            }
+            
+            const updateData = { [field]: finalValue };
             await base44.entities.CustomerGoal.update(goal.id, updateData);
             refreshData();
             
