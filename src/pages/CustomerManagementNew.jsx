@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Loader2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
 // קומפוננטות
@@ -25,6 +25,7 @@ import RecommendationUpgradeModal from '@/components/admin/RecommendationUpgrade
 
 export default function CustomerManagementNew() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // State management
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -138,15 +139,32 @@ export default function CustomerManagementNew() {
     });
   }, [recommendations, categoryFilter, statusFilter, priorityFilter, sourceFilter]);
 
-  // בחירה אוטומטית של לקוח לפי URL
+  // בחירה אוטומטית של לקוח לפי URL (תמיכה ב-clientId ו-customer)
   useEffect(() => {
-    if (clientIdFromUrl && customers.length > 0 && !selectedCustomer) {
+    const customerEmail = searchParams.get('customer');
+    if (customerEmail && customers.length > 0 && !selectedCustomer) {
+      const customer = customers.find(c => c.email === customerEmail);
+      if (customer) {
+        setSelectedCustomer(customer);
+      }
+    } else if (clientIdFromUrl && customers.length > 0 && !selectedCustomer) {
       const customerToSelect = customers.find(c => c.id === clientIdFromUrl);
       if (customerToSelect) {
         setSelectedCustomer(customerToSelect);
+        setSearchParams({ customer: customerToSelect.email });
       }
     }
-  }, [clientIdFromUrl, customers, selectedCustomer]);
+  }, [clientIdFromUrl, customers, selectedCustomer, searchParams, setSearchParams]);
+
+  // פונקציה לבחירת לקוח עם עדכון URL
+  const handleSelectCustomer = (customer) => {
+    setSelectedCustomer(customer);
+    if (customer) {
+      setSearchParams({ customer: customer.email });
+    } else {
+      setSearchParams({});
+    }
+  };
 
   // Handlers
   const handleTaskClick = (task) => {
