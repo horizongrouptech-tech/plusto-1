@@ -3,6 +3,7 @@ import { Handle, Position } from 'reactflow';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import {
   Calendar,
   User,
@@ -22,10 +23,13 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 const EnhancedGoalNode = ({ data, selected }) => {
   const [showActions, setShowActions] = useState(false);
   const [showSubtasks, setShowSubtasks] = useState(false);
+  const [editingDate, setEditingDate] = useState(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const statusConfig = {
     open: {
@@ -220,14 +224,103 @@ const EnhancedGoalNode = ({ data, selected }) => {
 
         {/* Meta Info */}
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-horizon">
-          {/* Date */}
+          {/* Dates - with inline editing */}
+          {data.startDate && (
+            <Popover open={editingDate === 'start' && datePickerOpen} onOpenChange={(open) => {
+              if (!open) {
+                setEditingDate(null);
+                setDatePickerOpen(false);
+              }
+            }}>
+              <PopoverTrigger asChild>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingDate('start');
+                    setDatePickerOpen(true);
+                  }}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-horizon-dark/70 border border-horizon backdrop-blur-sm hover:bg-horizon-primary/20 transition-colors node-action-button"
+                >
+                  <Calendar className="w-3 h-3 flex-shrink-0 text-horizon-secondary" />
+                  <span className="text-xs font-semibold text-horizon-text">
+                    {format(new Date(data.startDate), 'dd/MM/yy', { locale: he })}
+                  </span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 bg-horizon-card border-horizon" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={new Date(data.startDate)}
+                  onSelect={async (date) => {
+                    if (!date) return;
+                    
+                    // ולידציה - תאריך התחלה חייב להיות לפני תאריך סיום
+                    if (data.endDate && date > new Date(data.endDate)) {
+                      toast.error('תאריך התחלה חייב להיות לפני תאריך הסיום');
+                      return;
+                    }
+                    
+                    const isoDate = date.toISOString();
+                    if (data.onDateChange) {
+                      await data.onDateChange('start_date', isoDate);
+                    }
+                    setDatePickerOpen(false);
+                    setEditingDate(null);
+                  }}
+                  disabled={(date) => data.endDate && date > new Date(data.endDate)}
+                  className="bg-horizon-dark border-horizon"
+                />
+              </PopoverContent>
+            </Popover>
+          )}
+          
           {data.endDate && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-horizon-dark/70 border border-horizon backdrop-blur-sm">
-              <Calendar className="w-3 h-3 flex-shrink-0 text-horizon-primary" />
-              <span className="text-xs font-semibold text-horizon-text">
-                {format(new Date(data.endDate), 'dd/MM/yy', { locale: he })}
-              </span>
-            </div>
+            <Popover open={editingDate === 'end' && datePickerOpen} onOpenChange={(open) => {
+              if (!open) {
+                setEditingDate(null);
+                setDatePickerOpen(false);
+              }
+            }}>
+              <PopoverTrigger asChild>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingDate('end');
+                    setDatePickerOpen(true);
+                  }}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-horizon-dark/70 border border-horizon backdrop-blur-sm hover:bg-horizon-primary/20 transition-colors node-action-button"
+                >
+                  <Calendar className="w-3 h-3 flex-shrink-0 text-horizon-primary" />
+                  <span className="text-xs font-semibold text-horizon-text">
+                    {format(new Date(data.endDate), 'dd/MM/yy', { locale: he })}
+                  </span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 bg-horizon-card border-horizon" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={new Date(data.endDate)}
+                  onSelect={async (date) => {
+                    if (!date) return;
+                    
+                    // ולידציה - תאריך סיום חייב להיות אחרי תאריך התחלה
+                    if (data.startDate && date < new Date(data.startDate)) {
+                      toast.error('תאריך סיום חייב להיות אחרי תאריך ההתחלה');
+                      return;
+                    }
+                    
+                    const isoDate = date.toISOString();
+                    if (data.onDateChange) {
+                      await data.onDateChange('end_date', isoDate);
+                    }
+                    setDatePickerOpen(false);
+                    setEditingDate(null);
+                  }}
+                  disabled={(date) => data.startDate && date < new Date(data.startDate)}
+                  className="bg-horizon-dark border-horizon"
+                />
+              </PopoverContent>
+            </Popover>
           )}
 
           {/* Assignee */}

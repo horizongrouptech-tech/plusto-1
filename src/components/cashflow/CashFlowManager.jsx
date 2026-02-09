@@ -64,6 +64,9 @@ export default function CashFlowManager({ customer }) {
     date: '',
     description: ''
   });
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
   
   const queryClient = useQueryClient();
 
@@ -198,6 +201,7 @@ export default function CashFlowManager({ customer }) {
 
         queryClient.invalidateQueries(['cashFlow', customer.email]);
         queryClient.invalidateQueries(['recurringExpenses', customer.email]);
+        queryClient.invalidateQueries(['file-uploads', customer.email]);
         
         // שמור נתונים על שורות בעייתיות
         setFailedRowsData({
@@ -375,15 +379,51 @@ export default function CashFlowManager({ customer }) {
   };
 
   const handleDelete = async (id) => {
+    setIsDeleting(true);
     try {
       await base44.entities.CashFlow.delete(id);
       queryClient.invalidateQueries(['cashFlow', customer.email]);
       queryClient.invalidateQueries(['recurringTransactions', customer.email]);
       setDeleteConfirmId(null);
+      setShowDeleteDialog(false);
+      setItemToDelete(null);
       toast.success('התנועה נמחקה בהצלחה');
     } catch (error) {
       console.error('Error deleting:', error);
       toast.error('שגיאה במחיקה: ' + error.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteFileUpload = async (fileUploadId) => {
+    setIsDeleting(true);
+    try {
+      // מצא את כל תנועות ה-CashFlow המשויכות לקובץ
+      const relatedEntries = await base44.entities.CashFlow.filter({
+        customer_email: customer.email,
+        file_upload_id: fileUploadId
+      });
+
+      // מחק את כל התנועות המשויכות
+      for (const entry of relatedEntries) {
+        await base44.entities.CashFlow.delete(entry.id);
+      }
+
+      // מחק את רשומת הקובץ
+      await base44.entities.FileUpload.delete(fileUploadId);
+
+      // רענן את כל ה-caches הרלוונטיים
+      queryClient.invalidateQueries(['cashFlow', customer.email]);
+      queryClient.invalidateQueries(['file-uploads', customer.email]);
+      queryClient.invalidateQueries(['recurringExpenses', customer.email]);
+      
+      toast.success(`הקובץ ו-${relatedEntries.length} תנועות משויכות נמחקו בהצלחה`);
+    } catch (error) {
+      console.error('Error deleting file upload:', error);
+      toast.error('שגיאה במחיקת הקובץ: ' + error.message);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -687,35 +727,22 @@ export default function CashFlowManager({ customer }) {
                                 >
                                   <Pencil className="w-4 h-4" />
                                 </Button>
-                                {deleteConfirmId === item.id ? (
-                                  <div className="flex items-center gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10"
-                                      onClick={() => handleDelete(item.id)}
-                                    >
-                                      <Check className="w-4 h-4" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-horizon-accent hover:text-horizon-text"
-                                      onClick={() => setDeleteConfirmId(null)}
-                                    >
-                                      <X className="w-4 h-4" />
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-horizon-accent hover:text-red-500"
-                                    onClick={() => setDeleteConfirmId(item.id)}
-                                  >
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-horizon-accent hover:text-red-500"
+                                  onClick={() => {
+                                    setItemToDelete(item);
+                                    setShowDeleteDialog(true);
+                                  }}
+                                  disabled={isDeleting}
+                                >
+                                  {isDeleting && itemToDelete?.id === item.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
                                     <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                )}
+                                  )}
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -1049,6 +1076,55 @@ export default function CashFlowManager({ customer }) {
               className="btn-horizon-primary"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'שמור'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* דיאלוג אישור מחיקה */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="bg-horizon-card border-horizon text-horizon-text max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>אישור מחיקה</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-horizon-text mb-2">האם אתה בטוח שברצונך למחוק תנועה זו?</p>
+            <p className="text-sm text-red-400 font-semibold">⚠️ פעולה זו בלתי הפיכה</p>
+            {itemToDelete && (
+              <div className="mt-4 p-3 bg-horizon-dark rounded-lg border border-horizon">
+                <div className="text-sm space-y-1">
+                  <div><span className="text-horizon-accent">תאריך:</span> <span className="text-horizon-text">{itemToDelete.date}</span></div>
+                  <div><span className="text-horizon-accent">תיאור:</span> <span className="text-horizon-text">{itemToDelete.description}</span></div>
+                  <div><span className="text-horizon-accent">סכום:</span> <span className="text-horizon-text">₪{(itemToDelete.credit || itemToDelete.debit || 0).toLocaleString()}</span></div>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setItemToDelete(null);
+              }}
+              className="border-horizon text-horizon-text"
+              disabled={isDeleting}
+            >
+              ביטול
+            </Button>
+            <Button
+              onClick={() => itemToDelete && handleDelete(itemToDelete.id)}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                  מוחק...
+                </>
+              ) : (
+                'מחק'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

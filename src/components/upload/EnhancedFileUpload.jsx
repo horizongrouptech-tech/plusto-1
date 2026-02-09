@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,9 +38,18 @@ export default function EnhancedFileUpload({
     { value: 'profit_loss', label: 'רווח והפסד' },
     { value: 'balance_sheet', label: 'מאזן' },
     { value: 'bank_statement', label: 'דוח בנק' },
+    { value: 'credit_card_report', label: 'דוח כרטיס אשראי' },
     { value: 'promotions_report', label: 'דוח מבצעים' },
     { value: 'mixed_business_data', label: 'נתונים עסקיים מעורבים' }
   ];
+
+  // זיהוי קבצי BiziBox
+  const detectBiziBoxFile = (file) => {
+    const fileName = file.name.toLowerCase();
+    return fileName.includes('bizibox') || 
+           fileName.includes('ביזיבוקס') ||
+           (fileName.includes('.xlsx') && fileName.includes('תזרים'));
+  };
 
   const handleFileSelect = (event) => {
     const files = Array.from(event.target.files || []);
@@ -77,12 +85,60 @@ export default function EnhancedFileUpload({
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleProcessingComplete = (fileData) => {
-    const { fileMetadata, analysisResult, extractedData } = fileData;
+  const handleProcessingComplete = async (fileData) => {
+    const { fileMetadata, analysisResult, extractedData, file } = fileData;
     
-    // אם יש נתונים טבלאיים שדורשים מיפוי
+    // זיהוי קבצי BiziBox ועיבודם בנפרד
+    if (file && detectBiziBoxFile(file)) {
+      try {
+        setProcessingFiles(prev => new Map(prev).set(file.name, { status: 'processing', progress: 50 }));
+        
+        // העלאת הקובץ
+        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        
+        // קריאה לפונקציה המתמחה של BiziBox
+        const response = await base44.functions.invoke('parseBizIboxFile', {
+          fileUrl: file_url,
+          customerEmail: customer.email
+        });
+
+        if (response.data.success) {
+          // שמירת הקובץ ל-FileUpload entity
+          await base44.entities.FileUpload.create({
+            customer_email: customer.email,
+            filename: file.name,
+            file_url: file_url,
+            file_type: file.name.split('.').pop()?.toLowerCase() || 'xlsx',
+            status: 'analyzed',
+            data_category: 'bank_statement',
+            analysis_notes: `נוספו ${response.data.processed || 0} תנועות תזרים`,
+            products_count: response.data.processed || 0,
+            parsed_data: {
+              summary: `${response.data.processed || 0} תנועות`,
+              categories: response.data.categories || []
+            }
+          });
+
+          setProcessingFiles(prev => new Map(prev).set(file.name, { status: 'completed', progress: 100 }));
+          toast.success(`קובץ BiziBox עובד בהצלחה! ${response.data.processed || 0} תנועות נוספו`);
+          
+          if (onUploadComplete) {
+            onUploadComplete({ success: true, processed: response.data.processed });
+          }
+        } else {
+          throw new Error(response.data.error || 'שגיאה בעיבוד קובץ BiziBox');
+        }
+      } catch (error) {
+        console.error('BiziBox file processing error:', error);
+        setProcessingFiles(prev => new Map(prev).set(file.name, { status: 'failed', error: error.message }));
+        toast.error('שגיאה בעיבוד קובץ BiziBox: ' + error.message);
+        if (onError) onError(error);
+      }
+      return;
+    }
+    
+    // עיבוד רגיל לקבצים אחרים
     if (analysisResult.columns_detected && analysisResult.file_type) {
-      // בדוק אם צריך מיפוי ידני
       const needsManualMapping = analysisResult.columns_detected.some(col => 
         !col.suggested_mapping || col.confidence < 0.8
       );
@@ -98,7 +154,6 @@ export default function EnhancedFileUpload({
       }
     }
 
-    // שמירה ישירה אם לא צריך מיפוי
     saveProcessedFile(fileData);
   };
 
