@@ -170,9 +170,13 @@ export default function SupplierRecommendationEngine({ customer, onSupplierSelec
   const loadSuppliers = useCallback(async () => {
     setIsLoading(true);
     try {
-      const suppliers = await base44.entities.Supplier.filter({ is_active: true });
-      setAllSuppliers(suppliers);
-      generateRecommendations(suppliers);
+      // טען רק ספקים שלא משויכים ללקוח הנוכחי
+      const allActiveSuppliers = await base44.entities.Supplier.filter({ is_active: true });
+      const availableSuppliers = allActiveSuppliers.filter(s => 
+        !s.customer_emails?.includes(customer.email)
+      );
+      setAllSuppliers(availableSuppliers);
+      generateRecommendations(availableSuppliers);
     } catch (error) {
       console.error("Error loading suppliers:", error);
     } finally {
