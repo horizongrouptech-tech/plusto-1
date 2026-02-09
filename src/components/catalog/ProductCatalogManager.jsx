@@ -486,7 +486,6 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
   }, [customer?.email, selectedCatalogId, setCatalogGenerationProcessId, setCatalogGenerationStatus, setIsGenerating, setGenerationProcessId]);
 
   const filterProducts = useCallback(() => {
-    // Apply only search (client-side) - other filters already applied server-side
     let filtered = [...products];
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -498,8 +497,33 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
         product.supplier_item_code?.toLowerCase().includes(term)
       );
     }
+    if (categoryFilter !== "all") {
+      filtered = filtered.filter(product => product.category === categoryFilter);
+    }
+    if (qualityFilter !== "all") {
+      if (qualityFilter === "missing_cost") {
+        filtered = filtered.filter(product => !product.cost_price || product.cost_price === 0);
+      } else {
+        filtered = filtered.filter(product => product.data_quality === qualityFilter);
+      }
+    }
+    if (sourceFilter !== "all") {
+      if (sourceFilter === "existing") {
+        filtered = filtered.filter(product =>
+          !product.is_suggested &&
+          product.data_source !== 'ai_suggestion' &&
+          !product.is_recommended
+        );
+      } else if (sourceFilter === "ai_suggested") {
+        filtered = filtered.filter(product =>
+          product.is_suggested ||
+          product.data_source === 'ai_suggestion' ||
+          product.is_recommended
+        );
+      }
+    }
     setFilteredProducts(filtered);
-  }, [products, searchTerm, setFilteredProducts]);
+  }, [products, searchTerm, categoryFilter, qualityFilter, sourceFilter, setFilteredProducts]);
 
   useEffect(() => {
     if (customer?.email) {
