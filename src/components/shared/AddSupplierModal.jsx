@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -66,15 +65,21 @@ export default function AddSupplierModal({ isOpen, onClose, onSupplierAdded, cur
 
     setIsSubmitting(true);
     try {
+      // וולידציה קריטית - ספק חייב להיות משויך ללקוח
+      if (!customerEmail) {
+        alert('שגיאה: לא ניתן ליצור ספק ללא שיוך ללקוח');
+        return;
+      }
+
       const supplierData = {
         ...formData,
         min_order: formData.min_order ? parseFloat(formData.min_order) : 0,
-        phone: formData.phone || null, // ✅ אופציונלי
-        email: formData.email || null, // ✅ אופציונלי
+        phone: formData.phone || null,
+        email: formData.email || null,
         is_active: true,
         added_by_full_name: currentUser?.full_name || currentUser?.email,
         source: 'manual',
-        customer_emails: customerEmail ? [customerEmail] : []
+        customer_emails: [customerEmail]
       };
 
       await base44.entities.Supplier.create(supplierData);

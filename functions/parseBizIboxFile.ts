@@ -680,11 +680,21 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error parsing BiziBox file:', error);
+    console.error('❌ ERROR parsing BiziBox file:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      fileUrl,
+      customerEmail
+    });
     return Response.json({ 
       success: false, 
-      error: error.message,
-      stack: error.stack
+      error: error.message || 'שגיאה לא ידועה בעיבוד הקובץ',
+      details: {
+        errorType: error.name,
+        fileUrl: fileUrl,
+        timestamp: new Date().toISOString()
+      }
     }, { status: 500 });
   }
 });

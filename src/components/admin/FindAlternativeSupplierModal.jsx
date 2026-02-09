@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -81,7 +80,13 @@ export default function FindAlternativeSupplierModal({ isOpen, onClose, customer
   };
 
   const handleAddSupplier = async (supplierData) => {
-    const tempId = `${supplierData.name}-${Date.now()}`; // Note: Date.now() makes this ID unique on every render/call, potentially impacting disabled state persistence. Preserving original logic.
+    // וולידציה קריטית
+    if (!customerEmail) {
+      alert('שגיאה: לא ניתן ליצור ספק ללא שיוך ללקוח');
+      return;
+    }
+
+    const tempId = `${supplierData.name}-${Date.now()}`;
     setAddingSupplierIds(prev => new Set([...prev, tempId]));
     
     try {
@@ -96,7 +101,7 @@ export default function FindAlternativeSupplierModal({ isOpen, onClose, customer
         source: 'internet_search',
         is_active: true,
         added_by_full_name: currentUser?.full_name || currentUser?.email,
-        customer_emails: customerEmail ? [customerEmail] : []
+        customer_emails: [customerEmail]
       });
       
       alert(`הספק "${supplierData.name}" נוסף בהצלחה ושויך ללקוח!`);

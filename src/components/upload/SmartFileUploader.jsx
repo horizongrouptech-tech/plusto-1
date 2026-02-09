@@ -1526,7 +1526,8 @@ The report language is Hebrew.
       }, 2000);
 
     } catch (err) {
-      console.error('File upload process failed:', err);
+      console.error('❌ File upload process failed:', err);
+      console.error('Error stack:', err.stack);
       const displayMessage = analysisNotes || err.message || 'אירעה שגיאה לא ידועה';
       
       // עדכון רשומת הקובץ עם פרטי השגיאה
