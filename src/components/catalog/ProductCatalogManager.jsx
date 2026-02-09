@@ -208,19 +208,36 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
       setFilteredProducts(batch);
       setCurrentPage(pageNum);
       
+      // ✅ תיקון: נסה לספור, אבל אם זה נכשל, נשתמש ב-fallback
       try {
         const totalCount = await ProductCatalog.count(filterQuery);
         setTotalProducts(totalCount);
-        updateCatalogStats(batch);
       } catch (countError) {
         console.error("Error counting products:", countError);
+        
+        // ✅ Fallback 1: אם יש 100 מוצרים, כנראה יש עוד
+        if (batch.length === PRODUCTS_PER_PAGE) {
+          // נשתמש ב-product_count מה-Catalog אם קיים
+          const selectedCatalog = catalogs.find(c => c.id === selectedCatalogId);
+          if (selectedCatalog?.product_count) {
+            setTotalProducts(selectedCatalog.product_count);
+          } else {
+            // אם אין, נניח שיש עוד (נקבע מספר גדול)
+            setTotalProducts((pageNum * PRODUCTS_PER_PAGE) + 1); // לפחות עוד עמוד אחד
+          }
+        } else {
+          // אם יש פחות מ-100, זה העמוד האחרון
+          setTotalProducts((pageNum - 1) * PRODUCTS_PER_PAGE + batch.length);
+        }
       }
+      
+      updateCatalogStats(batch);
     } catch (error) {
       console.error("Error loading catalog:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [customer.email, selectedCatalogId, categoryFilter, qualityFilter, sourceFilter, updateCatalogStats]);
+  }, [customer.email, selectedCatalogId, categoryFilter, qualityFilter, sourceFilter, updateCatalogStats, catalogs]);
 
 
 
