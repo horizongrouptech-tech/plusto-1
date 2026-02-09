@@ -863,10 +863,8 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                     <SelectContent>
                         {catalogs.length > 0 ? (
                             catalogs.map(catalog => {
-                                // הצגת מספר מוצרים מהקטלוג הנטען או מישות Catalog
-                                const displayCount = catalog.id === selectedCatalogId 
-                                    ? catalogStats.total 
-                                    : (catalog.product_count || 0);
+                                // הצגת מספר מוצרים ישירות מישות Catalog
+                                const displayCount = catalog.product_count || 0;
                                 return (
                                     <SelectItem key={catalog.id} value={catalog.id}>
                                         <div className="flex items-center gap-2">
