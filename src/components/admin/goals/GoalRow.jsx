@@ -728,7 +728,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                             size="sm"
                             variant="ghost"
                             onClick={() => handleRemoveAssignee(email)}
-                            className="h-5 w-5 p-0 text-red-400"
+                            className="h-5 w-5 p-0 !text-red-400"
                             disabled={isUpdatingAssignees}>
 
                                                             <X className="w-3 h-3" />
@@ -774,7 +774,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                         size="sm"
                         variant="ghost"
                         onClick={() => handleRemoveExternalAssignee(idx)}
-                        className="h-5 w-5 p-0 text-red-400"
+                        className="h-5 w-5 p-0 !text-red-400"
                         disabled={isUpdatingAssignees}>
 
                                                         <X className="w-3 h-3" />
