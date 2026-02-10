@@ -440,18 +440,16 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                                     {getExternalResponsible(editedGoal.external_responsible).map((name, idx) =>
                 <div key={idx} className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
                                             <span className="text-xs text-horizon-text">{name}</span>
-                                            <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      const currentExternal = getExternalResponsible(editedGoal.external_responsible);
-                      const newExternal = currentExternal.filter((_, i) => i !== idx);
-                      setEditedGoal({ ...editedGoal, external_responsible: newExternal });
-                    }}
-                    className="h-5 w-5 p-0 text-red-400">
-
+                                            <button
+                                                onClick={() => {
+                                                    const currentExternal = getExternalResponsible(editedGoal.external_responsible);
+                                                    const newExternal = currentExternal.filter((_, i) => i !== idx);
+                                                    setEditedGoal({ ...editedGoal, external_responsible: newExternal });
+                                                }}
+                                                className="h-5 w-5 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded transition-colors"
+                                            >
                                                 <X className="w-3 h-3" />
-                                            </Button>
+                                            </button>
                                         </div>
                 )}
                                 </div>
@@ -724,15 +722,13 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                       return (
                         <div key={email} className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
                                                         <span className="text-xs text-horizon-text">{user?.full_name || email}</span>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
+                                                        <button
                                                             onClick={() => handleRemoveAssignee(email)}
-                                                            className="h-5 w-5 p-0 text-red-400 hover:text-red-500"
+                                                            className="h-5 w-5 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
                                                             disabled={isUpdatingAssignees}
                                                         >
                                                             <X className="w-3 h-3" />
-                                                        </Button>
+                                                        </button>
                                                     </div>);
 
                     })}
@@ -770,15 +766,13 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                                             {getExternalResponsible(goal.external_responsible).map((name, idx) =>
                     <div key={idx} className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
                                                     <span className="text-xs text-horizon-text">{name}</span>
-                                                    <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleRemoveExternalAssignee(idx)}
-                        className="h-5 w-5 p-0 text-red-400"
-                        disabled={isUpdatingAssignees}>
-
+                                                    <button
+                                                        onClick={() => handleRemoveExternalAssignee(idx)}
+                                                        className="h-5 w-5 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
+                                                        disabled={isUpdatingAssignees}
+                                                    >
                                                         <X className="w-3 h-3" />
-                                                    </Button>
+                                                    </button>
                                                 </div>
                     )}
                                         </div>
