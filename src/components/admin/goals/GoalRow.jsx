@@ -98,9 +98,9 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     } catch (e) {
 
 
+
       // אם זה לא תאריך תקין, פשוט החזר את המחרוזת
     }return dateString;};
-
   const handleQuickStatusChange = async (newStatus) => {
     try {
       await base44.entities.CustomerGoal.update(goal.id, { status: newStatus });
@@ -727,7 +727,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                                                         <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => handleRemoveAssignee(email)} className="text-slate-900 p-0 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-horizon-primary/50 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-horizon-primary/10 hover:text-horizon-primary active:bg-horizon-primary/20 h-9 h-5 w-5"
+                            onClick={() => handleRemoveAssignee(email)} className="bg-zinc-900 text-zinc-500 p-0 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-horizon-primary/50 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-horizon-primary/10 hover:text-horizon-primary active:bg-horizon-primary/20 h-9 h-5 w-5"
 
                             disabled={isUpdatingAssignees}>
 
