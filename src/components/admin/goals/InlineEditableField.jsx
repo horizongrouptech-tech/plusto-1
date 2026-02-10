@@ -45,14 +45,21 @@ export default function InlineEditableField({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isEditing, editValue]);
+  }, [isEditing, editValue, handleSave]);
 
   const handleSave = useCallback(async (valueToSave) => {
-    const finalValue = valueToSave !== undefined ? valueToSave : editValue;
-    if (finalValue !== value) {
-      await onSave(finalValue);
+    if (isSavingRef.current) return; // Prevent concurrent saves
+    isSavingRef.current = true;
+    
+    try {
+      const finalValue = valueToSave !== undefined ? valueToSave : editValue;
+      if (finalValue !== value) {
+        await onSave(finalValue);
+      }
+      setIsEditing(false);
+    } finally {
+      isSavingRef.current = false;
     }
-    setIsEditing(false);
   }, [editValue, value, onSave]);
 
   const handleCancel = () => {
@@ -100,11 +107,11 @@ export default function InlineEditableField({
             <Calendar
               mode="single"
               selected={editValue ? new Date(editValue) : undefined}
-              onSelect={(date) => {
+              onSelect={async (date) => {
                 if (date) {
                   const formatted = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                   setEditValue(formatted);
-                  handleSave(formatted);
+                  await handleSave(formatted);
                 }
               }}
               locale={he}
