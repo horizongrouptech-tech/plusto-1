@@ -23,6 +23,21 @@ export default function InlineEditableField({
   const containerRef = useRef(null);
   const isSavingRef = useRef(false);
 
+  const handleSave = useCallback(async (valueToSave) => {
+    if (isSavingRef.current) return; // Prevent concurrent saves
+    isSavingRef.current = true;
+    
+    try {
+      const finalValue = valueToSave !== undefined ? valueToSave : editValue;
+      if (finalValue !== value) {
+        await onSave(finalValue);
+      }
+      setIsEditing(false);
+    } finally {
+      isSavingRef.current = false;
+    }
+  }, [editValue, value, onSave]);
+
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
@@ -46,22 +61,7 @@ export default function InlineEditableField({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isEditing, editValue, handleSave]);
-
-  const handleSave = useCallback(async (valueToSave) => {
-    if (isSavingRef.current) return; // Prevent concurrent saves
-    isSavingRef.current = true;
-    
-    try {
-      const finalValue = valueToSave !== undefined ? valueToSave : editValue;
-      if (finalValue !== value) {
-        await onSave(finalValue);
-      }
-      setIsEditing(false);
-    } finally {
-      isSavingRef.current = false;
-    }
-  }, [editValue, value, onSave]);
+  }, [isEditing, handleSave]);
 
   const handleCancel = () => {
     setEditValue(value);
