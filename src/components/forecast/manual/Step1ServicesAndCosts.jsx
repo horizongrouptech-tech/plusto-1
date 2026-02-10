@@ -174,22 +174,32 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
       const allProducts = [];
       const MAX_PRODUCTS_PER_CATALOG = 200; // ✅ הגבלה למניעת קפיאה
       
-      // טען מוצרים מכל הקטלוגים (מוגבל)
+      // טען מוצרים מכל הקטלוגים (ללא הגבלה)
       for (const catalog of availableCatalogs) {
         try {
-          // ✅ תיקון: טעינה מוגבלת של מוצרים מכל קטלוג
-          const products = await base44.entities.ProductCatalog.filter(
-            {
-              catalog_id: catalog.id,
-              is_active: true
-            },
-            '-created_date',
-            MAX_PRODUCTS_PER_CATALOG,
-            0
-          );
+          // ✅ טעינת כל המוצרים באמצעות pagination
+          let catalogProducts = [];
+          let hasMore = true;
+          let skip = 0;
+          const batchSize = 5000;
+          
+          while (hasMore) {
+            const batch = await base44.entities.ProductCatalog.filter(
+              { catalog_id: catalog.id, is_active: true },
+              '-created_date',
+              batchSize,
+              skip
+            );
+            catalogProducts = [...catalogProducts, ...batch];
+            skip += batch.length;
+            
+            if (batch.length < batchSize) {
+              hasMore = false;
+            }
+          }
           
           // הוסף metadata של הקטלוג לכל מוצר
-          products.forEach(product => {
+          catalogProducts.forEach(product => {
             allProducts.push({
               ...product,
               catalog_name: catalog.catalog_name,
@@ -235,34 +245,31 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
       
       console.log('📦 Loading products from catalog:', selectedCatalogForLoad.id);
       
-      // ✅ תיקון: טעינה מוגבלת של מוצרים (500 ראשונים) למניעת קפיאה
-      const MAX_PRODUCTS_TO_LOAD = 500;
-      const products = await base44.entities.ProductCatalog.filter(
-        {
-          catalog_id: selectedCatalogForLoad.id,
-          is_active: true
-        },
-        '-created_date',
-        MAX_PRODUCTS_TO_LOAD,
-        0
-      );
+      // ✅ טעינת כל המוצרים באמצעות pagination
+      let allProducts = [];
+      let hasMore = true;
+      let skip = 0;
+      const batchSize = 5000;
       
-      console.log('✅ Found products:', products.length);
-      
-      // ✅ התראה אם יש יותר מוצרים
-      if (products.length === MAX_PRODUCTS_TO_LOAD) {
-        try {
-          const totalCount = await base44.entities.ProductCatalog.count({
-            catalog_id: selectedCatalogForLoad.id,
-            is_active: true
-          });
-          if (totalCount > MAX_PRODUCTS_TO_LOAD) {
-            alert(`⚠️ נטענו ${MAX_PRODUCTS_TO_LOAD} מוצרים מתוך ${totalCount} קיימים בקטלוג.\n\nמומלץ לסנן או לחלק את הקטלוג לקטלוגים קטנים יותר.`);
-          }
-        } catch (countError) {
-          console.warn('Could not get total count:', countError);
+      while (hasMore) {
+        const batch = await base44.entities.ProductCatalog.filter(
+          { catalog_id: selectedCatalogForLoad.id, is_active: true },
+          '-created_date',
+          batchSize,
+          skip
+        );
+        allProducts = [...allProducts, ...batch];
+        skip += batch.length;
+        
+        console.log(`טוען מוצרים: ${allProducts.length} נטענו...`);
+        
+        if (batch.length < batchSize) {
+          hasMore = false;
         }
       }
+      
+      const products = allProducts;
+      console.log('✅ Total products loaded:', products.length);
       
       if (products.length === 0) {
         alert('הקטלוג ריק - אין מוצרים לטעינה');

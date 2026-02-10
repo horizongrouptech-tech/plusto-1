@@ -226,7 +226,7 @@ Deno.serve(async (req) => {
       
       product.gross_profit = Math.max(0, sellingPrice - costPrice);
       if (!product.profit_percentage || product.profit_percentage === 0) {
-        product.profit_percentage = costPrice > 0 ? Math.round(((sellingPrice - costPrice) / costPrice) * 100) : 0;
+        product.profit_percentage = sellingPrice > 0 ? Math.round(((sellingPrice - costPrice) / sellingPrice) * 100) : 0;
       }
 
       // קביעת איכות נתונים

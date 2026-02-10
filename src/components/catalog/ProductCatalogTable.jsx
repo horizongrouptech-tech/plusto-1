@@ -127,8 +127,8 @@ export default function ProductCatalogTable({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3 text-green-400" />
-                        <span className="text-green-400 font-medium">
+                        <TrendingUp className={`w-3 h-3 ${(product.profit_percentage || 0) < 0 ? 'text-red-400' : 'text-green-400'}`} />
+                        <span className={`font-medium ${(product.profit_percentage || 0) < 0 ? 'text-red-500 font-bold' : 'text-green-400'}`}>
                           {product.profit_percentage ? `${Math.round(product.profit_percentage)}%` : '0%'}
                         </span>
                       </div>
