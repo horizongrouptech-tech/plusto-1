@@ -130,6 +130,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                 start_date: normalizeDate(editedGoal.start_date),
                 end_date: normalizeDate(editedGoal.end_date),
                 assignee_email: editedGoal.assignee_email,
+                external_responsible: editedGoal.external_responsible,
                 notes: editedGoal.notes,
                 due_time: editedGoal.due_time
             });
@@ -360,7 +361,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                     </div>
 
                     <div>
-                        <label className="text-sm text-horizon-accent mb-2 block">אחראי</label>
+                        <label className="text-sm text-horizon-accent mb-2 block">אחראי (בחר ממערכת)</label>
                         <Select
                             value={editedGoal.assignee_email || ''}
                             onValueChange={(value) => setEditedGoal({ ...editedGoal, assignee_email: value })}
@@ -384,6 +385,17 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                                     ))}
                             </SelectContent>
                         </Select>
+                    </div>
+
+                    <div>
+                        <label className="text-sm text-horizon-accent mb-2 block">אחראי חיצוני (טקסט חופשי)</label>
+                        <Input
+                            value={editedGoal.external_responsible || ''}
+                            onChange={(e) => setEditedGoal({ ...editedGoal, external_responsible: e.target.value })}
+                            className="bg-horizon-card border-horizon text-horizon-text"
+                            placeholder="לדוגמה: רו״ח יוסי כהן, יועץ עסקי - דוד לוי"
+                        />
+                        <p className="text-xs text-horizon-accent mt-1">השתמש בשדה זה לאחראים שאינם רשומים במערכת</p>
                     </div>
 
                     <div>
@@ -556,87 +568,32 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-horizon-text">
-                    <Popover>
-                        <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-1 cursor-pointer hover:bg-horizon-primary/10 rounded px-2 py-1 transition-colors" title={goal.assignee_email || 'ללא אחראי'}>
-                                {(goal.assigned_users || []).length > 0 ? (
+                    <InlineEditableField
+                        value={goal.external_responsible || ''}
+                        displayValue={
+                            <div className="flex items-center gap-1">
+                                {goal.external_responsible ? (
+                                    <span className="text-horizon-text">{goal.external_responsible}</span>
+                                ) : (goal.assigned_users || []).length > 0 ? (
                                     <div className="flex items-center gap-1">
                                         {goal.assigned_users.slice(0, 2).map(email => {
                                             const user = users.find(u => u.email === email);
-                                            return <span key={email} className="text-xs text-horizon-text">{user?.full_name || email.split('@')[0] || 'משתמש'}</span>;
+                                            return <span key={email} className="text-xs text-horizon-text">{user?.full_name || email.split('@')[0]}</span>;
                                         })}
                                         {goal.assigned_users.length > 2 && <span className="text-xs">+{goal.assigned_users.length - 2}</span>}
                                     </div>
                                 ) : goal.assignee_email ? (
-                                    <span className="text-horizon-text">{users.find(u => u.email === goal.assignee_email)?.full_name || goal.assignee_email.split('@')[0] || 'משתמש'}</span>
+                                    <span className="text-horizon-text">{users.find(u => u.email === goal.assignee_email)?.full_name || goal.assignee_email.split('@')[0]}</span>
                                 ) : (
-                                    <span className="text-gray-400">ללא אחראי</span>
+                                    <span className="text-gray-400">הוסף אחראי</span>
                                 )}
-                                <UserPlus className="w-3 h-3 text-horizon-primary" />
+                                <UserIcon className="w-3 h-3 text-horizon-accent" />
                             </div>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-64 bg-horizon-dark border-horizon p-3" dir="rtl" onClick={(e) => e.stopPropagation()}>
-                            <div className="space-y-2">
-                                <p className="text-xs font-semibold text-horizon-text">אחראים:</p>
-                                {(goal.assigned_users || []).length > 0 && (
-                                    <div className="space-y-1">
-                                        {goal.assigned_users.map(email => {
-                                            const user = users.find(u => u.email === email);
-                                            return (
-                                                <div key={email} className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
-                                                    <span className="text-xs text-horizon-text">{user?.full_name || email.split('@')[0] || email}</span>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onClick={() => handleRemoveAssignee(email)}
-                                                        className="h-5 w-5 p-0 text-red-400"
-                                                        disabled={isUpdatingAssignees}
-                                                    >
-                                                        <X className="w-3 h-3" />
-                                                    </Button>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                                
-                                {users
-                                    .filter(u => {
-                                        // סינון: רק משתמשים רלוונטיים
-                                        if (!(goal.assigned_users || []).includes(u.email)) {
-                                            if (!goal.customer_email) return true;
-                                            return u.email === goal.customer_email || 
-                                                   u.email === goal.assigned_manager_email ||
-                                                   u.user_type === 'financial_manager';
-                                        }
-                                        return false;
-                                    }).length > 0 && (
-                                    <Select onValueChange={handleAddAssignee} disabled={isUpdatingAssignees}>
-                                        <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text h-8 text-xs">
-                                            <SelectValue placeholder="הוסף אחראי..." />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-horizon-dark border-horizon">
-                                            {users
-                                                .filter(u => {
-                                                    if (!(goal.assigned_users || []).includes(u.email)) {
-                                                        if (!goal.customer_email) return true;
-                                                        return u.email === goal.customer_email || 
-                                                               u.email === goal.assigned_manager_email ||
-                                                               u.user_type === 'financial_manager';
-                                                    }
-                                                    return false;
-                                                })
-                                                .map(user => (
-                                                    <SelectItem key={user.email} value={user.email} className="text-xs">
-                                                        {user.full_name}
-                                                    </SelectItem>
-                                                ))}
-                                        </SelectContent>
-                                    </Select>
-                                )}
-                            </div>
-                        </PopoverContent>
-                    </Popover>
+                        }
+                        onSave={(newValue) => handleQuickSave('external_responsible', newValue)}
+                        placeholder="הזן שם אחראי (לדוגמה: רו״ח יוסי כהן)"
+                        className="flex-1"
+                    />
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-horizon-accent">
