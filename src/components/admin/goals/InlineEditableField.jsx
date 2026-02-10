@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
@@ -47,13 +47,13 @@ export default function InlineEditableField({
     };
   }, [isEditing, editValue]);
 
-  const handleSave = async (valueToSave) => {
+  const handleSave = useCallback(async (valueToSave) => {
     const finalValue = valueToSave !== undefined ? valueToSave : editValue;
     if (finalValue !== value) {
       await onSave(finalValue);
     }
     setIsEditing(false);
-  };
+  }, [editValue, value, onSave]);
 
   const handleCancel = () => {
     setEditValue(value);
@@ -85,7 +85,11 @@ export default function InlineEditableField({
   if (type === 'date') {
     return (
       <div ref={containerRef} className="flex items-center gap-1">
-        <Popover open={isEditing} onOpenChange={(open) => !open && handleCancel()}>
+        <Popover open={isEditing} onOpenChange={(open) => {
+          if (!open) {
+            setIsEditing(false);
+          }
+        }}>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="h-8 text-xs bg-horizon-card border-horizon-primary">
               <CalendarIcon className="w-3 h-3 ml-1" />
@@ -108,14 +112,6 @@ export default function InlineEditableField({
             />
           </PopoverContent>
         </Popover>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => handleCancel()}
-          className="h-6 w-6 text-red-400"
-        >
-          <X className="w-3 h-3" />
-        </Button>
       </div>
     );
   }
