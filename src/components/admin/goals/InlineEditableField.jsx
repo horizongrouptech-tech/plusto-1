@@ -111,7 +111,7 @@ export default function InlineEditableField({
         <Button
           variant="ghost"
           size="icon"
-          onClick={handleCancel}
+          onClick={() => handleCancel()}
           className="h-6 w-6 text-red-400"
         >
           <X className="w-3 h-3" />
@@ -145,7 +145,7 @@ export default function InlineEditableField({
       <Button
         variant="ghost"
         size="icon"
-        onClick={handleSave}
+        onClick={() => handleSave()}
         className="h-6 w-6 text-green-400"
       >
         <Check className="w-3 h-3" />
@@ -153,7 +153,7 @@ export default function InlineEditableField({
       <Button
         variant="ghost"
         size="icon"
-        onClick={handleCancel}
+        onClick={() => handleCancel()}
         className="h-6 w-6 text-red-400"
       >
         <X className="w-3 h-3" />

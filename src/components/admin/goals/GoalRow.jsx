@@ -33,6 +33,8 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     const [showComments, setShowComments] = useState(false);
     const [isUpdatingAssignees, setIsUpdatingAssignees] = useState(false);
     const [quickEditMode, setQuickEditMode] = useState(null); // 'name', 'date', 'notes'
+    const [newExternalAssignee, setNewExternalAssignee] = useState('');
+    const [newExternalAssigneeEdit, setNewExternalAssigneeEdit] = useState('');
 
     const statusOptions = [
         { value: 'open', label: 'פתוח', color: 'bg-gray-500', badgeClass: 'bg-gray-500/20 text-gray-700 dark:text-gray-300 border-gray-500/30' },
@@ -280,6 +282,41 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
         }
     };
 
+    const handleAddExternalAssignee = async () => {
+        if (!newExternalAssignee.trim() || isUpdatingAssignees) return;
+        setIsUpdatingAssignees(true);
+        try {
+            const currentExternal = goal.external_responsible || [];
+            await base44.entities.CustomerGoal.update(goal.id, {
+                external_responsible: [...currentExternal, newExternalAssignee.trim()]
+            });
+            setNewExternalAssignee('');
+            await refreshData();
+        } catch (error) {
+            console.error('Error adding external assignee:', error);
+            alert('שגיאה בהוספת אחראי חיצוני: ' + error.message);
+        } finally {
+            setIsUpdatingAssignees(false);
+        }
+    };
+
+    const handleRemoveExternalAssignee = async (indexToRemove) => {
+        if (isUpdatingAssignees) return;
+        setIsUpdatingAssignees(true);
+        try {
+            const currentExternal = goal.external_responsible || [];
+            await base44.entities.CustomerGoal.update(goal.id, {
+                external_responsible: currentExternal.filter((_, idx) => idx !== indexToRemove)
+            });
+            await refreshData();
+        } catch (error) {
+            console.error('Error removing external assignee:', error);
+            alert('שגיאה בהסרת אחראי חיצוני: ' + error.message);
+        } finally {
+            setIsUpdatingAssignees(false);
+        }
+    };
+
     const handleCancel = () => {
         setEditedGoal(goal);
         setIsEditing(false);
@@ -388,14 +425,67 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                     </div>
 
                     <div>
-                        <label className="text-sm text-horizon-accent mb-2 block">אחראי חיצוני (טקסט חופשי)</label>
-                        <Input
-                            value={editedGoal.external_responsible || ''}
-                            onChange={(e) => setEditedGoal({ ...editedGoal, external_responsible: e.target.value })}
-                            className="bg-horizon-card border-horizon text-horizon-text"
-                            placeholder="לדוגמה: רו״ח יוסי כהן, יועץ עסקי - דוד לוי"
-                        />
-                        <p className="text-xs text-horizon-accent mt-1">השתמש בשדה זה לאחראים שאינם רשומים במערכת</p>
+                        <label className="text-sm text-horizon-accent mb-2 block">אחראים חיצוניים (טקסט חופשי)</label>
+                        <div className="space-y-2">
+                            {(editedGoal.external_responsible || []).length > 0 && (
+                                <div className="space-y-1">
+                                    {editedGoal.external_responsible.map((name, idx) => (
+                                        <div key={idx} className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
+                                            <span className="text-xs text-horizon-text">{name}</span>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => {
+                                                    const newExternal = editedGoal.external_responsible.filter((_, i) => i !== idx);
+                                                    setEditedGoal({ ...editedGoal, external_responsible: newExternal });
+                                                }}
+                                                className="h-5 w-5 p-0 text-red-400"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <div className="flex gap-2">
+                                <Input
+                                    value={newExternalAssigneeEdit}
+                                    onChange={(e) => setNewExternalAssigneeEdit(e.target.value)}
+                                    className="bg-horizon-card border-horizon text-horizon-text"
+                                    placeholder="הזן שם (רו״ח, יועץ וכו') ולחץ הוסף"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            if (newExternalAssigneeEdit.trim()) {
+                                                setEditedGoal({
+                                                    ...editedGoal,
+                                                    external_responsible: [...(editedGoal.external_responsible || []), newExternalAssigneeEdit.trim()]
+                                                });
+                                                setNewExternalAssigneeEdit('');
+                                            }
+                                        }
+                                    }}
+                                />
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => {
+                                        if (newExternalAssigneeEdit.trim()) {
+                                            setEditedGoal({
+                                                ...editedGoal,
+                                                external_responsible: [...(editedGoal.external_responsible || []), newExternalAssigneeEdit.trim()]
+                                            });
+                                            setNewExternalAssigneeEdit('');
+                                        }
+                                    }}
+                                    disabled={!newExternalAssigneeEdit.trim()}
+                                    className="btn-horizon-primary h-9"
+                                >
+                                    הוסף
+                                </Button>
+                            </div>
+                        </div>
+                        <p className="text-xs text-horizon-accent mt-1">השתמש בשדה זה לאחראים שאינם רשומים במערכת (רו״ח, יועצים, וכו')</p>
                     </div>
 
                     <div>
@@ -568,32 +658,146 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-horizon-text">
-                    <InlineEditableField
-                        value={goal.external_responsible || ''}
-                        displayValue={
-                            <div className="flex items-center gap-1">
-                                {goal.external_responsible ? (
-                                    <span className="text-horizon-text">{goal.external_responsible}</span>
-                                ) : (goal.assigned_users || []).length > 0 ? (
-                                    <div className="flex items-center gap-1">
-                                        {goal.assigned_users.slice(0, 2).map(email => {
-                                            const user = users.find(u => u.email === email);
-                                            return <span key={email} className="text-xs text-horizon-text">{user?.full_name || email.split('@')[0]}</span>;
-                                        })}
-                                        {goal.assigned_users.length > 2 && <span className="text-xs">+{goal.assigned_users.length - 2}</span>}
+                    <div className="flex items-center gap-1 flex-wrap">
+                        {/* Show system users from assigned_users */}
+                        {(goal.assigned_users || []).slice(0, 2).map(email => {
+                            const user = users.find(u => u.email === email);
+                            return (
+                                <Badge key={email} className="bg-blue-500/20 text-blue-700 dark:text-blue-300 text-xs border-blue-500/30">
+                                    {user?.full_name || email.split('@')[0]}
+                                </Badge>
+                            );
+                        })}
+                        {(goal.assigned_users || []).length > 2 && (
+                            <Badge className="bg-blue-500/20 text-blue-700 dark:text-blue-300 text-xs border-blue-500/30">
+                                +{(goal.assigned_users || []).length - 2}
+                            </Badge>
+                        )}
+                        
+                        {/* Show external assignees from external_responsible array */}
+                        {(goal.external_responsible || []).map((name, idx) => (
+                            <Badge key={`ext-${idx}`} className="bg-purple-500/20 text-purple-700 dark:text-purple-300 text-xs border-purple-500/30">
+                                {name}
+                            </Badge>
+                        ))}
+                        
+                        {/* Show single assignee_email if no arrays */}
+                        {!(goal.assigned_users || []).length && !(goal.external_responsible || []).length && goal.assignee_email && (
+                            <Badge className="bg-gray-500/20 text-gray-700 dark:text-gray-300 text-xs border-gray-500/30">
+                                {users.find(u => u.email === goal.assignee_email)?.full_name || goal.assignee_email.split('@')[0]}
+                            </Badge>
+                        )}
+                        
+                        {/* Show placeholder if no assignees */}
+                        {!(goal.assigned_users || []).length && !(goal.external_responsible || []).length && !goal.assignee_email && (
+                            <span className="text-gray-400 text-xs">ללא אחראי</span>
+                        )}
+                    </div>
+                    
+                    {/* Popover to add/remove assignees */}
+                    <Popover>
+                        <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <button className="hover:bg-horizon-primary/10 rounded p-1">
+                                <UserPlus className="w-3 h-3 text-horizon-primary" />
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 bg-horizon-dark border-horizon p-3" dir="rtl" onClick={(e) => e.stopPropagation()}>
+                            <div className="space-y-3">
+                                {/* Section: System Users */}
+                                <div>
+                                    <p className="text-xs font-semibold text-horizon-text mb-2">משתמשי מערכת:</p>
+                                    {(goal.assigned_users || []).length > 0 && (
+                                        <div className="space-y-1 mb-2">
+                                            {goal.assigned_users.map(email => {
+                                                const user = users.find(u => u.email === email);
+                                                return (
+                                                    <div key={email} className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
+                                                        <span className="text-xs text-horizon-text">{user?.full_name || email}</span>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => handleRemoveAssignee(email)}
+                                                            className="h-5 w-5 p-0 text-red-400"
+                                                            disabled={isUpdatingAssignees}
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </Button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                    <Select onValueChange={handleAddAssignee} disabled={isUpdatingAssignees}>
+                                        <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text h-8 text-xs">
+                                            <SelectValue placeholder="הוסף משתמש מערכת..." />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-horizon-dark border-horizon">
+                                            {users
+                                                .filter(u => {
+                                                    if (!(goal.assigned_users || []).includes(u.email)) {
+                                                        if (!goal.customer_email) return true;
+                                                        return u.email === goal.customer_email || 
+                                                               u.email === goal.assigned_manager_email ||
+                                                               u.user_type === 'financial_manager';
+                                                    }
+                                                    return false;
+                                                })
+                                                .map(user => (
+                                                    <SelectItem key={user.email} value={user.email} className="text-xs">
+                                                        {user.full_name}
+                                                    </SelectItem>
+                                                ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                
+                                {/* Section: External Assignees */}
+                                <div className="border-t border-horizon pt-3">
+                                    <p className="text-xs font-semibold text-horizon-text mb-2">אחראים חיצוניים:</p>
+                                    {(goal.external_responsible || []).length > 0 && (
+                                        <div className="space-y-1 mb-2">
+                                            {goal.external_responsible.map((name, idx) => (
+                                                <div key={idx} className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
+                                                    <span className="text-xs text-horizon-text">{name}</span>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => handleRemoveExternalAssignee(idx)}
+                                                        className="h-5 w-5 p-0 text-red-400"
+                                                        disabled={isUpdatingAssignees}
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder="הזן שם (רו״ח, יועץ וכו')"
+                                            value={newExternalAssignee}
+                                            onChange={(e) => setNewExternalAssignee(e.target.value)}
+                                            className="bg-horizon-card border-horizon text-horizon-text h-8 text-xs"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    handleAddExternalAssignee();
+                                                }
+                                            }}
+                                        />
+                                        <Button
+                                            size="sm"
+                                            onClick={handleAddExternalAssignee}
+                                            disabled={!newExternalAssignee.trim() || isUpdatingAssignees}
+                                            className="h-8 text-xs btn-horizon-primary"
+                                        >
+                                            הוסף
+                                        </Button>
                                     </div>
-                                ) : goal.assignee_email ? (
-                                    <span className="text-horizon-text">{users.find(u => u.email === goal.assignee_email)?.full_name || goal.assignee_email.split('@')[0]}</span>
-                                ) : (
-                                    <span className="text-gray-400">הוסף אחראי</span>
-                                )}
-                                <UserIcon className="w-3 h-3 text-horizon-accent" />
+                                </div>
                             </div>
-                        }
-                        onSave={(newValue) => handleQuickSave('external_responsible', newValue)}
-                        placeholder="הזן שם אחראי (לדוגמה: רו״ח יוסי כהן)"
-                        className="flex-1"
-                    />
+                        </PopoverContent>
+                    </Popover>
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-horizon-accent">
