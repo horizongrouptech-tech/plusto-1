@@ -36,6 +36,14 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     const [newExternalAssignee, setNewExternalAssignee] = useState('');
     const [newExternalAssigneeEdit, setNewExternalAssigneeEdit] = useState('');
 
+    // Helper function to normalize external_responsible to array
+    const getExternalResponsible = (externalResp) => {
+        if (!externalResp) return [];
+        if (Array.isArray(externalResp)) return externalResp;
+        // Old data is string - convert to array
+        return [externalResp];
+    };
+
     const statusOptions = [
         { value: 'open', label: 'פתוח', color: 'bg-gray-500', badgeClass: 'bg-gray-500/20 text-gray-700 dark:text-gray-300 border-gray-500/30' },
         { value: 'in_progress', label: 'בביצוע', color: 'bg-blue-500', badgeClass: 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30' },
@@ -286,7 +294,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
         if (!newExternalAssignee.trim() || isUpdatingAssignees) return;
         setIsUpdatingAssignees(true);
         try {
-            const currentExternal = goal.external_responsible || [];
+            const currentExternal = getExternalResponsible(goal.external_responsible);
             await base44.entities.CustomerGoal.update(goal.id, {
                 external_responsible: [...currentExternal, newExternalAssignee.trim()]
             });
@@ -304,7 +312,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
         if (isUpdatingAssignees) return;
         setIsUpdatingAssignees(true);
         try {
-            const currentExternal = goal.external_responsible || [];
+            const currentExternal = getExternalResponsible(goal.external_responsible);
             await base44.entities.CustomerGoal.update(goal.id, {
                 external_responsible: currentExternal.filter((_, idx) => idx !== indexToRemove)
             });
@@ -427,16 +435,17 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                     <div>
                         <label className="text-sm text-horizon-accent mb-2 block">אחראים חיצוניים (טקסט חופשי)</label>
                         <div className="space-y-2">
-                            {(editedGoal.external_responsible || []).length > 0 && (
+                            {getExternalResponsible(editedGoal.external_responsible).length > 0 && (
                                 <div className="space-y-1">
-                                    {editedGoal.external_responsible.map((name, idx) => (
+                                    {getExternalResponsible(editedGoal.external_responsible).map((name, idx) => (
                                         <div key={idx} className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
                                             <span className="text-xs text-horizon-text">{name}</span>
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
                                                 onClick={() => {
-                                                    const newExternal = editedGoal.external_responsible.filter((_, i) => i !== idx);
+                                                    const currentExternal = getExternalResponsible(editedGoal.external_responsible);
+                                                    const newExternal = currentExternal.filter((_, i) => i !== idx);
                                                     setEditedGoal({ ...editedGoal, external_responsible: newExternal });
                                                 }}
                                                 className="h-5 w-5 p-0 text-red-400"
@@ -457,9 +466,10 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                                         if (e.key === 'Enter') {
                                             e.preventDefault();
                                             if (newExternalAssigneeEdit.trim()) {
+                                                const currentExternal = getExternalResponsible(editedGoal.external_responsible);
                                                 setEditedGoal({
                                                     ...editedGoal,
-                                                    external_responsible: [...(editedGoal.external_responsible || []), newExternalAssigneeEdit.trim()]
+                                                    external_responsible: [...currentExternal, newExternalAssigneeEdit.trim()]
                                                 });
                                                 setNewExternalAssigneeEdit('');
                                             }
@@ -471,9 +481,10 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                                     size="sm"
                                     onClick={() => {
                                         if (newExternalAssigneeEdit.trim()) {
+                                            const currentExternal = getExternalResponsible(editedGoal.external_responsible);
                                             setEditedGoal({
                                                 ...editedGoal,
-                                                external_responsible: [...(editedGoal.external_responsible || []), newExternalAssigneeEdit.trim()]
+                                                external_responsible: [...currentExternal, newExternalAssigneeEdit.trim()]
                                             });
                                             setNewExternalAssigneeEdit('');
                                         }
@@ -675,21 +686,21 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                         )}
                         
                         {/* Show external assignees from external_responsible array */}
-                        {(goal.external_responsible || []).map((name, idx) => (
+                        {getExternalResponsible(goal.external_responsible).map((name, idx) => (
                             <Badge key={`ext-${idx}`} className="bg-purple-500/20 text-purple-700 dark:text-purple-300 text-xs border-purple-500/30">
                                 {name}
                             </Badge>
                         ))}
                         
                         {/* Show single assignee_email if no arrays */}
-                        {!(goal.assigned_users || []).length && !(goal.external_responsible || []).length && goal.assignee_email && (
+                        {!(goal.assigned_users || []).length && !getExternalResponsible(goal.external_responsible).length && goal.assignee_email && (
                             <Badge className="bg-gray-500/20 text-gray-700 dark:text-gray-300 text-xs border-gray-500/30">
                                 {users.find(u => u.email === goal.assignee_email)?.full_name || goal.assignee_email.split('@')[0]}
                             </Badge>
                         )}
                         
                         {/* Show placeholder if no assignees */}
-                        {!(goal.assigned_users || []).length && !(goal.external_responsible || []).length && !goal.assignee_email && (
+                        {!(goal.assigned_users || []).length && !getExternalResponsible(goal.external_responsible).length && !goal.assignee_email && (
                             <span className="text-gray-400 text-xs">ללא אחראי</span>
                         )}
                     </div>
@@ -754,9 +765,9 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                                 {/* Section: External Assignees */}
                                 <div className="border-t border-horizon pt-3">
                                     <p className="text-xs font-semibold text-horizon-text mb-2">אחראים חיצוניים:</p>
-                                    {(goal.external_responsible || []).length > 0 && (
+                                    {getExternalResponsible(goal.external_responsible).length > 0 && (
                                         <div className="space-y-1 mb-2">
-                                            {goal.external_responsible.map((name, idx) => (
+                                            {getExternalResponsible(goal.external_responsible).map((name, idx) => (
                                                 <div key={idx} className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
                                                     <span className="text-xs text-horizon-text">{name}</span>
                                                     <Button
