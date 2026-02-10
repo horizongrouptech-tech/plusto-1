@@ -448,7 +448,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                       const newExternal = currentExternal.filter((_, i) => i !== idx);
                       setEditedGoal({ ...editedGoal, external_responsible: newExternal });
                     }}
-                    className="h-5 w-5 p-0 text-red-400">
+                    className="h-5 w-5 p-0 !text-red-400 !bg-red-500/10 border border-red-500/30 hover:!bg-red-500/20 rounded">
 
                                                 <X className="w-3 h-3" />
                                             </Button>
@@ -728,7 +728,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                             size="sm"
                             variant="ghost"
                             onClick={() => handleRemoveAssignee(email)}
-                            className="h-5 w-5 p-0 !text-red-400"
+                            className="h-5 w-5 p-0 !text-red-400 !bg-red-500/10 border border-red-500/30 hover:!bg-red-500/20 rounded"
                             disabled={isUpdatingAssignees}>
 
                                                             <X className="w-3 h-3" />
@@ -774,7 +774,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                         size="sm"
                         variant="ghost"
                         onClick={() => handleRemoveExternalAssignee(idx)}
-                        className="h-5 w-5 p-0 !text-red-400"
+                        className="h-5 w-5 p-0 !text-red-400 !bg-red-500/10 border border-red-500/30 hover:!bg-red-500/20 rounded"
                         disabled={isUpdatingAssignees}>
 
                                                         <X className="w-3 h-3" />

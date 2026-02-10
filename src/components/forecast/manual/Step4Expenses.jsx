@@ -87,7 +87,7 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
   // פונקציה לשכפול סכום לכל המשבצות החודשיות
   const fillAllMonthlyAmounts = (expIndex, field, value, expenseType) => {
     const parsedValue = parseFloat(value);
-    const safeValue = Number.isFinite(parsedValue) ? parsedValue : 0;
+    const safeValue = Number.isFinite(parsedValue) ? Math.round(parsedValue * 100) / 100 : 0;
     
     if (expenseType === 'marketing') {
       const updated = [...marketingExpenses];
@@ -164,7 +164,7 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
 
   const updateMarketingMonthly = (expIndex, monthIndex, field, value) => {
     const parsedValue = parseFloat(value);
-    const safeValue = Number.isFinite(parsedValue) ? parsedValue : 0;
+    const safeValue = Number.isFinite(parsedValue) ? Math.round(parsedValue * 100) / 100 : 0;
     
     const updated = [...marketingExpenses];
     const expense = { ...updated[expIndex] };
@@ -179,7 +179,7 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
 
   const updateAdminMonthly = (expIndex, monthIndex, field, value) => {
     const parsedValue = parseFloat(value);
-    const safeValue = Number.isFinite(parsedValue) ? parsedValue : 0;
+    const safeValue = Number.isFinite(parsedValue) ? Math.round(parsedValue * 100) / 100 : 0;
     
     const updated = [...adminExpenses];
     const expense = { ...updated[expIndex] };
