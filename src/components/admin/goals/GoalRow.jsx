@@ -725,12 +725,12 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                         <div key={email} className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
                                                         <span className="text-xs text-horizon-text">{user?.full_name || email}</span>
                                                         <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleRemoveAssignee(email)}
-                            className="h-5 w-5 p-0 text-red-400"
-                            disabled={isUpdatingAssignees}>
-
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => handleRemoveAssignee(email)}
+                                                            className="h-5 w-5 p-0 text-red-400 hover:text-red-500"
+                                                            disabled={isUpdatingAssignees}
+                                                        >
                                                             <X className="w-3 h-3" />
                                                         </Button>
                                                     </div>);
