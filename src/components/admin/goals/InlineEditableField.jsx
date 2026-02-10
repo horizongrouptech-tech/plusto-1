@@ -21,6 +21,7 @@ export default function InlineEditableField({
   const [editValue, setEditValue] = useState(value);
   const inputRef = useRef(null);
   const containerRef = useRef(null);
+  const isSavingRef = useRef(false);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {

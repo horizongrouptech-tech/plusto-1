@@ -29,6 +29,8 @@ import { formatCurrency } from '@/components/forecast/manual/utils/numberFormatt
 import Ofek360Modal from '@/components/admin/Ofek360Modal';
 import GoalBankManager from '@/components/admin/GoalBankManager';
 import InlineEditableCustomerDetails from '@/components/admin/InlineEditableCustomerDetails';
+import InlineEditableField from '@/components/admin/goals/InlineEditableField';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function CustomerOverviewModal({ 
   customer, 
@@ -41,6 +43,7 @@ export default function CustomerOverviewModal({
   const [ofek360Open, setOfek360Open] = useState(false);
   const [goalBankOpen, setGoalBankOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const queryClient = useQueryClient();
 
   // טעינת המשתמש הנוכחי
   useQuery({
@@ -94,6 +97,17 @@ export default function CustomerOverviewModal({
   const whatsappUrl = customer.phone 
     ? `https://wa.me/${customer.phone.replace(/[^0-9]/g, '')}`
     : null;
+
+  const handleFieldUpdate = async (field, value) => {
+    try {
+      await base44.entities.OnboardingRequest.update(customer.id, {
+        [field]: value
+      });
+      queryClient.invalidateQueries(['activeCustomers']);
+    } catch (error) {
+      alert('שגיאה בעדכון: ' + error.message);
+    }
+  };
 
   return (
     <>
@@ -167,38 +181,47 @@ export default function CustomerOverviewModal({
             }}
           />
 
-          {customer.main_products_services && (
-            <Card className="card-horizon mt-4">
-              <CardHeader>
-                <CardTitle className="text-sm text-horizon-text">מוצרים ושירותים עיקריים</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-horizon-text whitespace-pre-line text-sm">{customer.main_products_services}</p>
-              </CardContent>
-            </Card>
-          )}
+          <Card className="card-horizon mt-4">
+            <CardHeader>
+              <CardTitle className="text-sm text-horizon-text">מוצרים ושירותים עיקריים</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <InlineEditableField
+                value={customer.main_products_services || ''}
+                onSave={(newValue) => handleFieldUpdate('main_products_services', newValue)}
+                placeholder="הזן מוצרים ושירותים עיקריים"
+                multiline={true}
+              />
+            </CardContent>
+          </Card>
 
-          {customer.business_goals && (
-            <Card className="card-horizon mt-4">
-              <CardHeader>
-                <CardTitle className="text-sm text-horizon-text">יעדים עסקיים</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-horizon-text text-sm">{customer.business_goals}</p>
-              </CardContent>
-            </Card>
-          )}
+          <Card className="card-horizon mt-4">
+            <CardHeader>
+              <CardTitle className="text-sm text-horizon-text">יעדים עסקיים</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <InlineEditableField
+                value={customer.business_goals || ''}
+                onSave={(newValue) => handleFieldUpdate('business_goals', newValue)}
+                placeholder="הזן יעדים עסקיים"
+                multiline={true}
+              />
+            </CardContent>
+          </Card>
 
-          {customer.target_audience && (
-            <Card className="card-horizon mt-4">
-              <CardHeader>
-                <CardTitle className="text-sm text-horizon-text">קהל יעד</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-horizon-text text-sm">{customer.target_audience}</p>
-              </CardContent>
-            </Card>
-          )}
+          <Card className="card-horizon mt-4">
+            <CardHeader>
+              <CardTitle className="text-sm text-horizon-text">קהל יעד</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <InlineEditableField
+                value={customer.target_audience || ''}
+                onSave={(newValue) => handleFieldUpdate('target_audience', newValue)}
+                placeholder="הזן קהל יעד"
+                multiline={true}
+              />
+            </CardContent>
+          </Card>
 
           {/* כפתורי פעולה מהירה */}
           <div className="space-y-3" dir="rtl">
