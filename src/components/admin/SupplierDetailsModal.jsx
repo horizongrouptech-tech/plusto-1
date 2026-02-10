@@ -67,7 +67,8 @@ const processExpenseDataByMonth = (purchaseRecords) => {
     }));
 };
 
-export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, onClose, onFindAlternatives }) {
+export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, onClose, onFindAlternatives, onSupplierUpdated }) {
+  const [currentSupplier, setCurrentSupplier] = useState(supplier);
   const [purchaseRecords, setPurchaseRecords] = useState([]);
   const [selectedPurchaseRecordId, setSelectedPurchaseRecordId] = useState(null);
   const [currentPurchaseItems, setCurrentPurchaseItems] = useState([]);
@@ -87,6 +88,10 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
     total_amount: 0,
     items: [{ description: '', quantity: 1, unit_price: 0, total_price: 0 }]
   });
+
+  useEffect(() => {
+    setCurrentSupplier(supplier);
+  }, [supplier]);
 
   useEffect(() => {
     if (isOpen && supplier) {
@@ -212,12 +217,12 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
           <div className="flex items-center justify-between">
             <DialogTitle className="text-2xl text-horizon-text text-right flex items-center gap-3">
               <Building className="w-6 h-6 text-horizon-primary" />
-              פרטי ספק: {supplier.name}
+              פרטי ספק: {currentSupplier.name}
             </DialogTitle>
             <Button
               variant="outline"
               onClick={() => {
-                setEditingSupplier(supplier);
+                setEditingSupplier(currentSupplier);
                 setShowEditSupplierDialog(true);
               }}
               className="border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10"
@@ -250,70 +255,70 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
                   {renderStarRating(supplier.rating)}
                 </div>
 
-                {supplier.contact_person && (
+                {currentSupplier.contact_person && (
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-horizon-accent" />
-                    <span className="text-horizon-text">{supplier.contact_person}</span>
+                    <span className="text-horizon-text">{currentSupplier.contact_person}</span>
                   </div>
                 )}
 
-                {supplier.phone && (
+                {currentSupplier.phone && (
                   <div className="flex items-center gap-2">
                     <Phone className="w-4 h-4 text-horizon-accent" />
-                    <a href={`tel:${supplier.phone}`} className="text-horizon-primary hover:underline">
-                      {supplier.phone}
+                    <a href={`tel:${currentSupplier.phone}`} className="text-horizon-primary hover:underline">
+                      {currentSupplier.phone}
                     </a>
                   </div>
                 )}
 
-                {supplier.email && (
+                {currentSupplier.email && (
                   <div className="flex items-center gap-2">
                     <Mail className="w-4 h-4 text-horizon-accent" />
-                    <a href={`mailto:${supplier.email}`} className="text-horizon-primary hover:underline">
-                      {supplier.email}
+                    <a href={`mailto:${currentSupplier.email}`} className="text-horizon-primary hover:underline">
+                      {currentSupplier.email}
                     </a>
                   </div>
                 )}
 
-                {supplier.address && (
+                {currentSupplier.address && (
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-horizon-accent" />
-                    <span className="text-horizon-text">{supplier.address}</span>
+                    <span className="text-horizon-text">{currentSupplier.address}</span>
                   </div>
                 )}
 
-                {supplier.category && (
+                {currentSupplier.category && (
                   <div className="flex items-center gap-2">
                     <Package className="w-4 h-4 text-horizon-accent" />
                     <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-                      {supplier.category}
+                      {currentSupplier.category}
                     </Badge>
                   </div>
                 )}
 
-                {supplier.payment_terms && (
+                {currentSupplier.payment_terms && (
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-horizon-accent" />
-                    <span className="text-horizon-text">{supplier.payment_terms}</span>
+                    <span className="text-horizon-text">{currentSupplier.payment_terms}</span>
                   </div>
                 )}
 
-                {supplier.delivery_time && (
+                {currentSupplier.delivery_time && (
                   <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-horizon-accent" />
-                    <span className="text-horizon-text">זמן אספקה: {supplier.delivery_time}</span>
+                    <span className="text-horizon-text">זמן אספקה: {currentSupplier.delivery_time}</span>
                   </div>
                 )}
 
-                {onFindAlternatives && supplier.category && (
+                {onFindAlternatives && currentSupplier.category && (
                   <div className="pt-3 border-t border-horizon">
                     <Button
                       variant="outline"
-                      onClick={() => onFindAlternatives(supplier.category)}
+                      onClick={() => onFindAlternatives(currentSupplier.category)}
                       className="w-full"
                     >
                       <Search className="w-4 h-4 ml-2" />
-                      מצא ספקים חלופיים ב{supplier.category}
+                      מצא ספקים חלופיים ב{currentSupplier.category}
                     </Button>
                   </div>
                 )}
@@ -355,7 +360,7 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
                   title="מסמך רכש חדש"
                   description="העלה חשבונית, תעודת משלוח או הזמנת רכש"
                   icon={FileText}
-                  context={{ supplier_id: supplier.id }}
+                  context={{ supplier_id: currentSupplier.id }}
                   onUploadComplete={handleUploadComplete}
                 />
               </CardContent>
@@ -927,14 +932,22 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
             setEditingSupplier(null);
           }}
           supplier={editingSupplier}
-          onUpdate={() => {
-            // רענון הנתונים
-            const loadPurchaseData = async () => {
-              if (!supplier?.id) return;
+          onUpdate={async (updatedSupplier) => {
+            // עדכון הספק המקומי עם הנתונים החדשים
+            if (updatedSupplier) {
+              setCurrentSupplier(updatedSupplier);
               
+              // עדכון הספק בקומפוננטה האב
+              if (onSupplierUpdated) {
+                onSupplierUpdated(updatedSupplier);
+              }
+            }
+            
+            // רענון נתוני הרכישות
+            if (currentSupplier?.id) {
               setIsLoading(true);
               try {
-                const records = await PurchaseRecord.filter({ supplier_id: supplier.id }, '-purchase_date');
+                const records = await PurchaseRecord.filter({ supplier_id: currentSupplier.id }, '-purchase_date');
                 setPurchaseRecords(records);
                 
                 if (records.length > 0) {
@@ -950,8 +963,8 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
               } finally {
                 setIsLoading(false);
               }
-            };
-            loadPurchaseData();
+            }
+            
             setShowEditSupplierDialog(false);
             setEditingSupplier(null);
           }}

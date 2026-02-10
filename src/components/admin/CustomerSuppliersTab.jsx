@@ -561,7 +561,20 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
         customerEmail={customer.email}
         isOpen={!!selectedSupplier}
         onClose={() => setSelectedSupplier(null)}
-        onFindAlternatives={handleFindAlternatives} />
+        onFindAlternatives={handleFindAlternatives}
+        onSupplierUpdated={async (updatedSupplier) => {
+          // ניקוי cache
+          const cacheKey = `suppliers_${customer.email}`;
+          localStorage.removeItem(cacheKey);
+          
+          // רענון רשימת הספקים
+          await loadSuppliers(false);
+          
+          // עדכון הספק הנבחר להצגת הנתונים החדשים
+          if (updatedSupplier) {
+            setSelectedSupplier(updatedSupplier);
+          }
+        }} />
 
       }
 

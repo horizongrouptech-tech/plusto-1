@@ -67,8 +67,13 @@ export default function EditSupplierModal({ isOpen, onClose, supplier, onUpdate 
       };
 
       await Supplier.update(supplier.id, updatedData);
+      
+      // טעינת הספק המעודכן מה-DB כדי להחזיר את הנתונים העדכניים
+      const updatedSuppliers = await Supplier.filter({ id: supplier.id });
+      const updatedSupplier = updatedSuppliers && updatedSuppliers.length > 0 ? updatedSuppliers[0] : null;
+      
       if (onUpdate) {
-        onUpdate();
+        onUpdate(updatedSupplier);
       }
       onClose();
     } catch (error) {
