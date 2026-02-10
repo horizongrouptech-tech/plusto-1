@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
   });
 
   try {
-    await updateProcessStatus(base44, process.id, 10, 'running', 'מוריד קובץ...');
+    await updateProcessStatus(base44, process.id, 10, 'running', 'בודק גודל הקובץ...');
 
     // הורדת הקובץ
     const response = await fetch(file_url);
@@ -144,147 +144,80 @@ Deno.serve(async (req) => {
                     file_url.toLowerCase().endsWith('.xlsx') ||
                     file_url.toLowerCase().endsWith('.xls');
 
-    let records;
+    let totalRows;
     
+    // ספירת שורות מהירה בלבד - ללא עיבוד מלא
     if (isExcel) {
       const buffer = await response.arrayBuffer();
-      records = processExcel(buffer);
+      const workbook = xlsx.read(buffer, { type: 'buffer', sheetRows: 1 });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const range = xlsx.utils.decode_range(firstSheet['!ref'] || 'A1');
+      totalRows = range.e.r - range.s.r; // מספר שורות כולל
     } else {
       const buffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(buffer);
-      let text;
-      try {
-        text = new TextDecoder('utf-8').decode(uint8Array);
-      } catch (e) {
-        text = new TextDecoder('windows-1255').decode(uint8Array);
-      }
-      records = processCSV(text);
+      const text = new TextDecoder('utf-8').decode(uint8Array);
+      const lines = text.split(/\r\n|\n/).filter(line => line.trim());
+      totalRows = lines.length - 1; // מספר שורות ללא כותרת
     }
 
-    if (!records || records.length === 0) {
+    if (!totalRows || totalRows === 0) {
       throw new Error('הקובץ ריק או לא נמצאו נתונים');
     }
 
-    await updateProcessStatus(base44, process.id, 30, 'running', `מעבד ${records.length} שורות...`);
+    // חישוב chunks
+    const CHUNK_SIZE = 2000;
+    const totalChunks = Math.ceil(totalRows / CHUNK_SIZE);
 
-    await updateProcessStatus(base44, process.id, 40, 'running', 'ממיר נתונים לפי המיפוי...');
+    await updateProcessStatus(base44, process.id, 20, 'running', 
+      `זוהו ${totalRows.toLocaleString('he-IL')} מוצרים. מתחיל עיבוד ב-${totalChunks} חלקים...`);
 
-    // עיבוד כל רשומה לפי המיפוי
-    const productsToCreate = [];
-    const invalidRows = [];
-
-    for (let i = 0; i < records.length; i++) {
-      const record = records[i];
-      
-      // בניית אובייקט מוצר לפי המיפוי
-      const product = {
+    // שמירת מטא-דטה ל-ProcessStatus
+    await base44.asServiceRole.entities.ProcessStatus.update(process.id, {
+      metadata: {
+        file_url,
+        mapping,
         catalog_id,
         customer_email,
-        is_active: true,
-        data_source: 'file_upload',
-        last_updated: new Date().toISOString()
-      };
-
-      const missingFields = [];
-      const validationErrors = []; // NEW: מעקב אחר שגיאות ספציפיות
-
-      // מיפוי שדות
-      for (const [systemField, sourceColumn] of Object.entries(mapping)) {
-        if (sourceColumn && record[sourceColumn] !== undefined) {
-          const fieldType = FIELD_TYPES[systemField] || 'text';
-          product[systemField] = cleanValue(record[sourceColumn], fieldType);
-        }
+        total_rows: totalRows,
+        chunk_size: CHUNK_SIZE,
+        import_with_errors
       }
+    });
 
-      // בדיקת שדות חובה
-      if (!product.product_name || product.product_name.trim() === '') {
-        validationErrors.push('שם מוצר חסר');
-        // גם אם import_with_errors=true, שם מוצר הוא חובה - ניתן שם זמני
-        if (import_with_errors) {
-          product.product_name = `מוצר ללא שם - שורה ${i + 1}`;
-        } else {
-          invalidRows.push({ row: i + 1, reason: 'שם מוצר חסר' });
-          continue;
-        }
-      }
+    // קריאה ל-worker הראשון
+    await base44.asServiceRole.functions.invoke('processCatalogChunkWorker', {
+      process_id: process.id,
+      chunk_number: 0,
+      total_chunks: totalChunks
+    });
 
-      // חישוב רווח - גמיש לפי העמודות שזמינות
-      const costPrice = product.cost_price || product.cost_price_no_vat || 0;
-      const sellingPrice = product.selling_price || product.store_price || product.store_price_alt || 0;
-      
-      // שמירת מחיר עלות ומכירה מנורמלים
-      if (!product.cost_price && product.cost_price_no_vat) {
-        product.cost_price = product.cost_price_no_vat;
-      }
-      if (!product.selling_price && product.store_price) {
-        product.selling_price = product.store_price;
-      }
-      
-      product.gross_profit = Math.max(0, sellingPrice - costPrice);
-      // אם יש אחוז רווחיות בקובץ - נשתמש בו, אחרת נחשב
-      if (!product.profit_percentage || product.profit_percentage === 0) {
-        product.profit_percentage = costPrice > 0 ? Math.round(((sellingPrice - costPrice) / costPrice) * 100) : 0;
-      }
-
-      // קביעת איכות נתונים - גמיש יותר
-      if (!costPrice && !product.cost_price_no_vat) {
-        missingFields.push('מחיר עלות');
-      }
-      if (!sellingPrice && !product.store_price && !product.store_price_alt) {
-        missingFields.push('מחיר מכירה');
-      }
-      
-      product.missing_fields = missingFields;
-      product.data_quality = missingFields.length === 0 ? 'complete' : 
-                             missingFields.length <= 1 ? 'partial' : 'incomplete';
-      
-      // סימון מוצרים שיובאו עם שגיאות
-      const hasErrors = validationErrors.length > 0;
-      product.needs_review = missingFields.length > 0 || hasErrors;
-      product.import_errors = hasErrors ? validationErrors : null;
-
-      productsToCreate.push(product);
-    }
-
-    await updateProcessStatus(base44, process.id, 60, 'running', 'שומר מוצרים חדשים...');
-
-    // יצירת מוצרים חדשים - batches קטנים למניעת חסימת מגבלת 5000 של Base44
-    let createdCount = 0;
-    if (productsToCreate.length > 0) {
-      // Base44 מגביל ל-5000 רשומות, נשתמש ב-batch של 200 עם הפסקות
-      const batchSize = 200;
-      const totalBatches = Math.ceil(productsToCreate.length / batchSize);
-      
-      for (let i = 0; i < productsToCreate.length; i += batchSize) {
-        const batch = productsToCreate.slice(i, i + batchSize);
-        const currentBatch = Math.floor(i / batchSize) + 1;
-        
-        try {
-          await base44.asServiceRole.entities.ProductCatalog.bulkCreate(batch);
-          createdCount += batch.length;
-        } catch (batchError) {
-          console.error(`שגיאה ב-batch ${currentBatch}:`, batchError);
-          // ניסיון ליצור אחד-אחד במקרה של שגיאה
-          for (const product of batch) {
-            try {
-              await base44.asServiceRole.entities.ProductCatalog.create(product);
-              createdCount++;
-            } catch (singleError) {
-              console.error('שגיאה ביצירת מוצר בודד:', singleError);
-            }
-          }
-        }
-        
-        const progress = 60 + Math.round((createdCount / productsToCreate.length) * 25);
-        await updateProcessStatus(base44, process.id, progress, 'running', 
-          `נוצרו ${createdCount.toLocaleString('he-IL')} מתוך ${productsToCreate.length.toLocaleString('he-IL')} מוצרים (batch ${currentBatch}/${totalBatches})...`);
-        
-        // הפסקה בין batches למניעת עומס על השרת
-        if (i + batchSize < productsToCreate.length) {
-          await new Promise(resolve => setTimeout(resolve, 150));
-        }
-      }
-    }
+    // החזרת תגובה מיידית - העיבוד ממשיך ברקע
+    return new Response(JSON.stringify({
+      success: true,
+      process_id: process.id,
+      total_rows: totalRows,
+      total_chunks: totalChunks,
+      message: `התחיל עיבוד ${totalRows.toLocaleString('he-IL')} מוצרים ב-${totalChunks} שלבים`
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Error in processCatalogWithMapping orchestrator:', error);
+    await updateProcessStatus(base44, process.id, 0, 'failed', 
+      `שגיאה: ${error.message}`, null, error.message);
+    
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message,
+      process_id: process.id
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+});
 
     await updateProcessStatus(base44, process.id, 90, 'running', 'מעדכן ישות קטלוג...');
 
