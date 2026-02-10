@@ -35,6 +35,7 @@ import SpecificFileUploadBox from "./SpecificFileUploadBox";
 import { PurchaseRecord } from "@/entities/PurchaseRecord";
 import { formatCurrency } from "../utils/currencyFormatter";
 import { base44 } from '@/api/base44Client';
+import EditSupplierModal from "../shared/EditSupplierModal";
 
 // פונקציית עזר לעיבוד נתוני הגרף לפי חודשים
 const processExpenseDataByMonth = (purchaseRecords) => {
@@ -216,7 +217,7 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
             <Button
               variant="outline"
               onClick={() => {
-                // פתיחת מודל עריכה
+                setEditingSupplier(supplier);
                 setShowEditSupplierDialog(true);
               }}
               className="border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10"
@@ -916,6 +917,46 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* דיאלוג עריכת הספק */}
+      {showEditSupplierDialog && editingSupplier && (
+        <EditSupplierModal
+          isOpen={showEditSupplierDialog}
+          onClose={() => {
+            setShowEditSupplierDialog(false);
+            setEditingSupplier(null);
+          }}
+          supplier={editingSupplier}
+          onUpdate={() => {
+            // רענון הנתונים
+            const loadPurchaseData = async () => {
+              if (!supplier?.id) return;
+              
+              setIsLoading(true);
+              try {
+                const records = await PurchaseRecord.filter({ supplier_id: supplier.id }, '-purchase_date');
+                setPurchaseRecords(records);
+                
+                if (records.length > 0) {
+                  const latestRecord = records[0];
+                  setSelectedPurchaseRecordId(latestRecord.id);
+                  setCurrentPurchaseItems(latestRecord.items || []);
+                }
+                
+                const monthlyExpenseData = processExpenseDataByMonth(records);
+                setExpenseHistoryData(monthlyExpenseData);
+              } catch (error) {
+                console.error("Error loading purchase records:", error);
+              } finally {
+                setIsLoading(false);
+              }
+            };
+            loadPurchaseData();
+            setShowEditSupplierDialog(false);
+            setEditingSupplier(null);
+          }}
+        />
+      )}
     </Dialog>
   );
 }

@@ -369,11 +369,19 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                                 <SelectValue placeholder="בחר אחראי" />
                             </SelectTrigger>
                             <SelectContent>
-                                {users.map(user => (
-                                    <SelectItem key={user.email} value={user.email}>
-                                        {user.full_name}
-                                    </SelectItem>
-                                ))}
+                                {users
+                                    .filter(user => {
+                                        // סינון: רק הלקוח הנוכחי והמנהל הכספים שלו
+                                        if (!goal.customer_email) return true; // אם אין customer_email, הצג הכל
+                                        return user.email === goal.customer_email || 
+                                               user.email === goal.assigned_manager_email ||
+                                               user.user_type === 'financial_manager';
+                                    })
+                                    .map(user => (
+                                        <SelectItem key={user.email} value={user.email}>
+                                            {user.full_name}
+                                        </SelectItem>
+                                    ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -592,17 +600,37 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                                     </div>
                                 )}
                                 
-                                {users.filter(u => !(goal.assigned_users || []).includes(u.email)).length > 0 && (
+                                {users
+                                    .filter(u => {
+                                        // סינון: רק משתמשים רלוונטיים
+                                        if (!(goal.assigned_users || []).includes(u.email)) {
+                                            if (!goal.customer_email) return true;
+                                            return u.email === goal.customer_email || 
+                                                   u.email === goal.assigned_manager_email ||
+                                                   u.user_type === 'financial_manager';
+                                        }
+                                        return false;
+                                    }).length > 0 && (
                                     <Select onValueChange={handleAddAssignee} disabled={isUpdatingAssignees}>
                                         <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text h-8 text-xs">
                                             <SelectValue placeholder="הוסף אחראי..." />
                                         </SelectTrigger>
                                         <SelectContent className="bg-horizon-dark border-horizon">
-                                            {users.filter(u => !(goal.assigned_users || []).includes(u.email)).map(user => (
-                                                <SelectItem key={user.email} value={user.email} className="text-xs">
-                                                    {user.full_name}
-                                                </SelectItem>
-                                            ))}
+                                            {users
+                                                .filter(u => {
+                                                    if (!(goal.assigned_users || []).includes(u.email)) {
+                                                        if (!goal.customer_email) return true;
+                                                        return u.email === goal.customer_email || 
+                                                               u.email === goal.assigned_manager_email ||
+                                                               u.user_type === 'financial_manager';
+                                                    }
+                                                    return false;
+                                                })
+                                                .map(user => (
+                                                    <SelectItem key={user.email} value={user.email} className="text-xs">
+                                                        {user.full_name}
+                                                    </SelectItem>
+                                                ))}
                                         </SelectContent>
                                     </Select>
                                 )}
