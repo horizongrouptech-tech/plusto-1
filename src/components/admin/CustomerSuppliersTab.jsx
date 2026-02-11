@@ -542,6 +542,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
           // ✅ רענון עם React Query
           queryClient.invalidateQueries(['customerSuppliers', customer.email]);
           queryClient.invalidateQueries(['suggestedSuppliers', customer.email]);
+          queryClient.invalidateQueries(['suggestedSuppliersCount', customer.email]);
           
           // עדכון הספק הנבחר להצגת הנתונים החדשים
           if (updatedSupplier) {
