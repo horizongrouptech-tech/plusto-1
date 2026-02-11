@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TrendingUp, DollarSign, PieChart, Lightbulb, BarChart, AlertTriangle, CheckCircle, SlidersHorizontal, ArrowUpRight, Target, TrendingDown, XCircle, Sparkles } from "lucide-react"; // Added Sparkles
 import DeeperInsightsModal from "./DeeperInsightsModal"; // NEW IMPORT
+import { formatMarginPercentage } from "@/components/utils/formatMarginPercentage";
 
 const currencyFormatter = new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS' });
 
@@ -192,7 +193,7 @@ export function FinancialReportViewer({ reportData, isOpen, onClose, fileData })
               value={currencyFormatter.format(financialSummary.gross_profit.amount || financialSummary.gross_profit)} 
               icon={PieChart} 
               color="blue"
-              description={`${((profitabilityRatios.gross_margin || profitabilityRatios.gross_profit_margin || 0) * 100).toFixed(2)}% מההכנסות`}
+              description={`${formatMarginPercentage(profitabilityRatios.gross_margin || profitabilityRatios.gross_profit_margin || 0)}% מההכנסות`}
             />
           )}
 
@@ -202,7 +203,7 @@ export function FinancialReportViewer({ reportData, isOpen, onClose, fileData })
               value={currencyFormatter.format(financialSummary.net_profit.amount || financialSummary.net_profit)} 
               icon={financialSummary.net_profit.amount >= 0 ? TrendingUp : TrendingDown} 
               color={financialSummary.net_profit.amount >= 0 ? "green" : "red"}
-              description={`${((profitabilityRatios.net_margin || profitabilityRatios.net_profit_margin || 0) * 100).toFixed(2)}% מההכנסות`}
+              description={`${formatMarginPercentage(profitabilityRatios.net_margin || profitabilityRatios.net_profit_margin || 0)}% מההכנסות`}
             />
           )}
         </div>
@@ -220,7 +221,7 @@ export function FinancialReportViewer({ reportData, isOpen, onClose, fileData })
                 {profitabilityRatios.gross_profit_margin && (
                   <div className="text-center p-3 bg-horizon-card rounded-lg">
                     <p className="text-2xl font-bold text-green-400">
-                      {(profitabilityRatios.gross_profit_margin * 100).toFixed(1)}%
+                      {formatMarginPercentage(profitabilityRatios.gross_profit_margin)}%
                     </p>
                     <p className="text-sm text-horizon-accent">רווח גולמי</p>
                   </div>
@@ -228,7 +229,7 @@ export function FinancialReportViewer({ reportData, isOpen, onClose, fileData })
                 {profitabilityRatios.operating_profit_margin && (
                   <div className="text-center p-3 bg-horizon-card rounded-lg">
                     <p className="text-2xl font-bold text-blue-400">
-                      {(profitabilityRatios.operating_profit_margin * 100).toFixed(1)}%
+                      {formatMarginPercentage(profitabilityRatios.operating_profit_margin)}%
                     </p>
                     <p className="text-sm text-horizon-accent">רווח תפעולי</p>
                   </div>
@@ -236,7 +237,7 @@ export function FinancialReportViewer({ reportData, isOpen, onClose, fileData })
                 {profitabilityRatios.net_profit_margin && (
                   <div className="text-center p-3 bg-horizon-card rounded-lg">
                     <p className="text-2xl font-bold text-purple-400">
-                      {(profitabilityRatios.net_profit_margin * 100).toFixed(1)}%
+                      {formatMarginPercentage(profitabilityRatios.net_profit_margin)}%
                     </p>
                     <p className="text-sm text-horizon-accent">רווח נקי</p>
                   </div>
@@ -388,10 +389,10 @@ export function FinancialReportViewer({ reportData, isOpen, onClose, fileData })
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {expenseEfficiency.salary_to_revenue_ratio !== undefined && <div className="text-center p-2 rounded-lg bg-horizon-card/50"><h4>שכר</h4><p className="font-bold text-lg text-blue-400">{(expenseEfficiency.salary_to_revenue_ratio * 100).toFixed(1)}%</p></div>}
-                      {expenseEfficiency.admin_to_revenue_ratio !== undefined && <div className="text-center p-2 rounded-lg bg-horizon-card/50"><h4>הנהלה וכלליות</h4><p className="font-bold text-lg text-yellow-400">{(expenseEfficiency.admin_to_revenue_ratio * 100).toFixed(1)}%</p></div>}
-                      {expenseEfficiency.financing_cost_ratio !== undefined && <div className="text-center p-2 rounded-lg bg-horizon-card/50"><h4>מימון</h4><p className="font-bold text-lg text-purple-400">{(expenseEfficiency.financing_cost_ratio * 100).toFixed(1)}%</p></div>}
-                      {costStructure?.cost_of_goods_sold?.percentage_of_revenue !== undefined && <div className="text-center p-2 rounded-lg bg-horizon-card/50"><h4>עלות מכר</h4><p className="font-bold text-lg text-red-400">{(costStructure.cost_of_goods_sold.percentage_of_revenue * 100).toFixed(1)}%</p></div>}
+                      {expenseEfficiency.salary_to_revenue_ratio !== undefined && <div className="text-center p-2 rounded-lg bg-horizon-card/50"><h4>שכר</h4><p className="font-bold text-lg text-blue-400">{formatMarginPercentage(expenseEfficiency.salary_to_revenue_ratio)}%</p></div>}
+                      {expenseEfficiency.admin_to_revenue_ratio !== undefined && <div className="text-center p-2 rounded-lg bg-horizon-card/50"><h4>הנהלה וכלליות</h4><p className="font-bold text-lg text-yellow-400">{formatMarginPercentage(expenseEfficiency.admin_to_revenue_ratio)}%</p></div>}
+                      {expenseEfficiency.financing_cost_ratio !== undefined && <div className="text-center p-2 rounded-lg bg-horizon-card/50"><h4>מימון</h4><p className="font-bold text-lg text-purple-400">{formatMarginPercentage(expenseEfficiency.financing_cost_ratio)}%</p></div>}
+                      {costStructure?.cost_of_goods_sold?.percentage_of_revenue !== undefined && <div className="text-center p-2 rounded-lg bg-horizon-card/50"><h4>עלות מכר</h4><p className="font-bold text-lg text-red-400">{formatMarginPercentage(costStructure.cost_of_goods_sold.percentage_of_revenue)}%</p></div>}
                   </div>
                 </CardContent>
             </Card>

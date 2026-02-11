@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
 import { formatCurrency, formatLargeNumber } from "@/components/utils/currencyFormatter";
+import { formatMarginPercentage } from "@/components/utils/formatMarginPercentage";
 
 export default function ProfitLossViewer({ reportData }) {
   const [activeTab, setActiveTab] = useState('summary');
@@ -54,7 +55,7 @@ export default function ProfitLossViewer({ reportData }) {
         <p className="text-2xl font-bold text-horizon-text mt-1">{isCurrency ? formatCurrency(value) : formatNumber(value)}</p>
       </div>
       <div className="text-xs text-horizon-accent mt-2 space-y-1">
-        {percentage !== undefined && <div>{percentage.toFixed(2)}% מההכנסות</div>}
+        {percentage !== undefined && <div>{formatMarginPercentage(percentage)}% מההכנסות</div>}
         {monthly !== undefined && <div>ממוצע חודשי: {isCurrency ? formatCurrency(monthly) : formatNumber(monthly)}</div>}
         {change !== undefined && (
           <div className={`flex items-center gap-1 ${getChangeColor(change)}`}>
