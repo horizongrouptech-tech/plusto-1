@@ -112,7 +112,7 @@ export default function CreditReportViewer({ isOpen, onClose, reportData }) {
                         ניתוח דוח ריכוז נתונים - {reportMeta?.subjectFullName}
                     </DialogTitle>
                     <DialogDescription className="text-horizon-accent">
-                        הופק בתאריך: {reportMeta?.reportIssueDate ? format(new Date(reportMeta.reportIssueDate), 'dd/MM/yyyy') : 'לא ידוע'}
+                        הופק בתאריך: {(() => { try { const d = new Date(reportMeta?.reportIssueDate); return isNaN(d.getTime()) ? 'לא ידוע' : format(d, 'dd/MM/yyyy'); } catch { return 'לא ידוע'; } })()}
                     </DialogDescription>
                 </DialogHeader>
 
