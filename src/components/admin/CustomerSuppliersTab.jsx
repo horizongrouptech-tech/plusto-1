@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow } from
 "@/components/ui/table";
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AddSupplierModal from "../shared/AddSupplierModal";
 import SupplierDetailsModal from "./SupplierDetailsModal";
 import SupplierPreviewModal from "./SupplierPreviewModal";
@@ -59,163 +60,104 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
   }, [propCurrentUser]);
 
   const currentUser = localCurrentUser;
-  const [suppliers, setSuppliers] = useState([]);
-  const [suggestedSuppliers, setSuggestedSuppliers] = useState([]);
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("customer-suppliers");
   const [searchTerm, setSearchTerm] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [selectedSuggestedSupplier, setSelectedSuggestedSupplier] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState(null);
   const [showFindAlternativeModal, setShowFindAlternativeModal] = useState(false);
   
-  // Pagination state
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  // Pagination state for suggested suppliers
+  const [suggestedPage, setSuggestedPage] = useState(1);
   const PAGE_SIZE = 20;
 
-  const loadSuppliers = useCallback(async (loadMore = false) => {
-    if (!customer) {
-      setIsLoading(false);
-      return;
-    }
+  // ✅ טעינת ספקי הלקוח - מהיר, מיד, עם React Query
+  const { 
+    data: suppliers = [], 
+    isLoading: isLoadingCustomerSuppliers,
+    refetch: refetchCustomerSuppliers 
+  } = useQuery({
+    queryKey: ['customerSuppliers', customer?.email],
+    queryFn: async () => {
+      if (!customer?.email) return [];
+      return await base44.entities.Supplier.filter({
+        customer_emails: [customer.email],
+        is_active: true
+      });
+    },
+    enabled: !!customer?.email,
+    staleTime: 5 * 60 * 1000, // 5 דקות cache
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1
+  });
 
-    try {
-      if (loadMore) {
-        setIsLoadingMore(true);
-      } else {
-        setIsLoading(true);
-        setPage(1);
-      }
-
-      const currentPage = loadMore ? page : 1;
-
-      // בדוק cache רק בטעינה ראשונה
-      if (!loadMore) {
-        const cacheKey = `suppliers_${customer.email}`;
-        const cached = localStorage.getItem(cacheKey);
-        if (cached) {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < 5 * 60 * 1000) { // 5 דקות
-            setSuppliers(data.customerSuppliers || []);
-            setSuggestedSuppliers(data.suggestedSuppliers?.slice(0, PAGE_SIZE) || []);
-            setHasMore((data.suggestedSuppliers?.length || 0) > PAGE_SIZE);
-            setIsLoading(false);
-            return;
-          }
-        }
-      }
-
-      // טעינה מקבילית עם timeout
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 10000)
-      );
-
-      const [customerSuppliersResult, suggestedResult] = await Promise.allSettled([
-        Promise.race([
-          base44.entities.Supplier.filter({
-            customer_emails: [customer.email],
-            is_active: true
-          }),
-          timeoutPromise
-        ]),
-        Promise.race([
+  // ✅ טעינת ספקים מוצעים - איטי, lazy loading, רק כשצריך
+  const { 
+    data: allSuggestedSuppliers = [], 
+    isLoading: isLoadingSuggested,
+    refetch: refetchSuggested 
+  } = useQuery({
+    queryKey: ['suggestedSuppliers', customer?.email],
+    queryFn: async () => {
+      if (!customer?.email) return [];
+      
+      try {
+        // נסה AI call עם timeout קצר
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 8000)
+        );
+        
+        const result = await Promise.race([
           base44.functions.invoke('getSuggestedSuppliers', {
             customer_email: customer.email,
             customer_data: customer
           }),
           timeoutPromise
-        ])
-      ]);
-
-      // עיבוד ספקי הלקוח
-      let customerSuppliers = [];
-      if (customerSuppliersResult.status === 'fulfilled') {
-        customerSuppliers = customerSuppliersResult.value;
-        setSuppliers(customerSuppliers);
-      } else {
-        console.error('Error loading customer suppliers:', customerSuppliersResult.reason);
-        const cacheKey = `suppliers_${customer.email}`;
-        const cached = localStorage.getItem(cacheKey);
-        if (cached) {
-          const { data } = JSON.parse(cached);
-          customerSuppliers = data.customerSuppliers || [];
-          setSuppliers(customerSuppliers);
-        } else {
-          setSuppliers([]);
-        }
+        ]);
+        
+        const { data: suggested, error } = result || {};
+        if (error) throw new Error(error);
+        
+        const suppliersList = suggested?.data || suggested || [];
+        return Array.isArray(suppliersList) ? suppliersList : [];
+      } catch (error) {
+        console.warn('AI suggestion failed, using fallback:', error);
+        // Fallback: טען את כל הספקים הפעילים (ללא AI)
+        const allSuppliers = await base44.entities.Supplier.filter({ is_active: true });
+        return allSuppliers.filter((supplier) =>
+          !supplier.customer_emails?.includes(customer.email)
+        );
       }
+    },
+    enabled: !!customer?.email && activeTab === 'suggested-suppliers', // ✅ רק כשצריך
+    staleTime: 10 * 60 * 1000, // 10 דקות cache (AI call יקר)
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1
+  });
 
-      // עיבוד ספקים מוצעים עם Pagination
-      let allSuggestedSuppliers = [];
-      if (suggestedResult.status === 'fulfilled') {
-        const { data: suggested, error } = suggestedResult.value;
-        if (error) {
-          console.error('Error from getSuggestedSuppliers:', error);
-          try {
-            const allSuppliers = await base44.entities.Supplier.filter({ is_active: true });
-            allSuggestedSuppliers = allSuppliers.filter((supplier) =>
-              !supplier.customer_emails?.includes(customer.email)
-            );
-          } catch (fallbackError) {
-            console.error('Fallback also failed:', fallbackError);
-            allSuggestedSuppliers = [];
-          }
-        } else {
-          const suppliersList = suggested?.data || suggested || [];
-          allSuggestedSuppliers = Array.isArray(suppliersList) ? suppliersList : [];
-        }
-      } else {
-        console.error('Error loading suggested suppliers:', suggestedResult.reason);
-        const cacheKey = `suppliers_${customer.email}`;
-        const cached = localStorage.getItem(cacheKey);
-        if (cached) {
-          const { data } = JSON.parse(cached);
-          allSuggestedSuppliers = data.suggestedSuppliers || [];
-        }
-      }
+  // Pagination עבור ספקים מוצעים
+  const paginatedSuggestedSuppliers = React.useMemo(() => {
+    const endIndex = suggestedPage * PAGE_SIZE;
+    return allSuggestedSuppliers.slice(0, endIndex);
+  }, [allSuggestedSuppliers, suggestedPage]);
 
-      // Pagination - slice results
-      const endIndex = currentPage * PAGE_SIZE;
-      const paginatedSuppliers = allSuggestedSuppliers.slice(0, endIndex);
-      
-      if (loadMore) {
-        setSuggestedSuppliers(paginatedSuppliers);
-        setPage(currentPage + 1);
-      } else {
-        setSuggestedSuppliers(paginatedSuppliers);
-        setPage(2);
-      }
-      
-      setHasMore(endIndex < allSuggestedSuppliers.length);
+  const hasMore = paginatedSuggestedSuppliers.length < allSuggestedSuppliers.length;
 
-      // שמירה ב-cache
-      if (!loadMore && (customerSuppliersResult.status === 'fulfilled' || suggestedResult.status === 'fulfilled')) {
-        const cacheKey = `suppliers_${customer.email}`;
-        localStorage.setItem(cacheKey, JSON.stringify({
-          data: {
-            customerSuppliers,
-            suggestedSuppliers: allSuggestedSuppliers
-          },
-          timestamp: Date.now()
-        }));
-      }
+  // ✅ פונקציה לטעינת עוד ספקים מוצעים
+  const loadMoreSuggested = useCallback(() => {
+    setSuggestedPage(prev => prev + 1);
+  }, []);
 
-    } catch (error) {
-      console.error("Error loading suppliers:", error);
-      setSuppliers([]);
-      setSuggestedSuppliers([]);
-    } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
-    }
-  }, [customer, page]);
-
+  // ✅ איפוס pagination כשמשנים טאב או מסננים
   useEffect(() => {
-    loadSuppliers();
-  }, [loadSuppliers]);
+    if (activeTab === 'suggested-suppliers') {
+      setSuggestedPage(1);
+    }
+  }, [activeTab, categoryFilter, searchTerm]);
 
   const handleAssignSupplier = async (supplier) => {
     try {
@@ -227,10 +169,9 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
         customer_emails: updatedEmails
       });
 
-      // ✅ נקה cache לפני טעינה מחדש
-      const cacheKey = `suppliers_${customer.email}`;
-      localStorage.removeItem(cacheKey);
-      await loadSuppliers(false);
+      // ✅ רענון עם React Query
+      queryClient.invalidateQueries(['customerSuppliers', customer.email]);
+      queryClient.invalidateQueries(['suggestedSuppliers', customer.email]);
     } catch (error) {
       console.error("Error assigning supplier:", error);
     }
@@ -244,10 +185,9 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
         customer_emails: updatedEmails
       });
 
-      // ✅ נקה cache לפני טעינה מחדש
-      const cacheKey = `suppliers_${customer.email}`;
-      localStorage.removeItem(cacheKey);
-      await loadSuppliers(false);
+      // ✅ רענון עם React Query
+      queryClient.invalidateQueries(['customerSuppliers', customer.email]);
+      queryClient.invalidateQueries(['suggestedSuppliers', customer.email]);
     } catch (error) {
       console.error("Error removing supplier:", error);
     }
@@ -302,30 +242,26 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
     setSearchTerm('');
   };
 
-  const filteredSuppliers = suppliers.filter((supplier) =>
-  supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  supplier.contact_person?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredSuppliers = React.useMemo(() => 
+    suppliers.filter((supplier) =>
+      supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      supplier.contact_person?.toLowerCase().includes(searchTerm.toLowerCase())
+    ), [suppliers, searchTerm]
   );
 
-  const filteredSuggestedSuppliers = suggestedSuppliers.filter((supplier) => {
-    const searchMatch = supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    supplier.contact_person?.toLowerCase().includes(searchTerm.toLowerCase());
-    const categoryMatch = !categoryFilter || supplier.category === categoryFilter;
-    return searchMatch && categoryMatch;
-  });
+  const filteredSuggestedSuppliers = React.useMemo(() => 
+    paginatedSuggestedSuppliers.filter((supplier) => {
+      const searchMatch = supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      supplier.contact_person?.toLowerCase().includes(searchTerm.toLowerCase());
+      const categoryMatch = !categoryFilter || supplier.category === categoryFilter;
+      return searchMatch && categoryMatch;
+    }), [paginatedSuggestedSuppliers, searchTerm, categoryFilter]
+  );
 
   const canAddSupplier = currentUser && (currentUser.role === 'admin' || currentUser.user_type === 'financial_manager');
 
-  if (isLoading) {
-    return (
-      <Card className="card-horizon">
-        <CardContent className="p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-horizon-primary mx-auto mb-4"></div>
-          <p className="text-horizon-accent">טוען ספקים...</p>
-        </CardContent>
-      </Card>);
-
-  }
+  // ✅ טעינה רק עבור ספקי הלקוח (מהיר) - לא חוסם את כל הממשק
+  const isLoading = isLoadingCustomerSuppliers;
 
   if (!customer) {
     return (
@@ -367,6 +303,9 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
               value="suggested-suppliers"
               className="data-[state=active]:bg-[#32acc1] data-[state=active]:text-white transition-all">
               ספקים מוצעים ({filteredSuggestedSuppliers.length})
+              {isLoadingSuggested && (
+                <span className="mr-2 animate-spin">⏳</span>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -460,7 +399,12 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
               </div>
             }
             
-            {filteredSuggestedSuppliers.length > 0 ?
+            {isLoadingSuggested ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-horizon-primary mx-auto mb-4"></div>
+                <p className="text-horizon-accent">טוען ספקים מוצעים...</p>
+              </div>
+            ) : filteredSuggestedSuppliers.length > 0 ?
             <>
               <div className="border rounded-lg overflow-hidden border-horizon">
                 <Table dir="rtl">
@@ -512,19 +456,11 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
               {hasMore && !categoryFilter && !searchTerm && (
                 <div className="mt-4 text-center">
                   <Button
-                    onClick={() => loadSuppliers(true)}
-                    disabled={isLoadingMore}
+                    onClick={loadMoreSuggested}
                     variant="outline"
                     className="border-horizon text-horizon-text"
                   >
-                    {isLoadingMore ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-horizon-primary ml-2"></div>
-                        טוען עוד...
-                      </>
-                    ) : (
-                      'טען עוד ספקים'
-                    )}
+                    טען עוד ספקים
                   </Button>
                 </div>
               )}
@@ -544,10 +480,9 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSupplierAdded={async () => {
-          // ✅ נקה cache לפני טעינה מחדש כדי לראות את הספק החדש
-          const cacheKey = `suppliers_${customer.email}`;
-          localStorage.removeItem(cacheKey);
-          await loadSuppliers(false); // כפה טעינה מחדש ללא cache
+          // ✅ רענון עם React Query
+          queryClient.invalidateQueries(['customerSuppliers', customer.email]);
+          queryClient.invalidateQueries(['suggestedSuppliers', customer.email]);
           setShowAddModal(false);
         }}
         currentUser={currentUser}
@@ -563,12 +498,9 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
         onClose={() => setSelectedSupplier(null)}
         onFindAlternatives={handleFindAlternatives}
         onSupplierUpdated={async (updatedSupplier) => {
-          // ניקוי cache
-          const cacheKey = `suppliers_${customer.email}`;
-          localStorage.removeItem(cacheKey);
-          
-          // רענון רשימת הספקים
-          await loadSuppliers(false);
+          // ✅ רענון עם React Query
+          queryClient.invalidateQueries(['customerSuppliers', customer.email]);
+          queryClient.invalidateQueries(['suggestedSuppliers', customer.email]);
           
           // עדכון הספק הנבחר להצגת הנתונים החדשים
           if (updatedSupplier) {
@@ -585,10 +517,9 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
         customerEmail={customer.email}
         currentUser={currentUser}
         onSupplierAdded={async () => {
-          // ✅ נקה cache לפני טעינה מחדש כדי לראות את הספק החדש
-          const cacheKey = `suppliers_${customer.email}`;
-          localStorage.removeItem(cacheKey);
-          await loadSuppliers(false); // כפה טעינה מחדש ללא cache
+          // ✅ רענון עם React Query
+          queryClient.invalidateQueries(['customerSuppliers', customer.email]);
+          queryClient.invalidateQueries(['suggestedSuppliers', customer.email]);
           setShowFindAlternativeModal(false);
         }} />
 
