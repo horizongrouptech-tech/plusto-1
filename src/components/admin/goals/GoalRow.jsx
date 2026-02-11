@@ -23,6 +23,7 @@ import { he } from 'date-fns/locale';
 import { base44 } from '@/api/base44Client';
 import GoalCommentsModal from './GoalCommentsModal';
 import { syncTaskToFireberry } from '@/functions/syncTaskToFireberry';
+import { deleteGoalServiceRole } from '@/functions/deleteGoalServiceRole';
 import InlineEditableField from './InlineEditableField';
 import GoalDependencySelector from '../GoalDependencySelector';
 
