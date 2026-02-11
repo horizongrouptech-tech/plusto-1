@@ -340,8 +340,8 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
             <TabsTrigger
               value="suggested-suppliers"
               className="data-[state=active]:bg-[#32acc1] data-[state=active]:text-white transition-all">
-              ספקים מוצעים ({filteredSuggestedSuppliers.length})
-              {isLoadingSuggested && (
+              ספקים מוצעים ({isLoadingSuggestedCount ? '...' : suggestedSuppliersCount})
+              {isLoadingSuggested && activeTab === 'suggested-suppliers' && (
                 <span className="mr-2 animate-spin">⏳</span>
               )}
             </TabsTrigger>
