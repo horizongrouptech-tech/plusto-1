@@ -94,6 +94,44 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
     retry: 1
   });
 
+  // ✅ ספירת ספקים מוצעים - מיידי, לא תלוי בטאב
+  const { 
+    data: suggestedSuppliersCount = 0, 
+    isLoading: isLoadingSuggestedCount 
+  } = useQuery({
+    queryKey: ['suggestedSuppliersCount', customer?.email],
+    queryFn: async () => {
+      if (!customer?.email) return 0;
+      try {
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 8000)
+        );
+        const result = await Promise.race([
+          base44.functions.invoke('getSuggestedSuppliers', {
+            customer_email: customer.email,
+            customer_data: customer
+          }),
+          timeoutPromise
+        ]);
+        const { data: suggested, error } = result || {};
+        if (error) throw new Error(error);
+        const suppliersList = suggested?.data || suggested || [];
+        return Array.isArray(suppliersList) ? suppliersList.length : 0;
+      } catch (error) {
+        console.warn('AI suggestion count failed, using fallback:', error);
+        const allSuppliers = await base44.entities.Supplier.filter({ is_active: true });
+        return allSuppliers.filter((supplier) =>
+          !supplier.customer_emails?.includes(customer.email)
+        ).length;
+      }
+    },
+    enabled: !!customer?.email,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1
+  });
+
   // ✅ טעינת ספקים מוצעים - איטי, lazy loading, רק כשצריך
   const { 
     data: allSuggestedSuppliers = [], 
