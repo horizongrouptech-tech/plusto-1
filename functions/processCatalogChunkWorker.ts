@@ -22,6 +22,14 @@ function cleanValue(value, type) {
   return strValue.replace(/[\uFEFF\u200E\u200F\u202A-\u202E]/g, '').trim();
 }
 
+// ניקוי תא כותרת (זהה ל-parseFileHeaders)
+function cleanCell(cell) {
+  if (cell === null || cell === undefined) return '';
+  return String(cell).trim()
+    .replace(/[\uFEFF\u200E\u200F\u202A-\u202E]/g, '')
+    .replace(/\s+/g, ' ').trim();
+}
+
 // הגדרת סוגי שדות
 const FIELD_TYPES = {
   product_name: 'text',
@@ -44,8 +52,8 @@ const FIELD_TYPES = {
   no_vat_item: 'text'
 };
 
-// עיבוד CSV
-function processCSV(content) {
+// עיבוד CSV - מחזיר מערך של מערכים (raw arrays)
+function processCSVRaw(content) {
   const lines = content.split(/\r\n|\n/).filter(line => line.trim());
   const delimiter = (lines[0] || '').includes('\t') ? '\t' : ',';
   
@@ -53,28 +61,20 @@ function processCSV(content) {
     return parse(content, {
       delimiter,
       skip_empty_lines: true,
-      relax_column_count: true,
-      columns: true
+      relax_column_count: true
+      // NO columns: true — return raw arrays
     });
   } catch (e) {
-    const headerRow = lines[0].split(delimiter).map(h => h.trim());
-    return lines.slice(1).map(line => {
-      const values = line.split(delimiter);
-      const obj = {};
-      headerRow.forEach((h, i) => {
-        obj[h] = values[i]?.trim() || '';
-      });
-      return obj;
-    });
+    return lines.map(line => line.split(delimiter).map(v => v?.trim() || ''));
   }
 }
 
-// עיבוד Excel
-function processExcel(buffer) {
+// עיבוד Excel - מחזיר מערך של מערכים (raw arrays)
+function processExcelRaw(buffer) {
   const workbook = xlsx.read(buffer, { type: 'buffer' });
   const firstSheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[firstSheetName];
-  return xlsx.utils.sheet_to_json(worksheet, { defval: null });
+  return xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: null });
 }
 
 // עדכון סטטוס
@@ -130,10 +130,11 @@ Deno.serve(async (req) => {
       customer_email, 
       total_rows,
       chunk_size,
-      import_with_errors 
+      import_with_errors,
+      header_row_index = 0
     } = metadata;
 
-    // חישוב טווח השורות
+    // חישוב טווח השורות (relative to data rows, not raw file rows)
     const startRow = chunk_number * chunk_size;
     const endRow = Math.min((chunk_number + 1) * chunk_size, total_rows);
 
@@ -148,18 +149,18 @@ Deno.serve(async (req) => {
       throw new Error(`נכשל בהורדת הקובץ: ${response.statusText}`);
     }
 
-    // זיהוי וניתוח
+    // זיהוי וניתוח - תמיד כ-raw arrays
     const contentType = response.headers.get('content-type') || '';
     const isExcel = contentType.includes('spreadsheet') || 
                     contentType.includes('excel') ||
                     file_url.toLowerCase().endsWith('.xlsx') ||
                     file_url.toLowerCase().endsWith('.xls');
 
-    let allRecords;
+    let allRawRows;
     
     if (isExcel) {
       const buffer = await response.arrayBuffer();
-      allRecords = processExcel(buffer);
+      allRawRows = processExcelRaw(buffer);
     } else {
       const buffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(buffer);
@@ -169,8 +170,31 @@ Deno.serve(async (req) => {
       } catch (e) {
         text = new TextDecoder('windows-1255').decode(uint8Array);
       }
-      allRecords = processCSV(text);
+      allRawRows = processCSVRaw(text);
     }
+
+    // בניית אובייקטים באמצעות שורת הכותרת הנכונה
+    const headerRowIdx = header_row_index || 0;
+    const headerRow = allRawRows[headerRowIdx];
+    
+    if (!headerRow || !Array.isArray(headerRow)) {
+      throw new Error(`שורת כותרת לא נמצאה באינדקס ${headerRowIdx}`);
+    }
+
+    const headers = headerRow.map(cell => cleanCell(cell));
+    const dataRows = allRawRows.slice(headerRowIdx + 1);
+
+    // המרת שורות גולמיות לאובייקטים
+    const allRecords = dataRows.map(row => {
+      if (!row || !Array.isArray(row)) return null;
+      const obj = {};
+      headers.forEach((header, i) => {
+        if (header && row[i] !== undefined && row[i] !== null) {
+          obj[header] = row[i];
+        }
+      });
+      return obj;
+    }).filter(obj => obj && Object.keys(obj).length > 0);
 
     // חילוץ החלק הרלוונטי
     const records = allRecords.slice(startRow, endRow);

@@ -187,6 +187,7 @@ export default function ProductCatalogUpload({
   const [uploadedFileUrl, setUploadedFileUrl] = useState('');
   const [existingProfiles, setExistingProfiles] = useState([]);
   const [useAdvancedUpload, setUseAdvancedUpload] = useState(true);
+  const [headerRowIndex, setHeaderRowIndex] = useState(0);
   
   // טעינת פרופילים קיימים
   useEffect(() => {
@@ -251,6 +252,7 @@ export default function ProductCatalogUpload({
 
       setFileHeaders(parseResult.data.headers);
       setRawData(parseResult.data.raw_data);
+      setHeaderRowIndex(parseResult.data.header_row_index || 0);
       
       setLocalProgress(50);
       setLocalStatus('פותח אשף מיפוי...');
@@ -283,7 +285,8 @@ export default function ProductCatalogUpload({
         file_url: uploadedFileUrl,
         catalog_id: selectedCatalogId,
         mapping: mappingConfig.mapping,
-        import_with_errors: mappingConfig.importWithErrors
+        import_with_errors: mappingConfig.importWithErrors,
+        header_row_index: headerRowIndex
       });
 
       if (!result?.success) {

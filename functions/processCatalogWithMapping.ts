@@ -1,48 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
 import * as xlsx from 'npm:xlsx@0.18.5';
-import { parse } from "npm:csv-parse@5.5.2/sync";
-
-// ניקוי ערכים
-function cleanValue(value, type) {
-  if (value === null || value === undefined || value === '') {
-    return type === 'number' ? 0 : '';
-  }
-  
-  const strValue = String(value).trim();
-  
-  if (type === 'number') {
-    const cleaned = strValue
-      .replace(/[\u200E\u200F\u202A-\u202E]/g, '')
-      .replace(/[₪$€£,\s]/g, '')
-      .replace(/[^\d.-]/g, '');
-    const num = parseFloat(cleaned);
-    return isNaN(num) ? 0 : num;
-  }
-  
-  return strValue.replace(/[\uFEFF\u200E\u200F\u202A-\u202E]/g, '').trim();
-}
-
-// הגדרת סוגי שדות - מורחב לתמיכה בקטלוגים מגוונים
-const FIELD_TYPES = {
-  product_name: 'text',
-  barcode: 'text',
-  cost_price: 'number',
-  cost_price_no_vat: 'number',
-  selling_price: 'number',
-  store_price: 'number',
-  store_price_alt: 'number',
-  category: 'text',
-  secondary_category: 'text',
-  supplier: 'text',
-  supplier_item_code: 'text',
-  inventory: 'number',
-  monthly_sales: 'number',
-  color: 'text',
-  size: 'text',
-  creation_date: 'text',
-  profit_percentage: 'number',
-  no_vat_item: 'text'
-};
 
 // עדכון סטטוס תהליך
 const updateProcessStatus = async (base44, processId, progress, status, currentStep, resultData = null, errorMessage = null) => {
@@ -65,40 +22,6 @@ const updateProcessStatus = async (base44, processId, progress, status, currentS
   }
 };
 
-// עיבוד CSV
-function processCSV(content) {
-  const lines = content.split(/\r\n|\n/).filter(line => line.trim());
-  const delimiter = (lines[0] || '').includes('\t') ? '\t' : ',';
-  
-  try {
-    return parse(content, {
-      delimiter,
-      skip_empty_lines: true,
-      relax_column_count: true,
-      columns: true
-    });
-  } catch (e) {
-    // פרסור ידני
-    const headerRow = lines[0].split(delimiter).map(h => h.trim());
-    return lines.slice(1).map(line => {
-      const values = line.split(delimiter);
-      const obj = {};
-      headerRow.forEach((h, i) => {
-        obj[h] = values[i]?.trim() || '';
-      });
-      return obj;
-    });
-  }
-}
-
-// עיבוד Excel
-function processExcel(buffer) {
-  const workbook = xlsx.read(buffer, { type: 'buffer' });
-  const firstSheetName = workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[firstSheetName];
-  return xlsx.utils.sheet_to_json(worksheet, { defval: null });
-}
-
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
 
@@ -107,7 +30,8 @@ Deno.serve(async (req) => {
     file_url, 
     catalog_id, 
     mapping,
-    import_with_errors = false
+    import_with_errors = false,
+    header_row_index = 0
   } = await req.json();
 
   if (!customer_email || !file_url || !catalog_id || !mapping) {
@@ -146,22 +70,23 @@ Deno.serve(async (req) => {
 
     let totalRows;
     
-    // ספירת שורות מהירה בלבד - ללא עיבוד מלא
+    // ספירת שורות נתונים בלבד (ללא שורות מטא-דטה וכותרת)
     if (isExcel) {
       const buffer = await response.arrayBuffer();
       const workbook = xlsx.read(buffer, { type: 'buffer', sheetRows: 1 });
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       const range = xlsx.utils.decode_range(firstSheet['!ref'] || 'A1');
-      totalRows = range.e.r - range.s.r; // מספר שורות כולל
+      const totalFileRows = range.e.r - range.s.r + 1; // total rows in file (1-based)
+      totalRows = totalFileRows - header_row_index - 1; // subtract header and pre-header rows
     } else {
       const buffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(buffer);
       const text = new TextDecoder('utf-8').decode(uint8Array);
       const lines = text.split(/\r\n|\n/).filter(line => line.trim());
-      totalRows = lines.length - 1; // מספר שורות ללא כותרת
+      totalRows = lines.length - header_row_index - 1; // subtract header and pre-header rows
     }
 
-    if (!totalRows || totalRows === 0) {
+    if (!totalRows || totalRows <= 0) {
       throw new Error('הקובץ ריק או לא נמצאו נתונים');
     }
 
@@ -181,7 +106,8 @@ Deno.serve(async (req) => {
         customer_email,
         total_rows: totalRows,
         chunk_size: CHUNK_SIZE,
-        import_with_errors
+        import_with_errors,
+        header_row_index
       }
     });
 
@@ -205,75 +131,6 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error('Error in processCatalogWithMapping orchestrator:', error);
-    await updateProcessStatus(base44, process.id, 0, 'failed', 
-      `שגיאה: ${error.message}`, null, error.message);
-    
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: error.message,
-      process_id: process.id
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-});
-
-    await updateProcessStatus(base44, process.id, 90, 'running', 'מעדכן ישות קטלוג...');
-
-    // עדכון ישות הקטלוג - ספירה מדויקת של כל המוצרים
-    try {
-      // ספירת כל המוצרים הפעילים בקטלוג
-      let totalCount = 0;
-      let hasMore = true;
-      let skip = 0;
-      const countBatchSize = 5000;
-      
-      while (hasMore) {
-        const batch = await base44.asServiceRole.entities.ProductCatalog.filter(
-          { catalog_id, is_active: true },
-          '-created_date',
-          countBatchSize,
-          skip
-        );
-        totalCount += batch.length;
-        skip += batch.length;
-        if (batch.length < countBatchSize) {
-          hasMore = false;
-        }
-      }
-      
-      await base44.asServiceRole.entities.Catalog.update(catalog_id, {
-        product_count: totalCount,
-        last_generated_at: new Date().toISOString(),
-        status: 'ready'
-      });
-    } catch (e) {
-      console.warn('שגיאה בעדכון קטלוג:', e);
-    }
-
-    const resultData = {
-      created_count: createdCount,
-      invalid_rows: invalidRows.length,
-      total_processed: records.length,
-      catalog_id,
-      products_with_errors: productsToCreate.filter(p => p.import_errors).length
-    };
-
-    await updateProcessStatus(base44, process.id, 100, 'completed', 
-      `הושלם! נוצרו ${createdCount} מוצרים`, resultData);
-
-    return new Response(JSON.stringify({
-      success: true,
-      process_id: process.id,
-      ...resultData
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-  } catch (error) {
-    console.error('Error in processCatalogWithMapping:', error);
     await updateProcessStatus(base44, process.id, 0, 'failed', 
       `שגיאה: ${error.message}`, null, error.message);
     
