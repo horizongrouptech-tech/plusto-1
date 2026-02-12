@@ -189,6 +189,10 @@
       "type": "string",
       "description": "מזהה המשימה בפיירברי (לסנכרון דו-כיווני)"
     },
+    "fireberry_meeting_id": {
+      "type": "string",
+      "description": "מזהה הפגישה בפיירברי (לסנכרון דו-כיווני)"
+    },
     "fireberry_synced_at": {
       "type": "string",
       "format": "date-time",
