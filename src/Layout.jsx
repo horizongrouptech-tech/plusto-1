@@ -736,6 +736,7 @@ function LayoutContent({ children, currentPageName }) {
     return (
       <div dir="rtl" className="min-h-screen bg-horizon-dark" data-theme={theme}>
         <GlobalThemeStyles />
+        <Toaster position="bottom-left" richColors dir="rtl" duration={5000} />
         <header className="bg-horizon-card shadow-sm border-b border-horizon">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
