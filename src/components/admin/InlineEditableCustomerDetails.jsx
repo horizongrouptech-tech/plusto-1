@@ -6,6 +6,7 @@ import { base44 } from '@/api/base44Client';
 import { Loader2, Edit2, Save, X } from 'lucide-react';
 import InlineEditableField from '@/components/admin/goals/InlineEditableField';
 
+import { toast } from "sonner";
 export default function InlineEditableCustomerDetails({ customer, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -31,7 +32,7 @@ export default function InlineEditableCustomerDetails({ customer, onUpdate }) {
         onUpdate({ ...customer, [field]: value });
       }
     } catch (error) {
-      alert('שגיאה בעדכון: ' + error.message);
+      toast.error('שגיאה בעדכון: ' + error.message);
     } finally {
       setIsSaving(false);
     }
@@ -90,7 +91,7 @@ export default function InlineEditableCustomerDetails({ customer, onUpdate }) {
                   value={customer[field.key] || ''}
                   onSave={(value) => {
                     if (field.key === 'email' && value && !validateEmail(value)) {
-                      alert('אימייל לא תקין');
+                      toast.warning('אימייל לא תקין');
                       return;
                     }
                     handleFieldSave(field.key, value);

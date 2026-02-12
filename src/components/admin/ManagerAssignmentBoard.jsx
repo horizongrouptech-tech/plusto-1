@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { UserX, Search, ArrowRight, UserPlus } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
+import { toast } from "sonner";
 export default function ManagerAssignmentBoard({ clients, financialManagers, onAssignmentChange }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedManager, setSelectedManager] = useState(null);
@@ -41,7 +42,7 @@ export default function ManagerAssignmentBoard({ clients, financialManagers, onA
             onAssignmentChange();
         } catch (error) {
             console.error('Error assigning:', error);
-            alert('שגיאה בשיוך לקוח');
+            toast.error('שגיאה בשיוך לקוח');
         }
     };
 
@@ -59,7 +60,7 @@ export default function ManagerAssignmentBoard({ clients, financialManagers, onA
             onAssignmentChange();
         } catch (error) {
             console.error('Error unassigning:', error);
-            alert('שגיאה בהסרת שיוך');
+            toast.error('שגיאה בהסרת שיוך');
         }
     };
 
@@ -67,7 +68,7 @@ export default function ManagerAssignmentBoard({ clients, financialManagers, onA
         try {
             const currentAdditional = client.raw?.additional_assigned_financial_manager_emails || [];
             if (currentAdditional.includes(managerEmail)) {
-                alert('מנהל זה כבר משויך ללקוח');
+                toast.warning('מנהל זה כבר משויך ללקוח');
                 return;
             }
             
@@ -85,7 +86,7 @@ export default function ManagerAssignmentBoard({ clients, financialManagers, onA
             onAssignmentChange();
         } catch (error) {
             console.error('Error adding secondary manager:', error);
-            alert('שגיאה בשיוך מנהל משני');
+            toast.error('שגיאה בשיוך מנהל משני');
         }
     };
 
@@ -106,7 +107,7 @@ export default function ManagerAssignmentBoard({ clients, financialManagers, onA
             onAssignmentChange();
         } catch (error) {
             console.error('Error removing secondary manager:', error);
-            alert('שגיאה בהסרת מנהל משני');
+            toast.error('שגיאה בהסרת מנהל משני');
         }
     };
 

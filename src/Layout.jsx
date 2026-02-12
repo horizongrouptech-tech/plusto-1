@@ -841,7 +841,7 @@ function LayoutContent({ children, currentPageName }) {
     <TooltipProvider>
     <div dir="rtl" className="min-h-screen bg-horizon-dark" data-theme={theme}>
       <GlobalThemeStyles />
-      <Toaster position="bottom-center" richColors dir="rtl" />
+      <Toaster position="bottom-left" richColors dir="rtl" duration={5000} />
 
       <div className="min-h-screen flex">
         {isSidebarOpen && (

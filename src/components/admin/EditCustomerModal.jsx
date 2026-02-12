@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { base44 } from '@/api/base44Client';
 import { Loader2, Save, UserCog, User, Users } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { toast } from 'react-hot-toast';
+import { toast } from "sonner";
 
 export default function EditCustomerModal({ isOpen, onClose, customer, onCustomerUpdated }) {
     const [formData, setFormData] = useState({

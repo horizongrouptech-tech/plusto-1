@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { base44 } from '@/api/base44Client';
 import { Loader2, SearchCheck, ExternalLink, Plus } from 'lucide-react';
 
+import { toast } from "sonner";
 export default function FindAlternativeSupplierModal({ isOpen, onClose, customerEmail, currentUser, onSupplierAdded }) {
   // Original state variables removed/replaced: searchQuery, additionalDetails
   const [formData, setFormData] = useState({
@@ -82,7 +83,7 @@ export default function FindAlternativeSupplierModal({ isOpen, onClose, customer
   const handleAddSupplier = async (supplierData) => {
     // וולידציה קריטית
     if (!customerEmail) {
-      alert('שגיאה: לא ניתן ליצור ספק ללא שיוך ללקוח');
+      toast.error('שגיאה: לא ניתן ליצור ספק ללא שיוך ללקוח');
       return;
     }
 
@@ -104,7 +105,7 @@ export default function FindAlternativeSupplierModal({ isOpen, onClose, customer
         customer_emails: [customerEmail]
       });
       
-      alert(`הספק "${supplierData.name}" נוסף בהצלחה ושויך ללקוח!`);
+      toast.success(`הספק "${supplierData.name}" נוסף בהצלחה ושויך ללקוח!`);
       
       setSearchResults(prev => prev.filter(s => s.name !== supplierData.name));
       
@@ -113,7 +114,7 @@ export default function FindAlternativeSupplierModal({ isOpen, onClose, customer
       }
     } catch (error) {
       console.error('Error adding supplier:', error);
-      alert('שגיאה בהוספת הספק: ' + error.message);
+      toast.error('שגיאה בהוספת הספק: ' + error.message);
     } finally {
       setAddingSupplierIds(prev => {
         const updated = new Set(prev);

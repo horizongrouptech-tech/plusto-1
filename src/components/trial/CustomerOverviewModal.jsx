@@ -31,6 +31,7 @@ import GoalBankManager from '@/components/admin/GoalBankManager';
 import InlineEditableCustomerDetails from '@/components/admin/InlineEditableCustomerDetails';
 import InlineEditableField from '@/components/admin/goals/InlineEditableField';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from "sonner";
 
 export default function CustomerOverviewModal({ 
   customer, 
@@ -105,7 +106,7 @@ export default function CustomerOverviewModal({
       });
       queryClient.invalidateQueries(['activeCustomers']);
     } catch (error) {
-      alert('שגיאה בעדכון: ' + error.message);
+      toast.error('שגיאה בעדכון: ' + error.message);
     }
   };
 

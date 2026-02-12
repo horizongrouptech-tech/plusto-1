@@ -19,6 +19,7 @@ import { format, isToday, isPast, isFuture, parseISO } from 'date-fns';
 import GoalTemplateSelector from '@/components/trial/GoalTemplateSelector';
 import CreateTaskModal from '@/components/shared/CreateTaskModal';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from "sonner";
 
 export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCollapse, onTaskClick, allUsers, currentUser }) {
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
@@ -98,7 +99,7 @@ export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCo
       if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Error marking task done:", error);
-      alert('שגיאה בעדכון משימה');
+      toast.error('שגיאה בעדכון משימה');
     }
   };
 

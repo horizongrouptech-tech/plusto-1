@@ -1,0 +1,39 @@
+{
+  "name": "ManualForecastVersion",
+  "type": "object",
+  "properties": {
+    "forecast_id": {
+      "type": "string",
+      "description": "מזהה התחזית"
+    },
+    "version_number": {
+      "type": "number",
+      "description": "מספר הגרסה (auto-increment)"
+    },
+    "change_summary": {
+      "type": "string",
+      "description": "תיאור השינויים"
+    },
+    "changed_by": {
+      "type": "string",
+      "description": "מי ביצע את השינוי (אימייל)"
+    },
+    "snapshot_data": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "צילום מצב של הנתונים"
+    }
+  },
+  "required": [
+    "forecast_id",
+    "version_number",
+    "change_summary",
+    "changed_by"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

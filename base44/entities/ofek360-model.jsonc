@@ -1,0 +1,117 @@
+{
+  "name": "Ofek360Model",
+  "type": "object",
+  "properties": {
+    "customer_email": {
+      "type": "string",
+      "format": "email",
+      "description": "אימייל הלקוח (מזהה ראשי)"
+    },
+    "customer_source": {
+      "type": "string",
+      "enum": [
+        "user",
+        "onboarding"
+      ],
+      "description": "מקור הלקוח - User או OnboardingRequest"
+    },
+    "last_updated_by": {
+      "type": "string",
+      "description": "אימייל המשתמש שעדכן לאחרונה"
+    },
+    "current_year": {
+      "type": "number",
+      "description": "השנה הנוכחית למעקב"
+    },
+    "steps_data": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "step_number": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "step_title": {
+            "type": "string"
+          },
+          "current_state_description": {
+            "type": "string"
+          },
+          "desired_state_description": {
+            "type": "string"
+          },
+          "monthly_status": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "month": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 12
+                },
+                "year": {
+                  "type": "number"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "current",
+                    "desired",
+                    "not_applicable"
+                  ],
+                  "default": "current"
+                },
+                "updated_by_email": {
+                  "type": "string"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "comments": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "timestamp": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "author_email": {
+                        "type": "string"
+                      },
+                      "author_name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "text",
+                      "timestamp",
+                      "author_email"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "customer_email",
+    "current_year"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

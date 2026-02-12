@@ -7,6 +7,7 @@ import { base44 } from '@/api/base44Client';
 import { Package, Plus, Trash2, Edit, Loader2 } from 'lucide-react';
 import { formatCurrency } from './manual/utils/numberFormatter';
 import ProjectForecastWizard from './ProjectForecastWizard';
+import { toast } from "sonner";
 
 export default function ProjectForecastManager({ customer }) {
   const [selectedForecast, setSelectedForecast] = useState(null);
@@ -22,7 +23,7 @@ export default function ProjectForecastManager({ customer }) {
     mutationFn: (id) => base44.entities.ProjectForecast.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['projectForecasts']);
-      alert('תחזית הפרויקט נמחקה בהצלחה');
+      toast.success('תחזית הפרויקט נמחקה בהצלחה');
     }
   });
 

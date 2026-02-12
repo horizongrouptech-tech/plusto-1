@@ -9,6 +9,7 @@ import { Plus, TrendingUp, Bot, Edit3, Star, Calendar, Loader2, Filter, Trash2, 
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Input } from '@/components/ui/input';
+import { toast } from "sonner";
 
 import ForecastTypeSelectionModal from './ForecastTypeSelectionModal';
 import BusinessForecastManager from './BusinessForecastManager';
@@ -110,10 +111,10 @@ export default function UnifiedForecastManager({ customer }) {
     queryClient.invalidateQueries(['manualForecasts', customer.email]);
     queryClient.invalidateQueries(['projectForecasts', customer.email]);
       
-      alert('התחזית נמחקה בהצלחה');
+      toast.success('התחזית נמחקה בהצלחה');
     } catch (error) {
       console.error('Error deleting forecast:', error);
-      alert('שגיאה במחיקת התחזית');
+      toast.error('שגיאה במחיקת התחזית');
     }
   };
 
@@ -125,7 +126,7 @@ export default function UnifiedForecastManager({ customer }) {
 
   const handleSaveForecastName = async (forecast) => {
     if (!newForecastName.trim()) {
-      alert('יש להזין שם תחזית');
+      toast.warning('יש להזין שם תחזית');
       return;
     }
 
@@ -147,7 +148,7 @@ export default function UnifiedForecastManager({ customer }) {
       setNewForecastName('');
     } catch (error) {
       console.error('Error updating forecast name:', error);
-      alert('שגיאה בעדכון שם התחזית');
+      toast.error('שגיאה בעדכון שם התחזית');
     }
   };
 

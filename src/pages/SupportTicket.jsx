@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MessageSquare, Send, CheckCircle, Clock, AlertTriangle, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
+import { toast } from "sonner";
 
 export default function SupportTicketPage() {
   const [tickets, setTickets] = useState([]);
@@ -66,7 +67,7 @@ export default function SupportTicketPage() {
       await loadUserAndTickets();
     } catch (error) {
       console.error("Error creating ticket:", error);
-      alert("שגיאה ביצירת הפנייה");
+      toast.error("שגיאה ביצירת הפנייה");
     } finally {
       setIsSubmitting(false);
     }

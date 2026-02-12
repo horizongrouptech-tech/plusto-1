@@ -1,0 +1,112 @@
+{
+  "name": "ProjectForecast",
+  "type": "object",
+  "properties": {
+    "customer_email": {
+      "type": "string",
+      "format": "email",
+      "description": "אימייל הלקוח המשויך לתחזית הפרויקט"
+    },
+    "project_name": {
+      "type": "string",
+      "description": "שם הפרויקט"
+    },
+    "project_description": {
+      "type": "string",
+      "description": "תיאור הפרויקט"
+    },
+    "forecast_year": {
+      "type": "number",
+      "description": "שנת התחזית"
+    },
+    "products": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit_price": {
+            "type": "number",
+            "description": "מחיר קנייה ליחידה"
+          },
+          "total_cost": {
+            "type": "number"
+          }
+        }
+      },
+      "description": "רשימת מוצרים בפרויקט"
+    },
+    "labor_costs": {
+      "type": "object",
+      "properties": {
+        "num_workers": {
+          "type": "number"
+        },
+        "cost_per_worker_per_day": {
+          "type": "number"
+        },
+        "project_duration_days": {
+          "type": "number"
+        },
+        "total_labor_cost": {
+          "type": "number"
+        }
+      },
+      "description": "עלויות עובדים"
+    },
+    "desired_margin_percentage": {
+      "type": "number",
+      "description": "אחוז רווח גולמי רצוי (50 = 50%)"
+    },
+    "calculated": {
+      "type": "object",
+      "properties": {
+        "total_materials_cost": {
+          "type": "number"
+        },
+        "total_labor_cost": {
+          "type": "number"
+        },
+        "total_cost": {
+          "type": "number"
+        },
+        "final_price": {
+          "type": "number"
+        },
+        "profit_amount": {
+          "type": "number"
+        }
+      },
+      "description": "נתונים מחושבים"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "final",
+        "approved"
+      ],
+      "default": "draft",
+      "description": "סטטוס התחזית"
+    }
+  },
+  "required": [
+    "project_name",
+    "customer_email",
+    "forecast_year"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

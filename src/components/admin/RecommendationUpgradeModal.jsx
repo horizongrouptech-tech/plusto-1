@@ -14,6 +14,7 @@ import { enhanceRecommendationWithPrompt } from "@/components/logic/targetedReco
 import { Recommendation } from "@/entities/Recommendation";
 import { sendWhatsAppMessage } from "@/functions/sendWhatsAppMessage";
 
+import { toast } from "sonner";
 export default function RecommendationUpgradeModal({ 
   isOpen, 
   recommendation, 
@@ -108,7 +109,7 @@ export default function RecommendationUpgradeModal({
 
     } catch (error) {
       console.error("Error sending WhatsApp:", error);
-      alert(`שגיאה בשליחת הוואטסאפ: ${error.message}`);
+      toast.error(`שגיאה בשליחת הוואטסאפ: ${error.message}`);
     } finally {
       setIsSendingWhatsApp(false);
     }

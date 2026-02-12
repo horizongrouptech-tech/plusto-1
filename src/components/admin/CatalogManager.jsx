@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format } from 'date-fns';
 
+import { toast } from "sonner";
 export default function CatalogManager({ customerId }) {
     const [catalogs, setCatalogs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -77,15 +78,15 @@ export default function CatalogManager({ customerId }) {
                 }
             } catch (err) {
                 console.error("Error during iterative catalog deletion:", err);
-                alert(`שגיאה במהלך המחיקה: ${err.message}. אנא נסה שנית.`);
+                toast.error(`שגיאה במהלך המחיקה: ${err.message}. אנא נסה שנית.`);
                 isFinished = true; // עצירת הלולאה במקרה של שגיאה
             }
         }
         
         if (deletionProgress.processed < totalProducts && !isFinished) {
-             alert(`המחיקה הופסקה עקב שגיאה. ${deletionProgress.processed} מוצרים נמחקו. ייתכן שהקטלוג נמחק חלקית.`);
+             toast.error(`המחיקה הופסקה עקב שגיאה. ${deletionProgress.processed} מוצרים נמחקו. ייתכן שהקטלוג נמחק חלקית.`);
         } else {
-            alert(`הקטלוג "${catalog.catalog_name}" נמחק בהצלחה.`);
+            toast.success(`הקטלוג "${catalog.catalog_name}" נמחק בהצלחה.`);
         }
         
         setDeletingCatalogId(null);

@@ -1,0 +1,73 @@
+{
+  "name": "ManualForecastRow",
+  "type": "object",
+  "properties": {
+    "forecast_id": {
+      "type": "string",
+      "description": "מזהה התחזית"
+    },
+    "sheet_id": {
+      "type": "string",
+      "description": "מזהה הגיליון"
+    },
+    "row_index": {
+      "type": "number",
+      "description": "מיקום השורה במקור"
+    },
+    "period_month": {
+      "type": "string",
+      "format": "date",
+      "description": "תקופה (היום הראשון של החודש)"
+    },
+    "category": {
+      "type": "string",
+      "description": "קטגוריה ראשית"
+    },
+    "subcategory": {
+      "type": "string",
+      "description": "תת-קטגוריה"
+    },
+    "revenue": {
+      "type": "number",
+      "description": "הכנסות"
+    },
+    "expenses": {
+      "type": "number",
+      "description": "הוצאות"
+    },
+    "profit": {
+      "type": "number",
+      "description": "רווח (מחושב אם חסר)"
+    },
+    "currency": {
+      "type": "string",
+      "default": "ILS",
+      "description": "מטבע"
+    },
+    "notes": {
+      "type": "string",
+      "description": "הערות חופשיות"
+    },
+    "extra": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "עמודות נוספות שלא מופו"
+    },
+    "source_columns": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "ערכי המקור לפני נרמול"
+    }
+  },
+  "required": [
+    "forecast_id",
+    "sheet_id",
+    "row_index"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

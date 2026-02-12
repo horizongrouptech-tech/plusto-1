@@ -1,0 +1,99 @@
+{
+  "name": "RecommendationFeedback",
+  "type": "object",
+  "properties": {
+    "recommendation_id": {
+      "type": "string",
+      "description": "מזהה ההמלצה שדורגה"
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "מייל הלקוח שדירג"
+    },
+    "rating": {
+      "type": "number",
+      "enum": [
+        1,
+        2,
+        3
+      ],
+      "description": "דירוג ההמלצה: 1=מדויק איישם, 2=צריך הבהרה, 3=לא רלוונטי"
+    },
+    "feedback_text": {
+      "type": "string",
+      "description": "משוב טקסטואלי נוסף (אופציונלי)"
+    },
+    "implementation_status": {
+      "type": "string",
+      "enum": [
+        "implemented",
+        "not_implemented",
+        "in_review",
+        "needs_clarification"
+      ],
+      "default": "not_implemented",
+      "description": "סטטוס ביצוע ההמלצה"
+    },
+    "actual_financial_impact": {
+      "type": "number",
+      "description": "השפעה כספית בפועל (אם יושמה)"
+    },
+    "implementation_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "תאריך יישום ההמלצה"
+    },
+    "admin_response": {
+      "type": "string",
+      "description": "תגובת האדמין לפידבק"
+    },
+    "follow_up_required": {
+      "type": "boolean",
+      "default": false,
+      "description": "האם נדרש מעקב נוסף"
+    },
+    "whatsapp_message_id": {
+      "type": "string",
+      "description": "מזהה הודעת וואטסאפ"
+    },
+    "whatsapp_phone": {
+      "type": "string",
+      "description": "מספר הטלפון בוואטסאפ"
+    },
+    "unique_recommendation_id": {
+      "type": "string",
+      "description": "מזהה ייחודי של ההמלצה שנשלחה"
+    },
+    "feedback_source": {
+      "type": "string",
+      "enum": [
+        "whatsapp",
+        "web",
+        "email",
+        "phone"
+      ],
+      "default": "web",
+      "description": "מקור הפידבק"
+    },
+    "feedback_payload": {
+      "type": "string",
+      "description": "הנתונים הגולמיים שהתקבלו מהמקור"
+    },
+    "received_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "מתי התקבל הפידבק"
+    }
+  },
+  "required": [
+    "recommendation_id",
+    "customer_email",
+    "rating"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

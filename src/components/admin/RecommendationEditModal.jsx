@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, X, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
+import { toast } from "sonner";
 const MAX_DESCRIPTION_CHARS = 1024;
 
 export default function RecommendationEditModal({ isOpen, onClose, recommendation, customer, onSave }) {
@@ -48,19 +49,19 @@ export default function RecommendationEditModal({ isOpen, onClose, recommendatio
 
   const handleSave = async () => {
     if (!formData.title.trim() || !formData.description.trim()) {
-      alert('נא למלא כותרת ותיאור');
+      toast.warning('נא למלא כותרת ותיאור');
       return;
     }
 
     // בדיקת מגבלת תווים
     if (formData.description.length > MAX_DESCRIPTION_CHARS) {
-      alert(`תיאור ההמלצה חורג ממגבלת ${MAX_DESCRIPTION_CHARS} תווים. נא לקצר.`);
+      toast.warning(`תיאור ההמלצה חורג ממגבלת ${MAX_DESCRIPTION_CHARS} תווים. נא לקצר.`);
       return;
     }
 
     const validSteps = formData.action_steps.filter(step => step.trim());
     if (validSteps.length < 3) {
-      alert('נא להוסיף לפחות 3 שלבי פעולה');
+      toast.warning('נא להוסיף לפחות 3 שלבי פעולה');
       return;
     }
 
@@ -77,7 +78,7 @@ export default function RecommendationEditModal({ isOpen, onClose, recommendatio
       onClose();
     } catch (error) {
       console.error('Error updating recommendation:', error);
-      alert('שגיאה בעדכון ההמלצה');
+      toast.error('שגיאה בעדכון ההמלצה');
     } finally {
       setIsSaving(false);
     }

@@ -25,6 +25,7 @@ import { he } from 'date-fns/locale';
 import GoalCommentsModal from '@/components/admin/goals/GoalCommentsModal';
 import MentionInput from '@/components/shared/MentionInput';
 import GoalDependenciesSelector from './GoalDependenciesSelector';
+import { toast } from "sonner";
 
 export default function TaskDetailsModal({ 
   task, 
@@ -78,12 +79,12 @@ export default function TaskDetailsModal({
 
   const handleSave = async () => {
     if (!editedTask.name?.trim()) {
-      alert('יש להזין שם למשימה');
+      toast.warning('יש להזין שם למשימה');
       return;
     }
 
     if (!editedTask.end_date) {
-      alert('יש להזין תאריך יעד');
+      toast.warning('יש להזין תאריך יעד');
       return;
     }
 
@@ -108,7 +109,7 @@ export default function TaskDetailsModal({
       onClose();
     } catch (error) {
       console.error("Error saving task:", error);
-      alert('שגיאה בשמירת המשימה');
+      toast.error('שגיאה בשמירת המשימה');
     } finally {
       setIsSaving(false);
     }
@@ -124,7 +125,7 @@ export default function TaskDetailsModal({
       onClose();
     } catch (error) {
       console.error("Error deleting task:", error);
-      alert('שגיאה במחיקת המשימה');
+      toast.error('שגיאה במחיקת המשימה');
     }
   };
 

@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link2, X } from 'lucide-react';
 
+import { toast } from "sonner";
 export default function GoalDependencySelector({ goal, allGoals, refreshData }) {
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -30,7 +31,7 @@ export default function GoalDependencySelector({ goal, allGoals, refreshData }) 
       await refreshData();
     } catch (error) {
       console.error('Error adding dependency:', error);
-      alert('שגיאה בהוספת תלות');
+      toast.error('שגיאה בהוספת תלות');
     } finally {
       setIsUpdating(false);
     }
@@ -48,7 +49,7 @@ export default function GoalDependencySelector({ goal, allGoals, refreshData }) 
       await refreshData();
     } catch (error) {
       console.error('Error removing dependency:', error);
-      alert('שגיאה בהסרת תלות');
+      toast.error('שגיאה בהסרת תלות');
     } finally {
       setIsUpdating(false);
     }

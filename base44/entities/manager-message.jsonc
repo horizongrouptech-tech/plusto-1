@@ -1,0 +1,68 @@
+{
+  "name": "ManagerMessage",
+  "type": "object",
+  "properties": {
+    "conversation_id": {
+      "type": "string",
+      "description": "מזהה השיחה"
+    },
+    "sender_email": {
+      "type": "string",
+      "description": "אימייל השולח"
+    },
+    "message_content": {
+      "type": "string",
+      "description": "תוכן ההודעה"
+    },
+    "message_type": {
+      "type": "string",
+      "enum": [
+        "text",
+        "recommendation_share",
+        "file_attachment",
+        "system_message"
+      ],
+      "default": "text",
+      "description": "סוג ההודעה"
+    },
+    "attachment_url": {
+      "type": "string",
+      "description": "קישור לקובץ מצורף (אם יש)"
+    },
+    "referenced_recommendation_id": {
+      "type": "string",
+      "description": "מזהה המלצה שמוזכרת בהודעה"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false,
+      "description": "האם ההודעה נקראה"
+    },
+    "read_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "מתי ההודעה נקראה"
+    },
+    "edited_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "מתי ההודעה נערכה"
+    },
+    "is_system_message": {
+      "type": "boolean",
+      "default": false,
+      "description": "האם זו הודעת מערכת"
+    }
+  },
+  "required": [
+    "conversation_id",
+    "sender_email",
+    "message_content"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

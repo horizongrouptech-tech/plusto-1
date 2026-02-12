@@ -1,0 +1,51 @@
+{
+  "name": "Sale",
+  "type": "object",
+  "properties": {
+    "product_name": {
+      "type": "string",
+      "description": "שם המוצר שנמכר"
+    },
+    "product_sku": {
+      "type": "string",
+      "description": "מק\"ט המוצר"
+    },
+    "quantity": {
+      "type": "number",
+      "description": "כמות יחידות שנמכרו"
+    },
+    "unit_price": {
+      "type": "number",
+      "description": "מחיר מכירה ליחידה"
+    },
+    "total_price": {
+      "type": "number",
+      "description": "סך הכל לעסקה"
+    },
+    "sale_date": {
+      "type": "string",
+      "format": "date",
+      "description": "תאריך המכירה"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "מזהה לקוח (אם רלוונטי)"
+    },
+    "payment_method": {
+      "type": "string",
+      "description": "אמצעי תשלום"
+    }
+  },
+  "required": [
+    "product_name",
+    "quantity",
+    "unit_price",
+    "sale_date"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

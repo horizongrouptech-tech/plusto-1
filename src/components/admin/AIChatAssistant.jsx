@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
+import { toast } from "sonner";
 export default function AIChatAssistant({ customer, currentUser, onRecommendationApproved }) {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
@@ -160,7 +161,7 @@ export default function AIChatAssistant({ customer, currentUser, onRecommendatio
       queryClient.invalidateQueries({ queryKey: ['customerRecommendations', customer.email] });
     } catch (error) {
       console.error('Error saving approved recommendation:', error);
-      alert('שגיאה בשמירת ההמלצה');
+      toast.error('שגיאה בשמירת ההמלצה');
     }
   };
 
@@ -197,7 +198,7 @@ export default function AIChatAssistant({ customer, currentUser, onRecommendatio
                       className="border-green-500 text-green-400 hover:bg-green-500/20"
                       onClick={() => {
                         // TODO: הפוך ליעד
-                        alert('פונקציונליות להפיכה ליעד תתווסף בקרוב');
+                        toast.info('פונקציונליות להפיכה ליעד תתווסף בקרוב');
                       }}
                     >
                       <Target className="w-4 h-4 ml-1" />

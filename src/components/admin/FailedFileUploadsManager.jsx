@@ -12,6 +12,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
+import { toast } from "sonner";
 export default function FailedFileUploadsManager() {
   const queryClient = useQueryClient();
   const [selectedFile, setSelectedFile] = useState(null);
@@ -43,7 +44,7 @@ export default function FailedFileUploadsManager() {
       queryClient.invalidateQueries(['failedFileUploads']);
     } catch (error) {
       console.error('Error marking file as resolved:', error);
-      alert('שגיאה בסימון הקובץ כטופל: ' + error.message);
+      toast.error('שגיאה בסימון הקובץ כטופל: ' + error.message);
     }
   };
 
@@ -59,7 +60,7 @@ export default function FailedFileUploadsManager() {
       queryClient.invalidateQueries(['failedFileUploads']);
     } catch (error) {
       console.error('Error deleting file:', error);
-      alert('שגיאה במחיקת הקובץ: ' + error.message);
+      toast.error('שגיאה במחיקת הקובץ: ' + error.message);
     }
   };
 

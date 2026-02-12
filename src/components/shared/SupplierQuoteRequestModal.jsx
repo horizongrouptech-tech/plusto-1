@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Send, Building, Star } from "lucide-react";
 import { requestSupplierQuote } from "@/functions/requestSupplierQuote";
+import { toast } from "sonner";
 
 export default function SupplierQuoteRequestModal({ isOpen, onClose, supplier, onQuoteRequested }) {
   const [formData, setFormData] = useState({
@@ -37,7 +38,7 @@ export default function SupplierQuoteRequestModal({ isOpen, onClose, supplier, o
     e.preventDefault();
     
     if (!formData.request_details.trim()) {
-      alert('נא להזין פרטי בקשה');
+      toast.warning('נא להזין פרטי בקשה');
       return;
     }
 
@@ -62,7 +63,7 @@ export default function SupplierQuoteRequestModal({ isOpen, onClose, supplier, o
         onQuoteRequested(data.lead_id);
       }
 
-      alert('הבקשה נשלחה בהצלחה לספק!');
+      toast.success('הבקשה נשלחה בהצלחה לספק!');
       onClose();
       
       // Reset form
@@ -75,7 +76,7 @@ export default function SupplierQuoteRequestModal({ isOpen, onClose, supplier, o
 
     } catch (error) {
       console.error("Error sending quote request:", error);
-      alert('שגיאה בשליחת הבקשה: ' + error.message);
+      toast.error('שגיאה בשליחת הבקשה: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }

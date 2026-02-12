@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { RecommendationFeedback } from "@/entities/RecommendationFeedback";
 import { User } from "@/entities/User";
+import { toast } from "sonner";
 
 export default function RecommendationFeedbackWidget({ recommendation, onFeedbackSubmitted }) {
   const [selectedRating, setSelectedRating] = useState(null);
@@ -68,7 +69,7 @@ export default function RecommendationFeedbackWidget({ recommendation, onFeedbac
 
     } catch (error) {
       console.error("Error submitting feedback:", error);
-      alert("שגיאה בשליחת הפידבק. אנא נסה שוב.");
+      toast.error("שגיאה בשליחת הפידבק. אנא נסה שוב.");
     }
     setIsSubmitting(false);
   };

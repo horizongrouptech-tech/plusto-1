@@ -9,6 +9,7 @@ import { ArrowLeft, ArrowRight, Package, Trash2, Plus, Search, DollarSign, Calcu
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { formatCurrency } from '../manual/utils/numberFormatter';
+import { toast } from "sonner";
 
 export default function Step2SelectProducts({ projectData, onUpdate, onNext, onBack, customer }) {
   const [selectedProducts, setSelectedProducts] = useState(projectData.products || []);
@@ -44,7 +45,7 @@ export default function Step2SelectProducts({ projectData, onUpdate, onNext, onB
   const handleAddProduct = (product) => {
     const existing = selectedProducts.find(p => p.product_id === product.id);
     if (existing) {
-      alert('מוצר זה כבר נוסף לרשימה');
+      toast.warning('מוצר זה כבר נוסף לרשימה');
       return;
     }
 

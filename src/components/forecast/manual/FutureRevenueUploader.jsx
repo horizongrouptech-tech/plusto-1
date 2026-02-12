@@ -10,6 +10,7 @@ import { Upload, Loader2, CheckCircle2, AlertCircle, FileSpreadsheet, Calendar, 
 import { base44 } from '@/api/base44Client';
 import { parseFutureRevenueFile } from '@/functions/parseFutureRevenueFile';
 import { formatCurrency } from './utils/numberFormatter';
+import { toast } from "sonner";
 
 export default function FutureRevenueUploader({ forecastData, onUpdateForecast, salesForecast, onSalesForecastUpdate }) {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -25,7 +26,7 @@ export default function FutureRevenueUploader({ forecastData, onUpdateForecast, 
     if (file) {
       const ext = file.name.split('.').pop().toLowerCase();
       if (!['xlsx', 'xls', 'csv'].includes(ext)) {
-        alert('יש להעלות קובץ Excel או CSV בלבד');
+        toast.warning('יש להעלות קובץ Excel או CSV בלבד');
         return;
       }
       setSelectedFile(file);
@@ -72,12 +73,12 @@ export default function FutureRevenueUploader({ forecastData, onUpdateForecast, 
         setProductMapping(autoMapping);
         setShowMappingModal(true);
       } else {
-        alert('לא נמצאו נתונים בקובץ');
+        toast.warning('לא נמצאו נתונים בקובץ');
       }
 
     } catch (error) {
       console.error('Error uploading/parsing revenue file:', error);
-      alert('שגיאה בעיבוד הקובץ: ' + error.message);
+      toast.error('שגיאה בעיבוד הקובץ: ' + error.message);
     } finally {
       setIsUploading(false);
       setIsParsing(false);
@@ -121,7 +122,7 @@ export default function FutureRevenueUploader({ forecastData, onUpdateForecast, 
 
       onSalesForecastUpdate(updatedSalesForecast);
       
-      alert(`✅ יובאו ${parsedData.rows.length} שורות הכנסה עתידיות בהצלחה!`);
+      toast.success(`✅ יובאו ${parsedData.rows.length} שורות הכנסה עתידיות בהצלחה!`);
       
       setShowMappingModal(false);
       setSelectedFile(null);
@@ -130,7 +131,7 @@ export default function FutureRevenueUploader({ forecastData, onUpdateForecast, 
 
     } catch (error) {
       console.error('Error importing revenue data:', error);
-      alert('שגיאה בייבוא הנתונים: ' + error.message);
+      toast.error('שגיאה בייבוא הנתונים: ' + error.message);
     } finally {
       setIsImporting(false);
     }

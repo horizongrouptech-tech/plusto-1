@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { toast } from "sonner";
 import { 
   ListChecks, Plus, Edit3, Trash2, Save, X, Loader2, 
   GripVertical, CheckCircle2, AlertCircle 
@@ -73,7 +74,7 @@ export default function DefaultTasksManager({ isOpen, onClose, currentUser }) {
 
   const handleSaveTask = () => {
     if (!editForm.title.trim()) {
-      alert('נא להזין כותרת למשימה');
+      toast.warning('נא להזין כותרת למשימה');
       return;
     }
 
@@ -119,10 +120,10 @@ export default function DefaultTasksManager({ isOpen, onClose, currentUser }) {
       }
       
       queryClient.invalidateQueries(['defaultOnboardingTasks']);
-      alert('המשימות נשמרו בהצלחה!');
+      toast.success('המשימות נשמרו בהצלחה!');
     } catch (error) {
       console.error('Error saving default tasks:', error);
-      alert('שגיאה בשמירת המשימות');
+      toast.error('שגיאה בשמירת המשימות');
     } finally {
       setIsSaving(false);
     }

@@ -7,6 +7,7 @@ import { User, Mail, Phone, Building, Calendar, FileText, Lightbulb, Users } fro
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 
+import { toast } from "sonner";
 export default function ClientDetailSidebar({ client, allUsers }) {
     const [isUpdatingGroup, setIsUpdatingGroup] = useState(false);
     const [customerGroup, setCustomerGroup] = useState(''); // New state to manage the selected group locally
@@ -91,10 +92,10 @@ export default function ClientDetailSidebar({ client, allUsers }) {
             // after this update, consider re-adding the invalidation.
             
             const groupName = newGroup === 'A' ? 'ראשון ורביעי' : 'שני וחמישי';
-            alert(`הלקוח שויך בהצלחה לקבוצה ${newGroup} (${groupName})`);
+            toast.success(`הלקוח שויך בהצלחה לקבוצה ${newGroup} (${groupName})`);
         } catch (error) {
             console.error('[components/admin/ClientDetailSidebar.js] Error updating customer group:', error);
-            alert('שגיאה בעדכון קבוצת הלקוח: ' + error.message);
+            toast.error('שגיאה בעדכון קבוצת הלקוח: ' + error.message);
         } finally {
             setIsUpdatingGroup(false);
         }

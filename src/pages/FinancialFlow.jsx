@@ -9,6 +9,7 @@ import { ArrowLeft, DollarSign, TrendingUp, TrendingDown, Edit3, Save, X, Calcul
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 
 export default function FinancialFlowPage() {
   const [user, setUser] = useState(null);
@@ -60,10 +61,10 @@ export default function FinancialFlowPage() {
       }));
       
       setIsEditingExpenses(false);
-      alert("הנתונים נשמרו בהצלחה!");
+      toast.success("הנתונים נשמרו בהצלחה!");
     } catch (error) {
       console.error("Error saving expenses:", error);
-      alert("שגיאה בשמירת הנתונים");
+      toast.error("שגיאה בשמירת הנתונים");
     }
   };
 

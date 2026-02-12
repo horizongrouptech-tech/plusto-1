@@ -1,41 +1,27 @@
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 export function useGlobalToast() {
-  const { toast } = useToast();
-
   const showSuccess = (message, duration = 3000) => {
-    toast({
-      title: "הצלחה!",
-      description: message,
-      variant: "default",
-      duration: duration
+    toast.success(message, {
+      duration: duration,
     });
   };
 
   const showError = (message, duration = 5000) => {
-    toast({
-      title: "שגיאה",
-      description: message,
-      variant: "destructive",
-      duration: duration
+    toast.error(message, {
+      duration: duration,
     });
   };
 
   const showInfo = (message, duration = 3000) => {
-    toast({
-      title: "מידע",
-      description: message,
-      variant: "default",
-      duration: duration
+    toast.info(message, {
+      duration: duration,
     });
   };
 
   const showWarning = (message, duration = 4000) => {
-    toast({
-      title: "אזהרה",
-      description: message,
-      variant: "default",
-      duration: duration
+    toast.warning(message, {
+      duration: duration,
     });
   };
 

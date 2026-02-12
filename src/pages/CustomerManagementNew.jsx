@@ -22,6 +22,7 @@ import ManualRecommendationModal from '@/components/admin/ManualRecommendationMo
 import RecommendationViewModal from '@/components/admin/RecommendationViewModal';
 import RecommendationEditModal from '@/components/admin/RecommendationEditModal';
 import RecommendationUpgradeModal from '@/components/admin/RecommendationUpgradeModal';
+import { toast } from "sonner";
 
 export default function CustomerManagementNew() {
   const navigate = useNavigate();
@@ -193,9 +194,9 @@ export default function CustomerManagementNew() {
     try {
       await base44.entities.Recommendation.delete(recId);
       queryClient.invalidateQueries(['customerRecommendations', selectedCustomer.email]);
-      alert('ההמלצה נמחקה');
+      toast.success('ההמלצה נמחקה');
     } catch (error) {
-      alert('שגיאה במחיקת ההמלצה: ' + error.message);
+      toast.error('שגיאה במחיקת ההמלצה: ' + error.message);
     }
   };
 
@@ -205,15 +206,15 @@ export default function CustomerManagementNew() {
     try {
       await base44.entities.Recommendation.update(recId, { status: 'archived' });
       queryClient.invalidateQueries(['customerRecommendations', selectedCustomer.email]);
-      alert('ההמלצה הועברה לארכיון');
+      toast.success('ההמלצה הועברה לארכיון');
     } catch (error) {
-      alert('שגיאה: ' + error.message);
+      toast.error('שגיאה: ' + error.message);
     }
   };
 
   const handleSendRecommendation = async (rec) => {
     // לוגיקת שליחה לווטסאפ
-    alert('פונקציונליות שליחה בפיתוח');
+    toast.info('פונקציונליות שליחה בפיתוח');
   };
 
   return (
@@ -351,9 +352,9 @@ export default function CustomerManagementNew() {
             queryClient.invalidateQueries(['activeCustomers']);
             setOverviewModalOpen(false);
             setSelectedCustomer(null);
-            alert('הלקוח הועבר לארכיון');
+            toast.success('הלקוח הועבר לארכיון');
           } catch (error) {
-            alert('שגיאה: ' + error.message);
+            toast.error('שגיאה: ' + error.message);
           }
         }}
       />
@@ -367,9 +368,9 @@ export default function CustomerManagementNew() {
             await base44.entities.OnboardingRequest.update(selectedCustomer.id, updatedData);
             queryClient.invalidateQueries(['activeCustomers']);
             setSettingsDrawerOpen(false);
-            alert('הנתונים נשמרו בהצלחה');
+            toast.success('הנתונים נשמרו בהצלחה');
           } catch (error) {
-            alert('שגיאה: ' + error.message);
+            toast.error('שגיאה: ' + error.message);
           }
         }}
       />
@@ -386,9 +387,9 @@ export default function CustomerManagementNew() {
             await base44.entities.CustomerGoal.update(updatedTask.id, updatedTask);
             queryClient.invalidateQueries(['customerGoals', selectedCustomer.email]);
             setTaskModalOpen(false);
-            alert('המשימה עודכנה');
+            toast.success('המשימה עודכנה');
           } catch (error) {
-            alert('שגיאה: ' + error.message);
+            toast.error('שגיאה: ' + error.message);
           }
         }}
         allUsers={allUsers}
@@ -416,13 +417,13 @@ export default function CustomerManagementNew() {
             
             if (response.data?.success) {
               queryClient.invalidateQueries(['customerRecommendations', selectedCustomer.email]);
-              alert(`נוצרו בהצלחה ${response.data.recommendations_count} המלצות!`);
+              toast.success(`נוצרו בהצלחה ${response.data.recommendations_count} המלצות!`);
             } else {
               throw new Error(response.data?.error || 'Failed to generate recommendations');
             }
           } catch (error) {
             console.error('Error generating recommendations:', error);
-            alert('שגיאה ביצירת המלצות: ' + error.message);
+            toast.error('שגיאה ביצירת המלצות: ' + error.message);
           } finally {
             setIsGeneratingRecs(false);
           }
@@ -490,9 +491,9 @@ export default function CustomerManagementNew() {
               await base44.entities.Recommendation.update(updatedRec.id, updatedRec);
               queryClient.invalidateQueries(['customerRecommendations', selectedCustomer.email]);
               setEditRecModalOpen(false);
-              alert('ההמלצה עודכנה');
+              toast.success('ההמלצה עודכנה');
             } catch (error) {
-              alert('שגיאה: ' + error.message);
+              toast.error('שגיאה: ' + error.message);
             }
           }}
         />

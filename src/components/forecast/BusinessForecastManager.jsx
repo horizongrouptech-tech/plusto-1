@@ -25,7 +25,7 @@ import { Catalog } from "@/entities/Catalog";
 import { FileUpload } from "@/entities/FileUpload";
 import { Checkbox } from "@/components/ui/checkbox";
 import { base44 } from "@/api/base44Client";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import {
   Accordion,
   AccordionContent,
@@ -92,7 +92,7 @@ const formatCurrency = (value) => {
     return `₪${Math.round(value).toLocaleString()}`;
 };
 
-export default function BusinessForecastManager({ customer,selectedForecastId,initialForecastData,onBack}) {  const { toast } = useToast();
+export default function BusinessForecastManager({ customer,selectedForecastId,initialForecastData,onBack}) {
 
   const [forecasts, setForecasts] = useState([]);
   const [forecast, setForecast] = useState(null); // The currently selected/active forecast
@@ -240,9 +240,9 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         setCustomerFiles(files);
     } catch (error) {
         console.error("Error loading customer files:", error);
-        toast({ title: "שגיאה", description: "שגיאה בטעינת קבצי הלקוח.", variant: "destructive" });
+        toast.error("שגיאה", { description: "שגיאה בטעינת קבצי הלקוח." });
     }
-  }, [customer?.email, toast]);
+  }, [customer?.email]);
 
   const loadForecastsList = useCallback(async () => {
     if (!customer?.email) return;
@@ -446,18 +446,10 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
       setForecasts(prev => prev.map(f => f.id === savedForecastResult.id ? savedForecastResult : f));
       loadForecast(savedForecastResult);
 
-      toast({
-        title: "התוכנית נשמרה",
-        description: `השינויים ב${fieldName} נשמרו בהצלחה!`,
-        variant: "success",
-      });
+      toast.success("התוכנית נשמרה", { description: `השינויים ב${fieldName} נשמרו בהצלחה!` });
     } catch (error) {
       console.error(`Error saving ${fieldName}:`, error);
-      toast({
-        title: "שגיאה",
-        description: `שגיאה בשמירת ${fieldName}`,
-        variant: "destructive",
-      });
+      toast.error("שגיאה", { description: `שגיאה בשמירת ${fieldName}` });
     } finally {
       setIsSaving(false);
       setEditingForecastName(false);
@@ -467,11 +459,11 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
   const handleSyncFromCatalog = async () => {
     if (!customer?.email) {
-      toast({ title: "שגיאה", description: "לא נמצא לקוח מחובר.", variant: "destructive" });
+      toast.error("שגיאה", { description: "לא נמצא לקוח מחובר." });
       return;
     }
     if (!forecast || !forecast.is_editable) {
-        toast({ title: "שגיאה", description: "יש לבחור תחזית ניתנת לעריכה לפני סנכרון מוצרים.", variant: "destructive" });
+        toast.error("שגיאה", { description: "יש לבחור תחזית ניתנת לעריכה לפני סנכרון מוצרים." });
         return;
     }
 
@@ -499,11 +491,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         const customerCatalogs = await Catalog.filter({ customer_email: customer.email });
         
         if (customerCatalogs.length > 3) {
-          toast({ 
-            title: "בחר קטלוג ספציפי", 
-            description: `יש לך ${customerCatalogs.length} קטלוגים. אנא בחר קטלוג ספציפי לסנכרון כדי למנוע עומס.`, 
-            variant: "destructive" 
-          });
+          toast.error("בחר קטלוג ספציפי", { description: `יש לך ${customerCatalogs.length} קטלוגים. אנא בחר קטלוג ספציפי לסנכרון כדי למנוע עומס.` });
           setIsSaving(false);
           setIsLoadingCatalogs(false);
           return;
@@ -522,7 +510,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
       }
 
       if (catalogProducts.length === 0) {
-        toast({ title: "אין מוצרים", description: "לא נמצאו מוצרים פעילים בקטלוג לסנכרון.", variant: "destructive" });
+        toast.error("אין מוצרים", { description: "לא נמצאו מוצרים פעילים בקטלוג לסנכרון." });
         setIsSaving(false);
         setIsLoadingCatalogs(false);
         return;
@@ -535,11 +523,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
           is_active: true
         });
         if (totalCount > MAX_PRODUCTS_TO_SYNC) {
-          toast({ 
-            title: "התראה", 
-            description: `נטענו ${MAX_PRODUCTS_TO_SYNC} מוצרים מתוך ${totalCount} קיימים. מומלץ לסנן לפי קטלוג ספציפי.`, 
-            variant: "default" 
-          });
+          toast.info("התראה", { description: `נטענו ${MAX_PRODUCTS_TO_SYNC} מוצרים מתוך ${totalCount} קיימים. מומלץ לסנן לפי קטלוג ספציפי.` });
         }
       }
 
@@ -561,11 +545,11 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
       loadForecast(updatedForecast);
       setIsCatalogSynced(true);
 
-      toast({ title: "מוצרים סונכרנו!", description: `${catalogProducts.length} מוצרים סונכרנו לתחזית הנוכחית.` });
+      toast.success("מוצרים סונכרנו!", { description: `${catalogProducts.length} מוצרים סונכרנו לתחזית הנוכחית.` });
 
     } catch (error) {
       console.error("Error syncing catalog:", error);
-      toast({ title: "שגיאה בסנכרון", description: error.message || "אירעה שגיאה בסנכרון המוצרים מהקטלוג.", variant: "destructive" });
+      toast.error("שגיאה בסנכרון", { description: error.message || "אירעה שגיאה בסנכרון המוצרים מהקטלוג." });
     } finally {
       setIsSaving(false);
       setIsLoadingCatalogs(false);
@@ -591,17 +575,17 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
   };
   const handleInitialForecastDetailsSubmit = async () => {
     if (!newForecastNameInput.trim() || !selectedCatalogToSync) {
-        toast({ title: "שגיאה", description: "אנא מלא את שם התוכנית ובחר קטלוג לסנכרון.", variant: "destructive" });
+        toast.error("שגיאה", { description: "אנא מלא את שם התוכנית ובחר קטלוג לסנכרון." });
         return;
     }
     if (catalogs.length === 0) {
-         toast({ title: "שגיאה", description: "לא נמצאו קטלוגים במערכת. אנא צור קטלוג חדש או העלה מוצרים לקטלוג קיים תחילה.", variant: "destructive" });
+         toast.error("שגיאה", { description: "לא נמצאו קטלוגים במערכת. אנא צור קטלוג חדש או העלה מוצרים לקטלוג קיים תחילה." });
         return;
     }
 
     setIsGenerating(true);
     setIsLoadingCatalogs(true);
-    toast({ title: "מכין תוכנית...", description: "מסנכרן מוצרים מהקטלוג הנבחר.", variant: "default" });
+    toast.info("מכין תוכנית...", { description: "מסנכרן מוצרים מהקטלוג הנבחר." });
 
     try {
         // ✅ תיקון: טעינה מוגבלת של מוצרים (500 ראשונים) למניעת קפיאה
@@ -634,7 +618,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         }
 
         if (productsToSync.length === 0) {
-            toast({ title: "אין מוצרים בקטלוג", description: `הקטלוג שבחרת (${selectedCatalogToSync.catalog_name}) ריק ממוצרים פעילים. אנא העלה מוצרים או בחר קטלוג אחר.`, variant: "destructive" });
+            toast.error("אין מוצרים בקטלוג", { description: `הקטלוג שבחרת (${selectedCatalogToSync.catalog_name}) ריק ממוצרים פעילים. אנא העלה מוצרים או בחר קטלוג אחר.` });
             setIsGenerating(false);
             setIsLoadingCatalogs(false);
             return;
@@ -647,11 +631,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
             is_active: true
           });
           if (totalCount > MAX_PRODUCTS_TO_SYNC) {
-            toast({ 
-              title: "התראה", 
-              description: `נטענו ${MAX_PRODUCTS_TO_SYNC} מוצרים מתוך ${totalCount} קיימים בקטלוג.`, 
-              variant: "default" 
-            });
+            toast.info("התראה", { description: `נטענו ${MAX_PRODUCTS_TO_SYNC} מוצרים מתוך ${totalCount} קיימים בקטלוג.` });
           }
         }
 
@@ -692,11 +672,11 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
             setExistingStrategicInput(null);
         }
 
-        toast({ title: "מוכן למילוי שאלון!", description: "אנא השלם את השאלון האסטרטגי להשלמת התוכנית.", variant: "success" });
+        toast.success("מוכן למילוי שאלון!", { description: "אנא השלם את השאלון האסטרטגי להשלמת התוכנית." });
 
     } catch (error) {
         console.error("Error in initial forecast details submission:", error);
-        toast({ title: "שגיאה", description: `אירעה שגיאה: ${error.message}. נסה שוב.`, variant: "destructive" });
+        toast.error("שגיאה", { description: `אירעה שגיאה: ${error.message}. נסה שוב.` });
     } finally {
         setIsGenerating(false);
         setIsLoadingCatalogs(false);
@@ -955,25 +935,21 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
   const generateForecastVersion = async (forecastType) => {
     if (!forecast) {
-      toast({ title: "שגיאה", description: "יש לבחור תחזית קיימת כדי ליצור גרסה חדשה שלה.", variant: "destructive" });
+      toast.error("שגיאה", { description: "יש לבחור תחזית קיימת כדי ליצור גרסה חדשה שלה." });
       return;
     }
     if (!forecast.is_editable) {
-      toast({ title: "שגיאה", description: "לא ניתן ליצור תחזית חדשה מתוך תוכנית שאינה ניתנת לעריכה.", variant: "destructive" });
+      toast.error("שגיאה", { description: "לא ניתן ליצור תחזית חדשה מתוך תוכנית שאינה ניתנת לעריכה." });
       return;
     }
 
     if (!forecast.services_data || forecast.services_data.length === 0) {
-      toast({
-        title: "אין מוצרים בתחזית",
-        description: "כדי ליצור תחזית AI, יש לסנכרן מוצרים מהקטלוג או להוסיף אותם ידנית לתוכנית זו.",
-        variant: "destructive"
-      });
+      toast.error("אין מוצרים בתחזית", { description: "כדי ליצור תחזית AI, יש לסנכרן מוצרים מהקטלוג או להוסיף אותם ידנית לתוכנית זו." });
       return;
     }
 
     setIsGenerating(true);
-    toast({ title: "יוצר תחזית חדשה...", description: "תהליך יצירת התחזית החל ברקע. תקבל עדכון בסיומו.", variant: "default" });
+    toast.info("יוצר תחזית חדשה...", { description: "תהליך יצירת התחזית החל ברקע. תקבל עדכון בסיומו." });
     try {
       const latestStrategicInput = await getLatestStrategicInput();
 
@@ -989,14 +965,14 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
       console.log('orchestrateBusinessForecast response:', response);
 
       if (response?.success === true) {
-        toast({ title: "התחזית בהכנה", description: "תהליך יצירת התחזית החל ברקע. תקבל עדכון בסיומו.", variant: "default", });
+        toast.info("התחזית בהכנה", { description: "תהליך יצירת התחזית החל ברקע. תקבל עדכון בסיומו." });
         await checkForRunningProcesses(customer.email);
       } else {
         throw new Error(response?.error || 'שגיאה ביצירת תחזית - אנא נסה שוב');
       }
     } catch (error) {
       console.error(`Error generating ${forecastType} forecast:`, error);
-      toast({ title: "שגיאה ביצירת תחזית", description: error.message || "אירעה שגיאה בלתי צפויה. נסה שוב.", variant: "destructive", });
+      toast.error("שגיאה ביצירת תחזית", { description: error.message || "אירעה שגיאה בלתי צפויה. נסה שוב." });
     } finally {
       setIsGenerating(false);
     }
@@ -1079,10 +1055,10 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         loadForecast(updatedForecast);
       }
 
-      toast({ title: "הדירוג נשמר", description: `התחזית דורגה ב-${rating} כוכבים!`, variant: "success", });
+      toast.success("הדירוג נשמר", { description: `התחזית דורגה ב-${rating} כוכבים!` });
     } catch (error) {
       console.error("Error rating forecast:", error);
-      toast({ title: "שגיאה", description: "שגיאה בדירוג התחזית", variant: "destructive", });
+      toast.error("שגיאה", { description: "שגיאה בדירוג התחזית" });
     }
   };
 
@@ -1097,10 +1073,10 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         resetCurrentForecastState();
       }
 
-      toast({ title: "נמחק בהצלחה", description: "התחזית נמקה בהצלחה", variant: "success", });
+      toast.success("נמחק בהצלחה", { description: "התחזית נמקה בהצלחה" });
     } catch (error) {
       console.error("Error deleting forecast:", error);
-      toast({ title: "שגיאה", description: "שגיאה במחיקת התחזית", variant: "destructive", });
+      toast.error("שגיאה", { description: "שגיאה במחיקת התחזית" });
     }
   };
 
@@ -1144,14 +1120,14 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         a.click();
         window.URL.revokeObjectURL(url);
         a.remove();
-        toast({ title: "קובץ ה-PDF נוצר והורד בהצלחה!", description: `קובץ "${filename}" הורד בהצלחה.` });
+        toast.success("קובץ ה-PDF נוצר והורד בהצלחה!", { description: `קובץ "${filename}" הורד בהצלחה.` });
       } else {
         throw new Error("לא התקבל קובץ PDF תקין מהשרת.");
       }
     } catch (error) {
       console.error('Error exporting to PDF:', error);
       setError(`שגיאה בייצוא התוכנית ל-PDF: ${error.message}`);
-      toast({ title: "שגיאה בייצוא PDF", description: `שגיאה בייצוא התוכנית ל-PDF: ${error.message}`, variant: "destructive" });
+      toast.error("שגיאה בייצוא PDF", { description: `שגיאה בייצוא התוכנית ל-PDF: ${error.message}` });
     } finally {
       setIsGenerating(false);
     }
@@ -1234,7 +1210,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
       const latestStrategicInput = await getLatestStrategicInput();
 
       if (!latestStrategicInput) {
-        toast({ title: "שגיאה", description: "לא נמצאו נתונים אסטרטגיים. אנא הזן נתונים אסטרטגיים לפני יצירת תוכנית במלל.", variant: "destructive" });
+        toast.error("שגיאה", { description: "לא נמצאו נתונים אסטרטגיים. אנא הזן נתונים אסטרטגיים לפני יצירת תוכנית במלל." });
         setShowStrategicInput(true);
         setForecast(forecastToGenerateFor);
         return;
@@ -1263,10 +1239,10 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
       setForecast(updatedForecast);
 
       setShowBusinessPlanModal(true);
-      toast({ title: "תוכנית עסקית נוצרה!", description: "תוכנית במלל נוצרה בהצלחה.", variant: "success", });
+      toast.success("תוכנית עסקית נוצרה!", { description: "תוכנית במלל נוצרה בהצלחה." });
     } catch (error) {
       console.error("Error generating business plan:", error);
-      toast({ title: "שגיאה ביצירת תוכנית עסקית", description: error.message || "אירעה שגיאה בלתי צפויה. נסה שוב.", variant: "destructive", });
+      toast.error("שגיאה ביצירת תוכנית עסקית", { description: error.message || "אירעה שגיאה בלתי צפויה. נסה שוב." });
     } finally {
       setIsGenerating(false);
     }
@@ -1317,12 +1293,12 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
       } else if (forecast && forecast.id && !businessPlanText) {
         await handleGenerateBusinessPlan(forecast);
       } else {
-        toast({ title: "הנתונים נשמרו", description: "הנתונים האסטרטגיים נשמרו בהצלחה.", variant: "success" });
+        toast.success("הנתונים נשמרו", { description: "הנתונים האסטרטגיים נשמרו בהצלחה." });
       }
 
     } catch (error) {
       console.error("Error submitting strategic input:", error);
-      toast({ title: "שגיאה", description: "שגיאה בשמירת נתונים אסטרטגיים.", variant: "destructive" });
+      toast.error("שגיאה", { description: "שגיאה בשמירת נתונים אסטרטגיים." });
     } finally {
       setIsGenerating(false);
       setPendingForecastType(null);
@@ -1339,10 +1315,10 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
       setForecasts(forecasts.map(f => f.id === forecast.id ? updatedForecast : f));
       setForecast(updatedForecast);
       setIsEditingPlan(false);
-      toast({ title: "התוכנית נשמרה", description: "התוכנית נשמרה בהצלחה!", variant: "success", });
+      toast.success("התוכנית נשמרה", { description: "התוכנית נשמרה בהצלחה!" });
     } catch (error) {
       console.error("Error saving plan:", error);
-      toast({ title: "שגיאה", description: "שגיאה בשמירת התוכנית.", variant: "destructive", });
+      toast.error("שגיאה", { description: "שגיאה בשמירת התוכנית." });
     } finally {
       setIsSavingPlan(false);
     }
@@ -1361,7 +1337,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
             setForecasts(prev => prev.map(f => f.id === updatedForecast.id ? updatedForecast : f));
             setBusinessPlanText(updatedForecast.business_plan_text || "");
             setEditedPlanText(updatedForecast.business_plan_text || "");
-            toast({ title: "התוכנית במלל נוצרה!", description: "המלל נוסף לתחזית הנוכחית.", variant: "success", });
+            toast.success("התוכנית במלל נוצרה!", { description: "המלל נוסף לתחזית הנוכחית." });
         } else {
             throw new Error(result.error || "שגיאה ביצירת המלל");
         }
@@ -1375,11 +1351,11 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
   const handleInitiateFullForecastGeneration = async (forecastToUse) => {
     if (!forecastToUse.services_data || forecastToUse.services_data.length === 0) {
-      toast({ title: "אין מוצרים", description: "יש לסנכרן מוצרים מהקטלוג תחילה.", variant: "destructive" });
+      toast.error("אין מוצרים", { description: "יש לסנכרן מוצרים מהקטלוג תחילה." });
       return;
     }
     if (!forecastToUse.is_editable) {
-      toast({ title: "שגיאה", description: "לא ניתן ליצור תוכנית מלאה עבור תוכנית שאינה ניתנת לעריכה.", variant: "destructive" });
+      toast.error("שגיאה", { description: "לא ניתן ליצור תוכנית מלאה עבור תוכנית שאינה ניתנת לעריכה." });
       return;
     }
 
@@ -1431,11 +1407,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
       console.log('orchestrateBusinessForecast response:', response);
 
       if (response?.success === true) {
-        toast({
-          title: "התחזית בהכנה",
-          description: "תהליך יצירת התחזית החל ברקע. תקבל עדכון בסיומו.",
-          variant: "default",
-        });
+        toast.info("התחזית בהכנה", { description: "תהליך יצירת התחזית החל ברקע. תקבל עדכון בסיומו." });
         setShowInitialCreationModal(false);
         setShowStrategicInput(false);
         setIsNewForecastModalOpen(false);
@@ -1452,11 +1424,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     } catch (err) {
       console.error('Error initiating forecast generation:', err);
       setError(err.message || 'שגיאה ביצירת התחזית. אנא נסה שוב.');
-      toast({
-        title: "שגיאה ביצירת תחזית",
-        description: err.message || "אירעה שגיאה בלתי צפויה. נסה שוב.",
-        variant: "destructive",
-      });
+      toast.error("שגיאה ביצירת תחזית", { description: err.message || "אירעה שגיאה בלתי צפויה. נסה שוב." });
     } finally {
       setIsGenerating(false);
     }
@@ -1484,26 +1452,18 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
   useEffect(() => {
     if (runningProcess && runningProcess.status === 'completed' && runningProcess.result_data) {
-        toast({
-            title: "טיוטת התחזית מוכנה!",
-            description: "התחזית החדשה נטענה לעריכה.",
-            variant: "success",
-        });
+        toast.success("טיוטת התחזית מוכנה!", { description: "התחזית החדשה נטענה לעריכה." });
         const newForecast = runningProcess.result_data;
         setForecasts(prev => [newForecast, ...prev]);
         handleSelectForecast(newForecast);
         setRunningProcess(null);
         setProcessId(null);
     } else if (runningProcess && runningProcess.status === 'failed') {
-        toast({
-            title: "יצירת תחזית נכשלה",
-            description: `אירעה שגיאה: ${runningProcess.error_message || 'שגיאה בלתי ידועה'}.`,
-            variant: "destructive",
-        });
+        toast.error("יצירת תחזית נכשלה", { description: `אירעה שגיאה: ${runningProcess.error_message || 'שגיאה בלתי ידועה'}.` });
         setRunningProcess(null);
         setProcessId(null);
     }
- }, [runningProcess, toast, handleSelectForecast]);
+ }, [runningProcess, handleSelectForecast]);
 
   // ✅ Pagination - עם useMemo למניעת חישובים מיותרים
   const totalProductPages = useMemo(() => {

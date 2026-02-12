@@ -25,6 +25,7 @@ import { formatCurrency } from './utils/numberFormatter';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { base44 } from '@/api/base44Client';
 import SaveProgressIndicator from './SaveProgressIndicator';
+import { toast } from "sonner";
 
 const MONTHS = [
   'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
@@ -38,7 +39,7 @@ export default function Step2SalaryCosts({ forecastData, onUpdateForecast, onNex
   
   const handleSaveProgress = async () => {
     if (!forecastData.forecast_name?.trim()) {
-      alert('נא להזין שם לתחזית לפני שמירה');
+      toast.warning('נא להזין שם לתחזית לפני שמירה');
       return;
     }
 
@@ -61,7 +62,7 @@ export default function Step2SalaryCosts({ forecastData, onUpdateForecast, onNex
     } catch (error) {
       console.error('Error saving:', error);
       setSaveStatus('error');
-      alert('שגיאה בשמירה: ' + error.message);
+      toast.error('שגיאה בשמירה: ' + error.message);
     } finally {
       setIsSaving(false);
     }

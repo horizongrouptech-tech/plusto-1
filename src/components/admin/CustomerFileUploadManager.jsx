@@ -33,6 +33,7 @@ import { he } from 'date-fns/locale';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
+import { toast } from "sonner";
 export default function CustomerFileUploadManager({ customer, isAdmin = false }) {
   const [files, setFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -98,7 +99,7 @@ export default function CustomerFileUploadManager({ customer, isAdmin = false })
       await loadFiles();
     } catch (error) {
       console.error("Error deleting file:", error);
-      alert('שגיאה במחיקת הקובץ');
+      toast.error('שגיאה במחיקת הקובץ');
       setError('שגיאה במחיקת הקובץ: ' + error.message);
     }
   };
@@ -425,11 +426,11 @@ export default function CustomerFileUploadManager({ customer, isAdmin = false })
                               importToCatalog: true
                             });
                             if (response.data?.success) {
-                              alert(`נוספו ${response.data.products?.length || 0} מוצרים לקטלוג`);
+                              toast.info(`נוספו ${response.data.products?.length || 0} מוצרים לקטלוג`);
                             }
                           } catch (error) {
                             console.error('Error importing Z report to catalog:', error);
-                            alert('שגיאה בייבוא לקטלוג');
+                            toast.error('שגיאה בייבוא לקטלוג');
                           }
                         }}
                         className="text-purple-400 hover:bg-purple-500/20"

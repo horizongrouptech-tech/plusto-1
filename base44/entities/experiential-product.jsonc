@@ -1,0 +1,80 @@
+{
+  "name": "ExperientialProduct",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "שם הפריט החוויתי"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "scratch_card",
+        "stickers",
+        "lottery_ticket",
+        "branded_packaging",
+        "gift_item",
+        "coupon",
+        "surprise_box"
+      ],
+      "description": "סוג הפריט החוויתי"
+    },
+    "value": {
+      "type": "number",
+      "description": "ערך כספי של הפריט"
+    },
+    "cost": {
+      "type": "number",
+      "description": "עלות הפריט לעסק"
+    },
+    "target_emotion": {
+      "type": "string",
+      "enum": [
+        "excitement",
+        "surprise",
+        "loyalty",
+        "joy",
+        "anticipation"
+      ],
+      "description": "רגש יעד שהפריט נועד להעביר"
+    },
+    "age_group": {
+      "type": "string",
+      "description": "קבוצת גיל מתאימה"
+    },
+    "usage_context": {
+      "type": "string",
+      "description": "הקשר השימוש (בקופה, עם קנייה, וכו')"
+    },
+    "success_metrics": {
+      "type": "object",
+      "properties": {
+        "customer_satisfaction": {
+          "type": "number"
+        },
+        "repeat_purchase_rate": {
+          "type": "number"
+        },
+        "social_sharing": {
+          "type": "number"
+        }
+      },
+      "description": "מדדי ההצלחה עבור הפריט"
+    },
+    "related_promotion_id": {
+      "type": "string",
+      "description": "מזהה המבצע הקשור"
+    }
+  },
+  "required": [
+    "name",
+    "type",
+    "value"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

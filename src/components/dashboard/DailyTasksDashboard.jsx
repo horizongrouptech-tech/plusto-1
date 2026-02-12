@@ -50,6 +50,7 @@ import CompletedTasksModal from './kanban/CompletedTasksModal';
 import GoalBankManager from '../admin/GoalBankManager';
 
 
+import { toast } from "sonner";
 // פונקציה לקבלת קבוצת העבודה היומית
 const getTodayWorkGroup = () => {
   const dayOfWeek = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
@@ -342,11 +343,11 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       queryClient.invalidateQueries(['allRelevantTasks']); // Invalidate the broader query
       setIsTaskModalOpen(false);
       setSelectedTask(null);
-      alert('המשימה עודכנה בהצלחה!');
+      toast.success('המשימה עודכנה בהצלחה!');
     },
     onError: (error) => {
       console.error('Error updating task:', error);
-      alert('שגיאה בעדכון המשימה: ' + error.message);
+      toast.error('שגיאה בעדכון המשימה: ' + error.message);
     }
   });
 
@@ -375,11 +376,11 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['allRelevantTasks']);
-      alert('המשימה הושלמה בהצלחה!');
+      toast.success('המשימה הושלמה בהצלחה!');
     },
     onError: (error) => {
       console.error('Error marking task as done:', error);
-      alert('שגיאה בהשלמת המשימה: ' + error.message);
+      toast.error('שגיאה בהשלמת המשימה: ' + error.message);
     }
   });
 
@@ -419,10 +420,10 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       try {
         await base44.entities.CustomerGoal.update(taskId, { status: 'open' });
         queryClient.invalidateQueries(['allRelevantTasks']);
-        alert('המשימה שוחזרה בהצלחה!');
+        toast.success('המשימה שוחזרה בהצלחה!');
       } catch (error) {
         console.error('Error restoring task:', error);
-        alert('שגיאה בשחזור המשימה');
+        toast.error('שגיאה בשחזור המשימה');
       }
     }
   };
@@ -440,7 +441,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       queryClient.invalidateQueries(['allRelevantTasks']);
     } catch (error) {
       console.error('Error updating task status:', error);
-      alert('שגיאה בעדכון סטטוס המשימה');
+      toast.error('שגיאה בעדכון סטטוס המשימה');
       queryClient.invalidateQueries(['allRelevantTasks']);
     }
   };

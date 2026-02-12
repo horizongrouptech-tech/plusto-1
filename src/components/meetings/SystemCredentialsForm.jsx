@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ChevronDown, ChevronUp, Plus, X, Loader2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from "sonner";
 import { base44 } from '@/api/base44Client';
 
 export default function SystemCredentialsForm({ customer, onClose }) {
@@ -67,7 +68,7 @@ export default function SystemCredentialsForm({ customer, onClose }) {
 
   const handleAddCredential = async () => {
     if (!formData.system_name.trim()) {
-      alert('נא להזין שם מערכת');
+      toast.warning('נא להזין שם מערכת');
       return;
     }
     addMutation.mutate(formData);

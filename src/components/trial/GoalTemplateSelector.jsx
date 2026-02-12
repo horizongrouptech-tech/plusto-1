@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Target, Loader2, Search, Plus, CheckCircle, Clock, ListChecks } from 'lucide-react';
 import { CategoryBadge, PopularBadge } from '@/components/goals/GoalTemplateBadges';
 import GoalTemplatePreview from '@/components/goals/GoalTemplatePreview';
+import { toast } from "sonner";
 
 export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoalCreated }) {
     const queryClient = useQueryClient();
@@ -66,7 +67,7 @@ export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoal
 
     const handleCreateGoal = async () => {
         if (!selectedTemplate || !customization.name.trim()) {
-            alert('נא לבחור תבנית ולהזין שם ליעד');
+            toast.warning('נא לבחור תבנית ולהזין שם ליעד');
             return;
         }
 
@@ -116,10 +117,10 @@ export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoal
             queryClient.invalidateQueries(['goalTemplates']);
             onGoalCreated();
             onClose();
-            alert('יעד נוצר בהצלחה מהתבנית!');
+            toast.success('יעד נוצר בהצלחה מהתבנית!');
         } catch (error) {
             console.error('Error creating goal from template:', error);
-            alert('שגיאה ביצירת יעד: ' + error.message);
+            toast.error('שגיאה ביצירת יעד: ' + error.message);
         } finally {
             setIsCreating(false);
         }

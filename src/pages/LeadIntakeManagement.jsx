@@ -15,6 +15,7 @@ import {
 import LeadCard from '@/components/admin/LeadCard';
 import LeadDetailModal from '@/components/admin/LeadDetailModal';
 import LoadingScreen from '@/components/shared/LoadingScreen';
+import { toast } from "sonner";
 
 const LEAD_STAGES = [
   { value: 'new', label: 'חדש', color: 'bg-blue-500' },
@@ -152,7 +153,7 @@ export default function LeadIntakeManagement() {
       queryClient.invalidateQueries(['leads']);
     } catch (error) {
       console.error('Error updating lead stage:', error);
-      alert('שגיאה בעדכון שלב הליד');
+      toast.error('שגיאה בעדכון שלב הליד');
     }
   };
 
@@ -162,7 +163,7 @@ export default function LeadIntakeManagement() {
       queryClient.invalidateQueries(['leads']);
     } catch (error) {
       console.error('Error assigning manager:', error);
-      alert('שגיאה בשיוך מנהל');
+      toast.error('שגיאה בשיוך מנהל');
     }
   };
 

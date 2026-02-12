@@ -19,6 +19,7 @@ import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
 
+import { toast } from "sonner";
 export default function FinanceManagerPerformanceTable() {
   const [activeView, setActiveView] = useState('performance');
   const [isCalculating, setIsCalculating] = useState(false);
@@ -145,12 +146,12 @@ export default function FinanceManagerPerformanceTable() {
       console.log('✅ All data refreshed successfully');
       
       // הצגת הודעת הצלחה
-      alert(`✅ חישוב ביצועים הושלם בהצלחה!\n\n${response.data.updated_count} מנהלים עודכנו`);
+      toast.success(`✅ חישוב ביצועים הושלם בהצלחה!\n\n${response.data.updated_count} מנהלים עודכנו`);
       
     } catch (error) {
       console.error("❌ Error calculating performance:", error);
       console.error("Error details:", error.response?.data);
-      alert("❌ שגיאה בחישוב ביצועים:\n\n" + (error.response?.data?.error || error.message));
+      toast.error("❌ שגיאה בחישוב ביצועים:\n\n" + (error.response?.data?.error || error.message));
     } finally {
       setIsCalculating(false);
     }

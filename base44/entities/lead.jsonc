@@ -1,0 +1,209 @@
+{
+  "name": "Lead",
+  "type": "object",
+  "properties": {
+    "supplier_id": {
+      "type": "string",
+      "description": "מזהה הספק שאליו נשלחה הפנייה (לליד מסוג ספק)"
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "מייל הלקוח שיצר את הפנייה"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "שם הלקוח"
+    },
+    "customer_phone": {
+      "type": "string",
+      "description": "טלפון הלקוח"
+    },
+    "business_name": {
+      "type": "string",
+      "description": "שם העסק של הליד"
+    },
+    "request_details": {
+      "type": "string",
+      "description": "תיאור מפורט של הבקשה"
+    },
+    "request_type": {
+      "type": "string",
+      "enum": [
+        "quote_request",
+        "service_inquiry",
+        "product_inquiry",
+        "partnership",
+        "working_meeting",
+        "club_membership",
+        "consultation",
+        "other"
+      ],
+      "default": "quote_request",
+      "description": "סוג הבקשה"
+    },
+    "lead_source": {
+      "type": "string",
+      "enum": [
+        "facebook",
+        "instagram",
+        "google_form",
+        "website",
+        "referral",
+        "linkedin",
+        "whatsapp",
+        "phone",
+        "email",
+        "event",
+        "other"
+      ],
+      "default": "other",
+      "description": "מקור הליד"
+    },
+    "lead_source_details": {
+      "type": "string",
+      "description": "פרטים נוספים על מקור הליד (שם הקמפיין, וכו')"
+    },
+    "lead_category": {
+      "type": "string",
+      "enum": [
+        "working_meeting",
+        "club_membership",
+        "general",
+        "supplier_lead",
+        "premium_consultation"
+      ],
+      "default": "general",
+      "description": "קטגוריית הליד לצורך חלוקת עבודה"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "new",
+        "contacted",
+        "quote_sent",
+        "meeting_scheduled",
+        "tasting_scheduled",
+        "in_negotiation",
+        "closed_won",
+        "closed_lost",
+        "no_response"
+      ],
+      "default": "new",
+      "description": "שלב הליד בפאנל (כמו בפיירברי)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "contacted",
+        "ignored",
+        "in_progress",
+        "closed"
+      ],
+      "default": "new",
+      "description": "סטטוס הליד (תאימות לאחור)"
+    },
+    "assigned_to_supplier_user_email": {
+      "type": "string",
+      "description": "מייל משתמש הספק המשויך"
+    },
+    "assigned_manager_email": {
+      "type": "string",
+      "format": "email",
+      "description": "מייל מנהל הכספים המשויך לליד"
+    },
+    "assigned_department": {
+      "type": "string",
+      "description": "מחלקה מטפלת"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "urgent"
+      ],
+      "default": "medium",
+      "description": "עדיפות הליד"
+    },
+    "estimated_value": {
+      "type": "number",
+      "description": "שווי משוער של העסקה"
+    },
+    "response_deadline": {
+      "type": "string",
+      "format": "date",
+      "description": "מועד אחרון למתן מענה"
+    },
+    "next_action": {
+      "type": "string",
+      "description": "הפעולה הבאה הנדרשת"
+    },
+    "next_action_date": {
+      "type": "string",
+      "format": "date",
+      "description": "תאריך הפעולה הבאה"
+    },
+    "notes": {
+      "type": "string",
+      "description": "הערות נוספות"
+    },
+    "contact_attempts": {
+      "type": "number",
+      "default": 0,
+      "description": "מספר ניסיונות יצירת קשר"
+    },
+    "last_contact_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "תאריך יצירת קשר אחרונה"
+    },
+    "first_contact_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "תאריך יצירת קשר ראשונה"
+    },
+    "conversion_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "תאריך המרה ללקוח"
+    },
+    "lost_reason": {
+      "type": "string",
+      "description": "סיבת אובדן הליד (אם closed_lost)"
+    },
+    "converted_customer_email": {
+      "type": "string",
+      "format": "email",
+      "description": "אימייל הלקוח שנוצר מהליד"
+    },
+    "utm_source": {
+      "type": "string",
+      "description": "UTM Source מהמקור"
+    },
+    "utm_medium": {
+      "type": "string",
+      "description": "UTM Medium מהמקור"
+    },
+    "utm_campaign": {
+      "type": "string",
+      "description": "UTM Campaign מהמקור"
+    },
+    "webhook_payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "הנתונים הגולמיים שהתקבלו מ-Make.com"
+    }
+  },
+  "required": [
+    "customer_name",
+    "request_details"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

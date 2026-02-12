@@ -1,0 +1,180 @@
+{
+  "name": "Meeting",
+  "type": "object",
+  "properties": {
+    "customer_email": {
+      "type": "string",
+      "format": "email",
+      "description": "אימייל הלקוח"
+    },
+    "meeting_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "תאריך ושעת הפגישה"
+    },
+    "duration_minutes": {
+      "type": "number",
+      "description": "משך הפגישה בדקות"
+    },
+    "meeting_type": {
+      "type": "string",
+      "enum": [
+        "initial_consultation",
+        "periodic_review",
+        "strategy_planning",
+        "problem_solving",
+        "training",
+        "other"
+      ],
+      "default": "periodic_review",
+      "description": "סוג הפגישה"
+    },
+    "recording_url": {
+      "type": "string",
+      "description": "קישור להקלטת הפגישה"
+    },
+    "transcription_text": {
+      "type": "string",
+      "description": "תמלול מלא של הפגישה"
+    },
+    "ai_summary": {
+      "type": "string",
+      "description": "סיכום AI של הפגישה"
+    },
+    "key_points": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "נקודות מפתח מהפגישה"
+    },
+    "action_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "assigned_to": {
+            "type": "string"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "completed",
+              "cancelled"
+            ]
+          },
+          "created_goal_id": {
+            "type": "string",
+            "description": "מזהה יעד שנוצר מהמשימה"
+          }
+        }
+      },
+      "description": "משימות שעלו בפגישה"
+    },
+    "participants": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "email"
+      },
+      "description": "משתתפי הפגישה"
+    },
+    "participant_names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "שמות המשתתפים"
+    },
+    "topics_discussed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "נושאים שנדונו"
+    },
+    "decisions_made": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "החלטות שהתקבלו"
+    },
+    "follow_up_required": {
+      "type": "boolean",
+      "default": false,
+      "description": "האם נדרש מעקב"
+    },
+    "next_meeting_date": {
+      "type": "string",
+      "format": "date",
+      "description": "תאריך פגישה הבאה מתוכננת"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "completed",
+        "transcribing",
+        "summarizing",
+        "cancelled"
+      ],
+      "default": "scheduled",
+      "description": "סטטוס הפגישה"
+    },
+    "manager_email": {
+      "type": "string",
+      "format": "email",
+      "description": "אימייל מנהל הכספים שניהל את הפגישה"
+    },
+    "notes": {
+      "type": "string",
+      "description": "הערות נוספות"
+    },
+    "sentiment_analysis": {
+      "type": "object",
+      "properties": {
+        "overall": {
+          "type": "string",
+          "enum": [
+            "positive",
+            "neutral",
+            "negative",
+            "mixed"
+          ]
+        },
+        "customer_satisfaction": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "key_concerns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "ניתוח רגשות מהפגישה"
+    }
+  },
+  "required": [
+    "customer_email",
+    "meeting_date",
+    "meeting_type"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

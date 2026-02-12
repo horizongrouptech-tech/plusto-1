@@ -1,0 +1,123 @@
+{
+  "name": "Supplier",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "שם הספק"
+    },
+    "contact_person": {
+      "type": "string",
+      "description": "איש קשר"
+    },
+    "phone": {
+      "type": "string",
+      "description": "טלפון"
+    },
+    "email": {
+      "type": "string",
+      "description": "אימייל"
+    },
+    "address": {
+      "type": "string",
+      "description": "כתובת"
+    },
+    "category": {
+      "type": "string",
+      "description": "תחום התמחות"
+    },
+    "supplier_type": {
+      "type": "string",
+      "enum": [
+        "supplier",
+        "accountant",
+        "lawyer",
+        "consultant",
+        "contact",
+        "system",
+        "service_provider",
+        "other"
+      ],
+      "default": "supplier",
+      "description": "סוג הספק/איש קשר"
+    },
+    "payment_terms": {
+      "type": "string",
+      "description": "תנאי תשלום"
+    },
+    "delivery_time": {
+      "type": "string",
+      "description": "זמן אספקה"
+    },
+    "min_order": {
+      "type": "number",
+      "description": "הזמנה מינימלית"
+    },
+    "rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "דירוג ספק (1-5)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "הערות"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "האם הספק פעיל"
+    },
+    "last_order_date": {
+      "type": "string",
+      "format": "date",
+      "description": "תאריך הזמנה אחרונה"
+    },
+    "added_by_full_name": {
+      "type": "string",
+      "description": "שם מלא של המשתמש שהוסיף את הספק"
+    },
+    "supplier_user_email": {
+      "type": "string",
+      "description": "אימייל של המשתמש המשויך לספק"
+    },
+    "is_partner_supplier": {
+      "type": "boolean",
+      "default": false,
+      "description": "האם זהו ספק שותף (בשיתוף פעולה)"
+    },
+    "customer_emails": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "email"
+      },
+      "description": "רשימת אימיילי לקוחות המשויכים לספק זה"
+    },
+    "website_url": {
+      "type": "string",
+      "description": "כתובת אתר הספק"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "internet_search",
+        "recommendation"
+      ],
+      "default": "manual",
+      "description": "מקור הספק - הוזן ידנית, נמצא באינטרנט או הומלץ"
+    }
+  },
+  "required": [
+    "name",
+    "contact_person",
+    "category"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

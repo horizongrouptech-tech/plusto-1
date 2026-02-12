@@ -29,6 +29,7 @@ import LoadingScreen from '../shared/LoadingScreen';
 import { calculateEngagementForAllUsers } from '@/components/logic/userEngagementTracker';
 import UnknownFileQueueManager from './UnknownFileQueueManager';
 
+import { toast } from "sonner";
 export default function EngagementDashboard() {
   const [timeFilter, setTimeFilter] = useState('all');
   const [engagementFilter, setEngagementFilter] = useState('all');
@@ -123,7 +124,7 @@ export default function EngagementDashboard() {
       await refetchEngagements();
     } catch (error) {
       console.error("Error calculating engagement:", error);
-      alert("שגיאה בחישוב מעורבות: " + error.message);
+      toast.error("שגיאה בחישוב מעורבות: " + error.message);
     } finally {
       setIsCalculating(false);
     }

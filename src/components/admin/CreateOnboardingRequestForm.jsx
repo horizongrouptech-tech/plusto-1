@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, UserPlus } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import toast from 'react-hot-toast'; // Assuming react-hot-toast is configured in the app
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge"; // Assuming ui/badge component exists
 

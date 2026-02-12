@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { toast } from "sonner";
 
 import Step1ProjectDetails from './project/Step1ProjectDetails';
 import Step2SelectProducts from './project/Step2SelectProducts';
@@ -76,7 +77,7 @@ export default function ProjectForecastWizard({
       
       setLastSaved(new Date());
       setSaveStatus('saved');
-      alert('תחזית הפרויקט נשמרה בהצלחה!');
+      toast.success('תחזית הפרויקט נשמרה בהצלחה!');
       
       if (onSave) {
         onSave();
@@ -84,7 +85,7 @@ export default function ProjectForecastWizard({
     } catch (error) {
       console.error('Error saving project forecast:', error);
       setSaveStatus('error');
-      alert('שגיאה בשמירת התחזית: ' + error.message);
+      toast.error('שגיאה בשמירת התחזית: ' + error.message);
     } finally {
       setIsSaving(false);
     }

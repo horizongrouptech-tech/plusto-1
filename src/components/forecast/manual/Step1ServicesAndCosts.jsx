@@ -29,6 +29,7 @@ import { formatCurrency } from './utils/numberFormatter';
 import { base44 } from '@/api/base44Client';
 import SaveProgressIndicator from './SaveProgressIndicator';
 import Pagination from '@/components/shared/Pagination';
+import { toast } from "sonner";
 
 export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, onNext, onBack }) {
   const [services, setServices] = useState(forecastData.services || []);
@@ -230,7 +231,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
   // ⭐ טעינת מוצרים מקטלוג
   const handleLoadCatalog = async () => {
     if (!selectedCatalogForLoad) {
-      alert('נא לבחור קטלוג תחילה');
+      toast.warning('נא לבחור קטלוג תחילה');
       return;
     }
     
@@ -272,7 +273,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
       console.log('✅ Total products loaded:', products.length);
       
       if (products.length === 0) {
-        alert('הקטלוג ריק - אין מוצרים לטעינה');
+        toast.warning('הקטלוג ריק - אין מוצרים לטעינה');
         return;
       }
       
@@ -323,13 +324,13 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
         });
       }
       
-      alert(`✅ נטענו ${convertedServices.length} מוצרים בהצלחה מהקטלוג "${selectedCatalogForLoad.catalog_name}"!\n\nכעת תוכל לערוך כל מוצר לפי הצורך.`);
+      toast.success(`✅ נטענו ${convertedServices.length} מוצרים בהצלחה מהקטלוג "${selectedCatalogForLoad.catalog_name}"!\n\nכעת תוכל לערוך כל מוצר לפי הצורך.`);
       
       setSelectedCatalogForLoad(null);
       
     } catch (error) {
       console.error('❌ Error loading catalog products:', error);
-      alert('שגיאה בטעינת המוצרים: ' + error.message);
+      toast.error('שגיאה בטעינת המוצרים: ' + error.message);
     } finally {
       setIsLoadingCatalogProducts(false);
     }
@@ -410,7 +411,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
 
     const product = allCatalogProducts.find(p => p.id === productId);
     if (!product) {
-      alert('מוצר לא נמצא');
+      toast.warning('מוצר לא נמצא');
       return;
     }
 
@@ -513,7 +514,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
 
   const handleSaveProgress = async () => {
     if (!forecastData.forecast_name?.trim()) {
-      alert('נא להזין שם לתחזית לפני שמירה');
+      toast.warning('נא להזין שם לתחזית לפני שמירה');
       return;
     }
 
@@ -542,7 +543,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
     } catch (error) {
       console.error('Error saving:', error);
       setSaveStatus('error');
-      alert('שגיאה בשמירה: ' + error.message);
+      toast.error('שגיאה בשמירה: ' + error.message);
     } finally {
       setIsSaving(false);
     }
@@ -550,13 +551,13 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
 
   const handleContinue = () => {
     if (services.length === 0) {
-      alert('יש להוסיף לפחות שירות/מוצר אחד לפני המשך');
+      toast.warning('יש להוסיף לפחות שירות/מוצר אחד לפני המשך');
       return;
     }
     
     const hasEmptyNames = services.some(s => !s.service_name || s.service_name.trim() === '');
     if (hasEmptyNames) {
-      alert('יש למלא שם עבור כל השירותים/מוצרים');
+      toast.warning('יש למלא שם עבור כל השירותים/מוצרים');
       return;
     }
 

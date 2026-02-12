@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { generateGeneralRecommendation } from "@/components/logic/generalRecommendationEngine";
 
+import { toast } from "sonner";
 export default function GeneralRecommendationModal({ customer, isOpen, onClose, onSuccess }) {
   const [description, setDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -23,7 +24,7 @@ export default function GeneralRecommendationModal({ customer, isOpen, onClose, 
 
   const handleGenerate = async () => {
     if (!description.trim()) {
-      alert('נא להזין תיאור להמלצה');
+      toast.warning('נא להזין תיאור להמלצה');
       return;
     }
 

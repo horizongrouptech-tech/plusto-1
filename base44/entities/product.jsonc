@@ -1,0 +1,55 @@
+{
+  "name": "Product",
+  "type": "object",
+  "properties": {
+    "catalog_id": {
+      "type": "string"
+    },
+    "item_code": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "supplier": {
+      "type": "string"
+    },
+    "supplier_sku": {
+      "type": "string"
+    },
+    "market_price_range": {
+      "type": "string"
+    },
+    "main_category": {
+      "type": "string"
+    },
+    "sub_category": {
+      "type": "string"
+    },
+    "cost_price": {
+      "type": "number"
+    },
+    "consumer_price": {
+      "type": "number"
+    },
+    "enrichment_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "enriched",
+        "failed"
+      ],
+      "default": "pending"
+    }
+  },
+  "required": [
+    "catalog_id",
+    "description"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

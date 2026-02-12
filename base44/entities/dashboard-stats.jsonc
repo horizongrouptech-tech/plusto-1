@@ -1,0 +1,29 @@
+{
+  "name": "DashboardStats",
+  "type": "object",
+  "properties": {
+    "total_potential_profit": {
+      "type": "number",
+      "description": "סכום מצטבר של רווחים צפויים מכל ההמלצות"
+    },
+    "last_calculated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "מתי חושב לאחרונה"
+    },
+    "recommendations_count": {
+      "type": "number",
+      "description": "מספר המלצות שנכללו בחישוב"
+    }
+  },
+  "required": [
+    "total_potential_profit",
+    "last_calculated"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

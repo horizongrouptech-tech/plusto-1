@@ -95,6 +95,7 @@ import LoadingScreen from '@/components/shared/LoadingScreen';
 // import DailyTasksDashboard from '../components/dashboard/DailyTasksDashboard'; // Removed direct import, lazy loaded
 import TaskManagement from './TaskManagement';
 import FailedFileUploadsManager from '../components/admin/FailedFileUploadsManager';
+import { toast } from "sonner";
 
 // Lazy loading של קומפוננטים כבדים
 const ClientManagementDashboard = lazy(() => import('../components/admin/ClientManagementDashboard'));
@@ -1258,10 +1259,10 @@ export default function AdminPage() {
 
         // קריאה לשרת לעדכון הסטטוס של הספק
         await Supplier.update(supplierId, { is_partner_supplier: isPartner });
-        alert("סטטוס שותפות עודכן בהצלחה!");
+        toast.success("סטטוס שותפות עודכן בהצלחה!");
     } catch (error) {
         console.error("שגיאה בשינוי סטטוס השותפות:", error);
-        alert("שגיאה בשינוי סטטוס השותפות של הספק: " + error.message);
+        toast.error("שגיאה בשינוי סטטוס השותפות של הספק: " + error.message);
         // אם הייתה שגיאה בשרת, רענן את הנתונים כדי לסנכרן מחדש את ה-UI עם ה-DB
         loadInitialData(); // פונקציה זו כבר קיימת וטוענת את כל הנתונים מחדש
     }
@@ -1675,13 +1676,13 @@ export default function AdminPage() {
       });
     
       if (response.data.success) {
-        alert(`שיחת וואטסאפ התחילה בהצלחה עם ${response.data.customer_name}`);
+        toast.success(`שיחת וואטסאפ התחילה בהצלחה עם ${response.data.customer_name}`);
       } else {
         throw new Error(response.data.error || 'Unknown error');
       }
     } catch (error) {
       console.error('Error initiating WhatsApp chat:', error);
-      alert(`שגיאה ביצירת שיחת וואטסאפ: ${error.message}`);
+      toast.error(`שגיאה ביצירת שיחת וואטסאפ: ${error.message}`);
     } finally {
       setIsInitiatingChat(false);
     }
@@ -1694,12 +1695,12 @@ export default function AdminPage() {
         const financialManagerEmails = allUsers.filter(u => u.user_type === 'financial_manager').map(u => u.email);
     
         if (financialManagerEmails.length === 0) {
-            alert('לא נמצאו מנהלי כספים במערכת לחישוב ביצועים.');
+            toast.warning('לא נמצאו מנהלי כספים במערכת לחישוב ביצועים.');
             setIsRecalculating(false); // <--- הוספה כאן, אם הפונקציה מסתיימת מוקדם
             return;
         }
 
-        alert('מתחיל בחישוב מחדש של ביצועי מנהלי הכספים. התהליך עשוי לקחת מספר דקות.');
+        toast.info('מתחיל בחישוב מחדש של ביצועי מנהלי הכספים. התהליך עשוי לקחת מספר דקות.');
 
         for (const managerEmail of financialManagerEmails) {
             // קריאה לפונקציית ה-backend calculateManagerPerformance
@@ -1711,10 +1712,10 @@ export default function AdminPage() {
     
         // רענן את הנתונים לאחר החישובים
         setRefreshPerformance(prev => prev + 1); // טריגר לרענון קומפוננטות שמקבלות את זה כפרופ
-        alert('נתוני ביצוע מנהלי הכספים עודכנו בהצלחה!');
+        toast.success('נתוני ביצוע מנהלי הכספים עודכנו בהצלחה!');
     } catch (error) {
         console.error("Error refreshing performance data:", error);
-        alert('שגיאה בעדכון נתוני ביצועים: ' + (error.message || 'שגיאה לא ידועה'));
+        toast.error('שגיאה בעדכון נתוני ביצועים: ' + (error.message || 'שגיאה לא ידועה'));
     } finally {
         setIsRecalculating(false); // <--- הוספה כאן לוודא שהמצב מתאפס גם בשגיאה
     }
@@ -1770,7 +1771,7 @@ export default function AdminPage() {
 
     } catch (error) {
       console.error("Error updating financial manager for customer:", error);
-      alert("שגיאה בעדכון מנהל הכספים: " + error.message);
+      toast.error("שגיאה בעדכון מנהל הכספים: " + error.message);
     }
   };
 // ... existing code ...
@@ -1844,7 +1845,7 @@ export default function AdminPage() {
       console.error("Error updating recommendation rating:", error);
       // במקרה של שגיאה - טען מחדש רק המלצות
       await loadRecommendationsOnly();
-      alert('שגיאה בעדכון הדירוג.');
+      toast.error('שגיאה בעדכון הדירוג.');
     }
   };
 
@@ -1905,7 +1906,7 @@ export default function AdminPage() {
       console.error("Error generating enhanced recommendations:", error);
       setGenerationStatus(`שגיאה ביצירת המלצות: ${error.message}`);
       setTimeout(() => {
-        alert(`שגיאה ביצירת המלצות: ${error.message}`);
+        toast.error(`שגיאה ביצירת המלצות: ${error.message}`);
       }, 500);
       await loadRecommendationsOnly();
     } finally {
@@ -1930,11 +1931,11 @@ export default function AdminPage() {
       await loadInitialData();
       setResetConfirmOpen(false);
 
-      alert(`נמחקו ${allRecs.length} המלצות מהמערכת`);
+      toast.success(`נמחקו ${allRecs.length} המלצות מהמערכת`);
 
     } catch (error) {
       console.error("Error resetting recommendations:", error);
-      alert("שגיאה במחיקת ההמלצות: " + error.message);
+      toast.error("שגיאה במחיקת ההמלצות: " + error.message);
     } finally {
         setIsLoading(false);
     }
@@ -1988,11 +1989,11 @@ export default function AdminPage() {
       console.log(`Notification created for customer: ${customer.email} about published recommendation`);
 
       console.log("ההמלצה פורסמה והועברה ללקוח בהצלחה!");
-      alert("ההמלצה פורסמה בהצלחה!");
+      toast.success("ההמלצה פורסמה בהצלחה!");
 
     } catch (error) {
       console.error("Error publishing recommendation:", error);
-      alert("שגיאה בפרסום ההמלצה: " + error.message);
+      toast.error("שגיאה בפרסום ההמלצה: " + error.message);
       await loadRecommendationsOnly();
     } finally {
         setPublishingRecommendations(prev => ({ ...prev, [recommendation.id]: false }));
@@ -2039,11 +2040,11 @@ export default function AdminPage() {
                 r.id === rec.id ? { ...r, delivery_status: 'sent' } : r
             )
         );
-        alert('הודעה נשלחה בהצלחה!');
+        toast.success('הודעה נשלחה בהצלחה!');
 
     } catch (error) {
         console.error("Error sending WhatsApp:", error);
-        alert(`שגיאה בשליחת וואטסאפ: ${error.message}`);
+        toast.error(`שגיאה בשליחת וואטסאפ: ${error.message}`);
         await loadRecommendationsOnly(); // Refresh data on error
     } finally {
         setIsSendingWhatsApp(false);
@@ -2093,10 +2094,10 @@ export default function AdminPage() {
       setViewingRecommendation(editingRecommendation); 
       setIsEditingInModal(false); 
       setEditingRecommendation(null); 
-      alert("ההמלצה נשמרה בהצלחה");
+      toast.success("ההמלצה נשמרה בהצלחה");
     } catch (error) {
       console.error("Error updating recommendation:", error);
-      alert("שגיאה בשמירת ההמלצה");
+      toast.error("שגיאה בשמירת ההמלצה");
     }
   };
 
@@ -2183,7 +2184,7 @@ export default function AdminPage() {
         status: 'resolved',
         resolved_date: new Date().toISOString()
     });
-      alert(`פנייה "${ticket.subject}" סומנה כנפתרה.`);
+      toast.success(`פנייה "${ticket.subject}" סומנה כנפתרה.`);
     } catch (error) {
       console.error("Error resolving ticket:", error);
       // במקרה של שגיאה - טען מחדש רק טיקטים
@@ -2194,7 +2195,7 @@ export default function AdminPage() {
       } catch (reloadError) {
         console.error("Error reloading tickets:", reloadError);
       }
-      alert("שגיאה בסימון הפנייה כנפתרה: " + error.message);
+      toast.error("שגיאה בסימון הפנייה כנפתרה: " + error.message);
     }
   };
 
@@ -2206,7 +2207,7 @@ export default function AdminPage() {
   // ===== יצירת המלצה ידנית עם עדכון אופטימסטי =====
   const handleCreateManualRecommendation = async () => { 
     if (!selectedCustomer || !manualRecommendation.title || !manualRecommendation.description) {
-      alert('יש למלא את כל השדות הנדרשים');
+      toast.warning('יש למלא את כל השדות הנדרשים');
       return;
     }
 
@@ -2239,10 +2240,10 @@ export default function AdminPage() {
         action_steps: ['', '', '', '']
       });
 
-      alert(`ההמלצה נוצרה בהצלחה עבור ${selectedCustomer.business_name || selectedCustomer.full_name}!`);
+      toast.success(`ההמלצה נוצרה בהצלחה עבור ${selectedCustomer.business_name || selectedCustomer.full_name}!`);
     } catch (error) {
       console.error('Error creating recommendation:', error);
-      alert('שגיאה ביצירת ההמלצה: ' + error.message);
+      toast.error('שגיאה ביצירת ההמלצה: ' + error.message);
       await loadRecommendationsOnly();
     }
   };
@@ -2305,7 +2306,7 @@ export default function AdminPage() {
           setCustomers(prevUsers => prevUsers.map(u =>
               u.id === customer.id ? { ...u, is_active: customer.is_active } : u
           ));
-          alert("שגיאה בעדכון סטטוס הלקוח: " + error.message);
+          toast.error("שגיאה בעדכון סטטוס הלקוח: " + error.message);
       } finally {
           setTogglingCustomer(null);
       }
@@ -2319,9 +2320,9 @@ export default function AdminPage() {
       if (typeof customerId === 'string' && customerId.startsWith('onboarding_')) {
         const onboardingRequestId = customerId.replace('onboarding_', '');
         await OnboardingRequest.delete(onboardingRequestId);
-        alert("לקוח הפילאאוט נמחק בהצלחה!");
+        toast.success("לקוח הפילאאוט נמחק בהצלחה!");
       } else {
-        alert("שגיאה: לא ניתן למחוק לקוח זה בדרך זו. נראה שזוהי אינה בקשת פילאאוט.");
+        toast.error("שגיאה: לא ניתן למחוק לקוח זה בדרך זו. נראה שזוהי אינה בקשת פילאאוט.");
         return;
       }
 
@@ -2330,7 +2331,7 @@ export default function AdminPage() {
 
     } catch (error) {
       console.error("שגיאה במחיקת לקוח אונבורדינג:", error);
-      alert("שגיאה במחיקת לקוח הפילאאוט: " + error.message);
+      toast.error("שגיאה במחיקת לקוח הפילאאוט: " + error.message);
     }
   };
     // הוספה: פונקציות לניהול ספקים
@@ -2361,11 +2362,11 @@ export default function AdminPage() {
     try {
       // מחיקה רכיבה: עדכון is_active ל-false
       await Supplier.update(supplierId, { is_active: false });
-      alert("הספק נמחק בהצלחה!");
+      toast.success("הספק נמחק בהצלחה!");
       loadInitialData(); // רענן את הנתונים לאחר המחיקה
     } catch (error) {
       console.error("Error deleting supplier:", error);
-      alert("שגיאה במחיקת הספק: " + error.message);
+      toast.error("שגיאה במחיקת הספק: " + error.message);
     }
   };
   const handleAssignSupplierUserClick = (supplier) => {
@@ -2395,7 +2396,7 @@ export default function AdminPage() {
       console.log(`Customer ${customer.business_name} type changed to: ${newType}`);
     } catch (error) {
       console.error("Error updating customer type:", error);
-      alert("שגיאה בעדכון סוג הלקוח");
+      toast.error("שגיאה בעדכון סוג הלקוח");
     }
   };
 
@@ -2504,13 +2505,13 @@ export default function AdminPage() {
           }
         });
 
-        alert('ההמלצה שודרגה בהצלחה על בסיס ההנחיה שלך!');
+        toast.success('ההמלצה שודרגה בהצלחה על בסיס ההנחיה שלך!');
       } else {
         throw new Error("הבינה המלאכותית לא החזירה המלצה משודרגת. נסה הנחיה אחרת.");
       }
     } catch (error) {
       console.error("Error upgrading recommendation with prompt:", error);
-      alert("שגיאה בשדרוג ההמלצה: " + error.message);
+      toast.error("שגיאה בשדרוג ההמלצה: " + error.message);
     } finally {
       setIsUpgradingWithPrompt(false);
       setIsUpgradePromptModalOpen(false);
@@ -2532,10 +2533,10 @@ export default function AdminPage() {
         await loadInitialData();
         setDetailsModalOpen(false); 
         setViewingRecommendation(null);
-        alert("ההמלצה נמקה בהצלחה!");
+        toast.success("ההמלצה נמקה בהצלחה!");
     } catch (error) {
         console.error("Error deleting recommendation:", error);
-        alert("שגיאה במחיקת ההמלצה: " + error.message);
+        toast.error("שגיאה במחיקת ההמלצה: " + error.message);
     } finally {
         setIsLoading(false);
     }
@@ -2567,7 +2568,7 @@ export default function AdminPage() {
         await BusinessForecast.update(selectedForecastForPlan.id, { business_plan_text: editedPlanText });
         setCurrentPlanText(editedPlanText); // עדכן את הטקסט המוצג לטקסט שנשמר
         setIsEditingPlan(false); // צא ממצב עריכה
-        alert('התוכנית נשמרה בהצלחה!');
+        toast.success('התוכנית נשמרה בהצלחה!');
 
         // רענן את רשימת התחזיות כדי שהשינוי ישתקף
         const updatedForecasts = await BusinessForecast.filter({ customer_email: selectedCustomer.email });
@@ -2579,7 +2580,7 @@ export default function AdminPage() {
         // }
     } catch (error) {
         console.error("Error saving edited plan:", error);
-        alert("שגיאה בשמירת התוכנית העסקית: " + error.message);
+        toast.error("שגיאה בשמירת התוכנית העסקית: " + error.message);
     } finally {
         setIsSavingPlan(false);
     }
@@ -2630,17 +2631,17 @@ export default function AdminPage() {
           document.body.removeChild(a);
           a.click();
          window.URL.revokeObjectURL(url);
-         alert('התוכנית העסקית יוצאה ל-PDF בהצלחה!');
+         toast.success('התוכנית העסקית יוצאה ל-PDF בהצלחה!');
      } catch (error) {
          console.error("Error exporting business plan to PDF:", error);
-          alert("שגיאה בייצוא התוכנית העסקית ל-PDF: " + error.message);
+          toast.error("שגיאה בייצוא התוכנית העסקית ל-PDF: " + error.message);
      } finally {
           setIsExportingPlan(false);
      }
   };
   const handleInitiateBusinessPlanGeneration = async (forecast) => {
       if (!selectedCustomer?.email) {
-          alert("שגיאה: לקוח לא נבחר או אימייל לקוח חסר.");
+          toast.error("שגיאה: לקוח לא נבחר או אימייל לקוח חסר.");
           return;
       }
 
@@ -2677,10 +2678,10 @@ export default function AdminPage() {
       await loadRecommendationsOnly(); // Refresh active recommendations
       await loadArchivedRecommendations(); // Refresh archived recommendations
       
-      alert("ההמלצה הועברה לארכיון בהצלחה");
+      toast.success("ההמלצה הועברה לארכיון בהצלחה");
     } catch (error) {
       console.error("Error archiving recommendation:", error);
-      alert("שגיאה בהעברה לארכיון: " + error.message);
+      toast.error("שגיאה בהעברה לארכיון: " + error.message);
     }
   };
 
@@ -4126,15 +4127,15 @@ const EditCustomerModal = ({ customer, isOpen, onClose, onUpdate }) => {
         } else {
           await User.update(customer.id, changes); 
         }
-        alert("פרטי הלקוח עודכנו בהצלחה!");
+        toast.success("פרטי הלקוח עודכנו בהצלחה!");
       } else {
-        alert("לא בוצעו שינויים.");
+        toast.info("לא בוצעו שינויים.");
       }
       onUpdate(finalUpdatedCustomer); 
       onClose(); 
     } catch (error) {
       console.error("Error updating customer:", error);
-      alert("שגיאה בעדכון פרטי הלקוח: " + error.message);
+      toast.error("שגיאה בעדכון פרטי הלקוח: " + error.message);
     } finally {
       setIsSaving(false);
     }

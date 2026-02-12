@@ -1,0 +1,100 @@
+{
+  "name": "ServiceContact",
+  "type": "object",
+  "properties": {
+    "customer_email": {
+      "type": "string",
+      "description": "אימייל הלקוח"
+    },
+    "contact_name": {
+      "type": "string",
+      "description": "שם איש הקשר"
+    },
+    "contact_type": {
+      "type": "string",
+      "enum": [
+        "ספק",
+        "רואה_חשבון",
+        "עורך_דין",
+        "יועץ_עסקי",
+        "בנק",
+        "ביטוח",
+        "לקוח_עיסקי",
+        "אחר"
+      ],
+      "default": "אחר",
+      "description": "סוג איש הקשר"
+    },
+    "company_name": {
+      "type": "string",
+      "description": "שם החברה"
+    },
+    "phone": {
+      "type": "string",
+      "description": "טלפון"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "אימייל"
+    },
+    "address": {
+      "type": "string",
+      "description": "כתובת"
+    },
+    "notes": {
+      "type": "string",
+      "description": "הערות"
+    },
+    "login_credentials": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "system_name": {
+            "type": "string",
+            "description": "שם המערכת (קופה, ביזיבוקס וכו')"
+          },
+          "username": {
+            "type": "string",
+            "description": "שם משתמש"
+          },
+          "password": {
+            "type": "string",
+            "description": "סיסמה (מוצפנת)"
+          },
+          "url": {
+            "type": "string",
+            "description": "כתובת URL של המערכת"
+          },
+          "notes": {
+            "type": "string",
+            "description": "הערות נוספות"
+          }
+        }
+      },
+      "description": "פרטי התחברות למערכות שונות"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "האם איש הקשר פעיל"
+    },
+    "last_contact_date": {
+      "type": "string",
+      "format": "date",
+      "description": "תאריך יצירת קשר אחרון"
+    }
+  },
+  "required": [
+    "customer_email",
+    "contact_name",
+    "contact_type"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

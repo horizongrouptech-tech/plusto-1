@@ -1,0 +1,70 @@
+{
+  "name": "SupportTicket",
+  "type": "object",
+  "properties": {
+    "subject": {
+      "type": "string",
+      "description": "נושא הפנייה"
+    },
+    "description": {
+      "type": "string",
+      "description": "תיאור מפורט של הבעיה או השאלה"
+    },
+    "ticket_type": {
+      "type": "string",
+      "enum": [
+        "problem",
+        "improvement",
+        "question"
+      ],
+      "default": "problem",
+      "description": "סוג הפנייה"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "in_progress",
+        "resolved",
+        "closed"
+      ],
+      "default": "open",
+      "description": "סטטוס הטיפול בפנייה"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "urgent"
+      ],
+      "default": "medium",
+      "description": "רמת דחיפות"
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "מייל הלקוח שיצר את הפנייה"
+    },
+    "admin_notes": {
+      "type": "string",
+      "description": "הערות מנהל המערכת"
+    },
+    "resolved_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "תאריך פתרון הבעיה"
+    }
+  },
+  "required": [
+    "subject",
+    "description",
+    "customer_email"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

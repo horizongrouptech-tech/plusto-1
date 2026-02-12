@@ -17,6 +17,7 @@ import ServiceCategoryGroup from './ServiceCategoryGroup';
 import AggregatePlanning from './AggregatePlanning';
 import { Progress } from "@/components/ui/progress";
 import SaveProgressIndicator from './SaveProgressIndicator';
+import { toast } from "sonner";
 
 export default function Step3SalesForecast({ forecastData, onUpdateForecast, onNext, onBack, customer, sanitizeAllForecastData, setForecastData }) {
   const [isImportingZReport, setIsImportingZReport] = useState(false);
@@ -508,7 +509,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       setRetryAttempt(0);
       
       setTimeout(() => {
-        alert(`✓ דוח Z יובא בהצלחה!\n${productsUpdated.toLocaleString('he-IL')} מוצרים עודכנו בחודש ${monthNames[monthIndex]}`);
+        toast.success(`✓ דוח Z יובא בהצלחה!\n${productsUpdated.toLocaleString('he-IL')} מוצרים עודכנו בחודש ${monthNames[monthIndex]}`);
       }, 200);
 
     } catch (error) {
@@ -537,7 +538,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
           return;
         }
       } else {
-        alert(`❌ הייבוא נכשל אחרי 3 ניסיונות: ${error.message}\n\nנא לנסות שוב מאוחר יותר או ליצור קשר עם התמיכה.`);
+        toast.error(`❌ הייבוא נכשל אחרי 3 ניסיונות: ${error.message}\n\nנא לנסות שוב מאוחר יותר או ליצור קשר עם התמיכה.`);
       }
       
     } finally {
@@ -551,7 +552,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
 
   const handleSaveProgress = async () => {
     if (!forecastData.forecast_name?.trim()) {
-      alert('נא להזין שם לתחזית לפני שמירה');
+      toast.warning('נא להזין שם לתחזית לפני שמירה');
       return;
     }
 
@@ -581,7 +582,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
     } catch (error) {
       console.error('Error saving:', error);
       setSaveStatus('error');
-      alert('שגיאה בשמירה: ' + error.message);
+      toast.error('שגיאה בשמירה: ' + error.message);
     } finally {
       setIsSaving(false);
     }

@@ -5,6 +5,7 @@ import { Loader2, Save, Users, Calendar, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
+import { toast } from "sonner";
 export default function CustomerGroupSelector({ customer, onUpdate }) {
     const [selectedGroup, setSelectedGroup] = useState(customer?.customer_group || '');
     const [isSaving, setIsSaving] = useState(false);
@@ -44,10 +45,10 @@ export default function CustomerGroupSelector({ customer, onUpdate }) {
 
             // הצגת הודעת הצלחה
             const groupName = selectedGroup === 'A' ? 'ראשון ורביעי' : 'שני וחמישי';
-            alert(`קבוצת הלקוח עודכנה בהצלחה!\nהלקוח משויך כעת לקבוצה ${selectedGroup} (${groupName})`);
+            toast.success(`קבוצת הלקוח עודכנה בהצלחה!\nהלקוח משויך כעת לקבוצה ${selectedGroup} (${groupName})`);
         } catch (error) {
             console.error('[components/admin/CustomerGroupSelector.js] Error updating customer group:', error);
-            alert('שגיאה בעדכון קבוצת הלקוח: ' + error.message);
+            toast.error('שגיאה בעדכון קבוצת הלקוח: ' + error.message);
         } finally {
             setIsSaving(false);
         }

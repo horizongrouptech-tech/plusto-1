@@ -20,6 +20,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from "sonner";
 
 export default function TaskManagement() {
   const queryClient = useQueryClient();
@@ -108,13 +109,13 @@ export default function TaskManagement() {
         tasks: Array.isArray(tasksArray) ? tasksArray : [tasksArray]
       });
 
-      alert(`יבוא הושלם!\n✅ ${response.success} משימות יובאו בהצלחה\n❌ ${response.failed} נכשלו`);
+      toast.success(`יבוא הושלם!\n✅ ${response.success} משימות יובאו בהצלחה\n❌ ${response.failed} נכשלו`);
       
       queryClient.invalidateQueries(['tasks']);
       setShowImportModal(false);
       setImportData('');
     } catch (error) {
-      alert(`שגיאה ביבוא: ${error.message}`);
+      toast.error(`שגיאה ביבוא: ${error.message}`);
     } finally {
       setIsImporting(false);
     }
@@ -405,7 +406,7 @@ export default function TaskManagement() {
               <Button 
                 onClick={() => {
                   if (!newTask.name || !newTask.customer_email) {
-                    alert('יש למלא שם משימה ולבחור לקוח');
+                    toast.warning('יש למלא שם משימה ולבחור לקוח');
                     return;
                   }
                   createTaskMutation.mutate({
@@ -597,7 +598,7 @@ export default function TaskManagement() {
               <Button
                 onClick={() => {
                   if (!editingTask.name || !editingTask.customer_email) {
-                    alert('יש למלא שם משימה ולבחור לקוח');
+                    toast.warning('יש למלא שם משימה ולבחור לקוח');
                     return;
                   }
                   updateTaskMutation.mutate({

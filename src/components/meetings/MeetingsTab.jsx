@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { format, formatDistanceToNow, isAfter, isBefore, isToday, isTomorrow, addDays, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { toast } from "sonner";
 import { useGlobalToast } from '@/components/utils/useGlobalToast';
 
 // סטטוסים אפשריים לפגישה
@@ -286,7 +287,7 @@ export default function MeetingsTab({ customer, currentUser }) {
       setSelectedMeeting(null);
     } catch (error) {
       console.error('Error updating meeting:', error);
-      alert('שגיאה בעדכון פגישה');
+      toast.error('שגיאה בעדכון פגישה');
     } finally {
       setIsSaving(false);
     }

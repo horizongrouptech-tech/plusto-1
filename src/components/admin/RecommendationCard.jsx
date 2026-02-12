@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Archive, Edit3, Eye, Send } from "lucide-react";
-import { toast } from "sonner";
 // Assuming User and Recommendation entities are still needed for broader context if not explicitly removed,
 // though their direct use in this component's new logic (handleSendWhatsApp) is gone.
 // For now, keeping them as they were in the original file, just in case they are used elsewhere

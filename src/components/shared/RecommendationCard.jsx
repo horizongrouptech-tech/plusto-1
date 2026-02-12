@@ -15,6 +15,7 @@ import {
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { sendWhatsAppMessage } from '@/functions/sendWhatsAppMessage';
+import { toast } from "sonner";
 
 export default function RecommendationCard({ 
   recommendation, 
@@ -54,7 +55,7 @@ export default function RecommendationCard({
 
   const handleWhatsAppSend = async () => {
     if (!customerPhone) {
-      alert('מספר טלפון לא זמין עבור לקוח זה');
+      toast.warning('מספר טלפון לא זמין עבור לקוח זה');
       return;
     }
 
@@ -68,7 +69,7 @@ export default function RecommendationCard({
       });
 
       if (response.data.success) {
-        alert(`הודעת וואטסאפ נשלחה בהצלחה!
+        toast.success(`הודעת וואטסאפ נשלחה בהצלחה!
 תבנית שנבחרה: ${response.data.templateUsed}
 מזהה הודעה: ${response.data.messageId}`);
       } else {
@@ -76,7 +77,7 @@ export default function RecommendationCard({
       }
     } catch (error) {
       console.error('Error sending WhatsApp message:', error);
-      alert(`שגיאה בשליחת הודעת וואטסאפ: ${error.message}`);
+      toast.error(`שגיאה בשליחת הודעת וואטסאפ: ${error.message}`);
     } finally {
       setIsWhatsAppSending(false);
     }

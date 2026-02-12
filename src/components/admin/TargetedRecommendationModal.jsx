@@ -21,6 +21,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { ProductCatalog } from '@/entities/ProductCatalog';
 
+import { toast } from "sonner";
 export default function TargetedRecommendationModal({ customer, isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     productName: '',
@@ -75,7 +76,7 @@ export default function TargetedRecommendationModal({ customer, isOpen, onClose,
 
   const handleGenerate = async () => {
     if (!selectedProductId && !formData.productName.trim()) {
-      alert('נא לבחור מוצר מהקטלוג או להזין שם מוצר');
+      toast.warning('נא לבחור מוצר מהקטלוג או להזין שם מוצר');
       return;
     }
 

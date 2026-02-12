@@ -1,0 +1,36 @@
+{
+  "name": "GoalComment",
+  "type": "object",
+  "properties": {
+    "goal_id": {
+      "type": "string",
+      "description": "מזהה היעד או המשימה אליה שייכת ההערה"
+    },
+    "author_email": {
+      "type": "string",
+      "description": "אימייל כותב ההערה"
+    },
+    "content": {
+      "type": "string",
+      "description": "תוכן ההערה"
+    },
+    "mentions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "רשימת אימיילים של משתמשים מתויגים"
+    }
+  },
+  "required": [
+    "goal_id",
+    "author_email",
+    "content"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

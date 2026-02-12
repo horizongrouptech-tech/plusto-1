@@ -9,6 +9,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Search, Save, X, Plus, Users, Building2 } from 'lucide-react';
 import { getFinancialManagers } from '@/functions/getFinancialManagers';
 
+import { toast } from "sonner";
 export default function ManagerAssignmentModal({ isOpen, onClose, currentUser }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [assignments, setAssignments] = useState({});
@@ -122,11 +123,11 @@ export default function ManagerAssignmentModal({ isOpen, onClose, currentUser })
       queryClient.invalidateQueries(['onboardingRequests']);
       queryClient.invalidateQueries(['activeCustomers']);
       setHasChanges(false);
-      alert(`עודכנו ${updates.length} שיוכים בהצלחה`);
+      toast.success(`עודכנו ${updates.length} שיוכים בהצלחה`);
       onClose();
     } catch (error) {
       console.error('Error saving assignments:', error);
-      alert('שגיאה בשמירת השיוכים: ' + error.message);
+      toast.error('שגיאה בשמירת השיוכים: ' + error.message);
     } finally {
       setIsSaving(false);
     }

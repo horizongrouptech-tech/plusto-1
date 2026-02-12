@@ -8,6 +8,7 @@ import { base44 } from "@/api/base44Client";
 import { formatCurrency } from './utils/numberFormatter';
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
 
 // מערכות קופה נתמכות
 const POS_SYSTEMS = [
@@ -45,13 +46,13 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
     // בדיקת גודל קובץ
     const fileSizeMB = file.size / (1024 * 1024);
     if (fileSizeMB > MAX_FILE_SIZE_MB) {
-      alert(`⚠️ הקובץ גדול מדי (${fileSizeMB.toFixed(1)}MB).\nהגודל המקסימלי: ${MAX_FILE_SIZE_MB}MB`);
+      toast.warning(`⚠️ הקובץ גדול מדי (${fileSizeMB.toFixed(1)}MB).\nהגודל המקסימלי: ${MAX_FILE_SIZE_MB}MB`);
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
     if (!selectedMonth) {
-      alert('אנא בחר חודש לפני העלאת הקובץ');
+      toast.warning('אנא בחר חודש לפני העלאת הקובץ');
       return;
     }
 
@@ -132,7 +133,7 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
       }
       
       // הודעה ידידותית למשתמש
-      alert('⚠️ הקובץ לא הועלה בהצלחה\n\nהקובץ הועבר לטיפול מנהל המערכת ונבדק בהקדם.\nתוכל לראות את הסטטוס בעדכונים שיישלחו אליך.');
+      toast.error('⚠️ הקובץ לא הועלה בהצלחה\n\nהקובץ הועבר לטיפול מנהל המערכת ונבדק בהקדם.\nתוכל לראות את הסטטוס בעדכונים שיישלחו אליך.');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {

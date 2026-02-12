@@ -9,6 +9,7 @@ import { Loader2, Calendar, Circle, Clock, CheckCircle2, AlertCircle, Bell, Refr
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 
+import { toast } from "sonner";
 export default function TaskCreationModal({ isOpen, onClose, currentUser, isAdmin, customers, taskToEdit }) {
   const queryClient = useQueryClient();
 
@@ -92,7 +93,7 @@ export default function TaskCreationModal({ isOpen, onClose, currentUser, isAdmi
     },
     onError: (error) => {
       console.error('Error creating task:', error);
-      alert('שגיאה ביצירת המשימה: ' + error.message);
+      toast.error('שגיאה ביצירת המשימה: ' + error.message);
     },
   });
 
@@ -105,7 +106,7 @@ export default function TaskCreationModal({ isOpen, onClose, currentUser, isAdmi
     },
     onError: (error) => {
       console.error('Error updating task:', error);
-      alert('שגיאה בעדכון המשימה: ' + error.message);
+      toast.error('שגיאה בעדכון המשימה: ' + error.message);
     },
   });
 
@@ -114,17 +115,17 @@ export default function TaskCreationModal({ isOpen, onClose, currentUser, isAdmi
     e.preventDefault();
 
     if (!name) {
-      alert('יש להזין שם למשימה');
+      toast.warning('יש להזין שם למשימה');
       return;
     }
 
     if (!customerEmail) {
-      alert('יש לבחור לקוח - כל משימה חייבת להיות משויכת ללקוח');
+      toast.warning('יש לבחור לקוח - כל משימה חייבת להיות משויכת ללקוח');
       return;
     }
 
     if (!endDate) {
-      alert('יש להזין תאריך סיום - זהו שדה חובה');
+      toast.warning('יש להזין תאריך סיום - זהו שדה חובה');
       return;
     }
 

@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Copy, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { toast } from "sonner";
 
 export default function DuplicateForecastModal({ isOpen, onClose, sourceForecast, customer, onSuccess }) {
   const currentYear = new Date().getFullYear();
@@ -21,12 +22,12 @@ export default function DuplicateForecastModal({ isOpen, onClose, sourceForecast
 
   const handleDuplicate = async () => {
     if (!sourceForecast || !customer) {
-      alert('חסרים נתונים ליצירת העתק');
+      toast.warning('חסרים נתונים ליצירת העתק');
       return;
     }
 
     if (!duplicateData.forecast_name.trim()) {
-      alert('נא להזין שם לתחזית החדשה');
+      toast.warning('נא להזין שם לתחזית החדשה');
       return;
     }
 
@@ -98,7 +99,7 @@ export default function DuplicateForecastModal({ isOpen, onClose, sourceForecast
         });
       }
       
-      alert(`התחזית שוכפלה בהצלחה! תחזית חדשה: "${duplicateData.forecast_name}"`);
+      toast.success(`התחזית שוכפלה בהצלחה! תחזית חדשה: "${duplicateData.forecast_name}"`);
       
       // העבר לעריכת התחזית החדשה
       if (onSuccess) {
@@ -109,7 +110,7 @@ export default function DuplicateForecastModal({ isOpen, onClose, sourceForecast
       
     } catch (error) {
       console.error('Error duplicating forecast:', error);
-      alert('שגיאה בשכפול התחזית: ' + error.message);
+      toast.error('שגיאה בשכפול התחזית: ' + error.message);
     } finally {
       setIsDuplicating(false);
     }

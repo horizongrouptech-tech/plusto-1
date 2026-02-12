@@ -6,6 +6,7 @@ import { FileUpload } from "@/entities/FileUpload";
 import { UploadFile, InvokeLLM } from "@/integrations/Core";
 import { parseXlsx } from "@/functions/parseXlsx";
 import { processESNAReport } from '@/functions/processESNAReport';
+import { toast } from "sonner";
 import { processPurchaseDocument } from '@/functions/processPurchaseDocument'; // ADDED: New function import
 
 // JSON Schemas for PDF analysis - ENHANCED FOR INSIGHTS
@@ -1569,7 +1570,7 @@ export default function SpecificFileUploadBox({
         }
         
         // הודעה ידידותית למשתמש
-        alert('⚠️ הקובץ לא הועלה בהצלחה\n\nהקובץ הועבר לטיפול מנהל המערכת ונבדק בהקדם.\nתוכל לראות את הסטטוס בעדכונים שיישלחו אליך.');
+        toast.error('⚠️ הקובץ לא הועלה בהצלחה\n\nהקובץ הועבר לטיפול מנהל המערכת ונבדק בהקדם.\nתוכל לראות את הסטטוס בעדכונים שיישלחו אליך.');
         setProcessingStatus('הקובץ הועבר לטיפול מנהל המערכת');
         setFinalStatus('error');
     } finally {

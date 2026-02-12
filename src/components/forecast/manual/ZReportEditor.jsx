@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Save, X, Trash2, Plus, AlertCircle, Calculator, Search, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { formatCurrency } from './utils/numberFormatter';
 import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 
 export default function ZReportEditor({ 
   isOpen, 
@@ -151,7 +152,7 @@ export default function ZReportEditor({
     );
     
     if (invalidProducts.length > 0) {
-      alert('⚠️ יש מוצרים עם נתונים לא תקינים. אנא מלא את כל השדות החובה.');
+      toast.warning('⚠️ יש מוצרים עם נתונים לא תקינים. אנא מלא את כל השדות החובה.');
       return;
     }
 
@@ -190,7 +191,7 @@ export default function ZReportEditor({
       
     } catch (error) {
       console.error('❌ Error saving Z-report:', error);
-      alert('שגיאה בשמירת הדוח: ' + error.message);
+      toast.error('שגיאה בשמירת הדוח: ' + error.message);
     }
   };
 

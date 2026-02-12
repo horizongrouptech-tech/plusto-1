@@ -16,6 +16,7 @@ import {
 import { format, addDays, differenceInDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 
+import { toast } from "sonner";
 // תנאי תשלום נפוצים
 const PAYMENT_TERMS = [
   { value: 'immediate', label: 'מזומן', days: 0 },
@@ -140,7 +141,7 @@ export default function SupplierPaymentsManager({ supplier, customer, isOpen, on
   // יצירת תשלום חדש
   const handleCreatePayment = async () => {
     if (!paymentForm.amount || !paymentForm.due_date) {
-      alert('נא למלא סכום ותאריך תשלום');
+      toast.warning('נא למלא סכום ותאריך תשלום');
       return;
     }
 
@@ -173,7 +174,7 @@ export default function SupplierPaymentsManager({ supplier, customer, isOpen, on
       setPaymentForm({ amount: '', due_date: '', invoice_number: '', notes: '', status: 'pending' });
     } catch (error) {
       console.error('Error creating payment:', error);
-      alert('שגיאה ביצירת תשלום');
+      toast.error('שגיאה ביצירת תשלום');
     } finally {
       setIsCreating(false);
     }
@@ -182,7 +183,7 @@ export default function SupplierPaymentsManager({ supplier, customer, isOpen, on
   // יצירת הזמנה חדשה
   const handleCreateOrder = async () => {
     if (!orderForm.amount || !orderForm.description) {
-      alert('נא למלא סכום ותיאור הזמנה');
+      toast.warning('נא למלא סכום ותיאור הזמנה');
       return;
     }
 
@@ -234,7 +235,7 @@ export default function SupplierPaymentsManager({ supplier, customer, isOpen, on
       setOrderForm({ amount: '', order_date: new Date().toISOString().split('T')[0], description: '', expected_delivery: '', notes: '' });
     } catch (error) {
       console.error('Error creating order:', error);
-      alert('שגיאה ביצירת הזמנה');
+      toast.error('שגיאה ביצירת הזמנה');
     } finally {
       setIsCreating(false);
     }
@@ -254,7 +255,7 @@ export default function SupplierPaymentsManager({ supplier, customer, isOpen, on
       queryClient.invalidateQueries(['supplierPayments', supplier.id, customer.email]);
     } catch (error) {
       console.error('Error updating payment:', error);
-      alert('שגיאה בעדכון התשלום');
+      toast.error('שגיאה בעדכון התשלום');
     }
   };
 

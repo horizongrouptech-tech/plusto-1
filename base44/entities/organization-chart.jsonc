@@ -1,0 +1,103 @@
+{
+  "name": "OrganizationChart",
+  "type": "object",
+  "properties": {
+    "customer_email": {
+      "type": "string",
+      "description": "אימייל הלקוח"
+    },
+    "chart_name": {
+      "type": "string",
+      "description": "שם העץ הארגוני"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": "string"
+          },
+          "position": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            }
+          },
+          "salary": {
+            "type": "number"
+          },
+          "department": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "רשימת צמתים בעץ הארגוני"
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "reports_to",
+              "collaborates",
+              "supports"
+            ],
+            "default": "reports_to"
+          }
+        }
+      },
+      "description": "קשרים בין תפקידים בעץ"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "customer_email",
+    "chart_name",
+    "nodes"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

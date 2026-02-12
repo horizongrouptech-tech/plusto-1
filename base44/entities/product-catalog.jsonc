@@ -1,0 +1,188 @@
+{
+  "name": "ProductCatalog",
+  "type": "object",
+  "properties": {
+    "catalog_id": {
+      "type": "string",
+      "description": "מזהה הקטלוג (מישות Catalog) אליו שייך המוצר"
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "אימייל הלקוח המשויך למוצר"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "שם המוצר"
+    },
+    "barcode": {
+      "type": "string",
+      "description": "ברקוד/EAN"
+    },
+    "cost_price": {
+      "type": "number",
+      "description": "מחיר עלות"
+    },
+    "cost_price_no_vat": {
+      "type": "number",
+      "description": "מחיר עלות ללא מע\"מ"
+    },
+    "selling_price": {
+      "type": "number",
+      "description": "מחיר לצרכן"
+    },
+    "store_price": {
+      "type": "number",
+      "description": "מחיר בחנות"
+    },
+    "store_price_alt": {
+      "type": "number",
+      "description": "מחיר בחנות נוסף (למשל סניף אחר)"
+    },
+    "category": {
+      "type": "string",
+      "description": "קטגוריה ראשית"
+    },
+    "secondary_category": {
+      "type": "string",
+      "description": "קטגוריה משנית"
+    },
+    "supplier": {
+      "type": "string",
+      "description": "ספק המוצר"
+    },
+    "supplier_item_code": {
+      "type": "string",
+      "description": "קוד פריט אצל הספק"
+    },
+    "color": {
+      "type": "string",
+      "description": "צבע המוצר"
+    },
+    "size": {
+      "type": "string",
+      "description": "מידה"
+    },
+    "creation_date": {
+      "type": "string",
+      "description": "תאריך יצירת המוצר"
+    },
+    "no_vat_item": {
+      "type": "string",
+      "description": "האם פריט ללא מע\"מ"
+    },
+    "inventory": {
+      "type": "number",
+      "description": "כמות במלאי"
+    },
+    "monthly_sales": {
+      "type": "number",
+      "description": "מכירות חודשיות ממוצעות"
+    },
+    "gross_profit": {
+      "type": "number",
+      "description": "רווח גולמי מחושב"
+    },
+    "profit_percentage": {
+      "type": "number",
+      "description": "אחוז רווח גולמי"
+    },
+    "parent_item_code": {
+      "type": "string",
+      "description": "קוד פריט אב (אם קיים)"
+    },
+    "sales_revenue": {
+      "type": "number",
+      "description": "פדיון - סך הכנסות ממכירת המוצר בתקופה"
+    },
+    "last_sales_report_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "תאריך עדכון נתוני מכירות אחרון"
+    },
+    "data_source": {
+      "type": "string",
+      "enum": [
+        "file_upload",
+        "auto_generated",
+        "manual_entry",
+        "merged_duplicates",
+        "ai_suggestion",
+        "sales_report"
+      ],
+      "description": "מקור הנתונים"
+    },
+    "data_quality": {
+      "type": "string",
+      "enum": [
+        "complete",
+        "partial",
+        "incomplete"
+      ],
+      "description": "איכות הנתונים"
+    },
+    "missing_fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "שדות חסרים או לא תקינים"
+    },
+    "import_errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "שגיאות שזוהו בייבוא"
+    },
+    "ai_suggestions": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "הצעות AI לשיפור"
+    },
+    "needs_review": {
+      "type": "boolean",
+      "default": false,
+      "description": "נדרש בדיקה ידנית"
+    },
+    "is_recommended": {
+      "type": "boolean",
+      "default": false,
+      "description": "האם המוצר המולץ על ידי המערכת"
+    },
+    "recommendation_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "תאריך ההמלצה על המוצר"
+    },
+    "is_suggested": {
+      "type": "boolean",
+      "default": false,
+      "description": "האם זהו מוצר מוצע על ידי המערכת"
+    },
+    "suggestion_reasoning": {
+      "type": "string",
+      "description": "הנימוק להצעת המוצר"
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "עדכון אחרון"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "האם המוצר פעיל"
+    }
+  },
+  "required": [
+    "product_name",
+    "customer_email",
+    "catalog_id"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

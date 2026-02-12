@@ -1,0 +1,60 @@
+{
+  "name": "CommunicationThread",
+  "type": "object",
+  "properties": {
+    "related_entity_id": {
+      "type": "string",
+      "description": "ID של ההמלצה/תוכנית עסקית אליה קשור הדיון"
+    },
+    "related_entity_type": {
+      "type": "string",
+      "enum": [
+        "recommendation",
+        "business_plan",
+        "business_forecast"
+      ],
+      "description": "סוג הישות אליה קשור הדיון"
+    },
+    "initiator_email": {
+      "type": "string",
+      "description": "מי פתח את הדיון"
+    },
+    "participants_emails": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "מי משתתף/תויג בדיון"
+    },
+    "is_private": {
+      "type": "boolean",
+      "default": false,
+      "description": "האם הדיון פרטי או פתוח לכל מנהלי הכספים"
+    },
+    "last_message_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "זמן ההודעה האחרונה"
+    },
+    "title": {
+      "type": "string",
+      "description": "כותרת הדיון"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "האם הדיון פעיל"
+    }
+  },
+  "required": [
+    "related_entity_id",
+    "related_entity_type",
+    "initiator_email"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

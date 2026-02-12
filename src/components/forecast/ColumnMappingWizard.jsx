@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, CheckCircle } from "lucide-react";
 import { ManualForecastMappingProfile } from "@/entities/ManualForecastMappingProfile";
 import { normalizeAndLoadForecast } from "@/functions/normalizeAndLoadForecast";
+import { toast } from "sonner";
 
 export default function ColumnMappingWizard({ isOpen, onClose, parsedData, customer, onComplete }) {
     const [currentSheetIndex, setCurrentSheetIndex] = useState(0);
@@ -72,7 +73,7 @@ export default function ColumnMappingWizard({ isOpen, onClose, parsedData, custo
             onComplete();
         } catch (error) {
             console.error('Mapping error:', error);
-            alert('שגיאה בשמירת המיפוי: ' + error.message);
+            toast.error('שגיאה בשמירת המיפוי: ' + error.message);
         } finally {
             setIsProcessing(false);
         }

@@ -1,0 +1,88 @@
+{
+  "name": "RecommendationSuggestion",
+  "type": "object",
+  "properties": {
+    "original_recommendation_id": {
+      "type": "string",
+      "description": "מזהה ההמלצה המקורית"
+    },
+    "original_customer_email": {
+      "type": "string",
+      "description": "אימייל הלקוח המקורי שקיבל את ההמלצה"
+    },
+    "original_manager_email": {
+      "type": "string",
+      "description": "אימייל המנהל שיצר את ההמלצה המקורית"
+    },
+    "suggested_customer_email": {
+      "type": "string",
+      "description": "אימייל הלקוח המוצע לקבל את ההמלצה"
+    },
+    "suggested_manager_email": {
+      "type": "string",
+      "description": "אימייל המנהל המוצע לקבל את ההצעה"
+    },
+    "business_similarity_reason": {
+      "type": "string",
+      "description": "הסיבה לדמיון העסקי (סוג עסק, גודל, וכו')"
+    },
+    "recommendation_title": {
+      "type": "string",
+      "description": "כותרת ההמלצה המוצעת"
+    },
+    "recommendation_category": {
+      "type": "string",
+      "description": "קטגוריית ההמלצה"
+    },
+    "expected_profit": {
+      "type": "number",
+      "description": "רווח צפוי מההמלצה"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted",
+        "rejected",
+        "implemented"
+      ],
+      "default": "pending",
+      "description": "סטטוס הצעת ההמלצה"
+    },
+    "similarity_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "ציון דמיון בין העסקים (0-100)"
+    },
+    "auto_generated": {
+      "type": "boolean",
+      "default": true,
+      "description": "האם ההצעה נוצרה אוטומטית על ידי המערכת"
+    },
+    "viewed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "מתי המנהל צפה בהצעה"
+    },
+    "responded_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "מתי המנהל הגיב להצעה"
+    }
+  },
+  "required": [
+    "original_recommendation_id",
+    "original_customer_email",
+    "original_manager_email",
+    "suggested_customer_email",
+    "suggested_manager_email",
+    "business_similarity_reason"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

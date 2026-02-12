@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Phone, Mail, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { Lead } from "@/entities/Lead";
 import { User } from "@/entities/User";
+import { toast } from "sonner";
 
 export default function MyLeads() {
   const [leads, setLeads] = useState([]);
@@ -47,7 +48,7 @@ export default function MyLeads() {
       await loadUserAndLeads();
     } catch (error) {
       console.error("Error updating lead:", error);
-      alert('אירעה שגיאה בעדכון הליד');
+      toast.error('אירעה שגיאה בעדכון הליד');
     } finally {
       setContactingLeadId(null);
     }
@@ -64,7 +65,7 @@ export default function MyLeads() {
       await loadUserAndLeads();
     } catch (error) {
       console.error("Error updating lead:", error);
-      alert('אירעה שגיאה בעדכון הליד');
+      toast.error('אירעה שגיאה בעדכון הליד');
     }
   };
 

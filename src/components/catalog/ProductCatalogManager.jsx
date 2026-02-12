@@ -572,7 +572,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
           trackActivity(customer.email, 'catalog_created', { catalog_id: newCatalog.id, catalog_name: newCatalog.catalog_name });
       } catch (error) {
           console.error("Error creating new catalog:", error);
-          alert("שגיאה ביצירת קטלוג חדש: " + error.message);
+          toast.error("שגיאה ביצירת קטלוג חדש: " + error.message);
       }
   };
 
@@ -584,7 +584,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
       setEditingProduct(null);
     } catch (error) {
       console.error("Error updating product:", error);
-      alert("שגיאה בעדכון המוצר");
+      toast.error("שגיאה בעדכון המוצר");
     }
   };
 
@@ -595,7 +595,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
       await loadCatalog(currentPage);
     } catch (error) {
       console.error("Error deleting product:", error);
-      alert("שגיאה במחיקת המוצר");
+      toast.error("שגיאה במחיקת המוצר");
     }
   };
 
@@ -634,7 +634,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
 
   const handleSmartClean = async () => {
     if (!selectedCatalogId) {
-      alert("יש לבחור קטלוג לפני הפעלת ניקוי חכם.");
+      toast.warning("יש לבחור קטלוג לפני הפעלת ניקוי חכם.");
       return;
     }
     setIsCleaning(true);
@@ -657,7 +657,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     } catch (error) {
         console.error("Error starting smart cleaning:", error);
         setCleaningStatus(`שגיאה: ${error.message}`);
-        alert("אירעה שגיאה במהלך הניקוי החכם: " + error.message);
+        toast.error("אירעה שגיאה במהלך הניקוי החכם: " + error.message);
         setIsCleaning(false);
         setTimeout(() => {
             setProgress(0);
@@ -683,7 +683,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
           trackActivity(customer.email, 'catalog_cleaning_cancelled', { process_id: activeProcessId, catalog_id: selectedCatalogId });
       } catch(error) {
           console.error("Error cancelling cleaning process:", error);
-          alert('שגיאה בביטול תהליך הניקוי: ' + error.message);
+          toast.error('שגיאה בביטול תהליך הניקוי: ' + error.message);
           setIsCleaning(false);
           setCleaningStatus('');
       }
@@ -691,7 +691,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
 
   const handleUploadAndProcess = async (file) => {
     if (!selectedCatalogId) {
-        alert("יש לבחור או ליצור קטלוג תחילה.");
+        toast.warning("יש לבחור או ליצור קטלוג תחילה.");
         return;
     }
     setIsProcessing(true);
@@ -756,7 +756,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
         // הודעה ידידותית למשתמש
         const friendlyMessage = '⚠️ הקובץ לא הועלה בהצלחה\n\nהקובץ הועבר לטיפול מנהל המערכת ונבדק בהקדם.\nתוכל לראות את הסטטוס בעדכונים שיישלחו אליך.';
         setProcessingStatus('הקובץ הועבר לטיפול מנהל המערכת');
-        alert(friendlyMessage);
+        toast.warning(friendlyMessage);
         setIsProcessing(false);
         setTimeout(() => {
             setProgress(0);
@@ -830,7 +830,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
       await refreshCatalogGenerationStatus();
     } catch (error) {
       console.error("Error cancelling catalog generation:", error);
-      alert('שגיאה בביטול תהליך יצירת הקטלוג: ' + error.message);
+      toast.error('שגיאה בביטול תהליך יצירת הקטלוג: ' + error.message);
     } finally {
       setIsCancellingGeneration(false);
     }

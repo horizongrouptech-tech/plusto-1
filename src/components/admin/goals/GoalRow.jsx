@@ -26,6 +26,7 @@ import { syncTaskToFireberry } from '@/functions/syncTaskToFireberry';
 import InlineEditableField from './InlineEditableField';
 import GoalDependencySelector from '../GoalDependencySelector';
 
+import { toast } from "sonner";
 export default function GoalRow({ goal, users, refreshData, allGoals, isParent = false, isDragging = false }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedGoal, setEditedGoal] = useState(goal);
@@ -123,12 +124,12 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
 
   const handleSave = async () => {
     if (!editedGoal.name) {
-      alert('יש להזין שם ליעד/משימה');
+      toast.warning('יש להזין שם ליעד/משימה');
       return;
     }
 
     if (!editedGoal.end_date) {
-      alert('יש להזין תאריך סיום - זהו שדה חובה');
+      toast.warning('יש להזין תאריך סיום - זהו שדה חובה');
       return;
     }
 
@@ -155,7 +156,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
       });
     } catch (error) {
       console.error("Error updating goal:", error);
-      alert('שגיאה בעדכון היעד');
+      toast.error('שגיאה בעדכון היעד');
     } finally {
       setIsSaving(false);
     }
@@ -186,7 +187,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
         console.log('✅ Subtask deleted successfully');
       } catch (error) {
         console.error('❌ Error deleting subtask:', error);
-        alert('שגיאה במחיקת המשימה: ' + error.message);
+        toast.error('שגיאה במחיקת המשימה: ' + error.message);
       }
       return;
     }
@@ -225,10 +226,10 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
         console.log('✅ Goal and all subtasks deleted successfully');
 
         await refreshData();
-        alert('היעד וכל התת-משימות נמחקו בהצלחה');
+        toast.success('היעד וכל התת-משימות נמחקו בהצלחה');
       } catch (error) {
         console.error('❌ Error deleting goal with subtasks:', error);
-        alert('שגיאה במחיקת היעד: ' + error.message);
+        toast.error('שגיאה במחיקת היעד: ' + error.message);
       }
     } else {
       // יעד ללא תת-משימות
@@ -251,7 +252,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
         console.log('✅ Goal deleted successfully');
       } catch (error) {
         console.error('❌ Error deleting goal:', error);
-        alert('שגיאה במחיקת היעד: ' + error.message);
+        toast.error('שגיאה במחיקת היעד: ' + error.message);
       }
     }
   };
@@ -302,7 +303,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
       await refreshData();
     } catch (error) {
       console.error('Error adding external assignee:', error);
-      alert('שגיאה בהוספת אחראי חיצוני: ' + error.message);
+      toast.error('שגיאה בהוספת אחראי חיצוני: ' + error.message);
     } finally {
       setIsUpdatingAssignees(false);
     }
@@ -319,7 +320,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
       await refreshData();
     } catch (error) {
       console.error('Error removing external assignee:', error);
-      alert('שגיאה בהסרת אחראי חיצוני: ' + error.message);
+      toast.error('שגיאה בהסרת אחראי חיצוני: ' + error.message);
     } finally {
       setIsUpdatingAssignees(false);
     }
@@ -342,14 +343,14 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
           const startDate = new Date(finalValue);
           const endDate = new Date(goal.end_date);
           if (startDate > endDate) {
-            alert('תאריך התחלה חייב להיות לפני תאריך הסיום');
+            toast.warning('תאריך התחלה חייב להיות לפני תאריך הסיום');
             return;
           }
         } else if (field === 'end_date' && goal.start_date) {
           const startDate = new Date(goal.start_date);
           const endDate = new Date(finalValue);
           if (endDate < startDate) {
-            alert('תאריך סיום חייב להיות אחרי תאריך ההתחלה');
+            toast.warning('תאריך סיום חייב להיות אחרי תאריך ההתחלה');
             return;
           }
         }
@@ -365,7 +366,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
       });
     } catch (error) {
       console.error("Error in quick save:", error);
-      alert('שגיאה בשמירה: ' + error.message);
+      toast.error('שגיאה בשמירה: ' + error.message);
     }
   };
 

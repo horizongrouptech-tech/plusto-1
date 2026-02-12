@@ -1,0 +1,91 @@
+{
+  "name": "ManagerConversation",
+  "type": "object",
+  "properties": {
+    "conversation_id": {
+      "type": "string",
+      "description": "מזהה ייחודי לשיחה"
+    },
+    "participant_1_email": {
+      "type": "string",
+      "description": "אימייל משתתף ראשון (מנהל כספים)"
+    },
+    "participant_2_email": {
+      "type": "string",
+      "description": "אימייל משתתף שני (מנהל כספים)"
+    },
+    "conversation_type": {
+      "type": "string",
+      "enum": [
+        "recommendation_sharing",
+        "general_discussion",
+        "client_consultation"
+      ],
+      "default": "general_discussion",
+      "description": "סוג השיחה"
+    },
+    "related_recommendation_id": {
+      "type": "string",
+      "description": "מזהה ההמלצה הקשורה (אם רלוונטי)"
+    },
+    "related_client_email": {
+      "type": "string",
+      "description": "אימייל הלקוח הקשור לשיחה"
+    },
+    "conversation_title": {
+      "type": "string",
+      "description": "כותרת השיחה"
+    },
+    "last_message_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "זמן ההודעה האחרונה"
+    },
+    "last_message_by": {
+      "type": "string",
+      "description": "מי שלח את ההודעה האחרונה"
+    },
+    "unread_count_p1": {
+      "type": "number",
+      "default": 0,
+      "description": "מספר הודעות שלא נקראו עבור משתתף 1"
+    },
+    "unread_count_p2": {
+      "type": "number",
+      "default": 0,
+      "description": "מספר הודעות שלא נקראו עבור משתתף 2"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "archived",
+        "closed"
+      ],
+      "default": "active",
+      "description": "סטטוס השיחה"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "urgent"
+      ],
+      "default": "medium",
+      "description": "עדיפות השיחה"
+    }
+  },
+  "required": [
+    "participant_1_email",
+    "participant_2_email",
+    "conversation_title"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

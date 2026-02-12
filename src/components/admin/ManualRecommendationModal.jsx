@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Plus, X } from "lucide-react"; // Corrected import: Added 'X'
 import { base44 } from "@/api/base44Client";
 
+import { toast } from "sonner";
 export default function ManualRecommendationModal({ customer, isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     title: '',
@@ -42,13 +43,13 @@ export default function ManualRecommendationModal({ customer, isOpen, onClose, o
 
   const handleSave = async () => {
     if (!formData.title.trim() || !formData.description.trim()) {
-      alert('נא למלא כותרת ותיאור');
+      toast.warning('נא למלא כותרת ותיאור');
       return;
     }
 
     const validSteps = formData.action_steps.filter(step => step.trim());
     if (validSteps.length < 3) {
-      alert('נא להוסיף לפחות 3 שלבי פעולה');
+      toast.warning('נא להוסיף לפחות 3 שלבי פעולה');
       return;
     }
 
@@ -72,7 +73,7 @@ export default function ManualRecommendationModal({ customer, isOpen, onClose, o
       handleClose();
     } catch (error) {
       console.error('Error creating manual recommendation:', error);
-      alert('שגיאה ביצירת ההמלצה');
+      toast.error('שגיאה ביצירת ההמלצה');
     } finally {
       setIsSaving(false);
     }

@@ -13,6 +13,7 @@ import {
   Upload, RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from "sonner";
 import { he } from 'date-fns/locale';
 
 export default function MeetingTranscriptionSystem({ customer, currentUser, onSummaryCreated }) {
@@ -73,7 +74,7 @@ export default function MeetingTranscriptionSystem({ customer, currentUser, onSu
       setRecordingTime(0);
     } catch (error) {
       console.error('Error starting recording:', error);
-      alert('לא ניתן להפעיל את המיקרופון. נא לוודא שהענקת הרשאה.');
+      toast.warning('לא ניתן להפעיל את המיקרופון. נא לוודא שהענקת הרשאה.');
     }
   };
 
@@ -125,7 +126,7 @@ export default function MeetingTranscriptionSystem({ customer, currentUser, onSu
       
     } catch (error) {
       console.error('Error processing recording:', error);
-      alert('שגיאה בעיבוד ההקלטה');
+      toast.error('שגיאה בעיבוד ההקלטה');
     } finally {
       setIsProcessing(false);
     }
@@ -134,7 +135,7 @@ export default function MeetingTranscriptionSystem({ customer, currentUser, onSu
   // יצירת סיכום מתמלול
   const generateSummary = async () => {
     if (!transcription.trim()) {
-      alert('נא להזין תמלול לפני יצירת סיכום');
+      toast.warning('נא להזין תמלול לפני יצירת סיכום');
       return;
     }
 
@@ -273,10 +274,10 @@ ${transcription}
       setGeneratedSummary(null);
       
       onSummaryCreated?.();
-      alert('סיכום הפגישה נשמר בהצלחה!');
+      toast.success('סיכום הפגישה נשמר בהצלחה!');
     } catch (error) {
       console.error('Error saving summary:', error);
-      alert('שגיאה בשמירת הסיכום');
+      toast.error('שגיאה בשמירת הסיכום');
     } finally {
       setIsSaving(false);
     }

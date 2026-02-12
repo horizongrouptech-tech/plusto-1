@@ -24,6 +24,7 @@ import { UploadFile, InvokeLLM } from "@/integrations/Core";
 import { parseXlsx } from "@/functions/parseXlsx";
 import { processESNAReport } from '@/functions/processESNAReport';
 import { processPurchaseDocument } from '@/functions/processPurchaseDocument';
+import { toast } from "sonner";
 
 const FILE_CATEGORIES = [
   { value: 'inventory_report', label: 'דוח מלאי', icon: Package },
@@ -791,12 +792,12 @@ export default function SmartFileUploader({ customerEmail, onUploadComplete }) {
     if (!file) return;
 
     if (!selectedCategory) {
-      alert('אנא בחר סוג מסמך לפני העלאה');
+      toast.warning('אנא בחר סוג מסמך לפני העלאה');
       return;
     }
 
     if (selectedCategory === 'other' && !customFileName.trim()) {
-      alert('אנא הכנס שם/תיאור למסמך');
+      toast.warning('אנא הכנס שם/תיאור למסמך');
       return;
     }
 
@@ -1564,7 +1565,7 @@ The report language is Hebrew.
       }
       
       // הודעה ידידותית למשתמש
-      alert('⚠️ הקובץ לא הועלה בהצלחה\n\nהקובץ הועבר לטיפול מנהל המערכת ונבדק בהקדם.\nתוכל לראות את הסטטוס בעדכונים שיישלחו אליך.');
+      toast.error('⚠️ הקובץ לא הועלה בהצלחה\n\nהקובץ הועבר לטיפול מנהל המערכת ונבדק בהקדם.\nתוכל לראות את הסטטוס בעדכונים שיישלחו אליך.');
       setProcessingStatus('הקובץ הועבר לטיפול מנהל המערכת');
       setFinalStatus('error');
     } finally {

@@ -13,6 +13,7 @@ import { Loader2, Bug, Lightbulb, MoreVertical, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 
+import { toast } from "sonner";
 export default function AgentSupportTicketsManager() {
   const queryClient = useQueryClient();
   const [editingTicket, setEditingTicket] = useState(null);
@@ -32,7 +33,7 @@ export default function AgentSupportTicketsManager() {
       queryClient.invalidateQueries(['agentSupportTickets']);
       setIsEditModalOpen(false);
       setEditingTicket(null);
-      alert('הפנייה עודכנה בהצלחה!');
+      toast.success('הפנייה עודכנה בהצלחה!');
     },
   });
 

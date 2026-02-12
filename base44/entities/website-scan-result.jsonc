@@ -1,0 +1,463 @@
+{
+  "name": "WebsiteScanResult",
+  "type": "object",
+  "properties": {
+    "customer_email": {
+      "type": "string"
+    },
+    "website_url": {
+      "type": "string"
+    },
+    "website_type": {
+      "type": "string",
+      "enum": [
+        "e-commerce",
+        "informational",
+        "hybrid",
+        "unknown"
+      ],
+      "default": "unknown",
+      "description": "סוג האתר שזוהה על ידי המערכת"
+    },
+    "scan_metadata": {
+      "type": "object",
+      "properties": {
+        "site_url": {
+          "type": "string"
+        },
+        "scan_timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "total_pages_scraped": {
+          "type": "number"
+        },
+        "total_products_found": {
+          "type": "number"
+        },
+        "total_services_found": {
+          "type": "number"
+        },
+        "categories_discovered": {
+          "type": "number"
+        },
+        "scan_duration_seconds": {
+          "type": "number"
+        },
+        "success_rate": {
+          "type": "number"
+        },
+        "pages_categorized": {
+          "type": "object",
+          "properties": {
+            "product_pages": {
+              "type": "number"
+            },
+            "category_pages": {
+              "type": "number"
+            },
+            "service_pages": {
+              "type": "number"
+            },
+            "content_pages": {
+              "type": "number"
+            },
+            "other_pages": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "products": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "subcategory": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "price": {
+            "type": "object",
+            "properties": {
+              "current_price": {
+                "type": "number"
+              },
+              "original_price": {
+                "type": "number"
+              },
+              "discount_amount": {
+                "type": "number"
+              },
+              "discount_percentage": {
+                "type": "number"
+              },
+              "currency": {
+                "type": "string",
+                "default": "ILS"
+              },
+              "is_on_sale": {
+                "type": "boolean"
+              }
+            }
+          },
+          "description": {
+            "type": "string"
+          },
+          "short_description": {
+            "type": "string"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "specifications": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "availability": {
+            "type": "object",
+            "properties": {
+              "in_stock": {
+                "type": "boolean"
+              },
+              "stock_status": {
+                "type": "string"
+              },
+              "delivery_info": {
+                "type": "string"
+              }
+            }
+          },
+          "reviews": {
+            "type": "object",
+            "properties": {
+              "rating": {
+                "type": "number"
+              },
+              "review_count": {
+                "type": "number"
+              },
+              "has_reviews": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "services": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "service_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "pricing": {
+            "type": "object",
+            "properties": {
+              "price_type": {
+                "type": "string",
+                "enum": [
+                  "fixed",
+                  "hourly",
+                  "project_based",
+                  "custom",
+                  "contact_for_quote"
+                ]
+              },
+              "amount": {
+                "type": "number"
+              },
+              "currency": {
+                "type": "string",
+                "default": "ILS"
+              }
+            }
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "target_audience": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "שירותים שזוהו באתר"
+    },
+    "business_analysis": {
+      "type": "object",
+      "properties": {
+        "overview": {
+          "type": "string"
+        },
+        "category_analysis": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "pricing_strategy_analysis": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "product_portfolio_analysis": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "competitive_positioning": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "business_opportunities": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "strategic_recommendations": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "market_trends": {
+          "type": "string"
+        },
+        "conclusion": {
+          "type": "string"
+        }
+      }
+    },
+    "informational_analysis": {
+      "type": "object",
+      "properties": {
+        "value_proposition_clarity": {
+          "type": "string",
+          "enum": [
+            "clear",
+            "somewhat_clear",
+            "unclear"
+          ],
+          "description": "עד כמה הצעת הערך ברורה"
+        },
+        "target_audience_appeal": {
+          "type": "string",
+          "enum": [
+            "strong",
+            "moderate",
+            "weak"
+          ],
+          "description": "עוצמת המשיכה לקהל היעד"
+        },
+        "messaging_effectiveness": {
+          "type": "object",
+          "properties": {
+            "main_message": {
+              "type": "string"
+            },
+            "consistency": {
+              "type": "string"
+            },
+            "differentiation": {
+              "type": "string"
+            }
+          }
+        },
+        "call_to_action_analysis": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "cta_text": {
+                "type": "string"
+              },
+              "location": {
+                "type": "string"
+              },
+              "strength": {
+                "type": "string",
+                "enum": [
+                  "strong",
+                  "moderate",
+                  "weak"
+                ]
+              },
+              "suggestions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "ux_assessment": {
+          "type": "object",
+          "properties": {
+            "navigation_clarity": {
+              "type": "string",
+              "enum": [
+                "excellent",
+                "good",
+                "needs_improvement"
+              ]
+            },
+            "mobile_friendliness": {
+              "type": "string",
+              "enum": [
+                "excellent",
+                "good",
+                "needs_improvement"
+              ]
+            },
+            "page_speed": {
+              "type": "string",
+              "enum": [
+                "fast",
+                "moderate",
+                "slow"
+              ]
+            },
+            "content_readability": {
+              "type": "string",
+              "enum": [
+                "excellent",
+                "good",
+                "needs_improvement"
+              ]
+            }
+          }
+        },
+        "seo_recommendations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "המלצות לשיפור SEO"
+        },
+        "content_improvement_suggestions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "הצעות לשיפור תוכן"
+        },
+        "lead_generation_opportunities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "הזדמנויות ליצירת לידים"
+        },
+        "conversion_optimization_tips": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "טיפים להגברת המרות"
+        },
+        "overall_effectiveness_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "ציון כללי לאפקטיביות האתר"
+        }
+      },
+      "description": "ניתוח ייעודי לאתרי תדמית ושירותים"
+    },
+    "technical_details": {
+      "type": "object",
+      "properties": {
+        "site_structure": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "data_quality": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "scraping_challenges": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "crawler_stats": {
+          "type": "object",
+          "properties": {
+            "urls_discovered": {
+              "type": "number"
+            },
+            "urls_crawled": {
+              "type": "number"
+            },
+            "failed_urls": {
+              "type": "number"
+            },
+            "javascript_rendered": {
+              "type": "boolean"
+            },
+            "sitemap_found": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "scan_settings": {
+      "type": "object",
+      "properties": {
+        "max_pages": {
+          "type": "number"
+        },
+        "scan_depth": {
+          "type": "number"
+        },
+        "scan_type": {
+          "type": "string"
+        }
+      },
+      "description": "הגדרות שימשו בסריקה"
+    }
+  },
+  "required": [
+    "customer_email",
+    "website_url",
+    "scan_metadata",
+    "business_analysis"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

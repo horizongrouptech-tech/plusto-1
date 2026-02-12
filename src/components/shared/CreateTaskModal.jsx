@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { useUsers } from './UsersContext';
 import { syncTaskToFireberry } from '@/functions/syncTaskToFireberry';
+import { toast } from "sonner";
 
 export default function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals = [], onSuccess }) {
   const [name, setName] = useState('');
@@ -63,15 +64,15 @@ export default function CreateTaskModal({ isOpen, onClose, customer, currentUser
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) {
-      alert('יש להזין שם למשימה');
+      toast.warning('יש להזין שם למשימה');
       return;
     }
     if (!startDate) {
-      alert('יש להזין תאריך התחלה');
+      toast.warning('יש להזין תאריך התחלה');
       return;
     }
     if (!endDate) {
-      alert('יש להזין תאריך סיום');
+      toast.warning('יש להזין תאריך סיום');
       return;
     }
 
@@ -144,7 +145,7 @@ export default function CreateTaskModal({ isOpen, onClose, customer, currentUser
       onSuccess();
     } catch (error) {
       console.error('Error creating task:', error);
-      alert('שגיאה ביצירת המשימה');
+      toast.error('שגיאה ביצירת המשימה');
     } finally {
       setIsSubmitting(false);
     }

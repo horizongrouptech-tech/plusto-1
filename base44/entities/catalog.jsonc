@@ -1,0 +1,76 @@
+{
+  "name": "Catalog",
+  "type": "object",
+  "properties": {
+    "customer_email": {
+      "type": "string",
+      "description": "אימייל הלקוח המשויך לקטלוג"
+    },
+    "catalog_name": {
+      "type": "string",
+      "description": "שם הקטלוג שהמשתמש נתן"
+    },
+    "creation_method": {
+      "type": "string",
+      "enum": [
+        "ai_generated",
+        "file_upload",
+        "manual_entry"
+      ],
+      "description": "איך הקטלוג נוצר"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "generating",
+        "ready",
+        "failed",
+        "active"
+      ],
+      "default": "draft",
+      "description": "סטטוס יצירת הקטלוג"
+    },
+    "rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "דירוג הקטלוג על ידי המשתמש"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": false,
+      "description": "האם הקטלוג פעיל"
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false,
+      "description": "האם זהו הקטלוג הרשמי/ברירת המחדל של הלקוח"
+    },
+    "generation_metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "כל המידע מהשאלון ששימש ליצירת הקטלוג"
+    },
+    "last_generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "תאריך יצירה אחרון של הקטלוג"
+    },
+    "product_count": {
+      "type": "number",
+      "default": 0,
+      "description": "מספר המוצרים בקטלוג"
+    }
+  },
+  "required": [
+    "customer_email",
+    "catalog_name"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

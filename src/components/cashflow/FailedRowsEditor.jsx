@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { base44 } from '@/api/base44Client';
 import { AlertTriangle, Save, Trash2, Plus, Edit, Loader2, CheckCircle2 } from 'lucide-react';
 
+import { toast } from "sonner";
 const CATEGORIES = [
   'הכנסות', 'הוצאות', 'הכנסות מסליקה', 'הכנסה מסליקה', 'הכנסות סיבוס',
   'הכנסות וולט', 'הכנסות עסקיות', 'בנקאיות', 'הלוואה', 'פיקדון/חסכון',
@@ -119,7 +120,7 @@ export default function FailedRowsEditor({
       }
     } catch (error) {
       console.error('Error saving rows:', error);
-      alert('שגיאה בשמירת הנתונים: ' + error.message);
+      toast.error('שגיאה בשמירת הנתונים: ' + error.message);
     } finally {
       setIsSaving(false);
     }

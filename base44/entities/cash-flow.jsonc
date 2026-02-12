@@ -1,0 +1,75 @@
+{
+  "name": "CashFlow",
+  "type": "object",
+  "properties": {
+    "customer_email": {
+      "type": "string",
+      "description": "אימייל הלקוח"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "תאריך התנועה"
+    },
+    "description": {
+      "type": "string",
+      "description": "תיאור התנועה"
+    },
+    "source": {
+      "type": "string",
+      "description": "מקור התנועה"
+    },
+    "category": {
+      "type": "string",
+      "description": "קטגוריית ההוצאה/הכנסה"
+    },
+    "credit": {
+      "type": "number",
+      "description": "זכות (הכנסה)"
+    },
+    "debit": {
+      "type": "number",
+      "description": "חובה (הוצאה)"
+    },
+    "balance": {
+      "type": "number",
+      "description": "יתרה"
+    },
+    "payment_type": {
+      "type": "string",
+      "description": "אמצעי תשלום"
+    },
+    "reference_number": {
+      "type": "string",
+      "description": "מספר אסמכתא"
+    },
+    "account_number": {
+      "type": "string",
+      "description": "מספר חשבון"
+    },
+    "bizibox_transaction_id": {
+      "type": "string",
+      "description": "מזהה ייחודי מ-BiziBox למניעת כפילויות"
+    },
+    "is_projected": {
+      "type": "boolean",
+      "default": false,
+      "description": "האם זוהי תנועה צפויה (לא בפועל)"
+    },
+    "recurring_expense_id": {
+      "type": "string",
+      "description": "מזהה הוצאה קבועה אם התנועה נוצרה ממנה"
+    }
+  },
+  "required": [
+    "customer_email",
+    "date",
+    "category"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

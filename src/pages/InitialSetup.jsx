@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { User as UserIcon, Building, ArrowRight, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from "sonner";
 
 export default function InitialSetup() {
   const [step, setStep] = useState(1);
@@ -75,7 +76,7 @@ export default function InitialSetup() {
       }
     } catch (error) {
       console.error('Setup error:', error);
-      alert('שגיאה בשמירת הנתונים. אנא נסה שוב.');
+      toast.error('שגיאה בשמירת הנתונים. אנא נסה שוב.');
     } finally {
       setIsSubmitting(false);
     }

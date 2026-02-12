@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from '@/api/base44Client';
 import { Loader2 } from 'lucide-react';
+import { toast } from "sonner";
 
 const SUPPLIER_CATEGORIES = [
   'מזון',
@@ -59,7 +60,7 @@ export default function AddSupplierModal({ isOpen, onClose, onSupplierAdded, cur
     
     // ✅ וולידציה מעודכנת - רק שם, איש קשר וקטגוריה חובה
     if (!formData.name || !formData.contact_person || !formData.category) {
-      alert('נא למלא: שם הספק, איש קשר וקטגוריה');
+      toast.warning('נא למלא: שם הספק, איש קשר וקטגוריה');
       return;
     }
 
@@ -67,7 +68,7 @@ export default function AddSupplierModal({ isOpen, onClose, onSupplierAdded, cur
     try {
       // וולידציה קריטית - ספק חייב להיות משויך ללקוח
       if (!customerEmail) {
-        alert('שגיאה: לא ניתן ליצור ספק ללא שיוך ללקוח');
+        toast.error('שגיאה: לא ניתן ליצור ספק ללא שיוך ללקוח');
         return;
       }
 
@@ -84,7 +85,7 @@ export default function AddSupplierModal({ isOpen, onClose, onSupplierAdded, cur
 
       await base44.entities.Supplier.create(supplierData);
       
-      alert('הספק נוסף בהצלחה!');
+      toast.success('הספק נוסף בהצלחה!');
       
       setFormData({
         name: '',
@@ -108,7 +109,7 @@ export default function AddSupplierModal({ isOpen, onClose, onSupplierAdded, cur
       onClose();
     } catch (error) {
       console.error('Error adding supplier:', error);
-      alert('שגיאה בהוספת הספק: ' + error.message);
+      toast.error('שגיאה בהוספת הספק: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }

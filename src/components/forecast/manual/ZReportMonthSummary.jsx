@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import ZReportEditor from './ZReportEditor';
 import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 
 export default function ZReportMonthSummary({ forecastData, salesForecast, services, onUpdateZReport, customer }) {
   const [editingMonth, setEditingMonth] = useState(null);
@@ -105,7 +106,7 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
     );
     
     if (!zReport) {
-      alert('⚠️ דוח לא נמצא');
+      toast.warning('⚠️ דוח לא נמצא');
       return;
     }
 
@@ -166,7 +167,7 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
 
       // ✅ שלב 3: fallback אחרון - שחזור מהקובץ המקורי
       if (!zReport.file_url) {
-        alert('⚠️ דוח זה לא מכיל פרטי מוצרים ולא נמצא קובץ מקור.\nהעלה דוח Z מחדש כדי לאפשר עריכה.');
+        toast.warning('⚠️ דוח זה לא מכיל פרטי מוצרים ולא נמצא קובץ מקור.\nהעלה דוח Z מחדש כדי לאפשר עריכה.');
         setIsReconstructing(false);
         return;
       }
@@ -202,7 +203,7 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
       
     } catch (error) {
       console.error('❌ Error loading Z-report for editing:', error);
-      alert('❌ שגיאה בטעינת הדוח:\n' + error.message);
+      toast.error('❌ שגיאה בטעינת הדוח:\n' + error.message);
     } finally {
       setIsReconstructing(false);
     }
@@ -210,17 +211,17 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
 
   const handleSaveEditedReport = async (updatedReport) => {
     if (!onUpdateZReport) {
-      alert('⚠️ לא ניתן לשמור - אין callback זמין');
+      toast.warning('⚠️ לא ניתן לשמור - אין callback זמין');
       return;
     }
 
     try {
       await onUpdateZReport(updatedReport);
       setEditingMonth(null);
-      alert('✅ דוח Z עודכן בהצלחה!');
+      toast.success('✅ דוח Z עודכן בהצלחה!');
     } catch (error) {
       console.error('Error saving edited report:', error);
-      alert('❌ שגיאה בשמירת השינויים: ' + error.message);
+      toast.error('❌ שגיאה בשמירת השינויים: ' + error.message);
     }
   };
 
@@ -230,7 +231,7 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
     );
     
     if (!zReport) {
-      alert('⚠️ דוח לא נמצא');
+      toast.warning('⚠️ דוח לא נמצא');
       return;
     }
 
@@ -258,10 +259,10 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
       }
 
       console.log('✅ Z-report deleted successfully');
-      alert('✅ דוח Z נמחק בהצלחה');
+      toast.success('✅ דוח Z נמחק בהצלחה');
     } catch (error) {
       console.error('❌ Error deleting Z-report:', error);
-      alert('❌ שגיאה במחיקת הדוח: ' + error.message);
+      toast.error('❌ שגיאה במחיקת הדוח: ' + error.message);
     }
   };
 

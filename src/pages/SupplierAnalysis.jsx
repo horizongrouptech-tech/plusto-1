@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { InvokeLLM } from "@/integrations/Core";
 
 import AddSupplierModal from '../components/shared/AddSupplierModal';
+import { toast } from "sonner";
 import SupplierQuoteRequestModal from '../components/shared/SupplierQuoteRequestModal';
 
 export default function SupplierAnalysisPage() {
@@ -233,7 +234,7 @@ export default function SupplierAnalysisPage() {
 
       if (newSupplierSuggestions && newSupplierSuggestions.suppliers) {
         // Here you would display these suggestions to the user, perhaps in a new state variable and a new UI section
-        alert("מצאנו ספקים חדשים! התוצאות יוצגו בקרוב.");
+        toast.info("מצאנו ספקים חדשים! התוצאות יוצגו בקרוב.");
         console.log(newSupplierSuggestions.suppliers);
       }
 

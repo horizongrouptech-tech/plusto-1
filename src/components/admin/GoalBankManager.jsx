@@ -14,6 +14,7 @@ import { CategoryBadge, PopularBadge } from '@/components/goals/GoalTemplateBadg
 import GoalTemplatePreview from '@/components/goals/GoalTemplatePreview';
 import DefaultTasksManager from './DefaultTasksManager';
 
+import { toast } from "sonner";
 export default function GoalBankManager({ currentUser }) {
   const [showDefaultTasks, setShowDefaultTasks] = useState(false);
   const queryClient = useQueryClient();
@@ -76,7 +77,7 @@ export default function GoalBankManager({ currentUser }) {
 
   const handleSave = async () => {
     if (!formData.name) {
-      alert('נא למלא שם לתבנית');
+      toast.warning('נא למלא שם לתבנית');
       return;
     }
 
@@ -97,7 +98,7 @@ export default function GoalBankManager({ currentUser }) {
       queryClient.invalidateQueries(['goalTemplates']);
       setShowModal(false);
     } catch (error) {
-      alert('שגיאה בשמירה: ' + error.message);
+      toast.error('שגיאה בשמירה: ' + error.message);
     } finally {
       setIsSaving(false);
     }
@@ -105,7 +106,7 @@ export default function GoalBankManager({ currentUser }) {
 
   const handleDelete = async (templateId) => {
     if (!canEdit) {
-      alert('אין לך הרשאות למחוק תבניות');
+      toast.warning('אין לך הרשאות למחוק תבניות');
       return;
     }
 
@@ -120,13 +121,13 @@ export default function GoalBankManager({ currentUser }) {
       await base44.entities.GoalTemplate.update(templateId, { is_active: false });
       queryClient.invalidateQueries(['goalTemplates']);
     } catch (error) {
-      alert('שגיאה במחיקה: ' + error.message);
+      toast.error('שגיאה במחיקה: ' + error.message);
     }
   };
 
   const handleDuplicate = async (template) => {
     if (!canEdit) {
-      alert('אין לך הרשאות לשכפל תבניות');
+      toast.warning('אין לך הרשאות לשכפל תבניות');
       return;
     }
 
@@ -142,13 +143,13 @@ export default function GoalBankManager({ currentUser }) {
       });
       queryClient.invalidateQueries(['goalTemplates']);
     } catch (error) {
-      alert('שגיאה בשכפול: ' + error.message);
+      toast.error('שגיאה בשכפול: ' + error.message);
     }
   };
 
   const handleUseTemplate = async (template, customerEmail) => {
     if (!customerEmail) {
-      alert('נא לבחור לקוח');
+      toast.warning('נא לבחור לקוח');
       return;
     }
 
@@ -170,9 +171,9 @@ export default function GoalBankManager({ currentUser }) {
       });
 
       queryClient.invalidateQueries(['goalTemplates']);
-      alert('יעד נוצר בהצלחה מהתבנית!');
+      toast.success('יעד נוצר בהצלחה מהתבנית!');
     } catch (error) {
-      alert('שגיאה ביצירת יעד: ' + error.message);
+      toast.error('שגיאה ביצירת יעד: ' + error.message);
     }
   };
 

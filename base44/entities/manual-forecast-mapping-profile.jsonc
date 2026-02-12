@@ -1,0 +1,30 @@
+{
+  "name": "ManualForecastMappingProfile",
+  "type": "object",
+  "properties": {
+    "customer_email": {
+      "type": "string",
+      "description": "אימייל הלקוח"
+    },
+    "profile_name": {
+      "type": "string",
+      "description": "שם הפרופיל"
+    },
+    "mappings": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "מיפוי עמודות: {targetField: [sourceColumns], ...}"
+    }
+  },
+  "required": [
+    "customer_email",
+    "profile_name",
+    "mappings"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

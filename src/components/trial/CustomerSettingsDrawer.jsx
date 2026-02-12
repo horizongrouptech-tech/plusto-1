@@ -19,6 +19,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from "sonner";
 
 export default function CustomerSettingsDrawer({ customer, isOpen, onClose }) {
   const [formData, setFormData] = useState({});
@@ -49,7 +50,7 @@ export default function CustomerSettingsDrawer({ customer, isOpen, onClose }) {
       onClose();
     } catch (error) {
       console.error("Error saving customer:", error);
-      alert('שגיאה בשמירה');
+      toast.error('שגיאה בשמירה');
     } finally {
       setIsSaving(false);
     }

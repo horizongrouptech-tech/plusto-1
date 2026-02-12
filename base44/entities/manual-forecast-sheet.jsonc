@@ -1,0 +1,45 @@
+{
+  "name": "ManualForecastSheet",
+  "type": "object",
+  "properties": {
+    "forecast_id": {
+      "type": "string",
+      "description": "מזהה התחזית (ref ManualForecast)"
+    },
+    "sheet_name": {
+      "type": "string",
+      "description": "שם הגיליון"
+    },
+    "sheet_index": {
+      "type": "number",
+      "description": "מיקום הגיליון בקובץ (0-based)"
+    },
+    "header_row_index": {
+      "type": "number",
+      "default": 0,
+      "description": "מיקום שורת הכותרת"
+    },
+    "original_columns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "רשימת כותרות המקוריות מהקובץ"
+    },
+    "row_count": {
+      "type": "number",
+      "description": "מספר שורות הנתונים בגיליון"
+    }
+  },
+  "required": [
+    "forecast_id",
+    "sheet_name",
+    "sheet_index"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

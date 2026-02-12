@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { toast } from "sonner";
 
 export default function VersionHistoryViewer({ forecast, onRestore }) {
     const [versions, setVersions] = useState([]);
@@ -42,7 +43,7 @@ export default function VersionHistoryViewer({ forecast, onRestore }) {
             return;
         }
 
-        alert('שחזור גרסאות יתווסף בשלב הבא');
+        toast.info('שחזור גרסאות יתווסף בשלב הבא');
         onRestore();
     };
 

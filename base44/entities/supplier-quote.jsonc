@@ -1,0 +1,84 @@
+{
+  "name": "SupplierQuote",
+  "type": "object",
+  "properties": {
+    "supplier_id": {
+      "type": "string",
+      "description": "מזהה ספק"
+    },
+    "supplier_name": {
+      "type": "string",
+      "description": "שם הספק"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "שם המוצר"
+    },
+    "unit_price": {
+      "type": "number",
+      "description": "מחיר ליחידה"
+    },
+    "minimum_quantity": {
+      "type": "number",
+      "description": "כמות מינימלית"
+    },
+    "delivery_time": {
+      "type": "string",
+      "description": "זמן אספקה"
+    },
+    "quality_grade": {
+      "type": "string",
+      "enum": [
+        "basic",
+        "premium",
+        "professional"
+      ],
+      "description": "דרגת איכות"
+    },
+    "payment_terms": {
+      "type": "string",
+      "description": "תנאי תשלום"
+    },
+    "quote_date": {
+      "type": "string",
+      "format": "date",
+      "description": "תאריך הצעת מחיר"
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date",
+      "description": "תוקף הצעת מחיר"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted",
+        "rejected",
+        "expired"
+      ],
+      "default": "pending",
+      "description": "סטטוס הצעת מחיר"
+    },
+    "savings_potential": {
+      "type": "number",
+      "description": "חיסכון פוטנציאלי בשקלים"
+    },
+    "savings_percentage": {
+      "type": "number",
+      "description": "חיסכון פוטנציאלי באחוזים"
+    }
+  },
+  "required": [
+    "supplier_name",
+    "product_name",
+    "unit_price",
+    "quote_date"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

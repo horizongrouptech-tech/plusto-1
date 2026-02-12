@@ -1,0 +1,63 @@
+{
+  "name": "CustomerNotification",
+  "type": "object",
+  "properties": {
+    "customer_email": {
+      "type": "string",
+      "description": "מייל הלקוח"
+    },
+    "notification_type": {
+      "type": "string",
+      "enum": [
+        "new_recommendation",
+        "new_business_move",
+        "supplier_update",
+        "system_update"
+      ],
+      "description": "סוג ההתראה"
+    },
+    "title": {
+      "type": "string",
+      "description": "כותרת ההתראה"
+    },
+    "message": {
+      "type": "string",
+      "description": "תוכן ההתראה"
+    },
+    "related_item_id": {
+      "type": "string",
+      "description": "מזהה הפריט הקשור (המלצה, מהלך וכו')"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false,
+      "description": "האם ההתראה נקראה"
+    },
+    "read_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "תאריך קריאת ההתראה"
+    },
+    "action_required": {
+      "type": "boolean",
+      "default": false,
+      "description": "האם נדרשת פעולה מהלקוח"
+    },
+    "action_url": {
+      "type": "string",
+      "description": "קישור לפעולה הנדרשת"
+    }
+  },
+  "required": [
+    "customer_email",
+    "notification_type",
+    "title",
+    "message"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

@@ -20,6 +20,7 @@ import html2canvas from 'html2canvas';
 import TimelineToolbar from './TimelineToolbar';
 import EnhancedGoalNode from './EnhancedGoalNode';
 import { applyLayout } from './LayoutEngine';
+import { toast } from "sonner";
 
 const nodeTypes = {
   enhancedGoal: EnhancedGoalNode
@@ -258,7 +259,7 @@ export default function GoalsTimelineNew({ customer }) {
         queryClient.invalidateQueries(['customerGoals', customer.email]);
       } catch (error) {
         console.error('Error saving connection:', error);
-        alert('שגיאה בשמירת התלות');
+        toast.error('שגיאה בשמירת התלות');
       }
     },
     [setEdges, customer, queryClient, goals]
@@ -283,7 +284,7 @@ export default function GoalsTimelineNew({ customer }) {
       console.log('✅ Connection deleted successfully');
     } catch (error) {
       console.error('❌ Error deleting dependency:', error);
-      alert('שגיאה בניתוק התלות');
+      toast.error('שגיאה בניתוק התלות');
     }
   };
 
@@ -313,7 +314,7 @@ export default function GoalsTimelineNew({ customer }) {
         console.log('✅ Connections deleted successfully');
       } catch (error) {
         console.error('❌ Error deleting dependencies:', error);
-        alert('שגיאה בניתוק התלות');
+        toast.error('שגיאה בניתוק התלות');
       }
     },
     [goals, customer, queryClient]
@@ -401,7 +402,7 @@ export default function GoalsTimelineNew({ customer }) {
       link.click();
     } catch (error) {
       console.error('Error exporting timeline:', error);
-      alert('שגיאה בייצוא התרשים');
+      toast.error('שגיאה בייצוא התרשים');
       if (flowRef.current) {
         flowRef.current.classList.remove('exporting-mode');
       }

@@ -6,6 +6,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import GoalRow from './GoalRow';
 import { base44 } from '@/api/base44Client';
 
+import { toast } from "sonner";
 export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals, isDragging, isCollapsed, onToggleCollapse }) {
     const [isExpanded, setIsExpanded] = useState(!isCollapsed);
 
@@ -39,7 +40,7 @@ export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals
             }
         } catch (error) {
             console.error("Error adding subtask:", error);
-            alert("שגיאה בהוספת המשימה. נסה שוב.");
+            toast.error("שגיאה בהוספת המשימה. נסה שוב.");
         }
     };
 

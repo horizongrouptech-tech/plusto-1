@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
+import { toast } from "sonner";
 const STAGES = [
   { value: 'new', label: 'חדש' },
   { value: 'contacted', label: 'נוצר קשר' },
@@ -93,7 +94,7 @@ export default function LeadDetailModal({
       onUpdate();
     } catch (error) {
       console.error('Error updating lead:', error);
-      alert('שגיאה בעדכון הליד');
+      toast.error('שגיאה בעדכון הליד');
     } finally {
       setIsSaving(false);
     }

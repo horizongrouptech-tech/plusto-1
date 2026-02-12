@@ -10,6 +10,7 @@ import { formatCurrency } from "./utils/numberFormatter";
 import LoanManagerSection from "./LoanManagerSection";
 import { base44 } from '@/api/base44Client';
 import SaveProgressIndicator from './SaveProgressIndicator';
+import { toast } from "sonner";
 
 // מע״מ קבוע
 const VAT_RATE = 0.18;
@@ -220,7 +221,7 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
 
   const handleSaveProgress = async () => {
     if (!forecastData.forecast_name?.trim()) {
-      alert('נא להזין שם לתחזית לפני שמירה');
+      toast.warning('נא להזין שם לתחזית לפני שמירה');
       return;
     }
 
@@ -251,7 +252,7 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
     } catch (error) {
       console.error('Error saving:', error);
       setSaveStatus('error');
-      alert('שגיאה בשמירה: ' + error.message);
+      toast.error('שגיאה בשמירה: ' + error.message);
     } finally {
       setIsSaving(false);
     }

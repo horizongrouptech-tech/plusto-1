@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { he } from "date-fns/locale";
 import { base44 } from "@/api/base44Client";
 
+import { toast } from "sonner";
 export default function ClientActivityStatusEditor({ customer, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -32,7 +33,7 @@ export default function ClientActivityStatusEditor({ customer, onUpdate }) {
       setIsEditing(false);
     } catch (error) {
       console.error("Error updating activity status:", error);
-      alert('שגיאה בעדכון סטטוס הפעילות');
+      toast.error('שגיאה בעדכון סטטוס הפעילות');
     } finally {
       setIsSaving(false);
     }

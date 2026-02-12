@@ -37,6 +37,7 @@ import { formatCurrency } from "../utils/currencyFormatter";
 import { base44 } from '@/api/base44Client';
 import EditSupplierModal from "../shared/EditSupplierModal";
 
+import { toast } from "sonner";
 // פונקציית עזר לעיבוד נתוני הגרף לפי חודשים
 const processExpenseDataByMonth = (purchaseRecords) => {
   const monthlyData = {};
@@ -425,7 +426,7 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
                                 handleUploadComplete();
                               } catch (error) {
                                 console.error('Error deleting record:', error);
-                                alert('שגיאה במחיקת המסמך: ' + error.message);
+                                toast.error('שגיאה במחיקת המסמך: ' + error.message);
                               }
                             }
                           }}
@@ -716,7 +717,7 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
                   setShowManualEntryDialog(false);
                 } catch (error) {
                   console.error('Error creating purchase record:', error);
-                  alert('שגיאה ביצירת רכישה: ' + error.message);
+                  toast.error('שגיאה ביצירת רכישה: ' + error.message);
                 } finally {
                   setIsSaving(false);
                 }
@@ -899,7 +900,7 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
                   setShowEditDialog(false);
                 } catch (error) {
                   console.error('Error updating purchase record:', error);
-                  alert('שגיאה בעדכון המסמך: ' + error.message);
+                  toast.error('שגיאה בעדכון המסמך: ' + error.message);
                 } finally {
                   setIsSaving(false);
                 }

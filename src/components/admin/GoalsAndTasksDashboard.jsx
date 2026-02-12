@@ -43,6 +43,7 @@ import { syncTaskToFireberry } from '@/functions/syncTaskToFireberry';
 import { useUsers } from '../shared/UsersContext';
 import CreateTaskModalShared from '../shared/CreateTaskModal';
 
+import { toast } from "sonner";
 export default function GoalsAndTasksDashboard({ customer }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [showGanttView, setShowGanttView] = useState(false);
@@ -249,7 +250,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
         }
         
         await queryClient.invalidateQueries(['customerGoals', customer.email]);
-        alert(deleteSubtasks ? 'היעד וכל התת-משימות נמחקו בהצלחה' : 'היעד נמחק והתת-משימות הפכו לעצמאיות');
+        toast.success(deleteSubtasks ? 'היעד וכל התת-משימות נמחקו בהצלחה' : 'היעד נמחק והתת-משימות הפכו לעצמאיות');
       } catch (error) {
         console.error('Error deleting task:', error);
         
@@ -267,9 +268,9 @@ export default function GoalsAndTasksDashboard({ customer }) {
           }
           await base44.entities.CustomerGoal.update(taskId, { is_active: false });
           await queryClient.invalidateQueries(['customerGoals', customer.email]);
-          alert('היעד הוסתר (לא נמחק לחלוטין)');
+          toast.success('היעד הוסתר (לא נמחק לחלוטין)');
         } catch (updateError) {
-          alert('שגיאה במחיקת היעד: ' + error.message);
+          toast.error('שגיאה במחיקת היעד: ' + error.message);
         }
       }
     } else {
@@ -282,7 +283,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
         // נסה מחיקה רגילה
         await base44.entities.CustomerGoal.delete(taskId);
         await queryClient.invalidateQueries(['customerGoals', customer.email]);
-        alert('המשימה נמחקה בהצלחה');
+        toast.success('המשימה נמחקה בהצלחה');
       } catch (error) {
         console.error('Error deleting task (trying service role):', error);
         
@@ -292,7 +293,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
           if (taskToDelete) {
             await base44.asServiceRole.entities.CustomerGoal.delete(taskId);
             await queryClient.invalidateQueries(['customerGoals', customer.email]);
-            alert('המשימה נמחקה בהצלחה');
+            toast.success('המשימה נמחקה בהצלחה');
           }
         } catch (serviceRoleError) {
           console.error('Service role deletion also failed:', serviceRoleError);
@@ -300,9 +301,9 @@ export default function GoalsAndTasksDashboard({ customer }) {
           try {
             await base44.entities.CustomerGoal.update(taskId, { is_active: false });
             await queryClient.invalidateQueries(['customerGoals', customer.email]);
-            alert('המשימה הוסתרה (לא נמחקה לחלוטין)');
+            toast.success('המשימה הוסתרה (לא נמחקה לחלוטין)');
           } catch (updateError) {
-            alert('שגיאה במחיקת המשימה: ' + error.message);
+            toast.error('שגיאה במחיקת המשימה: ' + error.message);
           }
         }
       }
@@ -320,7 +321,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
       openPrintWindow(htmlContent, `יעדים_${customer.business_name || customer.email}`);
     } catch (error) {
       console.error('Error exporting goals PDF:', error);
-      alert('שגיאה בייצוא PDF');
+      toast.error('שגיאה בייצוא PDF');
     }
   };
 
@@ -848,15 +849,15 @@ function CreateTaskModal_OLD({ isOpen, onClose, customer, currentUser, allGoals,
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) {
-      alert('יש להזין שם למשימה');
+      toast.warning('יש להזין שם למשימה');
       return;
     }
     if (!startDate) {
-      alert('יש להזין תאריך התחלה');
+      toast.warning('יש להזין תאריך התחלה');
       return;
     }
     if (!endDate) {
-      alert('יש להזין תאריך סיום');
+      toast.warning('יש להזין תאריך סיום');
       return;
     }
 
@@ -929,7 +930,7 @@ function CreateTaskModal_OLD({ isOpen, onClose, customer, currentUser, allGoals,
       onSuccess();
     } catch (error) {
       console.error('Error creating task:', error);
-      alert('שגיאה ביצירת המשימה');
+      toast.error('שגיאה ביצירת המשימה');
     } finally {
       setIsSubmitting(false);
     }
@@ -1264,11 +1265,11 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!editedTask || !editedTask.name.trim()) {
-      alert('יש להזין שם למשימה');
+      toast.warning('יש להזין שם למשימה');
       return;
     }
     if (!editedTask.start_date || !editedTask.end_date) {
-      alert('יש להזין תאריכי התחלה וסיום');
+      toast.warning('יש להזין תאריכי התחלה וסיום');
       return;
     }
 
@@ -1331,7 +1332,7 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
       });
     } catch (error) {
       console.error('Error updating task:', error);
-      alert('שגיאה בעדכון המשימה');
+      toast.error('שגיאה בעדכון המשימה');
     } finally {
       setIsSubmitting(false);
     }
@@ -1583,7 +1584,7 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) {
-      alert('יש להזין שם ליעד');
+      toast.warning('יש להזין שם ליעד');
       return;
     }
 
@@ -1711,7 +1712,7 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
       onSuccess();
     } catch (error) {
       console.error('Error creating goal:', error);
-      alert('שגיאה ביצירת היעד');
+      toast.error('שגיאה ביצירת היעד');
     } finally {
       setIsSubmitting(false);
     }

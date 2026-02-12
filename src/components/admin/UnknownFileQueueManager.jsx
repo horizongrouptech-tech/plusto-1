@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
+import { toast } from "sonner";
 const STATUS_CONFIG = {
   pending: { label: 'ממתין', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', icon: AlertTriangle },
   reviewed: { label: 'נבדק', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: Eye },
@@ -87,7 +88,7 @@ export default function UnknownFileQueueManager() {
       setSelectedFile(null);
     } catch (error) {
       console.error('Error updating file:', error);
-      alert('שגיאה בעדכון');
+      toast.error('שגיאה בעדכון');
     } finally {
       setIsSaving(false);
     }
@@ -100,7 +101,7 @@ export default function UnknownFileQueueManager() {
       queryClient.invalidateQueries(['unknownFileQueue']);
     } catch (error) {
       console.error('Error deleting:', error);
-      alert('שגיאה במחיקה');
+      toast.error('שגיאה במחיקה');
     }
   };
 

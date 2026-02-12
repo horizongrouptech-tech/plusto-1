@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowRight, ArrowLeft, Save, Loader2, CheckCircle2, AlertCircle, Package, Download, FileText, BarChart3, PieChart, Table, TrendingUp, ShoppingBag } from "lucide-react";
 import { base44 } from '@/api/base44Client';
+import { toast } from "sonner";
 
 import Step1ServicesAndCosts from './Step1ServicesAndCosts';
 import Step2SalaryCosts from './Step2SalaryCosts';
@@ -381,7 +382,7 @@ export default function ManualForecastWizard({
     }
 
     if (!forecastData.forecast_name?.trim()) {
-      alert('נא להזין שם לתחזית');
+      toast.warning('נא להזין שם לתחזית');
       return;
     }
 
@@ -399,7 +400,7 @@ export default function ManualForecastWizard({
       
       setLastSaved(new Date());
       setSaveStatus('saved');
-      alert('התחזית נשמרה בהצלחה!');
+      toast.success('התחזית נשמרה בהצלחה!');
       
       if (onSave) {
         onSave();
@@ -407,7 +408,7 @@ export default function ManualForecastWizard({
     } catch (error) {
       console.error('Error saving forecast:', error);
       setSaveStatus('error');
-      alert('שגיאה בשמירת התחזית: ' + error.message);
+      toast.error('שגיאה בשמירת התחזית: ' + error.message);
     } finally {
       setIsSaving(false);
     }
@@ -416,7 +417,7 @@ export default function ManualForecastWizard({
   // Open export dialog
   const handleOpenExportDialog = () => {
     if (!forecastData.id) {
-      alert('יש לשמור את התחזית לפני ייצוא ל-PDF');
+      toast.warning('יש לשמור את התחזית לפני ייצוא ל-PDF');
       return;
     }
     setShowExportDialog(true);
@@ -446,7 +447,7 @@ export default function ManualForecastWizard({
       setShowExportDialog(false);
     } catch (error) {
       console.error('Error exporting PDF:', error);
-      alert('שגיאה בייצוא PDF');
+      toast.error('שגיאה בייצוא PDF');
     } finally {
       setIsExporting(false);
     }

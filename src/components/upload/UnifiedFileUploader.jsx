@@ -41,6 +41,7 @@ import SalesReportViewer from "@/components/shared/SalesReportViewer";
 import PromotionsReportViewer from "@/components/shared/PromotionsReportViewer";
 import ESNAReportViewer from "@/components/shared/ESNAReportViewer";
 import DeeperInsightsModal from "@/components/shared/DeeperInsightsModal";
+import { toast } from "sonner";
 
 const FILE_CATEGORIES = [
   { value: 'inventory_report', label: 'דוח מלאי', icon: Package },
@@ -178,12 +179,12 @@ export default function UnifiedFileUploader({ customerEmail, onUploadComplete })
     if (!file) return;
 
     if (!selectedCategory) {
-      alert('אנא בחר סוג מסמך לפני העלאה');
+      toast.warning('אנא בחר סוג מסמך לפני העלאה');
       return;
     }
 
     if (selectedCategory === 'other' && !customFileName.trim()) {
-      alert('אנא הכנס שם/תיאור למסמך');
+      toast.warning('אנא הכנס שם/תיאור למסמך');
       return;
     }
 
@@ -615,7 +616,7 @@ ${rawDataForPrompt}
       }
       
       // הודעה ידידותית למשתמש
-      alert('⚠️ הקובץ לא הועלה בהצלחה\n\nהקובץ הועבר לטיפול מנהל המערכת ונבדק בהקדם.\nתוכל לראות את הסטטוס בעדכונים שיישלחו אליך.');
+      toast.error('⚠️ הקובץ לא הועלה בהצלחה\n\nהקובץ הועבר לטיפול מנהל המערכת ונבדק בהקדם.\nתוכל לראות את הסטטוס בעדכונים שיישלחו אליך.');
       setProcessingStatus('הקובץ הועבר לטיפול מנהל המערכת');
       setFinalStatus('error');
     } finally {

@@ -19,6 +19,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Target, CheckCircle, Circle, AlertCircle, MessageSquare, Send } from 'lucide-react';
 import MentionInput from '@/components/shared/MentionInput';
 
+import { toast } from "sonner";
 // נתוני השלבים מתוך ה-PDF - עדכון מדויק למלל המקורי
 const OFEK_360_STEPS = [
 {
@@ -345,7 +346,7 @@ export default function Ofek360Modal({ customer, isOpen, onClose }) {
       queryClient.invalidateQueries(['ofek360Model', customer.email]);
     } catch (error) {
       console.error('Error updating monthly status:', error);
-      alert('שגיאה בעדכון הסטטוס החודשי');
+      toast.error('שגיאה בעדכון הסטטוס החודשי');
     }
   };
 

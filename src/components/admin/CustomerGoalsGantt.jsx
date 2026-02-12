@@ -11,6 +11,7 @@ import { openPrintWindow } from '../shared/printUtils';
 import GoalTemplateSelector from '../trial/GoalTemplateSelector';
 import { useUsers } from '../shared/UsersContext';
 
+import { toast } from "sonner";
 export default function CustomerGoalsGantt({ customer }) {
     const [goals, setGoals] = useState([]);
     const [currentUser, setCurrentUser] = useState(null);
@@ -162,7 +163,7 @@ export default function CustomerGoalsGantt({ customer }) {
             openPrintWindow(htmlContent, `יעדים_${customer.business_name || customer.email}`);
         } catch (error) {
             console.error('Error exporting goals PDF:', error);
-            alert('שגיאה בייצוא PDF');
+            toast.error('שגיאה בייצוא PDF');
         }
     };
 

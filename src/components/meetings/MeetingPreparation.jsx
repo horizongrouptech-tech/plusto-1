@@ -13,6 +13,7 @@ import {
 import { format, formatDistanceToNow, differenceInDays, isAfter } from 'date-fns';
 import { he } from 'date-fns/locale';
 import SystemCredentialsForm from './SystemCredentialsForm';
+import { toast } from "sonner";
 import ProductCatalogSection from './ProductCatalogSection';
 
 // משימות דפולטיביות לפגישה ראשונה
@@ -140,7 +141,7 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
       queryClient.invalidateQueries(['customerMeetings', customer.email]);
     } catch (error) {
       console.error('Error marking first meeting:', error);
-      alert('שגיאה בסימון פגישה ראשונה');
+      toast.error('שגיאה בסימון פגישה ראשונה');
     } finally {
       setIsMarkingFirstMeeting(false);
     }
@@ -171,7 +172,7 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
       setPreparationModal(response);
     } catch (error) {
       console.error('Error generating preparation:', error);
-      alert('שגיאה בייצור הכנה. אנא נסו שוב.');
+      toast.error('שגיאה בייצור הכנה. אנא נסו שוב.');
     } finally {
       setIsLoadingPreparation(false);
     }

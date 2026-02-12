@@ -13,6 +13,7 @@ import {
 import { ManagerConversation } from "@/entities/ManagerConversation";
 import { ManagerMessage } from "@/entities/ManagerMessage";
 import { User } from "@/entities/User";
+import { toast } from "sonner";
 import { Notification } from "@/entities/Notification"; // Added import for Notification
 
 export default function ManagerChatSystem({ 
@@ -186,7 +187,7 @@ export default function ManagerChatSystem({
       
     } catch (error) {
       console.error('Error sending message:', error);
-      alert('שגיאה בשליחת ההודעה');
+      toast.error('שגיאה בשליחת ההודעה');
     }
   };
 

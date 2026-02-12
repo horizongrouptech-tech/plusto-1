@@ -24,6 +24,7 @@ import { OnboardingRequest } from "@/entities/OnboardingRequest";
 import { approveOnboardingRequest } from '@/functions/approveOnboardingRequest';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+import { toast } from "sonner";
 export default function OnboardingRequestsModal({ isOpen, onClose }) {
   const [requests, setRequests] = useState([]);
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -149,7 +150,7 @@ export default function OnboardingRequestsModal({ isOpen, onClose }) {
 
       if (approvalResponse.data?.success) {
         setApprovalStatus('הבקשה אושרה בהצלחה!');
-        alert('הלקוח אושר בהצלחה! ניתן לנהל אותו דרך רשימת הבקשות המאושרות.');
+        toast.success('הלקוח אושר בהצלחה! ניתן לנהל אותו דרך רשימת הבקשות המאושרות.');
         await loadRequests(); // רענון הרשימה
         setSelectedRequest(null); // סגור את תצוגת הבקשה
       } else {
@@ -159,7 +160,7 @@ export default function OnboardingRequestsModal({ isOpen, onClose }) {
     } catch (error) {
       console.error("Approval process failed:", error);
       setApprovalStatus(`שגיאה: ${error.message}`);
-      alert(`שגיאה בתהליך האישור: ${error.message}`);
+      toast.error(`שגיאה בתהליך האישור: ${error.message}`);
     } finally {
       setIsApproving(false);
     }
@@ -191,7 +192,7 @@ export default function OnboardingRequestsModal({ isOpen, onClose }) {
       ));
 
       setApprovalStatus('האישור בוטל בהצלחה');
-      alert('האישור בוטל בהצלחה. הבקשה חזרה למצב "ממתין".');
+      toast.success('האישור בוטל בהצלחה. הבקשה חזרה למצב "ממתין".');
       
       setTimeout(() => {
         setApprovalStatus('');
@@ -200,7 +201,7 @@ export default function OnboardingRequestsModal({ isOpen, onClose }) {
     } catch (error) {
       console.error("Error revoking approval:", error);
       setApprovalStatus(`שגיאה בביטול האישור: ${error.message}`);
-      alert(`שגיאה בביטול האישור: ${error.message}`);
+      toast.error(`שגיאה בביטול האישור: ${error.message}`);
     } finally {
       setIsRevoking(false);
     }

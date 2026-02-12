@@ -9,6 +9,7 @@ import { CommunicationThread } from "@/entities/CommunicationThread";
 import { ChatMessage } from "@/entities/ChatMessage";
 import { Notification } from "@/entities/Notification";
 import { User } from "@/entities/User";
+import { toast } from "sonner";
 
 export default function ChatBox({ 
   relatedEntityId, 
@@ -229,7 +230,7 @@ export default function ChatBox({
 
     } catch (error) {
       console.error("Error sending message:", error);
-      alert('שגיאה בשליחת ההודעה');
+      toast.error('שגיאה בשליחת ההודעה');
     }
     setIsSending(false);
   };

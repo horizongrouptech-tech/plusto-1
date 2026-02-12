@@ -1,0 +1,188 @@
+{
+  "name": "BusinessMove",
+  "type": "object",
+  "properties": {
+    "customer_email": {
+      "type": "string",
+      "description": "אימייל הלקוח המשויך למהלך"
+    },
+    "title": {
+      "type": "string",
+      "description": "כותרת המהלך האסטרטגי"
+    },
+    "description": {
+      "type": "string",
+      "description": "תיאור מפורט של המהלך"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "growth",
+        "efficiency",
+        "market_expansion",
+        "digital_transformation",
+        "cost_reduction",
+        "innovation"
+      ],
+      "description": "קטגוריית המהלך האסטרטגי"
+    },
+    "expected_impact": {
+      "type": "number",
+      "description": "השפעה כספית צפויה בשקלים (לטווח ארוך)"
+    },
+    "impact_percentage": {
+      "type": "number",
+      "description": "שיפור צפוי באחוזים"
+    },
+    "implementation_complexity": {
+      "type": "string",
+      "enum": [
+        "simple",
+        "moderate",
+        "complex"
+      ],
+      "description": "מורכבות יישום המהלך"
+    },
+    "timeframe": {
+      "type": "string",
+      "description": "טווח זמן ליישום (חודשים/שנים)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "pending_approval",
+        "approved_by_admin",
+        "in_progress",
+        "completed",
+        "cancelled"
+      ],
+      "default": "draft",
+      "description": "סטטוס המהלך"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "description": "עדיפות המהלך"
+    },
+    "implementation_phases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "phase_name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "string"
+          },
+          "key_activities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "success_metrics": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "description": "שלבי היישום של המהלך"
+    },
+    "required_resources": {
+      "type": "object",
+      "properties": {
+        "budget": {
+          "type": "number"
+        },
+        "team_size": {
+          "type": "number"
+        },
+        "external_support": {
+          "type": "string"
+        }
+      },
+      "description": "משאבים נדרשים ליישום"
+    },
+    "risk_factors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "גורמי סיכון ואתגרים"
+    },
+    "success_indicators": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "מדדי הצלחה למעקב"
+    },
+    "market_analysis": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "ניתוח שוק רלוונטי למהלך"
+    },
+    "competitive_advantage": {
+      "type": "string",
+      "description": "היתרון התחרותי שהמהלך יביא"
+    },
+    "admin_notes": {
+      "type": "string",
+      "description": "הערות מנהל (לצוות Horizon)"
+    },
+    "published_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "תאריך פרסום ע\"י אדמין"
+    },
+    "delivery_status": {
+      "type": "string",
+      "enum": [
+        "not_sent",
+        "sent",
+        "delivered",
+        "failed"
+      ],
+      "default": "not_sent",
+      "description": "סטטוס מסירת המהלך ללקוח"
+    },
+    "progress_tracking": {
+      "type": "object",
+      "properties": {
+        "current_phase": {
+          "type": "number"
+        },
+        "completion_percentage": {
+          "type": "number"
+        },
+        "last_update": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "מעקב התקדמות המהלך"
+    }
+  },
+  "required": [
+    "title",
+    "description",
+    "category"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

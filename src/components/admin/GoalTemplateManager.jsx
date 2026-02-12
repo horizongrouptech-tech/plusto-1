@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Edit3, Trash2, Copy, Lightbulb, Loader2, ShieldAlert } from 'lucide-react';
 import { canEditGoalTemplates } from '../utils/goalTemplatePermissions';
 
+import { toast } from "sonner";
 export default function GoalTemplateManager() {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
@@ -70,12 +71,12 @@ export default function GoalTemplateManager() {
 
   const handleSave = async () => {
     if (!canEdit) {
-      alert('אין לך הרשאות לערוך תבניות');
+      toast.warning('אין לך הרשאות לערוך תבניות');
       return;
     }
 
     if (!formData.template_name || !formData.goal_title) {
-      alert('נא למלא שם תבנית וכותרת יעד');
+      toast.warning('נא למלא שם תבנית וכותרת יעד');
       return;
     }
 
@@ -95,7 +96,7 @@ export default function GoalTemplateManager() {
       queryClient.invalidateQueries(['goalTemplates']);
       setShowModal(false);
     } catch (error) {
-      alert('שגיאה בשמירה: ' + error.message);
+      toast.error('שגיאה בשמירה: ' + error.message);
     } finally {
       setIsSaving(false);
     }
@@ -103,7 +104,7 @@ export default function GoalTemplateManager() {
 
   const handleDelete = async (templateId) => {
     if (!canEdit) {
-      alert('אין לך הרשאות למחוק תבניות');
+      toast.warning('אין לך הרשאות למחוק תבניות');
       return;
     }
 
@@ -113,7 +114,7 @@ export default function GoalTemplateManager() {
       await base44.entities.GoalTemplate.update(templateId, { is_active: false });
       queryClient.invalidateQueries(['goalTemplates']);
     } catch (error) {
-      alert('שגיאה במחיקה: ' + error.message);
+      toast.error('שגיאה במחיקה: ' + error.message);
     }
   };
 

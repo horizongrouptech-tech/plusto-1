@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ManagerAssignmentBoard from './ManagerAssignmentBoard';
 
 
+import { toast } from "sonner";
 export default function ClientManagementDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showInactive, setShowInactive] = useState(false);
@@ -214,7 +215,7 @@ export default function ClientManagementDashboard() {
 
   const handleToggleClientStatus = async (client) => {
     if (client.source !== 'user' && client.source !== 'onboarding') {
-      alert('לא ניתן לשנות סטטוס ללקוח זה.');
+      toast.warning('לא ניתן לשנות סטטוס ללקוח זה.');
       return;
     }
     
@@ -248,7 +249,7 @@ export default function ClientManagementDashboard() {
         queryClient.invalidateQueries(['allAdminClientsAndOnboarding']);
       } catch (error) {
         console.error(`Error toggling client status:`, error);
-        alert(`שגיאה ב${action} הלקוח.`);
+        toast.error(`שגיאה ב${action} הלקוח.`);
       }
     }
   };
@@ -281,7 +282,7 @@ export default function ClientManagementDashboard() {
 
       console.log('Onboarding automation triggered:', approvalResult);
 
-      alert(`הלקוח ${formData.business_name} נוצר בהצלחה! תהליכי האוטומציה (יצירת קטלוג, המלצות ועוד) יסתיימו תוך מספר דקות.`);
+      toast.success(`הלקוח ${formData.business_name} נוצר בהצלחה! תהליכי האוטומציה (יצירת קטלוג, המלצות ועוד) יסתיימו תוך מספר דקות.`);
 
       queryClient.invalidateQueries(['allAdminClientsAndOnboarding']);
       queryClient.invalidateQueries(['allUsers']);
@@ -290,7 +291,7 @@ export default function ClientManagementDashboard() {
 
     } catch (error) {
       console.error('Error creating onboarding customer:', error);
-      alert('שגיאה ביצירת הלקוח: ' + error.message);
+      toast.error('שגיאה ביצירת הלקוח: ' + error.message);
     } finally {
       setIsSubmittingNewOnboarding(false);
     }
@@ -312,7 +313,7 @@ export default function ClientManagementDashboard() {
       setClientToAssign(null);
     } catch (error) {
       console.error('Error assigning manager:', error);
-      alert('שגיאה בשיוך מנהל כספים');
+      toast.error('שגיאה בשיוך מנהל כספים');
     }
   };
 

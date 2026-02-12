@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Package, Barcode, DollarSign, TrendingUp, Calculator } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
+import { toast } from "sonner";
 export default function ProductAddForm({ 
   customer, 
   selectedCatalogId, 
@@ -63,7 +64,7 @@ export default function ProductAddForm({
     }
 
     if (!selectedCatalogId) {
-      alert('יש לבחור קטלוג תחילה');
+      toast.warning('יש לבחור קטלוג תחילה');
       return;
     }
 
@@ -114,7 +115,7 @@ export default function ProductAddForm({
       }
     } catch (error) {
       console.error('Error adding product:', error);
-      alert('שגיאה בהוספת המוצר: ' + error.message);
+      toast.error('שגיאה בהוספת המוצר: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }

@@ -5,6 +5,7 @@ import { Loader2, Trash2, Edit, Edit3, Plus } from "lucide-react";
 import { ProductCatalog } from "@/entities/ProductCatalog";
 import ProductAddForm from './ProductAddForm';
 import ProductEditModal from './ProductEditModal';
+import { toast } from "sonner";
 import { cn } from "@/lib/utils"; // Assuming cn utility is available for styling
 
 export default function ManualProductManagement({ customer, selectedCatalogId, disabled }) {
@@ -54,7 +55,7 @@ export default function ManualProductManagement({ customer, selectedCatalogId, d
       setProducts(catalogData);
     } catch (error) {
       console.error("Error loading products for manual management:", error);
-      alert("שגיאה בטעינת המוצרים.");
+      toast.error("שגיאה בטעינת המוצרים.");
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +76,7 @@ export default function ManualProductManagement({ customer, selectedCatalogId, d
     const errors = validateProduct(updatedProduct);
     if (Object.keys(errors).length > 0) {
       const errorMessages = Object.values(errors).join('\n');
-      alert("שגיאות עדכון מוצר:\n" + errorMessages);
+      toast.error("שגיאות עדכון מוצר:\n" + errorMessages);
       return;
     }
 
@@ -95,7 +96,7 @@ export default function ManualProductManagement({ customer, selectedCatalogId, d
       await loadProducts();
     } catch (error) {
       console.error("Error updating product:", error);
-      alert("שגיאה בעדכון המוצר: " + error.message);
+      toast.error("שגיאה בעדכון המוצר: " + error.message);
     }
   };
 
@@ -106,7 +107,7 @@ export default function ManualProductManagement({ customer, selectedCatalogId, d
       await loadProducts();
     } catch (error) {
       console.error("Error deleting product:", error);
-      alert("שגיאה במחיקת המוצר: " + error.message);
+      toast.error("שגיאה במחיקת המוצר: " + error.message);
     }
   };
   

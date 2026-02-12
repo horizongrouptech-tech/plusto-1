@@ -13,6 +13,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 export default function ManageProductsPage() {
   const [products, setProducts] = useState([]);
@@ -53,7 +54,7 @@ export default function ManageProductsPage() {
         loadProducts(); // Refresh list
       } catch (error) {
         console.error("Error deleting product:", error);
-        alert("שגיאה במחיקת המוצר.");
+        toast.error("שגיאה במחיקת המוצר.");
       }
     }
   };
@@ -83,7 +84,7 @@ export default function ManageProductsPage() {
       loadProducts(); // Refresh list
     } catch (error) {
       console.error("Error updating product:", error);
-      alert("שגיאה בעדכון המוצר.");
+      toast.error("שגיאה בעדכון המוצר.");
     }
   };
 

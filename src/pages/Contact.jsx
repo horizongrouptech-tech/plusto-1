@@ -8,12 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Phone, Mail, MapPin, Send, Building, Link as LinkIcon, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { toast } from "sonner";
 
 export default function ContactPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     // Add form submission logic here if needed (e.g., send email via integration)
-    alert("ההודעה נשלחה בהצלחה!");
+    toast.success("ההודעה נשלחה בהצלחה!");
     e.target.reset();
   };
 

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, AlertTriangle } from "lucide-react";
 
+import { toast } from "sonner";
 export default function ProductEditModal({ product, isOpen, onClose, onSave }) {
   const [formData, setFormData] = useState({
     product_name: '',
@@ -99,7 +100,7 @@ export default function ProductEditModal({ product, isOpen, onClose, onSave }) {
       });
     } catch (error) {
       console.error('Error saving product:', error);
-      alert('שגיאה בשמירת המוצר');
+      toast.error('שגיאה בשמירת המוצר');
     } finally {
       setIsSaving(false);
     }

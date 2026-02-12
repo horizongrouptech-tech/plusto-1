@@ -9,6 +9,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Search, Save, UserPlus, Users, X, Plus } from 'lucide-react';
 import { getFinancialManagers } from '@/functions/getFinancialManagers';
+import { toast } from "sonner";
 
 export default function ManagerAssignmentTab({ customer, currentUser }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -129,10 +130,10 @@ export default function ManagerAssignmentTab({ customer, currentUser }) {
       
       queryClient.invalidateQueries(['onboardingRequests']);
       setHasChanges(false);
-      alert(`עודכנו ${updates.length} שיוכים בהצלחה`);
+      toast.success(`עודכנו ${updates.length} שיוכים בהצלחה`);
     } catch (error) {
       console.error('Error saving assignments:', error);
-      alert('שגיאה בשמירת השיוכים: ' + error.message);
+      toast.error('שגיאה בשמירת השיוכים: ' + error.message);
     } finally {
       setIsSaving(false);
     }

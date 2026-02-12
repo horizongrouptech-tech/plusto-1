@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+
 /**
  * פתיחת חלון הדפסה עם HTML תוכן
  * @param {string} htmlContent - HTML string להדפסה
@@ -7,7 +9,7 @@ export const openPrintWindow = (htmlContent, filename = 'report') => {
   const printWindow = window.open('', '_blank', 'width=1200,height=800');
   
   if (!printWindow) {
-    alert('נא לאפשר pop-ups בדפדפן כדי לייצא PDF');
+    toast.warning('נא לאפשר pop-ups בדפדפן כדי לייצא PDF');
     return;
   }
 

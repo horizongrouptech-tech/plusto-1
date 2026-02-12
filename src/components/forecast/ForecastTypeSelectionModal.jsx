@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Bot, Edit3, TrendingUp, FileSpreadsheet, CheckCircle, Package } from 'lucide-react';
+import { toast } from "sonner";
 
 export default function ForecastTypeSelectionModal({
   isOpen,
@@ -20,7 +21,7 @@ export default function ForecastTypeSelectionModal({
 
   const handleContinue = () => {
     if (!forecastName.trim()) {
-      alert('יש להזין שם לתחזית');
+      toast.warning('יש להזין שם לתחזית');
       return;
     }
 

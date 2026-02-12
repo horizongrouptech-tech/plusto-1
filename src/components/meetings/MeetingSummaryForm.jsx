@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Plus, X, AlertCircle } from 'lucide-react';
+import { toast } from "sonner";
 
 export default function MeetingSummaryForm({ onSave, onCancel, initialCategory = '' }) {
   const categories = [
@@ -22,12 +23,12 @@ export default function MeetingSummaryForm({ onSave, onCancel, initialCategory =
 
   const handleAddPoint = () => {
     if (!itemName.trim()) {
-      alert('נא להזין נקודה');
+      toast.warning('נא להזין נקודה');
       return;
     }
 
     if (keyPoints.length >= 5) {
-      alert('ניתן להוסיף עד 5 נקודות בלבד');
+      toast.warning('ניתן להוסיף עד 5 נקודות בלבד');
       return;
     }
 
@@ -48,7 +49,7 @@ export default function MeetingSummaryForm({ onSave, onCancel, initialCategory =
 
   const handleSave = () => {
     if (keyPoints.length === 0) {
-      alert('נא להוסיף לפחות נקודה אחת');
+      toast.warning('נא להוסיף לפחות נקודה אחת');
       return;
     }
     onSave(keyPoints);

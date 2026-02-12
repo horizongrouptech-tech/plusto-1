@@ -28,3 +28,6 @@ dist-ssr
 *.sw?
 
 .env
+
+# Base44
+base44/.app.jsonc

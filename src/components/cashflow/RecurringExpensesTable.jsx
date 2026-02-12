@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Link as LinkIcon, Save, Check, RefreshCw, Calendar, FileText, Tag, CheckCircle2, AlertCircle } from 'lucide-react';
 import { format, subMonths } from 'date-fns';
 
+import { toast } from "sonner";
 const MONTH_NAMES = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 
 const ITEMS_PER_PAGE = 15;
@@ -114,7 +115,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
       });
 
       if (cashFlowEntries.length === 0) {
-        alert('לא נמצאו תנועות בטווח התאריכים הנבחר');
+        toast.warning('לא נמצאו תנועות בטווח התאריכים הנבחר');
         return;
       }
 
@@ -226,10 +227,10 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
 
       queryClient.invalidateQueries(['recurringExpenses', customer.email]);
       setLastCalcDate(calcDateRange.start);
-      alert(`הוצאות קבועות עודכנו! נמצאו ${Object.keys(categorySums).length} קטגוריות`);
+      toast.success(`הוצאות קבועות עודכנו! נמצאו ${Object.keys(categorySums).length} קטגוריות`);
     } catch (error) {
       console.error('Error recalculating:', error);
-      alert('שגיאה בעדכון הוצאות קבועות: ' + error.message);
+      toast.error('שגיאה בעדכון הוצאות קבועות: ' + error.message);
     } finally {
       setIsRecalculating(false);
     }
@@ -306,7 +307,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
   // שיוך הוצאה לתחזית
   const handleLinkToForecast = async () => {
     if (!selectedForecastId || !selectedExpenseForLink) {
-      alert('יש לבחור תחזית');
+      toast.warning('יש לבחור תחזית');
       return;
     }
 
@@ -315,7 +316,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
     const hasNewExpenseName = newExpenseName && newExpenseName.trim();
     
     if (!hasExistingSelection && !hasNewExpenseName) {
-      alert('יש לבחור פריט הוצאה קיים או למלא שם לפריט חדש');
+      toast.warning('יש לבחור פריט הוצאה קיים או למלא שם לפריט חדש');
       return;
     }
 
@@ -455,7 +456,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
 
     } catch (error) {
       console.error('Error linking to forecast:', error);
-      alert('שגיאה בשיוך לתחזית: ' + error.message);
+      toast.error('שגיאה בשיוך לתחזית: ' + error.message);
     } finally {
       setIsLinking(false);
     }

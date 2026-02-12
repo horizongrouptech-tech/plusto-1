@@ -7,6 +7,7 @@ import { base44 } from "@/api/base44Client";
 import ManualForecastWizard from "./manual/ManualForecastWizard";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
+import { toast } from "sonner";
 
 export default function ManualForecastManager({ 
   customer,
@@ -44,7 +45,7 @@ export default function ManualForecastManager({
     mutationFn: (id) => base44.entities.ManualForecast.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['manualForecasts']);
-      alert('התחזית נמחקה בהצלחה');
+      toast.success('התחזית נמחקה בהצלחה');
     }
   });
 
@@ -93,7 +94,7 @@ export default function ManualForecastManager({
       a.remove();
     } catch (error) {
       console.error('Error exporting PDF:', error);
-      alert('שגיאה בייצוא PDF');
+      toast.error('שגיאה בייצוא PDF');
     }
   };
 

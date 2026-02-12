@@ -19,6 +19,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, Plus, Save, Trash2, Edit3, Loader2, User } from 'lucide-react';
 import EnhancedOrgNode from './EnhancedOrgNode';
+import { toast } from "sonner";
 
 // Custom Organization Node with Handles (Fallback - kept for compatibility)
 const OrgNode = ({ data }) => {
@@ -269,7 +270,7 @@ export default function OrganizationChartBuilder({ customer }) {
         console.log('✅ Connections deleted successfully');
       } catch (error) {
         console.error('❌ Error deleting connection:', error);
-        alert('שגיאה במחיקת החיבור');
+        toast.error('שגיאה במחיקת החיבור');
       }
     },
     [orgChart, queryClient, customer]
@@ -303,7 +304,7 @@ export default function OrganizationChartBuilder({ customer }) {
 
   const handleSaveNode = async () => {
     if (!formData.name || !formData.role) {
-      alert('יש למלא שם ותפקיד');
+      toast.warning('יש למלא שם ותפקיד');
       return;
     }
 
@@ -351,7 +352,7 @@ export default function OrganizationChartBuilder({ customer }) {
       setShowAddModal(false);
     } catch (error) {
       console.error('Error saving node:', error);
-      alert('שגיאה בשמירה');
+      toast.error('שגיאה בשמירה');
     } finally {
       setIsSaving(false);
     }
@@ -379,7 +380,7 @@ export default function OrganizationChartBuilder({ customer }) {
       queryClient.invalidateQueries(['orgChart', customer.email]);
     } catch (error) {
       console.error('Error deleting node:', error);
-      alert('שגיאה במחיקה');
+      toast.error('שגיאה במחיקה');
     }
   };
 

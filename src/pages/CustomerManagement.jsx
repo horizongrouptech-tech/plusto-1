@@ -30,6 +30,7 @@ import ManualRecommendationModal from '@/components/admin/ManualRecommendationMo
 import CustomerSuppliersTab from '@/components/admin/CustomerSuppliersTab';
 import CustomerGroupSelector from '../components/admin/CustomerGroupSelector';
 import { useGlobalToast } from '@/hooks/useGlobalToast';
+import { toast } from "sonner";
 import EditCustomerModal from '@/components/admin/EditCustomerModal';
 import UnifiedForecastManager from '@/components/forecast/UnifiedForecastManager';
 import FloatingAgentChat from '@/components/admin/FloatingAgentChat';
@@ -368,7 +369,7 @@ export default function CustomerManagement() {
       queryClient.invalidateQueries({ queryKey: ['customerRecommendations', customer.email] });
     } catch (error) {
       console.error('Error deleting recommendation:', error);
-      alert('שגיאה במחיקת ההמלצה');
+      toast.error('שגיאה במחיקת ההמלצה');
     }
   };
 
@@ -417,10 +418,10 @@ export default function CustomerManagement() {
         focus_categories: selectedCategories
       });
       queryClient.invalidateQueries({ queryKey: ['customerRecommendations', customer.email] });
-      alert('המלצות נוצרו בהצלחה!');
+      toast.success('המלצות נוצרו בהצלחה!');
     } catch (error) {
       console.error('Error generating recommendations:', error);
-      alert('שגיאה ביצירת המלצות');
+      toast.error('שגיאה ביצירת המלצות');
     } finally {
       setIsGeneratingRecommendations(false);
     }
