@@ -67,11 +67,13 @@ export default function SupplierPreviewModal({
                 {supplier.category}
               </Badge>
             )}
+            {/* commented out - partner supplier feature disabled for now
             {supplier.is_partner_supplier && (
               <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/50">
                 ספק שותף
               </Badge>
             )}
+            */}
           </div>
 
           {/* דירוג */}

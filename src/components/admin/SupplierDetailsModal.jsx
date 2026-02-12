@@ -194,6 +194,7 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
     );
   };
 
+  /* commented out - partner supplier feature disabled for now
   const renderSupplierStatus = () => {
     if (supplier.is_partner_supplier) {
       return (
@@ -208,6 +209,7 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
       </Badge>
     );
   };
+  */
 
   if (!supplier) return null;
 
@@ -246,10 +248,12 @@ export default function SupplierDetailsModal({ supplier, customerEmail, isOpen, 
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                {/* commented out - partner supplier feature disabled for now
                 <div className="flex items-center justify-between">
                   <span className="text-horizon-accent">סטטוס:</span>
                   {renderSupplierStatus()}
                 </div>
+                */}
                 
                 <div className="flex items-center justify-between">
                   <span className="text-horizon-accent">דירוג:</span>

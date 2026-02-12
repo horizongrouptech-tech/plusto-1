@@ -176,10 +176,12 @@ export default function EditSupplierModal({ isOpen, onClose, supplier, onUpdate 
               <Label htmlFor="is_active" className="text-horizon-text">ספק פעיל</Label>
               <Switch id="is_active" checked={formData.is_active} onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })} disabled={isSubmitting} />
             </div>
+            {/* commented out - partner supplier feature disabled for now
             <div className="flex items-center space-x-2">
               <Label htmlFor="is_partner_supplier" className="text-horizon-text">ספק שותף</Label>
               <Switch id="is_partner_supplier" checked={formData.is_partner_supplier} onCheckedChange={(checked) => setFormData({ ...formData, is_partner_supplier: checked })} disabled={isSubmitting} />
             </div>
+            */}
           </div>
           
           <div className="flex justify-end space-x-2 pt-6">

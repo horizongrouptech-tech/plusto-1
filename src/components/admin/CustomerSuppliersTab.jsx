@@ -251,20 +251,20 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
 
   };
 
+  /* commented out - partner supplier feature disabled for now
   const renderSupplierStatus = (supplier) => {
     if (supplier.is_partner_supplier) {
       return (
         <Badge className="bg-orange-500 text-white border-orange-600 font-semibold">
           ספק שותף
         </Badge>);
-
     }
     return (
       <Badge variant="outline" className="text-gray-900 px-2.5 py-0.5 text-xs font-semibold rounded-full inline-flex items-center border transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-horizon-secondary">
         ספק רגיל
       </Badge>);
-
   };
+  */
 
   const renderCategoryBadge = (category) => {
     if (!category) return null;
@@ -380,7 +380,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                     <TableRow className="bg-horizon-card hover:bg-horizon-card/80">
                       <TableHead className="text-right text-horizon-accent">שם הספק</TableHead>
                       <TableHead className="text-right text-horizon-accent">סוג</TableHead>
-                      <TableHead className="text-right text-horizon-accent">סטטוס</TableHead>
+                      {/* <TableHead className="text-right text-horizon-accent">סטטוס</TableHead> */}
                       <TableHead className="text-right text-horizon-accent">איש קשר</TableHead>
                       <TableHead className="text-right text-horizon-accent">טלפון</TableHead>
                       <TableHead className="text-right text-horizon-accent">דירוג</TableHead>
@@ -396,7 +396,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                           </Button>
                         </TableCell>
                         <TableCell className="text-right">{renderCategoryBadge(supplier.category)}</TableCell>
-                        <TableCell className="text-right">{renderSupplierStatus(supplier)}</TableCell>
+                        {/* <TableCell className="text-right">{renderSupplierStatus(supplier)}</TableCell> */}
                         <TableCell className="text-horizon-accent text-right">{supplier.contact_person || '-'}</TableCell>
                         <TableCell className="text-horizon-accent text-right" dir="ltr">
                           {supplier.phone ?
@@ -452,7 +452,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                     <TableRow className="bg-horizon-card hover:bg-horizon-card/80">
                       <TableHead className="text-right text-horizon-accent">שם הספק</TableHead>
                       <TableHead className="text-right text-horizon-accent">סוג</TableHead>
-                      <TableHead className="text-right text-horizon-accent">סטטוס</TableHead>
+                      {/* <TableHead className="text-right text-horizon-accent">סטטוס</TableHead> */}
                       <TableHead className="text-right text-horizon-accent">איש קשר</TableHead>
                       <TableHead className="text-right text-horizon-accent">טלפון</TableHead>
                       <TableHead className="text-right text-horizon-accent">דירוג</TableHead>
@@ -468,7 +468,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                           </Button>
                         </TableCell>
                         <TableCell className="text-right">{renderCategoryBadge(supplier.category)}</TableCell>
-                        <TableCell className="text-right">{renderSupplierStatus(supplier)}</TableCell>
+                        {/* <TableCell className="text-right">{renderSupplierStatus(supplier)}</TableCell> */}
                         <TableCell className="text-slate-50 p-4 text-right align-middle [&:has([role=checkbox])]:pr-0">{supplier.contact_person || '-'}</TableCell>
                         <TableCell className="text-horizon-accent text-right" dir="ltr">
                           {supplier.phone ?
