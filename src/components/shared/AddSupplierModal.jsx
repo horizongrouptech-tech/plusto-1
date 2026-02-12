@@ -47,7 +47,8 @@ export default function AddSupplierModal({ isOpen, onClose, onSupplierAdded, cur
     delivery_time: '',
     min_order: '',
     notes: '',
-    website_url: ''
+    website_url: '',
+    rating: 5
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -75,6 +76,7 @@ export default function AddSupplierModal({ isOpen, onClose, onSupplierAdded, cur
       const supplierData = {
         ...formData,
         min_order: formData.min_order ? parseFloat(formData.min_order) : 0,
+        rating: parseInt(formData.rating) || 5,
         phone: formData.phone || null,
         email: formData.email || null,
         is_active: true,
@@ -99,7 +101,8 @@ export default function AddSupplierModal({ isOpen, onClose, onSupplierAdded, cur
         delivery_time: '',
         min_order: '',
         notes: '',
-        website_url: ''
+        website_url: '',
+        rating: 5
       });
       
       if (onSupplierAdded) {
@@ -252,6 +255,20 @@ export default function AddSupplierModal({ isOpen, onClose, onSupplierAdded, cur
                 onChange={(e) => handleChange('address', e.target.value)}
                 className="bg-horizon-card border-horizon text-horizon-text"
               />
+            </div>
+
+            <div>
+              <Label htmlFor="rating" className="text-horizon-text">דירוג (1-5 כוכבים)</Label>
+              <Select value={(formData.rating || 5).toString()} onValueChange={(value) => handleChange('rating', parseInt(value))}>
+                <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5].map((rate) => (
+                    <SelectItem key={rate} value={rate.toString()}>{'⭐'.repeat(rate)} ({rate})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

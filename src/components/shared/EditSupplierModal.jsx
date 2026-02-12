@@ -6,24 +6,51 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Save, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Supplier } from "@/entities/Supplier";
+import { toast } from "sonner";
+
+const SUPPLIER_CATEGORIES = [
+  'מזון',
+  'טכנולוגיה',
+  'אופנה',
+  'ניקיון',
+  'שירותים',
+  'לוגיסטיקה',
+  'אריזות',
+  'משרדי',
+  'כללי'
+];
+
+const SUPPLIER_TYPES = [
+  'רואה חשבון',
+  'הנהלת חשבונות',
+  'ספק בשר',
+  'ספק ירקות',
+  'ספק מוצרי ניקיון',
+  'ספק אריזות',
+  'ספק שירותים',
+  'ספק טכנולוגיה',
+  'ספק לוגיסטיקה',
+  'ספק כללי'
+];
 
 export default function EditSupplierModal({ isOpen, onClose, supplier, onUpdate }) {
   const [formData, setFormData] = useState({
     name: '',
-    category: '',
     contact_person: '',
     phone: '',
     email: '',
     address: '',
+    category: '',
+    supplier_type: '',
     payment_terms: '',
     delivery_time: '',
     min_order: '',
-    rating: 5,
     notes: '',
+    website_url: '',
+    rating: 5,
     is_active: true,
-    is_partner_supplier: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -32,30 +59,35 @@ export default function EditSupplierModal({ isOpen, onClose, supplier, onUpdate 
     if (isOpen && supplier) {
       setFormData({
         name: supplier.name || '',
-        category: supplier.category || '',
         contact_person: supplier.contact_person || '',
         phone: supplier.phone || '',
         email: supplier.email || '',
         address: supplier.address || '',
+        category: supplier.category || '',
+        supplier_type: supplier.supplier_type || '',
         payment_terms: supplier.payment_terms || '',
         delivery_time: supplier.delivery_time || '',
         min_order: supplier.min_order || '',
-        rating: supplier.rating || 5,
         notes: supplier.notes || '',
+        website_url: supplier.website_url || '',
+        rating: supplier.rating || 5,
         is_active: supplier.is_active !== false,
-        is_partner_supplier: supplier.is_partner_supplier || false,
       });
     }
   }, [isOpen, supplier]);
 
-  const categories = [
-    'חומרי גלם', 'אריזה ועיצוב', 'לוגיסטיקה ושילוח', 'שיווק ופרסום',
-    'טכנולוגיה ומערכות מידע', 'שירותים מקצועיים', 'ציוד ומכונות',
-    'תחזוקה ותיקונים', 'ייעוץ עסקי', 'שירותים פיננסיים', 'אחר'
-  ];
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.name || !formData.contact_person || !formData.category) {
+      toast.warning('נא למלא: שם הספק, איש קשר וקטגוריה');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
@@ -63,7 +95,9 @@ export default function EditSupplierModal({ isOpen, onClose, supplier, onUpdate 
       const updatedData = {
         ...formData,
         min_order: formData.min_order ? parseFloat(formData.min_order) : null,
-        rating: parseInt(formData.rating),
+        rating: parseInt(formData.rating) || 5,
+        phone: formData.phone || null,
+        email: formData.email || null,
       };
 
       await Supplier.update(supplier.id, updatedData);
@@ -72,6 +106,8 @@ export default function EditSupplierModal({ isOpen, onClose, supplier, onUpdate 
       const updatedSuppliers = await Supplier.filter({ id: supplier.id });
       const updatedSupplier = updatedSuppliers && updatedSuppliers.length > 0 ? updatedSuppliers[0] : null;
       
+      toast.success('הספק עודכן בהצלחה!');
+
       if (onUpdate) {
         onUpdate(updatedSupplier);
       }
@@ -79,6 +115,7 @@ export default function EditSupplierModal({ isOpen, onClose, supplier, onUpdate 
     } catch (error) {
       console.error("Error updating supplier:", error);
       setError("שגיאה בעדכון הספק. אנא נסה שוב.");
+      toast.error('שגיאה בעדכון הספק: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -86,12 +123,12 @@ export default function EditSupplierModal({ isOpen, onClose, supplier, onUpdate 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-horizon-dark text-horizon-text border-horizon" dir="rtl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-horizon-dark text-horizon-text border-horizon" dir="rtl">
         <DialogHeader>
-          <DialogTitle className="text-right text-horizon-primary text-2xl">
+          <DialogTitle className="text-2xl font-bold text-horizon-primary">
             עריכת ספק: {supplier?.name}
           </DialogTitle>
-          <DialogDescription className="text-right text-horizon-accent">
+          <DialogDescription className="text-horizon-accent">
             עדכן את פרטי הספק לפי הצורך.
           </DialogDescription>
         </DialogHeader>
@@ -102,92 +139,190 @@ export default function EditSupplierModal({ isOpen, onClose, supplier, onUpdate 
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="name" className="text-horizon-text">שם הספק *</Label>
-              <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="שם החברה" required className="bg-horizon-card border-horizon text-horizon-text" disabled={isSubmitting} />
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleChange('name', e.target.value)}
+                className="bg-horizon-card border-horizon text-horizon-text"
+                required
+                disabled={isSubmitting}
+              />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="category" className="text-horizon-text">תחום התמחות *</Label>
-              <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })} disabled={isSubmitting}>
-                <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text"><SelectValue placeholder="בחר תחום" /></SelectTrigger>
-                <SelectContent className="bg-horizon-card border-horizon text-horizon-text">
-                  {categories.map((cat) => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}
+
+            <div>
+              <Label htmlFor="contact_person" className="text-horizon-text">איש קשר *</Label>
+              <Input
+                id="contact_person"
+                value={formData.contact_person}
+                onChange={(e) => handleChange('contact_person', e.target.value)}
+                className="bg-horizon-card border-horizon text-horizon-text"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="phone" className="text-horizon-text">טלפון (אופציונלי)</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => handleChange('phone', e.target.value)}
+                className="bg-horizon-card border-horizon text-horizon-text"
+                placeholder="לדוגמה: 050-1234567"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="email" className="text-horizon-text">אימייל (אופציונלי)</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleChange('email', e.target.value)}
+                className="bg-horizon-card border-horizon text-horizon-text"
+                placeholder="לדוגמה: info@supplier.com"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="category" className="text-horizon-text">קטגוריה *</Label>
+              <Select value={formData.category} onValueChange={(value) => handleChange('category', value)} disabled={isSubmitting}>
+                <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
+                  <SelectValue placeholder="בחר קטגוריה" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPPLIER_CATEGORIES.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="supplier_type" className="text-horizon-text">סוג ספק</Label>
+              <Select value={formData.supplier_type} onValueChange={(value) => handleChange('supplier_type', value)} disabled={isSubmitting}>
+                <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
+                  <SelectValue placeholder="בחר סוג ספק" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPPLIER_TYPES.map(type => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="website_url" className="text-horizon-text">אתר אינטרנט</Label>
+              <Input
+                id="website_url"
+                value={formData.website_url}
+                onChange={(e) => handleChange('website_url', e.target.value)}
+                className="bg-horizon-card border-horizon text-horizon-text"
+                placeholder="https://..."
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="payment_terms" className="text-horizon-text">תנאי תשלום</Label>
+              <Input
+                id="payment_terms"
+                value={formData.payment_terms}
+                onChange={(e) => handleChange('payment_terms', e.target.value)}
+                className="bg-horizon-card border-horizon text-horizon-text"
+                placeholder="לדוגמה: שוטף+30"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="delivery_time" className="text-horizon-text">זמן אספקה</Label>
+              <Input
+                id="delivery_time"
+                value={formData.delivery_time}
+                onChange={(e) => handleChange('delivery_time', e.target.value)}
+                className="bg-horizon-card border-horizon text-horizon-text"
+                placeholder="לדוגמה: 3-5 ימי עסקים"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="min_order" className="text-horizon-text">הזמנה מינימלית (₪)</Label>
+              <Input
+                id="min_order"
+                type="number"
+                value={formData.min_order}
+                onChange={(e) => handleChange('min_order', e.target.value)}
+                className="bg-horizon-card border-horizon text-horizon-text"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="address" className="text-horizon-text">כתובת</Label>
+              <Input
+                id="address"
+                value={formData.address}
+                onChange={(e) => handleChange('address', e.target.value)}
+                className="bg-horizon-card border-horizon text-horizon-text"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="rating" className="text-horizon-text">דירוג (1-5 כוכבים)</Label>
+              <Select value={(formData.rating || 5).toString()} onValueChange={(value) => handleChange('rating', parseInt(value))} disabled={isSubmitting}>
+                <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5].map((rate) => (
+                    <SelectItem key={rate} value={rate.toString()}>{'⭐'.repeat(rate)} ({rate})</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="contact_person" className="text-horizon-text">איש קשר *</Label>
-              <Input id="contact_person" value={formData.contact_person} onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })} placeholder="שם איש הקשר" required className="bg-horizon-card border-horizon text-horizon-text" disabled={isSubmitting} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="text-horizon-text">טלפון *</Label>
-              <Input id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="050-1234567" required className="bg-horizon-card border-horizon text-horizon-text" disabled={isSubmitting} />
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-horizon-text">אימייל</Label>
-            <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="contact@supplier.com" className="bg-horizon-card border-horizon text-horizon-text" disabled={isSubmitting} />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="address" className="text-horizon-text">כתובת</Label>
-            <Input id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="כתובת הספק" className="bg-horizon-card border-horizon text-horizon-text" disabled={isSubmitting} />
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="payment_terms" className="text-horizon-text">תנאי תשלום</Label>
-              <Input id="payment_terms" value={formData.payment_terms} onChange={(e) => setFormData({ ...formData, payment_terms: e.target.value })} placeholder="לדוגמה: שוטף+30" className="bg-horizon-card border-horizon text-horizon-text" disabled={isSubmitting} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="delivery_time" className="text-horizon-text">זמן אספקה</Label>
-              <Input id="delivery_time" value={formData.delivery_time} onChange={(e) => setFormData({ ...formData, delivery_time: e.target.value })} placeholder="לדוגמה: 7 ימי עסקים" className="bg-horizon-card border-horizon text-horizon-text" disabled={isSubmitting} />
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="min_order" className="text-horizon-text">הזמנה מינימלית (₪)</Label>
-            <Input id="min_order" type="number" value={formData.min_order} onChange={(e) => setFormData({ ...formData, min_order: e.target.value })} placeholder="1000" className="bg-horizon-card border-horizon text-horizon-text" disabled={isSubmitting} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="rating" className="text-horizon-text">דירוג (1-5 כוכבים)</Label>
-            <Select value={formData.rating.toString()} onValueChange={(value) => setFormData({ ...formData, rating: parseInt(value) })} disabled={isSubmitting}>
-              <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text"><SelectValue /></SelectTrigger>
-              <SelectContent className="bg-horizon-card border-horizon text-horizon-text">
-                {[1, 2, 3, 4, 5].map((rate) => (<SelectItem key={rate} value={rate.toString()}>{'⭐'.repeat(rate)} ({rate})</SelectItem>))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
+          <div>
             <Label htmlFor="notes" className="text-horizon-text">הערות</Label>
-            <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="הערות נוספות על הספק..." rows={3} className="bg-horizon-card border-horizon text-horizon-text" disabled={isSubmitting} />
+            <Textarea
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => handleChange('notes', e.target.value)}
+              className="bg-horizon-card border-horizon text-horizon-text"
+              rows={3}
+              placeholder="הערות נוספות על הספק..."
+              disabled={isSubmitting}
+            />
           </div>
 
-          <div className="flex items-center gap-3 pt-4">
-            <Switch id="is_active" dir="ltr" checked={formData.is_active} onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })} disabled={isSubmitting} />
+          <div className="flex items-center gap-3 pt-2">
+            <Switch id="is_active" dir="ltr" checked={formData.is_active} onCheckedChange={(checked) => handleChange('is_active', checked)} disabled={isSubmitting} />
             <Label htmlFor="is_active" className="text-horizon-text cursor-pointer">ספק פעיל</Label>
           </div>
-          {/* commented out - partner supplier feature disabled for now
-          <div className="flex items-center gap-3 pt-2">
-            <Switch id="is_partner_supplier" checked={formData.is_partner_supplier} onCheckedChange={(checked) => setFormData({ ...formData, is_partner_supplier: checked })} disabled={isSubmitting} />
-            <Label htmlFor="is_partner_supplier" className="text-horizon-text cursor-pointer">ספק שותף</Label>
-          </div>
-          */}
-          
-          <div className="flex justify-end space-x-2 pt-6">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting} className="border-horizon-accent text-horizon-accent hover:bg-horizon-card">
-              <X className="w-4 h-4 ml-1" /> ביטול
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting} className="border-horizon text-horizon-text">
+              ביטול
             </Button>
-            <Button type="submit" disabled={isSubmitting || !formData.name || !formData.category || !formData.contact_person || !formData.phone} className="btn-horizon-primary">
-              {isSubmitting ? (<><Loader2 className="ml-2 h-4 w-4 animate-spin" /> שומר...</>) : (<><Save className="ml-2 h-4 w-4" /> שמור שינויים</>)}
+            <Button type="submit" disabled={isSubmitting || !formData.name || !formData.category || !formData.contact_person} className="btn-horizon-primary">
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                  שומר...
+                </>
+              ) : (
+                'שמור שינויים'
+              )}
             </Button>
           </div>
         </form>
