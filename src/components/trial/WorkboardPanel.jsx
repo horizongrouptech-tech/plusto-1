@@ -30,7 +30,8 @@ import CashFlowManager from '@/components/cashflow/CashFlowManager';
 import GoalsTimeline from '@/components/goals/GoalsTimeline';
 import GoalsTimelineNew from '@/components/goals/timeline/GoalsTimelineNew';
 import OrganizationChartBuilder from '@/components/organization/OrganizationChartBuilder';
-import ServiceContactsTab from '@/components/admin/ServiceContactsTab';
+// import ServiceContactsTab from '@/components/admin/ServiceContactsTab'; // commented out - contacts tab hidden, easy to restore
+import SystemCredentialsManager from '@/components/admin/SystemCredentialsManager';
 import MeetingsTab from '@/components/meetings/MeetingsTab';
 import { Calendar } from 'lucide-react';
 
@@ -41,7 +42,7 @@ const tabs = [
   { id: 'forecast', label: 'תוכנית עסקית', icon: FileText },
   { id: 'goals', label: 'יעדים', icon: Target },
   { id: 'suppliers', label: 'ספקים', icon: Truck },
-  { id: 'contacts', label: 'אנשי קשר', icon: Users },
+  // { id: 'contacts', label: 'אנשי קשר', icon: Users }, // commented out - contacts tab hidden, easy to restore
   { id: 'cashflow', label: 'תזרים כספים', icon: DollarSign },
   { id: 'org_chart', label: 'עץ ארגוני', icon: Building2 },
   { id: 'meetings', label: 'פגישות', icon: Calendar }
@@ -137,6 +138,7 @@ export default function WorkboardPanel({
           <div className="space-y-6">
             <CustomerFileUploadManager customer={customer} />
             <WebsiteScanner customer={customer} />
+            <SystemCredentialsManager customer={customer} />
           </div>
         )}
         
@@ -216,9 +218,11 @@ export default function WorkboardPanel({
           <CustomerSuppliersTab customer={customer} />
         )}
         
+        {/* commented out - contacts tab hidden, easy to restore:
         {activeTab === 'contacts' && (
           <ServiceContactsTab customer={customer} />
         )}
+        */}
         
         {activeTab === 'cashflow' && (
           <CashFlowManager customer={customer} />

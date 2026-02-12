@@ -23,7 +23,9 @@ import {
   Mail,
   MessageSquare,
   AlertCircle,
-  BookOpen
+  BookOpen,
+  Archive,
+  ArchiveRestore
 } from 'lucide-react';
 import { formatCurrency } from '@/components/forecast/manual/utils/numberFormatter';
 import Ofek360Modal from '@/components/admin/Ofek360Modal';
@@ -39,7 +41,8 @@ export default function CustomerOverviewModal({
   onClose,
   onOpenSettings,
   onNavigateToTab,
-  onArchive
+  onArchive,
+  onUnarchive
 }) {
   const [ofek360Open, setOfek360Open] = useState(false);
   const [goalBankOpen, setGoalBankOpen] = useState(false);
@@ -135,21 +138,39 @@ export default function CustomerOverviewModal({
                   <Edit className="w-4 h-4 ml-2" />
                   ערוך פרטים
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    if (!confirm('האם להעביר את הלקוח לארכיון?')) return;
-                    if (onArchive) {
-                      await onArchive(customer);
-                    }
-                  }}
-                  className="border-orange-500 text-orange-400 hover:bg-orange-500/10"
-                >
-                  <AlertCircle className="w-4 h-4 ml-2" />
-                  העבר לארכיון
-                </Button>
+                {customer.is_archived ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (!confirm('האם להוציא את הלקוח מארכיון?')) return;
+                      if (onUnarchive) {
+                        await onUnarchive(customer);
+                      }
+                    }}
+                    className="border-green-500 text-green-400 hover:bg-green-500/10"
+                  >
+                    <ArchiveRestore className="w-4 h-4 ml-2" />
+                    הוצא מארכיון
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (!confirm('האם להעביר את הלקוח לארכיון?')) return;
+                      if (onArchive) {
+                        await onArchive(customer);
+                      }
+                    }}
+                    className="border-orange-500 text-orange-400 hover:bg-orange-500/10"
+                  >
+                    <Archive className="w-4 h-4 ml-2" />
+                    העבר לארכיון
+                  </Button>
+                )}
               </div>
             </DialogTitle>
           </DialogHeader>

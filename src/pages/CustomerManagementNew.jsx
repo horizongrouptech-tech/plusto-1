@@ -357,6 +357,23 @@ export default function CustomerManagementNew() {
             toast.error('שגיאה: ' + error.message);
           }
         }}
+        onUnarchive={async (customer) => {
+          try {
+            await base44.entities.OnboardingRequest.update(customer.id, {
+              is_archived: false,
+              archived_date: null,
+              archived_by: null,
+              bestselling_products: typeof customer.bestselling_products === 'string' ? customer.bestselling_products : '',
+              unwanted_products: typeof customer.unwanted_products === 'string' ? customer.unwanted_products : ''
+            });
+            queryClient.invalidateQueries(['activeCustomers']);
+            setOverviewModalOpen(false);
+            setSelectedCustomer(null);
+            toast.success('הלקוח הוצא מארכיון');
+          } catch (error) {
+            toast.error('שגיאה: ' + error.message);
+          }
+        }}
       />
 
       <CustomerSettingsDrawer
