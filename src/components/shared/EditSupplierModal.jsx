@@ -171,18 +171,16 @@ export default function EditSupplierModal({ isOpen, onClose, supplier, onUpdate 
             <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="הערות נוספות על הספק..." rows={3} className="bg-horizon-card border-horizon text-horizon-text" disabled={isSubmitting} />
           </div>
 
-          <div className="flex justify-end space-x-6 pt-4">
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="is_active" className="text-horizon-text">ספק פעיל</Label>
-              <Switch id="is_active" checked={formData.is_active} onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })} disabled={isSubmitting} />
-            </div>
-            {/* commented out - partner supplier feature disabled for now
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="is_partner_supplier" className="text-horizon-text">ספק שותף</Label>
-              <Switch id="is_partner_supplier" checked={formData.is_partner_supplier} onCheckedChange={(checked) => setFormData({ ...formData, is_partner_supplier: checked })} disabled={isSubmitting} />
-            </div>
-            */}
+          <div className="flex items-center gap-3 pt-4">
+            <Switch id="is_active" checked={formData.is_active} onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })} disabled={isSubmitting} />
+            <Label htmlFor="is_active" className="text-horizon-text cursor-pointer">ספק פעיל</Label>
           </div>
+          {/* commented out - partner supplier feature disabled for now
+          <div className="flex items-center gap-3 pt-2">
+            <Switch id="is_partner_supplier" checked={formData.is_partner_supplier} onCheckedChange={(checked) => setFormData({ ...formData, is_partner_supplier: checked })} disabled={isSubmitting} />
+            <Label htmlFor="is_partner_supplier" className="text-horizon-text cursor-pointer">ספק שותף</Label>
+          </div>
+          */}
           
           <div className="flex justify-end space-x-2 pt-6">
             <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting} className="border-horizon-accent text-horizon-accent hover:bg-horizon-card">
