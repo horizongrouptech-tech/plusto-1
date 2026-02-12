@@ -115,6 +115,8 @@ export default function MeetingsTab({ customer, currentUser }) {
           google_event_id: additionalData.google_event_id || '',
           send_reminder: additionalData.send_reminder !== false,
           invite_customer: additionalData.invite_customer !== false,
+          fireberry_meeting_id: g.fireberry_meeting_id || null,
+          fireberry_synced_at: g.fireberry_synced_at || null,
           created_by: g.assignee_email,
           created_date: g.created_date,
           _raw: g
@@ -237,6 +239,17 @@ export default function MeetingsTab({ customer, currentUser }) {
           // לא נכשיל את יצירת הפגישה אם הקלנדר נכשל
         }
       }
+
+      // סנכרון לפיירברי
+      try {
+        await base44.functions.invoke('syncMeetingToFireberry', {
+          meetingId: newMeeting.id
+        });
+        console.log('✅ Meeting synced to Fireberry successfully');
+      } catch (fireberryError) {
+        console.error('Failed to sync meeting to Fireberry:', fireberryError);
+        // לא נכשיל את יצירת הפגישה אם הסנכרון נכשל
+      }
       
       queryClient.invalidateQueries(['customerMeetings', customer.email]);
       setShowNewMeetingModal(false);
@@ -281,6 +294,17 @@ export default function MeetingsTab({ customer, currentUser }) {
         additional_notes: JSON.stringify(additionalData),
         status: selectedMeeting.status === 'completed' ? 'done' : (selectedMeeting.status === 'cancelled' ? 'cancelled' : 'open')
       });
+
+      // סנכרון לפיירברי
+      try {
+        await base44.functions.invoke('syncMeetingToFireberry', {
+          meetingId: selectedMeeting.id
+        });
+        console.log('✅ Meeting updated in Fireberry successfully');
+      } catch (fireberryError) {
+        console.error('Failed to sync meeting update to Fireberry:', fireberryError);
+        // לא נכשיל את עדכון הפגישה אם הסנכרון נכשל
+      }
       
       queryClient.invalidateQueries(['customerMeetings', customer.email]);
       setShowMeetingDetailsModal(false);
@@ -298,7 +322,23 @@ export default function MeetingsTab({ customer, currentUser }) {
     if (!confirm('האם למחוק את הפגישה?')) return;
 
     try {
-      await base44.entities.CustomerGoal.update(meetingId, { is_active: false });
+      // עדכון סטטוס לפני מחיקה כדי לסנכרן לפיירברי
+      await base44.entities.CustomerGoal.update(meetingId, { 
+        is_active: false,
+        status: 'cancelled'
+      });
+
+      // סנכרון לפיירברי (עדכון סטטוס ל-cancelled)
+      try {
+        await base44.functions.invoke('syncMeetingToFireberry', {
+          meetingId: meetingId
+        });
+        console.log('✅ Meeting cancellation synced to Fireberry successfully');
+      } catch (fireberryError) {
+        console.error('Failed to sync meeting cancellation to Fireberry:', fireberryError);
+        // לא נכשיל את מחיקת הפגישה אם הסנכרון נכשל
+      }
+
       queryClient.invalidateQueries(['customerMeetings', customer.email]);
       setShowMeetingDetailsModal(false);
       setSelectedMeeting(null);
@@ -464,6 +504,12 @@ ${meeting.tasks || 'לא צוין'}
                   <ChannelIcon className="w-3 h-3 ml-1" />
                   {channelConfig.label}
                 </Badge>
+                {meeting.fireberry_meeting_id && (
+                  <Badge className="bg-green-500/20 text-green-400 border-green-500/50" title="מסונכרן עם פיירברי">
+                    <LinkIcon className="w-3 h-3 ml-1" />
+                    פיירברי
+                  </Badge>
+                )}
                 {isToday(meetingDate) && meeting.status === 'scheduled' && (
                   <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/50">היום!</Badge>
                 )}
