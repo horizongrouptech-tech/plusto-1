@@ -42,7 +42,8 @@ export default function CustomerOverviewModal({
   onOpenSettings,
   onNavigateToTab,
   onArchive,
-  onUnarchive
+  onUnarchive,
+  onCustomerUpdate
 }) {
   const [ofek360Open, setOfek360Open] = useState(false);
   const [goalBankOpen, setGoalBankOpen] = useState(false);
@@ -108,6 +109,7 @@ export default function CustomerOverviewModal({
         [field]: value
       });
       queryClient.invalidateQueries(['activeCustomers']);
+      onCustomerUpdate?.({ ...customer, [field]: value });
     } catch (error) {
       toast.error('שגיאה בעדכון: ' + error.message);
     }
@@ -198,9 +200,7 @@ export default function CustomerOverviewModal({
           {/* פרטי לקוח עם עריכה משולבת */}
           <InlineEditableCustomerDetails 
             customer={customer}
-            onUpdate={(updated) => {
-              // אופציונלי: רענון נתונים
-            }}
+            onUpdate={(updated) => onCustomerUpdate?.(updated)}
           />
 
           <Card className="card-horizon mt-4">

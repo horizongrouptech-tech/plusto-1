@@ -332,6 +332,7 @@ export default function CustomerManagementNew() {
         customer={selectedCustomer}
         isOpen={overviewModalOpen}
         onClose={() => setOverviewModalOpen(false)}
+        onCustomerUpdate={(updated) => setSelectedCustomer(updated)}
         onOpenSettings={() => {
           setOverviewModalOpen(false);
           setSettingsDrawerOpen(true);

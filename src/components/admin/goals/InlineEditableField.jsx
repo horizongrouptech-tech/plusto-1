@@ -23,6 +23,10 @@ export default function InlineEditableField({
   const containerRef = useRef(null);
   const isSavingRef = useRef(false);
 
+  useEffect(() => {
+    setEditValue(value);
+  }, [value]);
+
   const handleSave = useCallback(async (valueToSave) => {
     if (isSavingRef.current) return; // Prevent concurrent saves
     isSavingRef.current = true;
