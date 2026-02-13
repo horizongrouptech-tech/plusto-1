@@ -900,6 +900,11 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
               </div>
             )}
           </div>
+          {searchTerm && (
+            <div className="mt-2 text-sm text-horizon-accent">
+              נמצאו <span className="font-semibold text-horizon-primary">{filteredServices.length}</span> מתוך <span className="font-semibold">{services.length}</span> מוצרים
+            </div>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           {services.length === 0 ? (
