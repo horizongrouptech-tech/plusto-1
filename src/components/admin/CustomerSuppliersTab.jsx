@@ -10,7 +10,8 @@ import {
   Search,
   Star,
   X,
-  SearchCheck } from
+  SearchCheck,
+  Trash2 } from
 "lucide-react";
 import { base44 } from '@/api/base44Client';
 import {
@@ -233,6 +234,51 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
     }
   };
 
+  // ✅ מחיקת ספק לצמיתות - רק ספקים שהוקמו ידנית (source: manual)
+  const handleDeleteSupplier = async (supplier) => {
+    try {
+      const otherCustomerEmails = (supplier.customer_emails || []).filter(
+        (email) => email !== customer.email
+      );
+
+      if (otherCustomerEmails.length > 0) {
+        // הספק משויך גם ללקוחות אחרים - נשלוף את שמותיהם
+        let customerNames = [];
+        try {
+          const customerContacts = await base44.entities.CustomerContact.filter({});
+          customerNames = otherCustomerEmails.map((email) => {
+            const contact = customerContacts.find((c) => c.customer_email === email);
+            return contact?.business_name || contact?.full_name || email;
+          });
+        } catch {
+          // fallback - אם לא הצלחנו לשלוף שמות, נציג אימיילים
+          customerNames = otherCustomerEmails;
+        }
+
+        const namesStr = customerNames.join(', ');
+        const confirmed = window.confirm(
+          `שים לב! הספק "${supplier.name}" משויך גם ללקוחות הבאים:\n${namesStr}\n\nמחיקת הספק תסיר אותו גם מהלקוחות הללו.\nהאם אתה בטוח שברצונך למחוק את הספק לצמיתות?`
+        );
+        if (!confirmed) return;
+      } else {
+        // הספק משויך רק ללקוח הנוכחי
+        const confirmed = window.confirm(
+          `האם אתה בטוח שברצונך למחוק את הספק "${supplier.name}" לצמיתות מהמערכת?`
+        );
+        if (!confirmed) return;
+      }
+
+      await base44.entities.Supplier.delete(supplier.id);
+
+      // ✅ רענון עם React Query
+      queryClient.invalidateQueries(['customerSuppliers', customer.email]);
+      queryClient.invalidateQueries(['suggestedSuppliers', customer.email]);
+      queryClient.invalidateQueries(['suggestedSuppliersCount', customer.email]);
+    } catch (error) {
+      console.error("Error deleting supplier:", error);
+    }
+  };
+
   const renderStarRating = (rating) => {
     if (!rating) return <span className="text-horizon-accent text-sm">לא דורג</span>;
 
@@ -406,12 +452,24 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                         <TableCell className="text-right">{renderStarRating(supplier.rating)}</TableCell>
                         <TableCell className="text-center">
                           {canAddSupplier &&
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleRemoveSupplier(supplier)}>
-                              הסר שיוך
-                            </Button>
+                      <div className="flex items-center justify-center gap-2">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRemoveSupplier(supplier)}>
+                          הסר שיוך
+                        </Button>
+                        {supplier.source === 'manual' && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="bg-red-700 hover:bg-red-800"
+                            onClick={() => handleDeleteSupplier(supplier)}>
+                            <Trash2 className="w-3.5 h-3.5 ml-1" />
+                            מחק ספק
+                          </Button>
+                        )}
+                      </div>
                       }
                         </TableCell>
                       </TableRow>
