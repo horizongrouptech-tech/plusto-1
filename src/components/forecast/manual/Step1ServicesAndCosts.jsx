@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Plus,
   Trash2,
@@ -31,7 +32,143 @@ import SaveProgressIndicator from './SaveProgressIndicator';
 import Pagination from '@/components/shared/Pagination';
 import { toast } from "sonner";
 
+const CATALOG_PICKER_PAGE_SIZE = 100;
+
+function CatalogProductPicker({ value, onSelect, products, isLoading, onTriggerLoad }) {
+  const [open, setOpen] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [page, setPage] = React.useState(1);
+
+  const selectedProduct = React.useMemo(() => {
+    if (!value || value === 'none') return null;
+    return products.find(p => p.id === value);
+  }, [value, products]);
+
+  const filteredProducts = React.useMemo(() => {
+    if (!searchTerm) return products;
+    const term = searchTerm.toLowerCase();
+    return products.filter(p => 
+      p.product_name?.toLowerCase().includes(term) ||
+      p.catalog_name?.toLowerCase().includes(term)
+    );
+  }, [products, searchTerm]);
+
+  const totalPages = Math.ceil(filteredProducts.length / CATALOG_PICKER_PAGE_SIZE);
+  const paginatedProducts = React.useMemo(() => {
+    const start = (page - 1) * CATALOG_PICKER_PAGE_SIZE;
+    return filteredProducts.slice(start, start + CATALOG_PICKER_PAGE_SIZE);
+  }, [filteredProducts, page]);
+
+  // Reset page when search changes
+  React.useEffect(() => { setPage(1); }, [searchTerm]);
+
+  const handleOpen = (isOpen) => {
+    setOpen(isOpen);
+    if (isOpen) {
+      onTriggerLoad();
+      setSearchTerm('');
+      setPage(1);
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={handleOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className="w-full justify-between bg-horizon-card border-horizon text-horizon-text h-9 text-sm mb-2 font-normal"
+        >
+          <span className="truncate text-right">
+            {isLoading ? 'טוען מוצרים...' : selectedProduct ? selectedProduct.product_name : 'שייך למוצר מהקטלוג (אופציונלי)'}
+          </span>
+          <ChevronDown className="w-4 h-4 mr-2 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[400px] p-0 bg-horizon-dark border-horizon" align="start" dir="rtl">
+        {/* חיפוש */}
+        <div className="p-3 border-b border-horizon">
+          <div className="relative">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-horizon-accent" />
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="חפש מוצר..."
+              className="bg-horizon-card border-horizon text-horizon-text pr-9 h-8 text-sm"
+              autoFocus
+            />
+          </div>
+        </div>
+
+        {/* רשימת מוצרים */}
+        <div className="max-h-[300px] overflow-y-auto">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="w-4 h-4 animate-spin text-horizon-primary ml-2" />
+              <span className="text-sm text-horizon-accent">טוען מוצרים מהקטלוג...</span>
+            </div>
+          ) : (
+            <>
+              <button
+                className="w-full text-right px-3 py-2 text-sm hover:bg-horizon-card/50 text-horizon-accent transition-colors"
+                onClick={() => { onSelect('none'); setOpen(false); }}
+              >
+                ללא שיוך לקטלוג
+              </button>
+              {paginatedProducts.length === 0 && !isLoading && (
+                <div className="text-center py-4 text-sm text-horizon-accent">
+                  {searchTerm ? 'לא נמצאו מוצרים' : 'אין מוצרים בקטלוג'}
+                </div>
+              )}
+              {paginatedProducts.map((product) => (
+                <button
+                  key={product.id}
+                  className={`w-full text-right px-3 py-2 text-sm hover:bg-horizon-card/50 transition-colors ${
+                    value === product.id ? 'bg-horizon-primary/10 text-horizon-primary' : 'text-horizon-text'
+                  }`}
+                  onClick={() => { onSelect(product.id); setOpen(false); }}
+                >
+                  {product.product_name} {product.catalog_name ? <span className="text-horizon-accent text-xs">({product.catalog_name})</span> : ''}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* ניווט בין עמודים */}
+        {totalPages > 1 && !isLoading && (
+          <div className="flex items-center justify-between p-2 border-t border-horizon text-sm">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="h-7 text-xs text-horizon-accent"
+            >
+              <ChevronRight className="w-3 h-3 ml-1" />
+              הקודם
+            </Button>
+            <span className="text-horizon-accent text-xs">
+              עמוד {page} מתוך {totalPages} ({filteredProducts.length} מוצרים)
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="h-7 text-xs text-horizon-accent"
+            >
+              הבא
+              <ChevronLeft className="w-3 h-3 mr-1" />
+            </Button>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, onNext, onBack }) {
+  const initialCalcDone = React.useRef(false);
   const [services, setServices] = useState(forecastData.services || []);
   const [collapsedServices, setCollapsedServices] = useState(() => {
     const initial = {};
@@ -58,55 +195,56 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
   // ⭐ State לטעינת כל המוצרים מכל הקטלוגים (לשיוך שירותים)
   const [allCatalogProducts, setAllCatalogProducts] = useState([]);
   const [isLoadingAllProducts, setIsLoadingAllProducts] = useState(false);
+  const [catalogProductsLoaded, setCatalogProductsLoaded] = useState(false); // lazy loading flag
 
+  // חישוב מלא רק בטעינה ראשונית -- שינויים בודדים מחושבים ב-updateService/recalculateServiceProfitability
   useEffect(() => {
+    if (initialCalcDone.current) return;
+    initialCalcDone.current = true;
+
     const servicesFromData = forecastData.services || [];
     
-    // ✅ FIX: חישוב מחדש של כל המוצרים כשטוענים מה-DB
-    const recalculatedServices = servicesFromData.map((service, idx) => {
-      const updatedService = { ...service };
-      
-      // אם אין calculated או שהוא ריק - חשב מחדש
-      if (!updatedService.calculated || 
-          updatedService.calculated.cost_of_sale === undefined ||
-          updatedService.calculated.gross_profit === undefined) {
-        
-        const VAT_RATE = 0.17;
-        const rawPrice = parseFloat(updatedService.price) || 0;
-        const netPrice = updatedService.has_vat ? rawPrice / (1 + VAT_RATE) : rawPrice;
-        
-        let totalCost = 0;
-        (updatedService.costs || []).forEach(cost => {
-          if (cost.is_percentage) {
-            totalCost += (netPrice * (parseFloat(cost.percentage_of_price) || 0)) / 100;
-          } else {
-            const rawCostAmount = parseFloat(cost.amount) || 0;
-            const netCostAmount = cost.has_vat ? rawCostAmount / (1 + VAT_RATE) : rawCostAmount;
-            totalCost += netCostAmount;
-          }
-        });
-
-        const grossProfit = netPrice - totalCost;
-        const grossMarginPercentage = netPrice > 0 ? ((grossProfit / netPrice) * 100) : 0;
-
-        updatedService.calculated = {
-          cost_of_sale: totalCost,
-          gross_profit: grossProfit,
-          gross_margin_percentage: grossMarginPercentage
-        };
+    let hasChanges = false;
+    const recalculatedServices = servicesFromData.map((service) => {
+      if (service.calculated && 
+          service.calculated.cost_of_sale !== undefined &&
+          service.calculated.gross_profit !== undefined) {
+        return service;
       }
+      
+      hasChanges = true;
+      const updatedService = { ...service };
+      const VAT_RATE = 0.17;
+      const rawPrice = parseFloat(updatedService.price) || 0;
+      const netPrice = updatedService.has_vat ? rawPrice / (1 + VAT_RATE) : rawPrice;
+      
+      let totalCost = 0;
+      (updatedService.costs || []).forEach(cost => {
+        if (cost.is_percentage) {
+          totalCost += (netPrice * (parseFloat(cost.percentage_of_price) || 0)) / 100;
+        } else {
+          const rawCostAmount = parseFloat(cost.amount) || 0;
+          const netCostAmount = cost.has_vat ? rawCostAmount / (1 + VAT_RATE) : rawCostAmount;
+          totalCost += netCostAmount;
+        }
+      });
+
+      const grossProfit = netPrice - totalCost;
+      const grossMarginPercentage = netPrice > 0 ? ((grossProfit / netPrice) * 100) : 0;
+
+      updatedService.calculated = {
+        cost_of_sale: totalCost,
+        gross_profit: grossProfit,
+        gross_margin_percentage: grossMarginPercentage
+      };
       
       return updatedService;
     });
     
     setServices(recalculatedServices);
     
-    // ✅ אם היו שינויים - עדכן ב-forecastData
-    if (JSON.stringify(recalculatedServices) !== JSON.stringify(servicesFromData)) {
-      console.log('🔄 Recalculated services on load - updating forecastData');
-      if (onUpdateForecast) {
-        onUpdateForecast({ services: recalculatedServices });
-      }
+    if (hasChanges && onUpdateForecast) {
+      onUpdateForecast({ services: recalculatedServices });
     }
   }, [forecastData.services]);
 
@@ -213,7 +351,8 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
       }
       
       setAllCatalogProducts(allProducts);
-      console.log(`✅ Loaded ${allProducts.length} products from ${availableCatalogs.length} catalogs (limited to ${MAX_PRODUCTS_PER_CATALOG} per catalog)`);
+      setCatalogProductsLoaded(true);
+      console.log(`✅ Loaded ${allProducts.length} products from ${availableCatalogs.length} catalogs`);
     } catch (error) {
       console.error('❌ Error loading all catalog products:', error);
       setAllCatalogProducts([]);
@@ -222,11 +361,12 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
     }
   }, [forecastData?.customer_email, availableCatalogs]);
 
-  useEffect(() => {
-    if (availableCatalogs.length > 0) {
+  // lazy loading -- מוצרי הקטלוג נטענים רק כשהמשתמש פותח dropdown, לא ב-mount
+  const triggerLoadCatalogProducts = useCallback(() => {
+    if (!catalogProductsLoaded && !isLoadingAllProducts && availableCatalogs.length > 0) {
       loadAllCatalogProducts();
     }
-  }, [availableCatalogs, loadAllCatalogProducts]);
+  }, [catalogProductsLoaded, isLoadingAllProducts, availableCatalogs, loadAllCatalogProducts]);
 
   // ⭐ טעינת מוצרים מקטלוג
   const handleLoadCatalog = async () => {
@@ -820,24 +960,14 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
                                          שם השירות/מוצר *
                                        </Label>
                                        <div className="space-y-2">
-                                         {allCatalogProducts.length > 0 && (
-                                           <Select
-                                             value={service.linked_catalog_product_id || 'none'}
-                                             onValueChange={(productId) => linkServiceToCatalogProduct(actualIndex, productId)}
-                                             disabled={isLoadingAllProducts}
-                                           >
-                                             <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text h-9 text-sm mb-2">
-                                               <SelectValue placeholder="שייך למוצר מהקטלוג (אופציונלי)" />
-                                             </SelectTrigger>
-                                             <SelectContent className="bg-horizon-dark border-horizon max-h-[300px]">
-                                               <SelectItem value="none">ללא שיוך לקטלוג</SelectItem>
-                                               {allCatalogProducts.map((product) => (
-                                                 <SelectItem key={product.id} value={product.id}>
-                                                   📦 {product.product_name} {product.catalog_name ? `(${product.catalog_name})` : ''}
-                                                 </SelectItem>
-                                               ))}
-                                             </SelectContent>
-                                           </Select>
+                                         {availableCatalogs.length > 0 && (
+                                           <CatalogProductPicker
+                                             value={service.linked_catalog_product_id}
+                                             onSelect={(productId) => linkServiceToCatalogProduct(actualIndex, productId)}
+                                             products={allCatalogProducts}
+                                             isLoading={isLoadingAllProducts}
+                                             onTriggerLoad={triggerLoadCatalogProducts}
+                                           />
                                          )}
                                          <Input
                                            value={service.service_name}
