@@ -74,8 +74,9 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
   const [categoryFilter, setCategoryFilter] = useState(null);
   const [showFindAlternativeModal, setShowFindAlternativeModal] = useState(false);
   
-  // Pagination state for suggested suppliers
+  // Pagination state
   const [suggestedPage, setSuggestedPage] = useState(1);
+  const [customerPage, setCustomerPage] = useState(1);
   const PAGE_SIZE = 20;
 
   // ✅ טעינת ספקי הלקוח - מהיר, מיד, עם React Query
@@ -352,7 +353,18 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
     ), [suppliers, searchTerm]
   );
 
-  // filteredSuggestedSuppliers is now paginatedSuggestedSuppliers (filtering happens before pagination)
+  // ✅ Pagination עבור ספקי הלקוח
+  const totalCustomerPages = Math.max(1, Math.ceil(filteredSuppliers.length / PAGE_SIZE));
+  const paginatedCustomerSuppliers = React.useMemo(() => {
+    const startIndex = (customerPage - 1) * PAGE_SIZE;
+    const endIndex = startIndex + PAGE_SIZE;
+    return filteredSuppliers.slice(startIndex, endIndex);
+  }, [filteredSuppliers, customerPage]);
+
+  // ✅ איפוס עמוד ספקי לקוח כשמשנים חיפוש
+  useEffect(() => {
+    setCustomerPage(1);
+  }, [searchTerm]);
 
   const canAddSupplier = currentUser && (currentUser.role === 'admin' || currentUser.user_type === 'financial_manager');
 
@@ -429,14 +441,21 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
           </div>
 
           <TabsContent value="customer-suppliers" className="mt-4">
+            {/* מידע על תוצאות */}
+            {filteredSuppliers.length > 0 && (
+              <div className="mb-3 text-sm text-horizon-accent">
+                מציג {Math.min((customerPage - 1) * PAGE_SIZE + 1, filteredSuppliers.length)}-{Math.min(customerPage * PAGE_SIZE, filteredSuppliers.length)} מתוך {filteredSuppliers.length} ספקים
+              </div>
+            )}
+
             {filteredSuppliers.length > 0 ?
-            <div className="border rounded-lg overflow-hidden border-horizon">
+            <>
+              <div className="border rounded-lg overflow-hidden border-horizon">
                 <Table dir="rtl">
                   <TableHeader>
                     <TableRow className="bg-horizon-card hover:bg-horizon-card/80">
                       <TableHead className="text-right text-horizon-accent">שם הספק</TableHead>
                       <TableHead className="text-right text-horizon-accent">סוג</TableHead>
-                      {/* <TableHead className="text-right text-horizon-accent">סטטוס</TableHead> */}
                       <TableHead className="text-right text-horizon-accent">איש קשר</TableHead>
                       <TableHead className="text-right text-horizon-accent">טלפון</TableHead>
                       <TableHead className="text-right text-horizon-accent">דירוג</TableHead>
@@ -445,7 +464,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredSuppliers.map((supplier) =>
+                    {paginatedCustomerSuppliers.map((supplier) =>
                   <TableRow key={supplier.id} className="border-horizon">
                         <TableCell className="font-medium text-right">
                           <Button variant="link" onClick={() => setSelectedSupplier(supplier)} className="text-horizon-primary p-0 h-auto">
@@ -453,7 +472,6 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                           </Button>
                         </TableCell>
                         <TableCell className="text-right">{renderCategoryBadge(supplier.category)}</TableCell>
-                        {/* <TableCell className="text-right">{renderSupplierStatus(supplier)}</TableCell> */}
                         <TableCell className="text-horizon-accent text-right">{supplier.contact_person || '-'}</TableCell>
                         <TableCell className="text-horizon-accent text-right" dir="ltr">
                           {supplier.phone ?
@@ -503,7 +521,37 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                   )}
                   </TableBody>
                 </Table>
-              </div> :
+              </div>
+
+              {/* Pagination Controls */}
+              {totalCustomerPages > 1 && (
+                <div className="mt-4 flex items-center justify-center gap-4" dir="rtl">
+                  <Button
+                    onClick={() => setCustomerPage(prev => Math.max(1, prev - 1))}
+                    variant="outline"
+                    size="sm"
+                    className="border-horizon text-horizon-text"
+                    disabled={customerPage === 1}
+                  >
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                    הקודם
+                  </Button>
+                  <span className="text-sm text-horizon-text font-medium">
+                    עמוד {customerPage} מתוך {totalCustomerPages}
+                  </span>
+                  <Button
+                    onClick={() => setCustomerPage(prev => Math.min(totalCustomerPages, prev + 1))}
+                    variant="outline"
+                    size="sm"
+                    className="border-horizon text-horizon-text"
+                    disabled={customerPage === totalCustomerPages}
+                  >
+                    הבא
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                  </Button>
+                </div>
+              )}
+            </> :
 
             <div className="text-center py-8">
                 <Truck className="w-12 h-12 mx-auto mb-3 text-horizon-accent" />
