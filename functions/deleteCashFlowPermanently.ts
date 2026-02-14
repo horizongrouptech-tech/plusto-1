@@ -20,17 +20,19 @@ Deno.serve(async (req) => {
         while (true) {
             const entries = await base44.asServiceRole.entities.CashFlow.filter(
                 { customer_email },
-                'date',
-                batchSize
+                'date'
             );
 
             if (entries.length === 0) break;
 
-            const deletePromises = entries.map(entry =>
-                base44.asServiceRole.entities.CashFlow.delete(entry.id)
-            );
-            await Promise.all(deletePromises);
-            deletedCount += entries.length;
+            for (let i = 0; i < entries.length; i += batchSize) {
+                const batch = entries.slice(i, i + batchSize);
+                const deletePromises = batch.map(entry =>
+                    base44.asServiceRole.entities.CashFlow.delete(entry.id)
+                );
+                await Promise.all(deletePromises);
+                deletedCount += batch.length;
+            }
 
             console.log(`Deleted batch: ${entries.length} entries. Total deleted: ${deletedCount}`);
 
