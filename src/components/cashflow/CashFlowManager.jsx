@@ -492,19 +492,41 @@ export default function CashFlowManager({ customer }) {
                   try {
                     let totalDeleted = 0;
                     let hasMore = true;
+                    let batchCount = 0;
+                    
+                    // לולאה אוטומטית שממשיכה עד שאין יותר רשומות
                     while (hasMore) {
+                      batchCount++;
+                      console.log(`מריץ מחיקה - מנה #${batchCount}`);
+                      
                       const { data, error } = await base44.functions.invoke('deleteCashFlowPermanently', {
                         customer_email: customer.email
                       });
+                      
                       if (error) throw new Error(error.message || JSON.stringify(error));
-                      totalDeleted += data?.deletedCount ?? 0;
+                      
+                      const deletedInBatch = data?.deletedCount ?? 0;
+                      totalDeleted += deletedInBatch;
                       hasMore = Boolean(data?.hasMore);
+                      
+                      console.log(`מנה #${batchCount}: נמחקו ${deletedInBatch} תנועות, סה"כ ${totalDeleted}, נותרו עוד? ${hasMore}`);
+                      
+                      // עדכון UI בזמן אמת
                       setDeletedSoFar(totalDeleted);
+                      
+                      // רענון של הנתונים
                       queryClient.invalidateQueries(['cashFlow', customer.email]);
                       queryClient.invalidateQueries(['recurringTransactions', customer.email]);
+                      
+                      // המתנה קצרה בין קריאות כדי לא לעמוס את השרת
+                      if (hasMore) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                      }
                     }
-                    toast.success(totalDeleted > 0 ? `כל נתוני התזרים נמחקו בהצלחה - ${totalDeleted} תנועות` : 'אין תנועות למחוק');
+                    
+                    toast.success(totalDeleted > 0 ? `כל נתוני התזרים נמחקו בהצלחה! 🎉\nסה"כ ${totalDeleted} תנועות נמחקו` : 'אין תנועות למחוק');
                   } catch (err) {
+                    console.error('שגיאה במחיקה:', err);
                     toast.error('שגיאה במחיקה: ' + (err?.message || err));
                   } finally {
                     setIsDeleting(false);
