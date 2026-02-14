@@ -67,6 +67,7 @@ export default function CashFlowManager({ customer }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [deletedSoFar, setDeletedSoFar] = useState(0);
   
   const queryClient = useQueryClient();
 
@@ -487,6 +488,7 @@ export default function CashFlowManager({ customer }) {
                     return;
                   }
                   setIsDeleting(true);
+                  setDeletedSoFar(0);
                   try {
                     let totalDeleted = 0;
                     let hasMore = true;
@@ -496,15 +498,17 @@ export default function CashFlowManager({ customer }) {
                       });
                       if (error) throw new Error(error.message || JSON.stringify(error));
                       totalDeleted += data?.deletedCount ?? 0;
-                      hasMore = data?.hasMore === true;
+                      hasMore = Boolean(data?.hasMore);
+                      setDeletedSoFar(totalDeleted);
+                      queryClient.invalidateQueries(['cashFlow', customer.email]);
+                      queryClient.invalidateQueries(['recurringTransactions', customer.email]);
                     }
-                    queryClient.invalidateQueries(['cashFlow', customer.email]);
-                    queryClient.invalidateQueries(['recurringTransactions', customer.email]);
                     toast.success(totalDeleted > 0 ? `כל נתוני התזרים נמחקו בהצלחה - ${totalDeleted} תנועות` : 'אין תנועות למחוק');
                   } catch (err) {
                     toast.error('שגיאה במחיקה: ' + (err?.message || err));
                   } finally {
                     setIsDeleting(false);
+                    setDeletedSoFar(0);
                   }
                 }}
                 variant="outline"
@@ -514,7 +518,7 @@ export default function CashFlowManager({ customer }) {
                 {isDeleting ? (
                   <>
                     <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                    מוחק...
+                    {deletedSoFar > 0 ? `מוחק... (נמחקו ${deletedSoFar} תנועות)` : 'מוחק...'}
                   </>
                 ) : (
                   <>

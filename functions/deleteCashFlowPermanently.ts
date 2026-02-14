@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
         }
 
         const CHUNK_SIZE = 1000;
-        const MAX_BATCHES = 8; // מקסימום מנות בקריאה אחת – מונע 502 timeout
+        const MAX_BATCHES = 10; // מקסימום מנות בקריאה אחת – מונע 502 timeout
         let totalDeleted = 0;
         let batchCount = 0;
         let hasMore = false;
