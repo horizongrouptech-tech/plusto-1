@@ -40,7 +40,8 @@ Deno.serve(async (req) => {
             }
         }
 
-        const hasMore = entries?.length === CHUNK_SIZE;
+        // יש להמשיך כל עוד קיבלנו רשומות – ה-API עלול להחזיר פחות מ-CHUNK_SIZE (למשל limit 100)
+        const hasMore = (entries?.length ?? 0) > 0;
 
         return new Response(JSON.stringify({
             success: true,
