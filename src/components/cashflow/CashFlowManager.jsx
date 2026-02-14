@@ -505,10 +505,12 @@ export default function CashFlowManager({ customer }) {
                       
                       if (error) throw new Error(error.message || JSON.stringify(error));
                       
-                      const deletedInBatch = data?.deletedCount ?? 0;
+                      const payload = data?.data != null ? data.data : data;
+                      const deletedInBatch = payload?.deletedCount ?? 0;
                       totalDeleted += deletedInBatch;
-                      hasMore = Boolean(data?.hasMore);
+                      hasMore = Boolean(payload?.hasMore) || (deletedInBatch >= 50 && payload?.hasMore !== false);
                       
+                      console.log('deleteCashFlowPermanently response:', { data, payload: data?.data ?? data, hasMore, deletedInBatch });
                       console.log(`מנה #${batchCount}: נמחקו ${deletedInBatch} תנועות, סה"כ ${totalDeleted}, נותרו עוד? ${hasMore}`);
                       
                       // עדכון UI בזמן אמת
