@@ -79,57 +79,44 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
   const [customerPage, setCustomerPage] = useState(1);
   const PAGE_SIZE = 20;
 
-  // ✅ טעינת ספקי הלקוח - מהיר, מיד, עם React Query
-  const { 
-    data: suppliers = [], 
-    isLoading: isLoadingCustomerSuppliers,
-    refetch: refetchCustomerSuppliers 
-  } = useQuery({
-    queryKey: ['customerSuppliers', customer?.email],
-    queryFn: async () => {
-      if (!customer?.email) return [];
-      return await base44.entities.Supplier.filter({
-        customer_emails: [customer.email],
-        is_active: true
-      });
-    },
-    enabled: !!customer?.email,
-    staleTime: 5 * 60 * 1000, // 5 דקות cache
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    retry: 1
-  });
+  // ✅ פונקציית עזר: טעינת כל הרשומות עם pagination בצד השרת (עוקף מגבלת 50 של base44)
+  const fetchAllWithPagination = useCallback(async (filterQuery, fields = null) => {
+    let allResults = [];
+    let hasMore = true;
+    let skip = 0;
+    const batchSize = 500;
 
-  // ✅ ספירת ספקים מוצעים - מיידי, לא תלוי בטאב
+    while (hasMore) {
+      const args = [filterQuery, '-created_date', batchSize, skip];
+      if (fields) args.push(fields);
+      const batch = await base44.entities.Supplier.filter(...args);
+      allResults = [...allResults, ...batch];
+      skip += batch.length;
+      if (batch.length < batchSize) {
+        hasMore = false;
+      }
+    }
+    return allResults;
+  }, []);
+
+  // ✅ ספירת ספקים מוצעים -- שליפה קלה של שדות מינימליים בלבד
   const { 
-    data: suggestedSuppliersCount = 0, 
+    data: suggestedCountData = { count: 0, categories: [] }, 
     isLoading: isLoadingSuggestedCount 
   } = useQuery({
     queryKey: ['suggestedSuppliersCount', customer?.email],
     queryFn: async () => {
-      if (!customer?.email) return 0;
-      try {
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 8000)
-        );
-        const result = await Promise.race([
-          base44.functions.invoke('getSuggestedSuppliers', {
-            customer_email: customer.email,
-            customer_data: customer
-          }),
-          timeoutPromise
-        ]);
-        const { data: suggested, error } = result || {};
-        if (error) throw new Error(error);
-        const suppliersList = suggested?.data || suggested || [];
-        return Array.isArray(suppliersList) ? suppliersList.length : 0;
-      } catch (error) {
-        console.warn('AI suggestion count failed, using fallback:', error);
-        const allSuppliers = await base44.entities.Supplier.filter({ is_active: true });
-        return allSuppliers.filter((supplier) =>
-          !supplier.customer_emails?.includes(customer.email)
-        ).length;
-      }
+      if (!customer?.email) return { count: 0, categories: [] };
+      const allLightweight = await fetchAllWithPagination(
+        { is_active: true },
+        ['id', 'customer_emails', 'supplier_type', 'category']
+      );
+      const unassigned = allLightweight.filter(
+        (s) => !s.customer_emails?.includes(customer.email)
+      );
+      const cats = new Set();
+      unassigned.forEach(s => { if (s.category) cats.add(s.category); });
+      return { count: unassigned.length, categories: Array.from(cats).sort() };
     },
     enabled: !!customer?.email,
     staleTime: 5 * 60 * 1000,
@@ -138,83 +125,114 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
     retry: 1
   });
 
-  // ✅ טעינת ספקים מוצעים - איטי, lazy loading, רק כשצריך
+  const suggestedSuppliersCount = suggestedCountData.count;
+  const suggestedCategories = suggestedCountData.categories;
+
+  // ✅ ספירת ספקי הלקוח -- שליפה קלה
   const { 
-    data: allSuggestedSuppliers = [], 
-    isLoading: isLoadingSuggested,
-    refetch: refetchSuggested 
+    data: customerSuppliersCount = 0, 
+    isLoading: isLoadingCustomerCount 
   } = useQuery({
-    queryKey: ['suggestedSuppliers', customer?.email],
+    queryKey: ['customerSuppliersCount', customer?.email],
     queryFn: async () => {
-      if (!customer?.email) return [];
-      
-      try {
-        // נסה AI call עם timeout קצר
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 8000)
-        );
-        
-        const result = await Promise.race([
-          base44.functions.invoke('getSuggestedSuppliers', {
-            customer_email: customer.email,
-            customer_data: customer
-          }),
-          timeoutPromise
-        ]);
-        
-        const { data: suggested, error } = result || {};
-        if (error) throw new Error(error);
-        
-        const suppliersList = suggested?.data || suggested || [];
-        return Array.isArray(suppliersList) ? suppliersList : [];
-      } catch (error) {
-        console.warn('AI suggestion failed, using fallback:', error);
-        // Fallback: טען את כל הספקים הפעילים (ללא AI)
-        const allSuppliers = await base44.entities.Supplier.filter({ is_active: true });
-        return allSuppliers.filter((supplier) =>
-          !supplier.customer_emails?.includes(customer.email)
-        );
-      }
+      if (!customer?.email) return 0;
+      const allCustomer = await fetchAllWithPagination(
+        { customer_emails: [customer.email], is_active: true },
+        ['id']
+      );
+      return allCustomer.length;
     },
-    enabled: !!customer?.email && activeTab === 'suggested-suppliers', // ✅ רק כשצריך
-    staleTime: 10 * 60 * 1000, // 10 דקות cache (AI call יקר)
-    gcTime: 15 * 60 * 1000,
+    enabled: !!customer?.email,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: 1
   });
 
-  // ✅ סינון ספקים מוצעים (חיפוש + קטגוריה) -- לפני pagination
-  const filteredAllSuggested = React.useMemo(() => 
-    allSuggestedSuppliers.filter((supplier) => {
-      const searchMatch = !searchTerm || 
-        supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        supplier.contact_person?.toLowerCase().includes(searchTerm.toLowerCase());
-      const categoryMatch = !categoryFilter || supplier.category === categoryFilter;
-      return searchMatch && categoryMatch;
-    }), [allSuggestedSuppliers, searchTerm, categoryFilter]
-  );
+  // ✅ טעינת ספקי הלקוח -- עמוד נוכחי בלבד (20 לכל עמוד)
+  const { 
+    data: suppliers = [], 
+    isLoading: isLoadingCustomerSuppliers,
+    refetch: refetchCustomerSuppliers 
+  } = useQuery({
+    queryKey: ['customerSuppliers', customer?.email, customerPage],
+    queryFn: async () => {
+      if (!customer?.email) return [];
+      return await base44.entities.Supplier.filter(
+        { customer_emails: [customer.email], is_active: true },
+        '-created_date',
+        PAGE_SIZE,
+        (customerPage - 1) * PAGE_SIZE
+      );
+    },
+    enabled: !!customer?.email,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
+    keepPreviousData: true
+  });
 
-  // ✅ חישוב עמודים
-  const totalSuggestedPages = Math.max(1, Math.ceil(filteredAllSuggested.length / PAGE_SIZE));
+  // ✅ טעינת ספקים מוצעים -- עמוד נוכחי בלבד (20 לכל עמוד), סינון בצד השרת
+  const { 
+    data: suggestedPageData = { suppliers: [], totalFiltered: 0 }, 
+    isLoading: isLoadingSuggested,
+    refetch: refetchSuggested 
+  } = useQuery({
+    queryKey: ['suggestedSuppliers', customer?.email, suggestedPage, categoryFilter, searchTerm],
+    queryFn: async () => {
+      if (!customer?.email) return { suppliers: [], totalFiltered: 0 };
+      
+      // בניית שאילתת סינון
+      const filterQuery = { is_active: true };
+      if (categoryFilter) {
+        filterQuery.category = categoryFilter;
+      }
+      
+      // טעינת כל הספקים המתאימים לסינון (עם pagination בצד השרת)
+      const allFiltered = await fetchAllWithPagination(filterQuery);
+      
+      // סינון: רק ספקים שלא משויכים ללקוח + חיפוש טקסט
+      let unassigned = allFiltered.filter(
+        (s) => !s.customer_emails?.includes(customer.email)
+      );
+      
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        unassigned = unassigned.filter((s) =>
+          s.name?.toLowerCase().includes(term) ||
+          s.contact_person?.toLowerCase().includes(term)
+        );
+      }
+      
+      const totalFiltered = unassigned.length;
+      const startIndex = (suggestedPage - 1) * PAGE_SIZE;
+      const pageSuppliers = unassigned.slice(startIndex, startIndex + PAGE_SIZE);
+      
+      return { suppliers: pageSuppliers, totalFiltered };
+    },
+    enabled: !!customer?.email && activeTab === 'suggested-suppliers',
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
+    keepPreviousData: true
+  });
 
-  // ✅ Pagination עבור ספקים מוצעים -- עמוד נוכחי בלבד
-  const paginatedSuggestedSuppliers = React.useMemo(() => {
-    const startIndex = (suggestedPage - 1) * PAGE_SIZE;
-    const endIndex = startIndex + PAGE_SIZE;
-    return filteredAllSuggested.slice(startIndex, endIndex);
-  }, [filteredAllSuggested, suggestedPage]);
-
-  // ✅ חילוץ קטגוריות ייחודיות מהספקים המוצעים
-  const suggestedCategories = React.useMemo(() => {
-    const cats = new Set();
-    allSuggestedSuppliers.forEach(s => { if (s.category) cats.add(s.category); });
-    return Array.from(cats).sort();
-  }, [allSuggestedSuppliers]);
+  const paginatedSuggestedSuppliers = suggestedPageData.suppliers;
+  const totalFilteredSuggested = suggestedPageData.totalFiltered;
+  const totalSuggestedPages = Math.max(1, Math.ceil(totalFilteredSuggested / PAGE_SIZE));
+  const totalCustomerPages = Math.max(1, Math.ceil(customerSuppliersCount / PAGE_SIZE));
 
   // ✅ איפוס pagination כשמשנים טאב או מסננים
   useEffect(() => {
     setSuggestedPage(1);
   }, [activeTab, categoryFilter, searchTerm]);
+
+  // ✅ איפוס עמוד ספקי לקוח כשמשנים חיפוש
+  useEffect(() => {
+    setCustomerPage(1);
+  }, [searchTerm]);
 
   const handleAssignSupplier = async (supplier) => {
     try {
@@ -226,10 +244,11 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
         customer_emails: updatedEmails
       });
 
-      // ✅ רענון עם React Query
-      queryClient.invalidateQueries(['customerSuppliers', customer.email]);
-      queryClient.invalidateQueries(['suggestedSuppliers', customer.email]);
-      queryClient.invalidateQueries(['suggestedSuppliersCount', customer.email]);
+      // ✅ רענון כל השאילתות
+      queryClient.invalidateQueries({ queryKey: ['customerSuppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['customerSuppliersCount'] });
+      queryClient.invalidateQueries({ queryKey: ['suggestedSuppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['suggestedSuppliersCount'] });
     } catch (error) {
       console.error("Error assigning supplier:", error);
     }
@@ -243,10 +262,11 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
         customer_emails: updatedEmails
       });
 
-      // ✅ רענון עם React Query
-      queryClient.invalidateQueries(['customerSuppliers', customer.email]);
-      queryClient.invalidateQueries(['suggestedSuppliers', customer.email]);
-      queryClient.invalidateQueries(['suggestedSuppliersCount', customer.email]);
+      // ✅ רענון כל השאילתות
+      queryClient.invalidateQueries({ queryKey: ['customerSuppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['customerSuppliersCount'] });
+      queryClient.invalidateQueries({ queryKey: ['suggestedSuppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['suggestedSuppliersCount'] });
     } catch (error) {
       console.error("Error removing supplier:", error);
     }
@@ -288,10 +308,11 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
 
       await base44.entities.Supplier.delete(supplier.id);
 
-      // ✅ רענון עם React Query
-      queryClient.invalidateQueries(['customerSuppliers', customer.email]);
-      queryClient.invalidateQueries(['suggestedSuppliers', customer.email]);
-      queryClient.invalidateQueries(['suggestedSuppliersCount', customer.email]);
+      // ✅ רענון כל השאילתות
+      queryClient.invalidateQueries({ queryKey: ['customerSuppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['customerSuppliersCount'] });
+      queryClient.invalidateQueries({ queryKey: ['suggestedSuppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['suggestedSuppliersCount'] });
     } catch (error) {
       console.error("Error deleting supplier:", error);
     }
@@ -346,25 +367,14 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
     setSearchTerm('');
   };
 
-  const filteredSuppliers = React.useMemo(() => 
-    suppliers.filter((supplier) =>
+  // ✅ סינון חיפוש בצד הלקוח עבור ספקי הלקוח (הנתונים כבר מגיעים מהשרת בעמודים)
+  const filteredSuppliers = React.useMemo(() => {
+    if (!searchTerm) return suppliers;
+    return suppliers.filter((supplier) =>
       supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       supplier.contact_person?.toLowerCase().includes(searchTerm.toLowerCase())
-    ), [suppliers, searchTerm]
-  );
-
-  // ✅ Pagination עבור ספקי הלקוח
-  const totalCustomerPages = Math.max(1, Math.ceil(filteredSuppliers.length / PAGE_SIZE));
-  const paginatedCustomerSuppliers = React.useMemo(() => {
-    const startIndex = (customerPage - 1) * PAGE_SIZE;
-    const endIndex = startIndex + PAGE_SIZE;
-    return filteredSuppliers.slice(startIndex, endIndex);
-  }, [filteredSuppliers, customerPage]);
-
-  // ✅ איפוס עמוד ספקי לקוח כשמשנים חיפוש
-  useEffect(() => {
-    setCustomerPage(1);
-  }, [searchTerm]);
+    );
+  }, [suppliers, searchTerm]);
 
   const canAddSupplier = currentUser && (currentUser.role === 'admin' || currentUser.user_type === 'financial_manager');
 
@@ -405,12 +415,12 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
             <TabsTrigger
               value="customer-suppliers"
               className="data-[state=active]:bg-[#32acc1] data-[state=active]:text-white transition-all">
-              ספקים של הלקוח ({filteredSuppliers.length})
+              ספקים של הלקוח ({isLoadingCustomerCount ? '...' : customerSuppliersCount})
             </TabsTrigger>
             <TabsTrigger
               value="suggested-suppliers"
               className="data-[state=active]:bg-[#32acc1] data-[state=active]:text-white transition-all">
-              ספקים מוצעים ({activeTab === 'suggested-suppliers' && !isLoadingSuggested ? allSuggestedSuppliers.length : (isLoadingSuggestedCount ? '...' : suggestedSuppliersCount)})
+              ספקים מוצעים ({isLoadingSuggestedCount ? '...' : suggestedSuppliersCount})
               {isLoadingSuggested && activeTab === 'suggested-suppliers' && (
                 <span className="mr-2 animate-spin">⏳</span>
               )}
@@ -442,13 +452,18 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
 
           <TabsContent value="customer-suppliers" className="mt-4">
             {/* מידע על תוצאות */}
-            {filteredSuppliers.length > 0 && (
+            {customerSuppliersCount > 0 && (
               <div className="mb-3 text-sm text-horizon-accent">
-                מציג {Math.min((customerPage - 1) * PAGE_SIZE + 1, filteredSuppliers.length)}-{Math.min(customerPage * PAGE_SIZE, filteredSuppliers.length)} מתוך {filteredSuppliers.length} ספקים
+                מציג {Math.min((customerPage - 1) * PAGE_SIZE + 1, customerSuppliersCount)}-{Math.min(customerPage * PAGE_SIZE, customerSuppliersCount)} מתוך {customerSuppliersCount} ספקים
               </div>
             )}
 
-            {filteredSuppliers.length > 0 ?
+            {isLoadingCustomerSuppliers ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-horizon-primary mx-auto mb-4"></div>
+                <p className="text-horizon-accent">טוען ספקים...</p>
+              </div>
+            ) : filteredSuppliers.length > 0 ?
             <>
               <div className="border rounded-lg overflow-hidden border-horizon">
                 <Table dir="rtl">
@@ -464,7 +479,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedCustomerSuppliers.map((supplier) =>
+                    {filteredSuppliers.map((supplier) =>
                   <TableRow key={supplier.id} className="border-horizon">
                         <TableCell className="font-medium text-right">
                           <Button variant="link" onClick={() => setSelectedSupplier(supplier)} className="text-horizon-primary p-0 h-auto">
@@ -588,16 +603,16 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
             }
 
             {/* מידע על תוצאות */}
-            {!isLoadingSuggested && filteredAllSuggested.length > 0 && (
+            {!isLoadingSuggested && totalFilteredSuggested > 0 && (
               <div className="mb-3 text-sm text-horizon-accent flex items-center justify-between">
                 <span>
-                  מציג {Math.min((suggestedPage - 1) * PAGE_SIZE + 1, filteredAllSuggested.length)}-{Math.min(suggestedPage * PAGE_SIZE, filteredAllSuggested.length)} מתוך {filteredAllSuggested.length} ספקים
-                  {(searchTerm || categoryFilter) && ` (סה"כ במערכת: ${allSuggestedSuppliers.length})`}
+                  מציג {Math.min((suggestedPage - 1) * PAGE_SIZE + 1, totalFilteredSuggested)}-{Math.min(suggestedPage * PAGE_SIZE, totalFilteredSuggested)} מתוך {totalFilteredSuggested} ספקים
+                  {(searchTerm || categoryFilter) && ` (סה"כ במערכת: ${suggestedSuppliersCount})`}
                 </span>
               </div>
             )}
             
-            {isLoadingSuggested ? (
+            {isLoadingSuggested && paginatedSuggestedSuppliers.length === 0 ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-horizon-primary mx-auto mb-4"></div>
                 <p className="text-horizon-accent">טוען ספקים מוצעים...</p>
@@ -694,10 +709,11 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSupplierAdded={async () => {
-          // ✅ רענון עם React Query
-          queryClient.invalidateQueries(['customerSuppliers', customer.email]);
-          queryClient.invalidateQueries(['suggestedSuppliers', customer.email]);
-          queryClient.invalidateQueries(['suggestedSuppliersCount', customer.email]);
+          // ✅ רענון כל השאילתות
+          queryClient.invalidateQueries({ queryKey: ['customerSuppliers'] });
+          queryClient.invalidateQueries({ queryKey: ['customerSuppliersCount'] });
+          queryClient.invalidateQueries({ queryKey: ['suggestedSuppliers'] });
+          queryClient.invalidateQueries({ queryKey: ['suggestedSuppliersCount'] });
           setShowAddModal(false);
         }}
         currentUser={currentUser}
@@ -713,10 +729,11 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
         onClose={() => setSelectedSupplier(null)}
         onFindAlternatives={handleFindAlternatives}
         onSupplierUpdated={async (updatedSupplier) => {
-          // ✅ רענון עם React Query
-          queryClient.invalidateQueries(['customerSuppliers', customer.email]);
-          queryClient.invalidateQueries(['suggestedSuppliers', customer.email]);
-          queryClient.invalidateQueries(['suggestedSuppliersCount', customer.email]);
+          // ✅ רענון כל השאילתות
+          queryClient.invalidateQueries({ queryKey: ['customerSuppliers'] });
+          queryClient.invalidateQueries({ queryKey: ['customerSuppliersCount'] });
+          queryClient.invalidateQueries({ queryKey: ['suggestedSuppliers'] });
+          queryClient.invalidateQueries({ queryKey: ['suggestedSuppliersCount'] });
           
           // עדכון הספק הנבחר להצגת הנתונים החדשים
           if (updatedSupplier) {
@@ -733,10 +750,11 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
         customerEmail={customer.email}
         currentUser={currentUser}
         onSupplierAdded={async () => {
-          // ✅ רענון עם React Query
-          queryClient.invalidateQueries(['customerSuppliers', customer.email]);
-          queryClient.invalidateQueries(['suggestedSuppliers', customer.email]);
-          queryClient.invalidateQueries(['suggestedSuppliersCount', customer.email]);
+          // ✅ רענון כל השאילתות
+          queryClient.invalidateQueries({ queryKey: ['customerSuppliers'] });
+          queryClient.invalidateQueries({ queryKey: ['customerSuppliersCount'] });
+          queryClient.invalidateQueries({ queryKey: ['suggestedSuppliers'] });
+          queryClient.invalidateQueries({ queryKey: ['suggestedSuppliersCount'] });
           setShowFindAlternativeModal(false);
         }} />
 
