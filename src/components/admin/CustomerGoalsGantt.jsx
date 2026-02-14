@@ -94,7 +94,16 @@ export default function CustomerGoalsGantt({ customer }) {
             return 'open';
         };
 
-        const topLevelGoals = goals.filter(g => !g.parent_id).sort((a,b) => a.order_index - b.order_index);
+        // זיהוי יעדים אמיתיים: task_type === 'goal' או שיש תת-משימות (פריטים עם parent_id שמצביע אליו)
+        const explicitGoals = goals.filter(g => g.task_type === 'goal');
+        const goalsWithSubtasks = goals.filter(g => goals.some(t => t.parent_id === g.id));
+        const parentGoalIds = new Set([
+            ...explicitGoals.map(g => g.id),
+            ...goalsWithSubtasks.map(g => g.id)
+        ]);
+        const topLevelGoals = goals
+            .filter(g => !g.parent_id && parentGoalIds.has(g.id))
+            .sort((a, b) => a.order_index - b.order_index);
         const subtasksByGoal = goals.reduce((acc, goal) => {
             if (goal.parent_id) {
                 if (!acc[goal.parent_id]) {
@@ -148,6 +157,7 @@ export default function CustomerGoalsGantt({ customer }) {
                 customer_email: customer.email,
                 name: "יעד חדש (לחץ לעריכה)",
                 status: 'open',
+                task_type: 'goal',
                 order_index: newOrderIndex,
                 end_date: defaultEndDate.toISOString().split('T')[0] // פורמט YYYY-MM-DD
             });

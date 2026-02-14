@@ -101,10 +101,16 @@ export default function GoalsTimelineNew({ customer }) {
     });
   }, [goals, searchTerm, statusFilter, viewMode]);
 
-  // המרת יעדים ל-nodes ו-edges - רק יעדים ראשיים
+  // המרת יעדים ל-nodes ו-edges - רק יעדים ראשיים (לא משימות עצמאיות)
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
-    // סינון - רק יעדים ראשיים (ללא parent_id) או task_type='goal'
-    const mainGoals = filteredGoals.filter(g => !g.parent_id || g.task_type === 'goal');
+    // זיהוי יעדים אמיתיים: task_type === 'goal' או שיש תת-משימות
+    const explicitGoals = goals.filter(g => g.task_type === 'goal');
+    const goalsWithSubtasks = goals.filter(g => goals.some(t => t.parent_id === g.id));
+    const parentGoalIds = new Set([
+      ...explicitGoals.map(g => g.id),
+      ...goalsWithSubtasks.map(g => g.id)
+    ]);
+    const mainGoals = filteredGoals.filter(g => !g.parent_id && parentGoalIds.has(g.id));
     
     if (!mainGoals.length) return { nodes: [], edges: [] };
 

@@ -320,6 +320,7 @@ export default function CustomerManagementNew() {
               isLoading={isLoadingTasks}
               onTaskClick={handleTaskClick}
               onCollapse={() => setTasksCollapsed(true)}
+              onRefresh={() => queryClient.invalidateQueries(['customerGoals', selectedCustomer?.email])}
               allUsers={allUsers}
               currentUser={user}
             />
