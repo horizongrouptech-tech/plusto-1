@@ -75,6 +75,7 @@ import TaskManagement from './pages/TaskManagement';
 import WebsiteScan from './pages/WebsiteScan';
 import Welcome from './pages/Welcome';
 import WhatsAppTest from './pages/WhatsAppTest';
+import ExportData from './pages/ExportData';
 import __Layout from './Layout.jsx';
 
 
@@ -107,6 +108,7 @@ export const PAGES = {
     "WebsiteScan": WebsiteScan,
     "Welcome": Welcome,
     "WhatsAppTest": WhatsAppTest,
+    "ExportData": ExportData,
 }
 
 export const pagesConfig = {
