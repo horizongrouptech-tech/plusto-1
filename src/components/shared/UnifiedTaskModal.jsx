@@ -77,10 +77,10 @@ export default function UnifiedTaskModal({
       setTaggedUsers(existingTask.tagged_users || []);
       setStatus(existingTask.status || 'open');
       setIsStandalone(!existingTask.parent_id);
-    } else if (currentUser && !assigneeEmail) {
-      setAssigneeEmail(currentUser.email);
+    } else if (!assigneeEmail && (customer || currentUser)) {
+      setAssigneeEmail(customer?.assigned_financial_manager_email || currentUser?.email || '');
     }
-  }, [mode, existingTask, currentUser, assigneeEmail]);
+  }, [mode, existingTask, currentUser, customer, assigneeEmail]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -108,7 +108,7 @@ export default function UnifiedTaskModal({
         reminder_date: reminderDateTime,
         parent_id: (!isStandalone && parentGoalId && parentGoalId !== 'no_goal') ? parentGoalId : null,
         status,
-        assignee_email: assigneeEmail || currentUser?.email,
+        assignee_email: assigneeEmail || customer?.assigned_financial_manager_email || currentUser?.email,
         tagged_users: taggedUsers,
         task_type: 'one_time',
         is_active: true,

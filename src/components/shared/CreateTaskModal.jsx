@@ -56,10 +56,10 @@ export default function CreateTaskModal({ isOpen, onClose, customer, currentUser
   }, [allUsers, customer]);
 
   useEffect(() => {
-    if (currentUser && !assigneeEmail) {
-      setAssigneeEmail(currentUser.email);
+    if (!assigneeEmail && (customer || currentUser)) {
+      setAssigneeEmail(customer?.assigned_financial_manager_email || currentUser?.email || '');
     }
-  }, [currentUser, assigneeEmail]);
+  }, [currentUser, customer, assigneeEmail]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -93,7 +93,7 @@ export default function CreateTaskModal({ isOpen, onClose, customer, currentUser
         reminder_date: reminderDateTime,
         parent_id: parentGoalId && parentGoalId !== 'no_goal' ? parentGoalId : null,
         status,
-        assignee_email: assigneeEmail || currentUser?.email,
+        assignee_email: assigneeEmail || customer?.assigned_financial_manager_email || currentUser?.email,
         tagged_users: taggedUsers,
         task_type: 'one_time',
         is_active: true,

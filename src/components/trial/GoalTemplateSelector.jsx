@@ -86,7 +86,8 @@ export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoal
                 end_date: customization.end_date,
                 success_metrics: selectedTemplate.success_metrics,
                 order_index: newOrderIndex,
-                task_type: 'goal'
+                task_type: 'goal',
+                assignee_email: customer?.assigned_financial_manager_email
             });
 
             // יצירת תת-משימות אם קיימות
@@ -103,7 +104,8 @@ export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoal
                         status: 'open',
                         end_date: taskDate.toISOString().split('T')[0],
                         order_index: idx,
-                        is_active: true
+                        is_active: true,
+                        assignee_email: customer?.assigned_financial_manager_email
                     });
                 });
                 await Promise.all(subtaskPromises);

@@ -841,10 +841,10 @@ function CreateTaskModal_OLD({ isOpen, onClose, customer, currentUser, allGoals,
   }, [allUsers, customer]);
 
   useEffect(() => {
-    if (currentUser && !assigneeEmail) {
-      setAssigneeEmail(currentUser.email);
+    if (!assigneeEmail && (customer || currentUser)) {
+      setAssigneeEmail(customer?.assigned_financial_manager_email || currentUser?.email || '');
     }
-  }, [currentUser, assigneeEmail]);
+  }, [currentUser, customer, assigneeEmail]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -878,7 +878,7 @@ function CreateTaskModal_OLD({ isOpen, onClose, customer, currentUser, allGoals,
         reminder_date: reminderDateTime,
         parent_id: parentGoalId && parentGoalId !== 'no_goal' ? parentGoalId : null,
         status,
-        assignee_email: assigneeEmail || currentUser?.email,
+        assignee_email: assigneeEmail || customer?.assigned_financial_manager_email || currentUser?.email,
         tagged_users: taggedUsers,
         task_type: 'one_time',
         is_active: true,
@@ -1576,10 +1576,10 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
   }, [allUsers, customer]);
 
   useEffect(() => {
-    if (currentUser && !assigneeEmail) {
-      setAssigneeEmail(currentUser.email);
+    if (!assigneeEmail && (customer || currentUser)) {
+      setAssigneeEmail(customer?.assigned_financial_manager_email || currentUser?.email || '');
     }
-  }, [currentUser, assigneeEmail]);
+  }, [currentUser, customer, assigneeEmail]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1604,7 +1604,7 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
         end_date_time: endDateTime,
         reminder_date: reminderDateTime,
         status: 'open',
-        assignee_email: assigneeEmail || currentUser?.email,
+        assignee_email: assigneeEmail || customer?.assigned_financial_manager_email || currentUser?.email,
         responsible_users: responsibleUsers,
         external_responsible: externalResponsible.trim() || null,
         tagged_users: taggedUsers,

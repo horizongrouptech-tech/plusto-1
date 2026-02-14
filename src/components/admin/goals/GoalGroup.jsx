@@ -31,6 +31,7 @@ export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals
                 parent_id: goal.id,
                 name: "משימה חדשה (לחץ לעריכה)",
                 status: 'open',
+                assignee_email: goal.assignee_email,
                 order_index: newOrderIndex,
                 end_date: defaultEndDate.toISOString().split('T')[0] // פורמט YYYY-MM-DD - שדה חובה!
             });

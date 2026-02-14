@@ -158,6 +158,7 @@ export default function CustomerGoalsGantt({ customer }) {
                 name: "יעד חדש (לחץ לעריכה)",
                 status: 'open',
                 task_type: 'goal',
+                assignee_email: customer?.assigned_financial_manager_email,
                 order_index: newOrderIndex,
                 end_date: defaultEndDate.toISOString().split('T')[0] // פורמט YYYY-MM-DD
             });
