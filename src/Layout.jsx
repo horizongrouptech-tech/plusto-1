@@ -711,7 +711,7 @@ function LayoutContent({ children, currentPageName }) {
   }
 
   if (user && user.onboarding_completed) {
-    const allowedAdminPaths = ['/Admin', '/CustomerManagement', '/TrialDashboard'];
+    const allowedAdminPaths = ['/Admin', '/CustomerManagement', '/TrialDashboard', '/ExportData'];
     const isAllowed = allowedAdminPaths.some(path => location.pathname.startsWith(path));
 
     if (user.role === 'admin' && !isAllowed) {
