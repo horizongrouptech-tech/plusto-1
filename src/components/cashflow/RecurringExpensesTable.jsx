@@ -57,6 +57,8 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
   const [isLinking, setIsLinking] = useState(false);
   const [linkSuccess, setLinkSuccess] = useState(false);
   const [availableExpenseItems, setAvailableExpenseItems] = useState([]);
+  const [selectedForecastIdForActual, setSelectedForecastIdForActual] = useState('');
+  const [assigningMonthKey, setAssigningMonthKey] = useState(null);
 
   // טעינת הוצאות קבועות
   const { data: recurringExpenses = [], isLoading } = useQuery({
@@ -507,6 +509,105 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
     return { isLinked: false };
   };
 
+  // שיוך כל התור של חודש לביצוע בתחזית
+  const handleAssignMonthToActual = async (month, year) => {
+    const forecastId = selectedForecastIdForActual || availableForecasts?.[0]?.id;
+    if (!forecastId) {
+      toast.warning('יש לבחור תחזית לשיוך לביצוע');
+      return;
+    }
+    const monthKey = `${month}-${year}`;
+    setAssigningMonthKey(monthKey);
+    try {
+      const categoryAmounts = [];
+      for (const expense of recurringExpenses) {
+        const ma = expense.monthly_amounts?.find(
+          (m) => m.month === month && m.year === year
+        );
+        if (ma && (ma.amount == null || ma.amount > 0)) {
+          categoryAmounts.push({
+            category: expense.category || 'לא מסווג',
+            amount: Number(ma.amount) || 0
+          });
+        }
+      }
+      if (categoryAmounts.length === 0) {
+        toast.info(`אין נתונים לחודש ${MONTH_NAMES[month - 1]} ${year}`);
+        return;
+      }
+      const forecasts = await base44.entities.ManualForecast.filter({
+        id: forecastId
+      });
+      const forecast = forecasts?.[0];
+      if (!forecast) {
+        toast.error('תחזית לא נמצאה');
+        return;
+      }
+      const detailed = forecast.detailed_expenses || {
+        marketing_sales: [],
+        admin_general: []
+      };
+      const marketing = [...(detailed.marketing_sales || [])];
+      const admin = [...(detailed.admin_general || [])];
+      const monthIndex = month - 1;
+      const ensure12 = (arr) => {
+        const a = Array.isArray(arr) ? [...arr] : [];
+        while (a.length < 12) a.push(0);
+        return a.slice(0, 12);
+      };
+      for (const { category, amount } of categoryAmounts) {
+        const findIn = (list) =>
+          list.findIndex((item) => (item.name || '').trim() === (category || '').trim());
+        let idx = findIn(marketing);
+        let target = marketing;
+        if (idx === -1) {
+          idx = findIn(admin);
+          target = admin;
+        }
+        if (idx >= 0) {
+          const item = target[idx];
+          const actual = ensure12(item.actual_monthly_amounts);
+          actual[monthIndex] = amount;
+          target[idx] = {
+            ...item,
+            actual_monthly_amounts: actual
+          };
+        } else {
+          const newItem = {
+            name: category,
+            amount: amount,
+            planned_monthly_amounts: Array(12).fill(0),
+            actual_monthly_amounts: (() => {
+              const a = Array(12).fill(0);
+              a[monthIndex] = amount;
+              return a;
+            })(),
+            is_annual_total: false,
+            has_vat: true,
+            notes: `משויך מהוצאות קבועות (ביזיבוקס) - חודש ${MONTH_NAMES[month - 1]} ${year}`
+          };
+          admin.push(newItem);
+        }
+      }
+      await base44.entities.ManualForecast.update(forecastId, {
+        detailed_expenses: {
+          ...detailed,
+          marketing_sales: marketing,
+          admin_general: admin
+        }
+      });
+      queryClient.invalidateQueries(['forecasts', customer?.email]);
+      toast.success(
+        `שויך חודש ${MONTH_NAMES[month - 1]} ${year} לביצוע (${categoryAmounts.length} קטגוריות)`
+      );
+    } catch (err) {
+      console.error('Error assigning month to actual:', err);
+      toast.error('שגיאה בשיוך לביצוע: ' + (err?.message || err));
+    } finally {
+      setAssigningMonthKey(null);
+    }
+  };
+
   // קבלת החודשים הרלוונטיים מהטווח
   const getMonthsInRange = () => {
     const start = new Date(dateRange.start);
@@ -605,6 +706,24 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
             <p className="text-xs text-blue-300 mt-2">
               💡 בחר טווח תאריכים וחשב מחדש הוצאות קבועות לפי תנועות התזרים
             </p>
+            <div className="flex flex-wrap gap-4 items-center mt-4 pt-4 border-t border-blue-500/20">
+              <span className="text-sm font-medium text-green-400">שייך לביצוע לתחזית:</span>
+              <Select
+                value={selectedForecastIdForActual || availableForecasts?.[0]?.id || ''}
+                onValueChange={setSelectedForecastIdForActual}
+              >
+                <SelectTrigger className="w-56 bg-horizon-dark border-green-500/50 text-horizon-text text-sm">
+                  <SelectValue placeholder="בחר תחזית" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(availableForecasts || []).map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.forecast_name || f.name || `תחזית ${f.forecast_year || ''}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -622,11 +741,30 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
                   <TableHead className="text-right text-horizon-text font-bold sticky right-0 bg-horizon-dark">
                     קטגוריה
                   </TableHead>
-                  {monthsInRange.map((m, idx) => (
-                    <TableHead key={idx} className="text-center text-horizon-text">
-                      {m.label}
-                    </TableHead>
-                  ))}
+                  {monthsInRange.map((m, idx) => {
+                    const monthKey = `${m.month}-${m.year}`;
+                    const isAssigning = assigningMonthKey === monthKey;
+                    return (
+                      <TableHead key={idx} className="text-center text-horizon-text">
+                        <div className="flex flex-col items-center gap-1">
+                          <span>{m.label}</span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-[10px] h-7 border-green-500/50 text-green-400 hover:bg-green-500/10"
+                            disabled={isAssigning || !(selectedForecastIdForActual || availableForecasts?.[0]?.id)}
+                            onClick={() => handleAssignMonthToActual(m.month, m.year)}
+                          >
+                            {isAssigning ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              'שייך לביצוע'
+                            )}
+                          </Button>
+                        </div>
+                      </TableHead>
+                    );
+                  })}
                   <TableHead className="text-center text-horizon-text">ממוצע</TableHead>
                   <TableHead className="text-center text-horizon-text">סטטוס</TableHead>
                   <TableHead className="text-center text-horizon-text">פעולות</TableHead>
