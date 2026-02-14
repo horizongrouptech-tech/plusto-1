@@ -109,15 +109,27 @@ export default function FailedFileUploadsManager() {
                 </p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetch()}
-              className="border-horizon-primary text-horizon-primary"
-            >
-              <RefreshCw className="w-4 h-4 ml-2" />
-              רענון
-            </Button>
+            <div className="flex items-center gap-2">
+              <Link to={createPageUrl('ExportData')}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-horizon-primary text-horizon-primary"
+                >
+                  <Database className="w-4 h-4 ml-2" />
+                  ייצוא נתונים
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+                className="border-horizon-primary text-horizon-primary"
+              >
+                <RefreshCw className="w-4 h-4 ml-2" />
+                רענון
+              </Button>
+            </div>
           </div>
         </CardHeader>
       </Card>
