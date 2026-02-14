@@ -45,6 +45,7 @@ import { he } from 'date-fns/locale';
 import TaskCard from './kanban/TaskCard';
 import CompletedTasksModal from './kanban/CompletedTasksModal';
 import GoalBankManager from '../admin/GoalBankManager';
+import CreateTaskModal from '../shared/CreateTaskModal';
 
 
 import { toast } from "sonner";
@@ -89,6 +90,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const [showCompletedModal, setShowCompletedModal] = useState(false);
   const [isClientsExpanded, setIsClientsExpanded] = useState(false); // Default: collapsed
   const [showGoalBankModal, setShowGoalBankModal] = useState(false);
+  const [customerForNewTask, setCustomerForNewTask] = useState(null);
 
   const todayWorkGroup = getTodayWorkGroup();
   const queryClient = useQueryClient();
@@ -703,6 +705,16 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                       {totalCount}
                     </Badge>
                   </div>
+                  <div className="p-3 border-b border-horizon">
+                    <Button
+                      type="button"
+                      onClick={() => setCustomerForNewTask(customer)}
+                      className="w-full bg-horizon-secondary hover:bg-horizon-secondary/90 text-white"
+                    >
+                      <Plus className="w-4 h-4 ml-2" />
+                      הוסף משימה חדשה
+                    </Button>
+                  </div>
                   <div className="p-3 space-y-3 min-h-[200px] max-h-[calc(100vh-300px)] overflow-y-auto">
                     {totalCount === 0 ? (
                       <p className="text-sm text-horizon-accent text-center py-8">אין משימות</p>
@@ -855,6 +867,18 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         allGoals={goals}
         onRestoreTask={handleRestoreTask} />
 
+      {/* מודאל הוספת משימה חדשה (מתוך עמודת לקוח) */}
+      <CreateTaskModal
+        isOpen={!!customerForNewTask}
+        onClose={() => setCustomerForNewTask(null)}
+        customer={customerForNewTask}
+        currentUser={currentUser}
+        allGoals={customerForNewTask ? goals.filter((g) => g.customer_email === customerForNewTask.email && g.task_type === 'goal') : []}
+        onSuccess={() => {
+          queryClient.invalidateQueries(['allRelevantTasks']);
+          setCustomerForNewTask(null);
+        }}
+      />
 
       {/* מודל בנק יעדים */}
       <Dialog open={showGoalBankModal} onOpenChange={setShowGoalBankModal}>
