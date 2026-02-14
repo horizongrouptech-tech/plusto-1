@@ -1,5 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+/**
+ * מחיקת כל תזרים המזומנים של לקוח.
+ * גישה: שליפה במנות (Chunked Fetching) + מחיקה במנות – לא שולפים את כל הרשומות בבת אחת.
+ * בכל iteration: שולפים רק CHUNK_SIZE רשומות (עם limit), מוחקים אותן, וחוזרים עד שה-filter מחזיר רשימה ריקה.
+ */
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -12,79 +17,48 @@ Deno.serve(async (req) => {
             });
         }
 
-        console.log(`Starting permanent cash flow deletion for ${customer_email}`);
-        const startTime = Date.now();
-        const TIMEOUT_MS = 25000; // 25 seconds safety margin
         const CHUNK_SIZE = 1000;
-
-        // Step 1: Count total records
-        const allRecords = await base44.asServiceRole.entities.CashFlow.filter(
-            { customer_email },
-            '-created_date',
-            999999
-        );
-        const totalCount = allRecords.length;
-        console.log(`Found ${totalCount} records to delete`);
-
-        if (totalCount === 0) {
-            return new Response(JSON.stringify({
-                success: true,
-                deletedCount: 0,
-                message: 'אין תנועות למחוק'
-            }), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
-
-        // Step 2: Delete in chunks
         let totalDeleted = 0;
-        let chunkNumber = 0;
 
-        for (let i = 0; i < allRecords.length; i += CHUNK_SIZE) {
-            // Check timeout
-            if (Date.now() - startTime > TIMEOUT_MS) {
-                console.log(`Timeout reached. Deleted ${totalDeleted}/${totalCount}`);
-                return new Response(JSON.stringify({
-                    success: false,
-                    partialSuccess: true,
-                    deletedCount: totalDeleted,
-                    totalCount,
-                    message: `נמחקו ${totalDeleted} מתוך ${totalCount} תנועות. יש להריץ שוב למחיקת היתר`
-                }), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' }
-                });
+        console.log(`Starting permanent cash flow deletion for ${customer_email} (chunked fetch + delete)`);
+
+        while (true) {
+            // א. שליפה במנה בלבד – לא את כל הרשומות (מונע timeout וזיכרון ענק)
+            const entries = await base44.asServiceRole.entities.CashFlow.filter(
+                { customer_email },
+                'date',
+                CHUNK_SIZE
+            );
+
+            if (!entries || entries.length === 0) break;
+
+            // ב. מחיקת המנה שזה עתה נשלפה (במקביל)
+            const deleteResults = await Promise.allSettled(
+                entries.map(entry => base44.asServiceRole.entities.CashFlow.delete(entry.id))
+            );
+            const succeeded = deleteResults.filter(r => r.status === 'fulfilled').length;
+            const failed = deleteResults.filter(r => r.status === 'rejected').length;
+            totalDeleted += succeeded;
+            if (failed > 0) {
+                console.warn(`Batch: ${succeeded} deleted, ${failed} failed`);
             }
 
-            const chunk = allRecords.slice(i, i + CHUNK_SIZE);
-            const chunkIds = chunk.map(r => r.id);
+            console.log(`Deleted chunk of ${entries.length}. Total so far: ${totalDeleted}`);
 
-            chunkNumber++;
-            console.log(`Deleting chunk ${chunkNumber}: ${chunkIds.length} records`);
-
-            // Delete chunk by IDs
-            for (const id of chunkIds) {
-                try {
-                    await base44.asServiceRole.entities.CashFlow.delete(id);
-                    totalDeleted++;
-                } catch (deleteError) {
-                    console.error(`Failed to delete record ${id}:`, deleteError);
-                }
+            // הפסקה קצרה בין מנות כדי לא להעמיס על ה-API
+            if (entries.length === CHUNK_SIZE) {
+                await new Promise(r => setTimeout(r, 50));
             }
-
-            console.log(`Chunk ${chunkNumber} completed. Total deleted: ${totalDeleted}/${totalCount}`);
         }
 
-        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-        console.log(`Cash flow deletion completed in ${duration}s. Deleted: ${totalDeleted}`);
+        console.log(`Cash flow deletion completed. Total deleted: ${totalDeleted}`);
 
         return new Response(JSON.stringify({
             success: true,
             deletedCount: totalDeleted,
-            totalCount,
-            duration: `${duration}s`,
-            message: `כל נתוני התזרים נמחקו בהצלחה - ${totalDeleted} תנועות בזמן ${duration} שניות`
+            message: totalDeleted > 0
+                ? `כל נתוני התזרים נמחקו בהצלחה - ${totalDeleted} תנועות`
+                : 'אין תנועות למחוק'
         }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
