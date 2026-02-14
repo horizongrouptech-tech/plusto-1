@@ -518,9 +518,9 @@ export default function CashFlowManager({ customer }) {
                       queryClient.invalidateQueries(['cashFlow', customer.email]);
                       queryClient.invalidateQueries(['recurringTransactions', customer.email]);
                       
-                      // המתנה קצרה בין קריאות כדי לא לעמוס את השרת
+                      // המתנה בין קריאות כדי להימנע מ-Rate Limit (429)
                       if (hasMore) {
-                        await new Promise(resolve => setTimeout(resolve, 500));
+                        await new Promise(resolve => setTimeout(resolve, 800));
                       }
                     }
                     
