@@ -2,8 +2,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /**
  * מחיקת תזרים מזומנים של לקוח.
- * גישה: שליפה במנות (Chunked Fetching) + מחיקה במנות. כל קריאה מוגבלת ל־MAX_BATCHES
- * מנות כדי לא לעבור את מגבלת ה-timeout של הפלטפורמה (502). הלקוח קורא שוב עד hasMore=false.
+ * גישה: מחיקת מנה אחת בלבד בכל קריאה כדי למנוע Rate Limit (429).
+ * הלקוח ימשיך לקרוא עד hasMore=false.
  */
 Deno.serve(async (req) => {
     try {
@@ -17,23 +17,19 @@ Deno.serve(async (req) => {
             });
         }
 
-        const CHUNK_SIZE = 1000;
-        const MAX_BATCHES = 10; // מקסימום מנות בקריאה אחת – מונע 502 timeout
+        const CHUNK_SIZE = 1000; // מספר הרשומות למחיקה בכל מנה
         let totalDeleted = 0;
-        let batchCount = 0;
-        let hasMore = false;
 
-        console.log(`Cash flow deletion for ${customer_email} (up to ${MAX_BATCHES} batches per request)`);
+        console.log(`Cash flow deletion for ${customer_email} (one chunk per request)`);
 
-        while (batchCount < MAX_BATCHES) {
-            const entries = await base44.asServiceRole.entities.CashFlow.filter(
-                { customer_email },
-                'date',
-                CHUNK_SIZE
-            );
+        // נמשוך רק מנה אחת של רשומות
+        const entries = await base44.asServiceRole.entities.CashFlow.filter(
+            { customer_email },
+            'date',
+            CHUNK_SIZE
+        );
 
-            if (!entries || entries.length === 0) break;
-
+        if (entries && entries.length > 0) {
             const deleteResults = await Promise.allSettled(
                 entries.map(entry => base44.asServiceRole.entities.CashFlow.delete(entry.id))
             );
@@ -41,11 +37,10 @@ Deno.serve(async (req) => {
             const failed = deleteResults.filter(r => r.status === 'rejected').length;
             totalDeleted += succeeded;
             if (failed > 0) console.warn(`Batch: ${succeeded} deleted, ${failed} failed`);
-            batchCount++;
-            hasMore = entries.length === CHUNK_SIZE;
-            if (!hasMore) break;
-            await new Promise(r => setTimeout(r, 40));
         }
+
+        // דגל hasMore יהיה נכון אם מספר הרשומות שנמשכו שווה לגודל החבילה
+        const hasMore = entries?.length === CHUNK_SIZE;
 
         return new Response(JSON.stringify({
             success: true,
