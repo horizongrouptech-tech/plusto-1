@@ -6,9 +6,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
   AlertCircle, FileX, Download, Eye, RefreshCw, Loader2,
-  Calendar, User, FileText, XCircle, CheckCircle, Clock
+  Calendar, User, FileText, XCircle, CheckCircle, Clock, Database
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { he } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
