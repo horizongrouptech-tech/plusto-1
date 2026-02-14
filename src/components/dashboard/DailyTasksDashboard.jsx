@@ -167,7 +167,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       if (isAdmin) {
         const allTasks = await base44.entities.CustomerGoal.filter({ is_active: true }, 'order_index');
         // סינון משימות צ'קליסט יומי
-        return allTasks.filter(t => t.task_type !== 'daily_checklist_360');
+        return allTasks.filter(t => t.task_type !== 'daily_checklist_360' && t.task_type !== 'goal');
       } else {
         const myCustomers = allCustomers.map((c) => c.email);
         const customerTasks = await base44.entities.CustomerGoal.filter({
@@ -175,8 +175,8 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         }, 'order_index');
 
         const relevantTasks = customerTasks.filter((task) =>
-          // סינון משימות צ'קליסט יומי
-          task.task_type !== 'daily_checklist_360' && (
+          // סינון משימות צ'קליסט יומי ויעדים – מציגים רק משימות
+          task.task_type !== 'daily_checklist_360' && task.task_type !== 'goal' && (
             task.assignee_email === currentUser.email ||
             myCustomers.includes(task.customer_email)
           )
@@ -286,21 +286,36 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     });
   }, [allCustomers, groupFilter, customerFilter, filteredTasksByGroup]);
 
-  // קיבוץ משימות לפי לקוח, ממוין לפי תאריך סיום (הקרוב קודם)
+  // סדר וכותרת לכל סוג סטטוס (פעיל) – להפרדה ויזואלית בעמודה (בוטל לא מוצג)
+  const ACTIVE_STATUS_SECTIONS = [
+    { key: 'delayed', label: 'באיחור', colorClass: 'border-red-500/50 bg-red-500/10 text-red-700' },
+    { key: 'in_progress', label: 'בביצוע', colorClass: 'border-yellow-500/50 bg-yellow-500/10 text-yellow-700' },
+    { key: 'open', label: 'לביצוע', colorClass: 'border-blue-500/50 bg-blue-500/10 text-blue-700' }
+  ];
+
+  // קיבוץ משימות לפי לקוח ולפי סטטוס: delayed, in_progress, open, cancelled, completed – ממוין לפי תאריך בכל קבוצה
   const tasksByCustomer = useMemo(() => {
     const byEmail = {};
     filteredCustomersForColumns.forEach((c) => {
-      byEmail[c.email] = [];
+      byEmail[c.email] = {
+        delayed: [], in_progress: [], open: [],
+        completed: []
+      };
     });
+    const sortByEndDate = (a, b) => {
+      if (!a.end_date) return 1;
+      if (!b.end_date) return -1;
+      return new Date(a.end_date).getTime() - new Date(b.end_date).getTime();
+    };
     filteredTasksByGroup.forEach((task) => {
-      if (byEmail[task.customer_email]) byEmail[task.customer_email].push(task);
+      const bucket = byEmail[task.customer_email];
+      if (!bucket) return;
+      if (task.status === 'done') bucket.completed.push(task);
+      else if (task.status !== 'cancelled' && bucket[task.status] !== undefined) bucket[task.status].push(task);
     });
     Object.keys(byEmail).forEach((email) => {
-      byEmail[email].sort((a, b) => {
-        if (!a.end_date) return 1;
-        if (!b.end_date) return -1;
-        return new Date(a.end_date).getTime() - new Date(b.end_date).getTime();
-      });
+      ACTIVE_STATUS_SECTIONS.forEach(({ key }) => byEmail[email][key].sort(sortByEndDate));
+      byEmail[email].completed.sort(sortByEndDate);
     });
     return byEmail;
   }, [filteredTasksByGroup, filteredCustomersForColumns]);
@@ -665,7 +680,10 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-4">
           {filteredCustomersForColumns.map((customer) => {
-            const customerTasks = tasksByCustomer[customer.email] || [];
+            const bucket = tasksByCustomer[customer.email] || {
+              delayed: [], in_progress: [], open: [], completed: []
+            };
+            const totalCount = bucket.delayed.length + bucket.in_progress.length + bucket.open.length + bucket.completed.length;
             const headerColor = customer.customer_group === 'A'
               ? 'bg-[#32acc1] text-white'
               : customer.customer_group === 'B'
@@ -682,27 +700,63 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                       </h3>
                     </div>
                     <Badge className="bg-white/20 text-white flex-shrink-0">
-                      {customerTasks.length}
+                      {totalCount}
                     </Badge>
                   </div>
                   <div className="p-3 space-y-3 min-h-[200px] max-h-[calc(100vh-300px)] overflow-y-auto">
-                    {customerTasks.length === 0 ? (
+                    {totalCount === 0 ? (
                       <p className="text-sm text-horizon-accent text-center py-8">אין משימות</p>
                     ) : (
-                      customerTasks.map((task) => {
-                        const parentGoal = task.parent_id ? goals.find((g) => g.id === task.parent_id) : null;
-                        return (
-                          <TaskCard
-                            key={task.id}
-                            task={task}
-                            customer={customer}
-                            parentGoal={parentGoal}
-                            onTaskClick={handleTaskClick}
-                            onMarkAsDone={handleMarkAsDone}
-                            isDragging={false}
-                          />
-                        );
-                      })
+                      <>
+                        {ACTIVE_STATUS_SECTIONS.map(({ key, label, colorClass }) =>
+                          bucket[key].length > 0 ? (
+                            <div key={key}>
+                              <div className={`border rounded px-2 py-1.5 text-center text-xs font-medium ${colorClass}`}>
+                                {label} ({bucket[key].length})
+                              </div>
+                              <div className="space-y-2 mt-2">
+                                {bucket[key].map((task) => {
+                                  const parentGoal = task.parent_id ? goals.find((g) => g.id === task.parent_id) : null;
+                                  return (
+                                    <TaskCard
+                                      key={task.id}
+                                      task={task}
+                                      customer={customer}
+                                      parentGoal={parentGoal}
+                                      onTaskClick={handleTaskClick}
+                                      onMarkAsDone={handleMarkAsDone}
+                                      isDragging={false}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ) : null
+                        )}
+                        {bucket.completed.length > 0 && (
+                          <>
+                            <div className="border-t-2 border-horizon mt-4 pt-3 bg-horizon-primary/5 rounded px-2 py-2 text-center">
+                              <p className="text-xs font-medium text-horizon-accent">משימות שהושלמו ({bucket.completed.length})</p>
+                            </div>
+                            <div className="space-y-2 mt-2">
+                              {bucket.completed.map((task) => {
+                                const parentGoal = task.parent_id ? goals.find((g) => g.id === task.parent_id) : null;
+                                return (
+                                  <TaskCard
+                                    key={task.id}
+                                    task={task}
+                                    customer={customer}
+                                    parentGoal={parentGoal}
+                                    onTaskClick={handleTaskClick}
+                                    onMarkAsDone={handleMarkAsDone}
+                                    isDragging={false}
+                                  />
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
