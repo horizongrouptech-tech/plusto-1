@@ -1,9 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /**
- * מחיקת כל תזרים המזומנים של לקוח.
- * גישה: שליפה במנות (Chunked Fetching) + מחיקה במנות – לא שולפים את כל הרשומות בבת אחת.
- * בכל iteration: שולפים רק CHUNK_SIZE רשומות (עם limit), מוחקים אותן, וחוזרים עד שה-filter מחזיר רשימה ריקה.
+ * מחיקת תזרים מזומנים של לקוח.
+ * גישה: שליפה במנות (Chunked Fetching) + מחיקה במנות. כל קריאה מוגבלת ל־MAX_BATCHES
+ * מנות כדי לא לעבור את מגבלת ה-timeout של הפלטפורמה (502). הלקוח קורא שוב עד hasMore=false.
  */
 Deno.serve(async (req) => {
     try {
@@ -18,12 +18,14 @@ Deno.serve(async (req) => {
         }
 
         const CHUNK_SIZE = 1000;
+        const MAX_BATCHES = 8; // מקסימום מנות בקריאה אחת – מונע 502 timeout
         let totalDeleted = 0;
+        let batchCount = 0;
+        let hasMore = false;
 
-        console.log(`Starting permanent cash flow deletion for ${customer_email} (chunked fetch + delete)`);
+        console.log(`Cash flow deletion for ${customer_email} (up to ${MAX_BATCHES} batches per request)`);
 
-        while (true) {
-            // א. שליפה במנה בלבד – לא את כל הרשומות (מונע timeout וזיכרון ענק)
+        while (batchCount < MAX_BATCHES) {
             const entries = await base44.asServiceRole.entities.CashFlow.filter(
                 { customer_email },
                 'date',
@@ -32,33 +34,28 @@ Deno.serve(async (req) => {
 
             if (!entries || entries.length === 0) break;
 
-            // ב. מחיקת המנה שזה עתה נשלפה (במקביל)
             const deleteResults = await Promise.allSettled(
                 entries.map(entry => base44.asServiceRole.entities.CashFlow.delete(entry.id))
             );
             const succeeded = deleteResults.filter(r => r.status === 'fulfilled').length;
             const failed = deleteResults.filter(r => r.status === 'rejected').length;
             totalDeleted += succeeded;
-            if (failed > 0) {
-                console.warn(`Batch: ${succeeded} deleted, ${failed} failed`);
-            }
-
-            console.log(`Deleted chunk of ${entries.length}. Total so far: ${totalDeleted}`);
-
-            // הפסקה קצרה בין מנות כדי לא להעמיס על ה-API
-            if (entries.length === CHUNK_SIZE) {
-                await new Promise(r => setTimeout(r, 50));
-            }
+            if (failed > 0) console.warn(`Batch: ${succeeded} deleted, ${failed} failed`);
+            batchCount++;
+            hasMore = entries.length === CHUNK_SIZE;
+            if (!hasMore) break;
+            await new Promise(r => setTimeout(r, 40));
         }
-
-        console.log(`Cash flow deletion completed. Total deleted: ${totalDeleted}`);
 
         return new Response(JSON.stringify({
             success: true,
             deletedCount: totalDeleted,
-            message: totalDeleted > 0
-                ? `כל נתוני התזרים נמחקו בהצלחה - ${totalDeleted} תנועות`
-                : 'אין תנועות למחוק'
+            hasMore,
+            message: hasMore
+                ? `נמחקו ${totalDeleted} תנועות. ממשיך...`
+                : totalDeleted > 0
+                    ? `כל נתוני התזרים נמחקו בהצלחה - ${totalDeleted} תנועות`
+                    : 'אין תנועות למחוק'
         }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }

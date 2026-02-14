@@ -488,14 +488,19 @@ export default function CashFlowManager({ customer }) {
                   }
                   setIsDeleting(true);
                   try {
-                    const { data, error } = await base44.functions.invoke('deleteCashFlowPermanently', {
-                      customer_email: customer.email
-                    });
-                    if (error) throw new Error(error.message || JSON.stringify(error));
+                    let totalDeleted = 0;
+                    let hasMore = true;
+                    while (hasMore) {
+                      const { data, error } = await base44.functions.invoke('deleteCashFlowPermanently', {
+                        customer_email: customer.email
+                      });
+                      if (error) throw new Error(error.message || JSON.stringify(error));
+                      totalDeleted += data?.deletedCount ?? 0;
+                      hasMore = data?.hasMore === true;
+                    }
                     queryClient.invalidateQueries(['cashFlow', customer.email]);
                     queryClient.invalidateQueries(['recurringTransactions', customer.email]);
-                    const deletedCount = data?.deletedCount ?? 0;
-                    toast.success(deletedCount > 0 ? `כל נתוני התזרים נמחקו בהצלחה - ${deletedCount} תנועות` : 'אין תנועות למחוק');
+                    toast.success(totalDeleted > 0 ? `כל נתוני התזרים נמחקו בהצלחה - ${totalDeleted} תנועות` : 'אין תנועות למחוק');
                   } catch (err) {
                     toast.error('שגיאה במחיקה: ' + (err?.message || err));
                   } finally {
