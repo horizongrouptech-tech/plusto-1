@@ -11,7 +11,10 @@ import {
   Star,
   X,
   SearchCheck,
-  Trash2 } from
+  Trash2,
+  Database,
+  AlertTriangle,
+  Unlink } from
 "lucide-react";
 import { base44 } from '@/api/base44Client';
 import {
@@ -454,11 +457,15 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                         <TableCell className="text-right">
                           {supplier.created_for_customer_email === customer.email ? (
                             <Badge className="bg-green-100 text-green-800 border-green-200 font-medium">
-                              הוקם עבור לקוח זה
+                              ספק של הלקוח
+                            </Badge>
+                          ) : supplier.created_for_customer_email ? (
+                            <Badge className="bg-blue-100 text-blue-800 border-blue-200 font-medium">
+                              שויך מלקוח אחר
                             </Badge>
                           ) : (
-                            <Badge className="bg-blue-100 text-blue-800 border-blue-200 font-medium">
-                              שויך ללקוח
+                            <Badge className="bg-gray-100 text-gray-600 border-gray-200 font-medium">
+                              טרם סווג
                             </Badge>
                           )}
                         </TableCell>
@@ -466,12 +473,14 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                           {canAddSupplier &&
                       <div className="flex items-center justify-center gap-2">
                         <Button
-                          variant="destructive"
+                          variant="outline"
                           size="sm"
+                          className="border-orange-400 text-orange-500 hover:bg-orange-50 hover:text-orange-600 font-medium"
                           onClick={() => handleRemoveSupplier(supplier)}>
+                          <Unlink className="w-3.5 h-3.5 ml-1" />
                           הסר שיוך
                         </Button>
-                        {supplier.source === 'manual' && supplier.created_for_customer_email === customer.email && (
+                        {supplier.source === 'manual' && (!supplier.created_for_customer_email || supplier.created_for_customer_email === customer.email) && (
                           <Button
                             variant="destructive"
                             size="sm"
@@ -583,6 +592,98 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
             }
           </TabsContent>
         </Tabs>
+
+        {/* כלי מיגרציה ודיאגנוסטיקה לספקים - created_for_customer_email */}
+        {canAddSupplier && (
+          <div className="mt-6 p-4 border border-horizon rounded-lg bg-horizon-card/50">
+            <h4 className="text-horizon-text font-semibold mb-3 flex items-center gap-2">
+              <Database className="w-4 h-4" />
+              כלי מיגרציה - סיווג מקור ספקים
+            </h4>
+            <p className="text-horizon-accent text-sm mb-4">
+              כלים אלו מעדכנים את השדה "מקור" עבור ספקים קיימים. הרץ קודם את הבדיקה ואז את המיגרציה.
+            </p>
+            <div className="flex gap-3 flex-wrap">
+              <Button
+                variant="outline"
+                className="border-yellow-500 text-yellow-500 hover:bg-yellow-500/10"
+                onClick={async () => {
+                  try {
+                    const allSuppliersList = await base44.entities.Supplier.filter({});
+                    const needsMigration = allSuppliersList.filter(s => !s.created_for_customer_email);
+                    const alreadySet = allSuppliersList.filter(s => s.created_for_customer_email);
+                    const okToMigrate = needsMigration.filter(s => s.customer_emails?.length > 0);
+                    const noCustomers = needsMigration.filter(s => !s.customer_emails || s.customer_emails.length === 0);
+
+                    let report = `=== דוח דיאגנוסטיקה לספקים ===\n\n`;
+                    report += `סה"כ ספקים במערכת: ${allSuppliersList.length}\n`;
+                    report += `כבר מעודכנים (יש מקור מוגדר): ${alreadySet.length}\n`;
+                    report += `צריכים מיגרציה: ${needsMigration.length}\n\n`;
+                    report += `--- ניתן לעדכן אוטומטית: ${okToMigrate.length} ---\n`;
+                    report += `(יוגדר לפי הלקוח הראשון ברשימת השיוכים)\n\n`;
+
+                    if (noCustomers.length > 0) {
+                      report += `--- בעייתיים - אין לקוחות משויכים: ${noCustomers.length} ---\n`;
+                      report += `ספקים אלו לא ניתן לזהות עבור מי הוקמו:\n\n`;
+                      noCustomers.forEach(s => {
+                        report += `  - "${s.name}" (ID: ${s.id}, מקור: ${s.source || 'לא צוין'})\n`;
+                      });
+                    } else {
+                      report += `--- אין ספקים בעייתיים! כל הספקים ניתנים לעדכון אוטומטי ---\n`;
+                    }
+
+                    alert(report);
+                  } catch (error) {
+                    alert('שגיאה בהרצת הדיאגנוסטיקה: ' + error.message);
+                  }
+                }}
+              >
+                <AlertTriangle className="w-4 h-4 ml-2" />
+                בדיקת ספקים (דיאגנוסטיקה)
+              </Button>
+
+              <Button
+                variant="outline"
+                className="border-green-500 text-green-500 hover:bg-green-500/10"
+                onClick={async () => {
+                  const confirmed = window.confirm(
+                    'פעולה זו תעדכן את כל הספקים שעדיין אין להם שדה "מקור" מוגדר.\n' +
+                    'לכל ספק עם לקוחות משויכים, הלקוח הראשון ברשימה ייקבע כלקוח המקור.\n\n' +
+                    'מומלץ להריץ קודם את הבדיקה (דיאגנוסטיקה).\n\nלהמשיך?'
+                  );
+                  if (!confirmed) return;
+
+                  try {
+                    const allSuppliersList = await base44.entities.Supplier.filter({});
+                    const toUpdate = allSuppliersList.filter(
+                      s => !s.created_for_customer_email && s.customer_emails?.length > 0
+                    );
+
+                    let updated = 0;
+                    for (const supplier of toUpdate) {
+                      await base44.entities.Supplier.update(supplier.id, {
+                        created_for_customer_email: supplier.customer_emails[0]
+                      });
+                      updated++;
+                    }
+
+                    alert(`מיגרציה הושלמה בהצלחה!\n\nעודכנו ${updated} ספקים.`);
+                    
+                    // רענון הנתונים
+                    queryClient.invalidateQueries(['customerSuppliers', customer.email]);
+                    queryClient.invalidateQueries(['suggestedSuppliers', customer.email]);
+                    queryClient.invalidateQueries(['suggestedSuppliersCount', customer.email]);
+                  } catch (error) {
+                    alert('שגיאה בהרצת המיגרציה: ' + error.message);
+                  }
+                }}
+              >
+                <Database className="w-4 h-4 ml-2" />
+                הרץ מיגרציה
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
 
       {showAddModal &&
