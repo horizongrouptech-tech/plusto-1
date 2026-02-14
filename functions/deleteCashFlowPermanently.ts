@@ -12,39 +12,40 @@ Deno.serve(async (req) => {
             });
         }
 
-        console.log(`Starting permanent cash flow deletion for ${customer_email}`);
+        const CHUNK_SIZE = 1000;
+        // שליפה במנה בלבד – 1000 תנועות בכל פעם, מחיקה, ואז שליפה של 1000 הבאות (לא טוען את כל הנתונים לזיכרון)
+        const entries = await base44.asServiceRole.entities.CashFlow.filter(
+            { customer_email },
+            'date',
+            CHUNK_SIZE
+        );
 
-        let deletedCount = 0;
-        const batchSize = 1000;
-
-        while (true) {
-            const entries = await base44.asServiceRole.entities.CashFlow.filter(
-                { customer_email },
-                'date'
-            );
-
-            if (entries.length === 0) break;
-
-            for (let i = 0; i < entries.length; i += batchSize) {
-                const batch = entries.slice(i, i + batchSize);
-                const deletePromises = batch.map(entry =>
-                    base44.asServiceRole.entities.CashFlow.delete(entry.id)
-                );
-                await Promise.all(deletePromises);
-                deletedCount += batch.length;
-            }
-
-            console.log(`Deleted batch: ${entries.length} entries. Total deleted: ${deletedCount}`);
-
-            await new Promise(resolve => setTimeout(resolve, 100));
+        if (entries.length === 0) {
+            return new Response(JSON.stringify({
+                success: true,
+                deletedCount: 0,
+                hasMore: false,
+                message: 'אין תנועות למחוק'
+            }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
 
-        console.log(`Cash flow deletion completed. Total entries deleted: ${deletedCount}`);
+        const deletePromises = entries.map(entry =>
+            base44.asServiceRole.entities.CashFlow.delete(entry.id)
+        );
+        await Promise.all(deletePromises);
+
+        const hasMore = entries.length === CHUNK_SIZE;
 
         return new Response(JSON.stringify({
             success: true,
-            deletedCount,
-            message: `כל נתוני התזרים נמחקו בהצלחה - ${deletedCount} תנועות`
+            deletedCount: entries.length,
+            hasMore,
+            message: hasMore
+                ? `נמחקו ${entries.length} תנועות. ממשיך...`
+                : `כל נתוני התזרים נמחקו בהצלחה - ${entries.length} תנועות`
         }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
