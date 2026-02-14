@@ -16,8 +16,9 @@ Deno.serve(async (req) => {
 
         let deletedCount = 0;
         let errorCount = 0;
-        const batchSize = 50;
+        const batchSize = 200;
         const maxRetries = 3;
+        const delayBetweenBatchesMs = 30;
 
         while (true) {
             let entries;
@@ -40,22 +41,21 @@ Deno.serve(async (req) => {
 
             if (!fetchSuccess || !entries || entries.length === 0) break;
 
-            for (const entry of entries) {
-                for (let retry = 0; retry < maxRetries; retry++) {
-                    try {
-                        await base44.asServiceRole.entities.CashFlow.delete(entry.id);
-                        deletedCount++;
-                        break;
-                    } catch (delErr) {
-                        errorCount++;
-                        console.warn(`Delete retry ${retry + 1} for ${entry.id}: ${delErr.message}`);
-                        await new Promise(resolve => setTimeout(resolve, 300));
-                    }
-                }
+            const deleteResults = await Promise.allSettled(
+                entries.map(entry => base44.asServiceRole.entities.CashFlow.delete(entry.id))
+            );
+            const succeeded = deleteResults.filter(r => r.status === 'fulfilled').length;
+            const failed = deleteResults.filter(r => r.status === 'rejected').length;
+            deletedCount += succeeded;
+            errorCount += failed;
+            if (failed > 0) {
+                console.warn(`Batch: ${succeeded} deleted, ${failed} failed`);
             }
 
             console.log(`Deleted batch. Total deleted: ${deletedCount}, errors: ${errorCount}`);
-            await new Promise(resolve => setTimeout(resolve, 200));
+            if (delayBetweenBatchesMs > 0) {
+                await new Promise(resolve => setTimeout(resolve, delayBetweenBatchesMs));
+            }
         }
 
         console.log(`Cash flow deletion completed. Total: ${deletedCount}, errors: ${errorCount}`);
