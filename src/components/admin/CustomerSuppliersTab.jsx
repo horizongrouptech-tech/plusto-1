@@ -12,7 +12,10 @@ import {
   X,
   SearchCheck,
   Trash2,
-  Unlink } from
+  Unlink,
+  ChevronLeft,
+  ChevronRight,
+  Filter } from
 "lucide-react";
 import { base44 } from '@/api/base44Client';
 import {
@@ -179,24 +182,37 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
     retry: 1
   });
 
-  // Pagination עבור ספקים מוצעים
+  // ✅ סינון ספקים מוצעים (חיפוש + קטגוריה) -- לפני pagination
+  const filteredAllSuggested = React.useMemo(() => 
+    allSuggestedSuppliers.filter((supplier) => {
+      const searchMatch = !searchTerm || 
+        supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        supplier.contact_person?.toLowerCase().includes(searchTerm.toLowerCase());
+      const categoryMatch = !categoryFilter || supplier.category === categoryFilter;
+      return searchMatch && categoryMatch;
+    }), [allSuggestedSuppliers, searchTerm, categoryFilter]
+  );
+
+  // ✅ חישוב עמודים
+  const totalSuggestedPages = Math.max(1, Math.ceil(filteredAllSuggested.length / PAGE_SIZE));
+
+  // ✅ Pagination עבור ספקים מוצעים -- עמוד נוכחי בלבד
   const paginatedSuggestedSuppliers = React.useMemo(() => {
-    const endIndex = suggestedPage * PAGE_SIZE;
-    return allSuggestedSuppliers.slice(0, endIndex);
-  }, [allSuggestedSuppliers, suggestedPage]);
+    const startIndex = (suggestedPage - 1) * PAGE_SIZE;
+    const endIndex = startIndex + PAGE_SIZE;
+    return filteredAllSuggested.slice(startIndex, endIndex);
+  }, [filteredAllSuggested, suggestedPage]);
 
-  const hasMore = paginatedSuggestedSuppliers.length < allSuggestedSuppliers.length;
-
-  // ✅ פונקציה לטעינת עוד ספקים מוצעים
-  const loadMoreSuggested = useCallback(() => {
-    setSuggestedPage(prev => prev + 1);
-  }, []);
+  // ✅ חילוץ קטגוריות ייחודיות מהספקים המוצעים
+  const suggestedCategories = React.useMemo(() => {
+    const cats = new Set();
+    allSuggestedSuppliers.forEach(s => { if (s.category) cats.add(s.category); });
+    return Array.from(cats).sort();
+  }, [allSuggestedSuppliers]);
 
   // ✅ איפוס pagination כשמשנים טאב או מסננים
   useEffect(() => {
-    if (activeTab === 'suggested-suppliers') {
-      setSuggestedPage(1);
-    }
+    setSuggestedPage(1);
   }, [activeTab, categoryFilter, searchTerm]);
 
   const handleAssignSupplier = async (supplier) => {
@@ -336,14 +352,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
     ), [suppliers, searchTerm]
   );
 
-  const filteredSuggestedSuppliers = React.useMemo(() => 
-    paginatedSuggestedSuppliers.filter((supplier) => {
-      const searchMatch = supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      supplier.contact_person?.toLowerCase().includes(searchTerm.toLowerCase());
-      const categoryMatch = !categoryFilter || supplier.category === categoryFilter;
-      return searchMatch && categoryMatch;
-    }), [paginatedSuggestedSuppliers, searchTerm, categoryFilter]
-  );
+  // filteredSuggestedSuppliers is now paginatedSuggestedSuppliers (filtering happens before pagination)
 
   const canAddSupplier = currentUser && (currentUser.role === 'admin' || currentUser.user_type === 'financial_manager');
 
@@ -389,7 +398,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
             <TabsTrigger
               value="suggested-suppliers"
               className="data-[state=active]:bg-[#32acc1] data-[state=active]:text-white transition-all">
-              ספקים מוצעים ({isLoadingSuggestedCount ? '...' : suggestedSuppliersCount})
+              ספקים מוצעים ({activeTab === 'suggested-suppliers' && !isLoadingSuggested ? allSuggestedSuppliers.length : (isLoadingSuggestedCount ? '...' : suggestedSuppliersCount)})
               {isLoadingSuggested && activeTab === 'suggested-suppliers' && (
                 <span className="mr-2 animate-spin">⏳</span>
               )}
@@ -505,7 +514,22 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
 
           <TabsContent value="suggested-suppliers" className="mt-4">
             {canAddSupplier &&
-            <div className="mb-4 flex justify-end">
+            <div className="mb-4 flex justify-between items-center">
+                {/* סינון לפי קטגוריה */}
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-horizon-accent" />
+                  <select
+                    value={categoryFilter || ''}
+                    onChange={(e) => setCategoryFilter(e.target.value || null)}
+                    className="bg-horizon-card border border-horizon rounded-md px-3 py-1.5 text-sm text-horizon-text"
+                    dir="rtl"
+                  >
+                    <option value="">כל הקטגוריות</option>
+                    {suggestedCategories.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
                 <Button
                 onClick={() => setShowFindAlternativeModal(true)}
                 className="bg-purple-600 hover:bg-purple-700 text-white">
@@ -514,13 +538,23 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                 </Button>
               </div>
             }
+
+            {/* מידע על תוצאות */}
+            {!isLoadingSuggested && filteredAllSuggested.length > 0 && (
+              <div className="mb-3 text-sm text-horizon-accent flex items-center justify-between">
+                <span>
+                  מציג {Math.min((suggestedPage - 1) * PAGE_SIZE + 1, filteredAllSuggested.length)}-{Math.min(suggestedPage * PAGE_SIZE, filteredAllSuggested.length)} מתוך {filteredAllSuggested.length} ספקים
+                  {(searchTerm || categoryFilter) && ` (סה"כ במערכת: ${allSuggestedSuppliers.length})`}
+                </span>
+              </div>
+            )}
             
             {isLoadingSuggested ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-horizon-primary mx-auto mb-4"></div>
                 <p className="text-horizon-accent">טוען ספקים מוצעים...</p>
               </div>
-            ) : filteredSuggestedSuppliers.length > 0 ?
+            ) : paginatedSuggestedSuppliers.length > 0 ?
             <>
               <div className="border rounded-lg overflow-hidden border-horizon">
                 <Table dir="rtl">
@@ -528,7 +562,6 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                     <TableRow className="bg-horizon-card hover:bg-horizon-card/80">
                       <TableHead className="text-right text-horizon-accent">שם הספק</TableHead>
                       <TableHead className="text-right text-horizon-accent">סוג</TableHead>
-                      {/* <TableHead className="text-right text-horizon-accent">סטטוס</TableHead> */}
                       <TableHead className="text-right text-horizon-accent">איש קשר</TableHead>
                       <TableHead className="text-right text-horizon-accent">טלפון</TableHead>
                       <TableHead className="text-right text-horizon-accent">דירוג</TableHead>
@@ -536,7 +569,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredSuggestedSuppliers.map((supplier) =>
+                    {paginatedSuggestedSuppliers.map((supplier) =>
                   <TableRow key={supplier.id} className="border-horizon">
                         <TableCell className="font-medium text-right">
                           <Button variant="link" onClick={() => setSelectedSuggestedSupplier(supplier)} className="text-horizon-primary p-0 h-auto">
@@ -544,8 +577,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                           </Button>
                         </TableCell>
                         <TableCell className="text-right">{renderCategoryBadge(supplier.category)}</TableCell>
-                        {/* <TableCell className="text-right">{renderSupplierStatus(supplier)}</TableCell> */}
-                        <TableCell className="text-slate-50 p-4 text-right align-middle [&:has([role=checkbox])]:pr-0">{supplier.contact_person || '-'}</TableCell>
+                        <TableCell className="text-horizon-accent text-right">{supplier.contact_person || '-'}</TableCell>
                         <TableCell className="text-horizon-accent text-right" dir="ltr">
                           {supplier.phone ?
                       <a href={`tel:${supplier.phone}`} className="text-horizon-primary hover:underline">{supplier.phone}</a> :
@@ -568,15 +600,31 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                 </Table>
               </div>
               
-              {/* Load More Button */}
-              {hasMore && !categoryFilter && !searchTerm && (
-                <div className="mt-4 text-center">
+              {/* Pagination Controls */}
+              {totalSuggestedPages > 1 && (
+                <div className="mt-4 flex items-center justify-center gap-4" dir="rtl">
                   <Button
-                    onClick={loadMoreSuggested}
+                    onClick={() => setSuggestedPage(prev => Math.max(1, prev - 1))}
                     variant="outline"
+                    size="sm"
                     className="border-horizon text-horizon-text"
+                    disabled={suggestedPage === 1}
                   >
-                    טען עוד ספקים
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                    הקודם
+                  </Button>
+                  <span className="text-sm text-horizon-text font-medium">
+                    עמוד {suggestedPage} מתוך {totalSuggestedPages}
+                  </span>
+                  <Button
+                    onClick={() => setSuggestedPage(prev => Math.min(totalSuggestedPages, prev + 1))}
+                    variant="outline"
+                    size="sm"
+                    className="border-horizon text-horizon-text"
+                    disabled={suggestedPage === totalSuggestedPages}
+                  >
+                    הבא
+                    <ChevronLeft className="w-4 h-4 mr-1" />
                   </Button>
                 </div>
               )}
@@ -584,7 +632,9 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
 
             <div className="text-center py-8">
                 <Truck className="w-12 h-12 mx-auto mb-3 text-horizon-accent" />
-                <p className="text-horizon-accent">אין ספקים זמינים להקצאה</p>
+                <p className="text-horizon-accent">
+                  {(searchTerm || categoryFilter) ? 'לא נמצאו ספקים מוצעים לפי הסינון' : 'אין ספקים זמינים להקצאה'}
+                </p>
               </div>
             }
           </TabsContent>
