@@ -17,10 +17,10 @@ Deno.serve(async (req) => {
             });
         }
 
-        const CHUNK_SIZE = 1000; // מספר הרשומות למחיקה בכל מנה
+        const CHUNK_SIZE = 500; // מספר הרשומות למחיקה בכל מנה
         let totalDeleted = 0;
 
-        console.log(`Cash flow deletion for ${customer_email} (one chunk per request)`);
+        console.log(`Cash flow deletion for ${customer_email} (${CHUNK_SIZE} records per request)`);
 
         // נמשוך רק מנה אחת של רשומות
         const entries = await base44.asServiceRole.entities.CashFlow.filter(
