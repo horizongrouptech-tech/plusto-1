@@ -107,6 +107,11 @@
       ],
       "default": "manual",
       "description": "מקור הספק - הוזן ידנית, נמצא באינטרנט או הומלץ"
+    },
+    "created_for_customer_email": {
+      "type": "string",
+      "format": "email",
+      "description": "אימייל הלקוח שעבורו הוקם הספק במקור"
     }
   },
   "required": [

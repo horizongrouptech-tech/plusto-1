@@ -102,7 +102,8 @@ export default function FindAlternativeSupplierModal({ isOpen, onClose, customer
         source: 'internet_search',
         is_active: true,
         added_by_full_name: currentUser?.full_name || currentUser?.email,
-        customer_emails: [customerEmail]
+        customer_emails: [customerEmail],
+        created_for_customer_email: customerEmail
       });
       
       toast.success(`הספק "${supplierData.name}" נוסף בהצלחה ושויך ללקוח!`);

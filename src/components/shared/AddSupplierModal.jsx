@@ -82,7 +82,8 @@ export default function AddSupplierModal({ isOpen, onClose, onSupplierAdded, cur
         is_active: true,
         added_by_full_name: currentUser?.full_name || currentUser?.email,
         source: 'manual',
-        customer_emails: [customerEmail]
+        customer_emails: [customerEmail],
+        created_for_customer_email: customerEmail
       };
 
       await base44.entities.Supplier.create(supplierData);

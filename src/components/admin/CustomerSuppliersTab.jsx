@@ -430,6 +430,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                       <TableHead className="text-right text-horizon-accent">איש קשר</TableHead>
                       <TableHead className="text-right text-horizon-accent">טלפון</TableHead>
                       <TableHead className="text-right text-horizon-accent">דירוג</TableHead>
+                      <TableHead className="text-right text-horizon-accent">מקור</TableHead>
                       <TableHead className="text-center text-horizon-accent">פעולות</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -450,6 +451,17 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                       '-'}
                         </TableCell>
                         <TableCell className="text-right">{renderStarRating(supplier.rating)}</TableCell>
+                        <TableCell className="text-right">
+                          {supplier.created_for_customer_email === customer.email ? (
+                            <Badge className="bg-green-100 text-green-800 border-green-200 font-medium">
+                              הוקם עבור לקוח זה
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-blue-100 text-blue-800 border-blue-200 font-medium">
+                              שויך ללקוח
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="text-center">
                           {canAddSupplier &&
                       <div className="flex items-center justify-center gap-2">
@@ -459,7 +471,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
                           onClick={() => handleRemoveSupplier(supplier)}>
                           הסר שיוך
                         </Button>
-                        {supplier.source === 'manual' && (
+                        {supplier.source === 'manual' && supplier.created_for_customer_email === customer.email && (
                           <Button
                             variant="destructive"
                             size="sm"
