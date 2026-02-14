@@ -486,24 +486,36 @@ export default function CashFlowManager({ customer }) {
                   if (!window.confirm('אישור אחרון: כל הנתונים יימחקו לצמיתות!')) {
                     return;
                   }
+                  setIsDeleting(true);
                   try {
-                    const allEntries = await base44.entities.CashFlow.filter({
+                    const { data, error } = await base44.functions.invoke('deleteCashFlowPermanently', {
                       customer_email: customer.email
                     });
-                    for (const entry of allEntries) {
-                      await base44.entities.CashFlow.delete(entry.id);
-                    }
+                    if (error) throw new Error(error.message || JSON.stringify(error));
                     queryClient.invalidateQueries(['cashFlow', customer.email]);
-                    toast.success('כל נתוני התזרים נמחקו בהצלחה');
-                  } catch (error) {
-                    toast.error('שגיאה במחיקה: ' + error.message);
+                    queryClient.invalidateQueries(['recurringTransactions', customer.email]);
+                    toast.success(data?.message || 'כל נתוני התזרים נמחקו בהצלחה');
+                  } catch (err) {
+                    toast.error('שגיאה במחיקה: ' + (err?.message || err));
+                  } finally {
+                    setIsDeleting(false);
                   }
                 }}
                 variant="outline"
                 className="border-red-500 text-red-500 hover:bg-red-500/10"
+                disabled={isDeleting}
               >
-                <Trash2 className="w-4 h-4 ml-2" />
-                מחק הכל
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                    מוחק...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 ml-2" />
+                    מחק הכל
+                  </>
+                )}
               </Button>
             </div>
           </div>
