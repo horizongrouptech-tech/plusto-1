@@ -830,7 +830,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
     expensesArray[index][field] = value;
     if (field === 'amount' && expensesArray[index].is_annual_total) {
-        const monthlyVal = (parseFloat(value) || 0) / 12;
+        const monthlyVal = Math.round(((parseFloat(value) || 0) / 12) * 100) / 100;
         expensesArray[index].monthly_amounts = Array(12).fill(monthlyVal);
     }
     updatedExpenses[type] = expensesArray;

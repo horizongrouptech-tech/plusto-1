@@ -15,6 +15,27 @@ import { toast } from "sonner";
 // מע״מ קבוע
 const VAT_RATE = 0.18;
 
+// עיגול ל־2 עשרוניות לתצוגת סכומים (מקסימום 2 ספרות אחרי הנקודה)
+const roundTo2 = (v) => {
+  if (v == null || v === '') return '';
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : '';
+};
+
+// נרמול הוצאה: עיגול planned/actual_monthly_amounts ו־amount ל־2 עשרוניות
+const normalizeExpenseTo2Decimals = (expense) => {
+  if (!expense) return expense;
+  const out = { ...expense };
+  const roundArr = (arr) => (Array.isArray(arr) ? arr.map((x) => (Number.isFinite(Number(x)) ? Math.round(Number(x) * 100) / 100 : 0)) : Array(12).fill(0));
+  if (out.planned_monthly_amounts) out.planned_monthly_amounts = roundArr(out.planned_monthly_amounts);
+  if (out.actual_monthly_amounts) out.actual_monthly_amounts = roundArr(out.actual_monthly_amounts);
+  if (out.amount !== undefined && out.amount !== null && out.amount !== '') {
+    const n = Number(out.amount);
+    out.amount = Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
+  }
+  return out;
+};
+
 export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, onBack }) {
   const [marketingExpenses, setMarketingExpenses] = useState([]);
   const [adminExpenses, setAdminExpenses] = useState([]);
@@ -26,10 +47,10 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
 
   useEffect(() => {
     if (forecastData?.detailed_expenses?.marketing_sales) {
-      setMarketingExpenses(forecastData.detailed_expenses.marketing_sales);
+      setMarketingExpenses(forecastData.detailed_expenses.marketing_sales.map(normalizeExpenseTo2Decimals));
     }
     if (forecastData?.detailed_expenses?.admin_general) {
-      setAdminExpenses(forecastData.detailed_expenses.admin_general);
+      setAdminExpenses(forecastData.detailed_expenses.admin_general.map(normalizeExpenseTo2Decimals));
     }
   }, [forecastData]);
 
@@ -147,7 +168,10 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
 
   const updateMarketingExpense = (index, field, value) => {
     const updated = [...marketingExpenses];
-    updated[index] = { ...updated[index], [field]: value };
+    const roundedValue = field === 'amount' && (typeof value === 'number' || value !== '')
+      ? (Number.isFinite(Number(value)) ? Math.round(Number(value) * 100) / 100 : 0)
+      : value;
+    updated[index] = { ...updated[index], [field]: roundedValue };
     setMarketingExpenses(updated);
     onUpdateForecast && onUpdateForecast({
       detailed_expenses: { ...forecastData.detailed_expenses, marketing_sales: updated }
@@ -156,7 +180,10 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
 
   const updateAdminExpense = (index, field, value) => {
     const updated = [...adminExpenses];
-    updated[index] = { ...updated[index], [field]: value };
+    const roundedValue = field === 'amount' && (typeof value === 'number' || value !== '')
+      ? (Number.isFinite(Number(value)) ? Math.round(Number(value) * 100) / 100 : 0)
+      : value;
+    updated[index] = { ...updated[index], [field]: roundedValue };
     setAdminExpenses(updated);
     onUpdateForecast && onUpdateForecast({
       detailed_expenses: { ...forecastData.detailed_expenses, admin_general: updated }
@@ -361,7 +388,7 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
                   <Input
                     type="number"
                     placeholder="0"
-                    value={expense.amount || ''}
+                    value={roundTo2(expense.amount) ?? ''}
                     onChange={(e) => updateMarketingExpense(expIndex, 'amount', parseFloat(e.target.value) || 0)}
                     className="w-32 bg-horizon-card border-horizon text-horizon-text"
                   />
@@ -438,7 +465,7 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
                           <Label className="text-[10px] text-blue-400">תכנון</Label>
                           <Input
                             type="number"
-                            value={expense.planned_monthly_amounts?.[monthIndex] || 0}
+                            value={roundTo2(expense.planned_monthly_amounts?.[monthIndex]) ?? 0}
                             onChange={(e) => updateMarketingMonthly(expIndex, monthIndex, 'planned_monthly_amounts', e.target.value)}
                             className="bg-horizon-card border-blue-400/30 text-horizon-text text-sm h-8"
                             placeholder="0"
@@ -450,7 +477,7 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
                           <Label className="text-[10px] text-green-400">ביצוע</Label>
                           <Input
                             type="number"
-                            value={expense.actual_monthly_amounts?.[monthIndex] || 0}
+                            value={roundTo2(expense.actual_monthly_amounts?.[monthIndex]) ?? 0}
                             onChange={(e) => updateMarketingMonthly(expIndex, monthIndex, 'actual_monthly_amounts', e.target.value)}
                             className="bg-horizon-card border-green-400/30 text-horizon-text text-sm h-8"
                             placeholder="0"
@@ -553,7 +580,7 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
                   <Input
                     type="number"
                     placeholder="0"
-                    value={expense.amount || ''}
+                    value={roundTo2(expense.amount) ?? ''}
                     onChange={(e) => updateAdminExpense(expIndex, 'amount', parseFloat(e.target.value) || 0)}
                     className="w-32 bg-horizon-card border-horizon text-horizon-text"
                   />
@@ -630,7 +657,7 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
                           <Label className="text-[10px] text-blue-400">תכנון</Label>
                           <Input
                             type="number"
-                            value={expense.planned_monthly_amounts?.[monthIndex] || 0}
+                            value={roundTo2(expense.planned_monthly_amounts?.[monthIndex]) ?? 0}
                             onChange={(e) => updateAdminMonthly(expIndex, monthIndex, 'planned_monthly_amounts', e.target.value)}
                             className="bg-horizon-card border-blue-400/30 text-horizon-text text-sm h-8"
                             placeholder="0"
@@ -642,7 +669,7 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
                           <Label className="text-[10px] text-green-400">ביצוע</Label>
                           <Input
                             type="number"
-                            value={expense.actual_monthly_amounts?.[monthIndex] || 0}
+                            value={roundTo2(expense.actual_monthly_amounts?.[monthIndex]) ?? 0}
                             onChange={(e) => updateAdminMonthly(expIndex, monthIndex, 'actual_monthly_amounts', e.target.value)}
                             className="bg-horizon-card border-green-400/30 text-horizon-text text-sm h-8"
                             placeholder="0"

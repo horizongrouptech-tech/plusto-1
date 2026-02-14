@@ -342,12 +342,13 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
         const detailedExpenses = forecast.detailed_expenses || { marketing_sales: [], admin_general: [] };
         const targetArray = expenseType === 'marketing_sales' ? 'marketing_sales' : 'admin_general';
         
-        // צור מערך של 12 חודשים עם הסכום הממוצע
-        const monthlyAmounts = Array(12).fill(selectedExpenseForLink.average_monthly || 0);
+        // צור מערך של 12 חודשים עם הסכום הממוצע (עיגול ל־2 עשרוניות)
+        const rounded = Math.round((selectedExpenseForLink.average_monthly || 0) * 100) / 100;
+        const monthlyAmounts = Array(12).fill(rounded);
         
         const newExpenseItem = {
           name: expenseItemName,
-          amount: selectedExpenseForLink.average_monthly || 0,
+          amount: rounded,
           planned_monthly_amounts: monthlyAmounts,
           actual_monthly_amounts: Array(12).fill(0),
           is_annual_total: false,
@@ -381,14 +382,15 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
           const existingItem = existingItems[itemIndex];
           const monthlyAmounts = existingItem.planned_monthly_amounts || existingItem.monthly_amounts || Array(12).fill(0);
           
-          // הוסף את הסכום הממוצע לכל חודש
-          const updatedMonthlyAmounts = monthlyAmounts.map(amount => 
-            amount + (selectedExpenseForLink.average_monthly || 0)
+          // הוסף את הסכום הממוצע לכל חודש (עיגול ל־2 עשרוניות)
+          const addAmount = Math.round((selectedExpenseForLink.average_monthly || 0) * 100) / 100;
+          const updatedMonthlyAmounts = monthlyAmounts.map(amount =>
+            Math.round((amount + addAmount) * 100) / 100
           );
           
           existingItems[itemIndex] = {
             ...existingItem,
-            amount: (existingItem.amount || 0) + (selectedExpenseForLink.average_monthly || 0),
+            amount: Math.round(((existingItem.amount || 0) + addAmount) * 100) / 100,
             planned_monthly_amounts: updatedMonthlyAmounts,
             notes: existingItem.notes 
               ? `${existingItem.notes}\nעדכון: הוספת סכום מהוצאה קבועה "${selectedExpenseForLink.category}"`
