@@ -12,21 +12,21 @@ function cleanValue(value, type) {
   
   if (type === 'number') {
     const cleaned = strValue
-      .replace(/[\u200E-\u202E]/g, '')
+      .replace(/[\u200E\u200F\u202A-\u202E]/g, '')
       .replace(/[₪$€£,\s]/g, '')
       .replace(/[^\d.-]/g, '');
     const num = parseFloat(cleaned);
     return isNaN(num) ? 0 : num;
   }
   
-  return strValue.replace(/[\uFEFF\u200E-\u202E]/g, '').trim();
+  return strValue.replace(/[\uFEFF\u200E\u200F\u202A-\u202E]/g, '').trim();
 }
 
 // ניקוי תא כותרת (זהה ל-parseFileHeaders)
 function cleanCell(cell) {
   if (cell === null || cell === undefined) return '';
   return String(cell).trim()
-    .replace(/[\uFEFF\u200E-\u202E]/g, '')
+    .replace(/[\uFEFF\u200E\u200F\u202A-\u202E]/g, '')
     .replace(/\s+/g, ' ').trim();
 }
 
