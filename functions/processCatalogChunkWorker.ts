@@ -348,11 +348,12 @@ Deno.serve(async (req) => {
       const importStartTime = new Date(processStatus.started_at);
       
       let totalCount = 0;
-      let hasMore = true;
       let skip = 0;
       const countBatchSize = 5000;
+      const maxIterations = 100; // הגנה מפני לולאות אינסופיות
+      let iterations = 0;
       
-      while (hasMore) {
+      while (iterations < maxIterations) {
         const batch = await base44.asServiceRole.entities.ProductCatalog.filter(
           { 
             catalog_id, 
@@ -363,11 +364,18 @@ Deno.serve(async (req) => {
           countBatchSize,
           skip
         );
+        
+        if (batch.length === 0) break;
+        
         totalCount += batch.length;
-        skip += batch.length;
-        if (batch.length < countBatchSize) {
-          hasMore = false;
-        }
+        skip += countBatchSize; // תמיד להגדיל לפי הגודל המלא, לא לפי batch.length
+        iterations++;
+        
+        if (batch.length < countBatchSize) break; // סיימנו
+      }
+      
+      if (iterations >= maxIterations) {
+        console.warn(`הגענו למקסימום איטרציות (${maxIterations}) בספירת מוצרים - ייתכן שיש יותר מוצרים`);
       }
       
       // עדכון product_count עם כל המוצרים בקטלוג (כולל ישנים)
