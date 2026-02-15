@@ -280,7 +280,7 @@ export default function ProductCatalogUpload({
     setLocalStatus('מעבד מוצרים לפי המיפוי...');
 
     try {
-      const { data: result } = await processCatalogWithMapping({
+      const result = await base44.functions.processCatalogWithMapping({
         customer_email: customer.email,
         file_url: uploadedFileUrl,
         catalog_id: selectedCatalogId,
