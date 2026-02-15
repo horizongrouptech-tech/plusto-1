@@ -263,7 +263,11 @@ Deno.serve(async (req) => {
         // אם המשימה קיימת - עדכון, אחרת - יצירה
         if (existingTask) {
           console.log(`🔄 Updating existing task: ${existingTask.id}`);
-          await base44.asServiceRole.entities.CustomerGoal.update(existingTask.id, taskData);
+          // 🔒 שמירת is_active המקורי בעדכון מפיירברי
+          await base44.asServiceRole.entities.CustomerGoal.update(existingTask.id, {
+            ...taskData,
+            is_active: existingTask.is_active !== false
+          });
           finalTask = { id: existingTask.id };
         } else {
           console.log(`➕ Creating new task`);

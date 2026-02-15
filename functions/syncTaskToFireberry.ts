@@ -158,7 +158,8 @@ Deno.serve(async (req) => {
 
     // עדכון תאריך הסנכרון האחרון
     const updateData = {
-      fireberry_synced_at: new Date().toISOString()
+      fireberry_synced_at: new Date().toISOString(),
+      is_active: task.is_active !== false // 🔒 שמירת is_active המקורי
     };
 
     // אם זו הייתה משימה חדשה, נשמור את ה-taskid שחזר מפיירברי

@@ -405,10 +405,14 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
 
 
   const updateTaskMutation = useMutation({
-    mutationFn: ({ taskId, updateData }) => base44.entities.CustomerGoal.update(taskId, {
-      ...updateData,
-      is_active: updateData.is_active !== false
-    }),
+    mutationFn: async ({ taskId, updateData }) => {
+      // 🔒 קריאת המשימה המקורית לשמירת is_active
+      const originalTask = goals.find(g => g.id === taskId);
+      return base44.entities.CustomerGoal.update(taskId, {
+        ...updateData,
+        is_active: originalTask?.is_active !== false // שמירת הערך המקורי
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['allRelevantTasks']); // Invalidate the broader query
       setIsTaskModalOpen(false);
@@ -431,7 +435,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
           status: 'done',
           last_completed_at: new Date().toISOString(),
           times_completed: (task.times_completed || 0) + 1,
-          is_active: task.is_active !== false
+          is_active: true // 🔒 תמיד true למשימות חוזרות
         });
         
         // קרא לפונקציה ליצירת המשימה הבאה
@@ -441,8 +445,11 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
           console.error('Error generating next occurrence:', error);
         }
       } else {
-        // משימה רגילה
-        await base44.entities.CustomerGoal.update(taskId, { status: 'done', is_active: true });
+        // משימה רגילה - שמור is_active המקורי
+        await base44.entities.CustomerGoal.update(taskId, { 
+          status: 'done', 
+          is_active: task?.is_active !== false // 🔒 שמירת הערך המקורי
+        });
       }
     },
     onSuccess: () => {

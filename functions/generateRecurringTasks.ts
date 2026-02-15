@@ -127,7 +127,8 @@ Deno.serve(async (req) => {
         await base44.asServiceRole.entities.CustomerGoal.update(task.id, {
           status: 'open',
           last_completed_at: new Date().toISOString(),
-          next_occurrence_date: format(nextDueDate, 'yyyy-MM-dd')
+          next_occurrence_date: format(nextDueDate, 'yyyy-MM-dd'),
+          is_active: true // 🔒 וידוא שהמשימה נשארת פעילה
         });
 
         tasksProcessed.push({ taskId: task.id, action: 'created_next_occurrence', nextDate: format(nextDueDate, 'yyyy-MM-dd') });
