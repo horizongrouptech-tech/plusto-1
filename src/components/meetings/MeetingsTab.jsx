@@ -77,49 +77,51 @@ export default function MeetingsTab({ customer, currentUser }) {
   const { data: meetings = [], isLoading } = useQuery({
     queryKey: ['customerMeetings', customer?.email],
     queryFn: async () => {
-      const goals = await base44.entities.CustomerGoal.filter({
-        customer_email: customer.email,
-        task_type: { $in: ['meeting', 'meeting_summary'] },
-        is_active: true
-      }, '-start_date');
+      const meetingsList = await base44.entities.Meeting.filter({
+        customer_email: customer.email
+      }, '-meeting_date');
       
-      return goals.map(g => {
-        // פענוח נתונים נוספים מ-additional_notes (JSON)
-        let additionalData = {};
-        try {
-          if (g.additional_notes && g.additional_notes.startsWith('{')) {
-            additionalData = JSON.parse(g.additional_notes);
-          }
-        } catch (e) {
-          // אם זה לא JSON, נשמור כתיאור
-          additionalData.description = g.additional_notes;
-        }
+      return meetingsList.map(m => {
+        // המרת participants מ-array ל-string אם צריך
+        const participantsStr = Array.isArray(m.participants) 
+          ? m.participants.join(', ') 
+          : (m.participants || '');
+        
+        // המרת key_points ל-array של 5 נקודות
+        const mainPoints = Array.isArray(m.key_points) && m.key_points.length > 0
+          ? [...m.key_points, '', '', '', '', ''].slice(0, 5)
+          : ['', '', '', '', ''];
+        
+        // המרת action_items ל-string
+        const tasksStr = Array.isArray(m.action_items) && m.action_items.length > 0
+          ? m.action_items.map(item => typeof item === 'string' ? item : item.description || '').join('\n')
+          : '';
 
         return {
-          id: g.id,
-          subject: g.name || '',
-          start_date: g.start_date,
-          start_time: additionalData.start_time || '10:00',
-          end_date: g.end_date || g.start_date,
-          end_time: additionalData.end_time || '11:00',
-          channel: additionalData.channel || 'zoom',
-          location: additionalData.location || '',
-          location_details: additionalData.location_details || '',
-          status: g.status === 'done' ? 'completed' : (g.status === 'cancelled' ? 'cancelled' : 'scheduled'),
-          description: additionalData.description || g.description || '',
-          participants: additionalData.participants || '',
-          main_points: additionalData.main_points || ['', '', '', '', ''],
-          tasks: additionalData.tasks || '',
-          next_meeting_date: additionalData.next_meeting_date || '',
-          whatsapp_summary: additionalData.whatsapp_summary || '',
-          google_event_id: additionalData.google_event_id || '',
-          send_reminder: additionalData.send_reminder !== false,
-          invite_customer: additionalData.invite_customer !== false,
-          fireberry_meeting_id: g.fireberry_meeting_id || null,
-          fireberry_synced_at: g.fireberry_synced_at || null,
-          created_by: g.assignee_email,
-          created_date: g.created_date,
-          _raw: g
+          id: m.id,
+          subject: m.subject || 'פגישת ניהול כספים',
+          start_date: m.start_date || (m.meeting_date ? m.meeting_date.split('T')[0] : new Date().toISOString().split('T')[0]),
+          start_time: m.start_time || (m.meeting_date ? m.meeting_date.split('T')[1]?.slice(0, 5) : '10:00'),
+          end_date: m.end_date || m.start_date || (m.meeting_date ? m.meeting_date.split('T')[0] : new Date().toISOString().split('T')[0]),
+          end_time: m.end_time || '11:00',
+          channel: m.channel || 'zoom',
+          location: m.location || '',
+          location_details: m.location_details || '',
+          status: m.status || 'scheduled',
+          description: m.notes || '',
+          participants: participantsStr,
+          main_points: mainPoints,
+          tasks: tasksStr,
+          next_meeting_date: m.next_meeting_date || '',
+          whatsapp_summary: m.whatsapp_summary || '',
+          google_event_id: m.google_event_id || '',
+          send_reminder: m.send_reminder !== false,
+          invite_customer: m.invite_customer !== false,
+          fireberry_meeting_id: m.fireberry_meeting_id || null,
+          fireberry_synced_at: m.fireberry_synced_at || null,
+          created_by: m.manager_email || '',
+          created_date: m.created_date || m.meeting_date,
+          _raw: m
         };
       });
     },
@@ -175,36 +177,53 @@ export default function MeetingsTab({ customer, currentUser }) {
       // פורמט קבוע - לא ניתן לשינוי
       const finalSubject = `פגישת ניהול כספים מספר ${meetingNumber}, ${customer.business_name || customer.full_name}`;
 
-      // בניית אובייקט נתונים נוספים
-      const additionalData = {
+      // חישוב משך הפגישה בדקות
+      const startDateTime = new Date(`${newMeetingForm.start_date}T${newMeetingForm.start_time}:00`);
+      const endDateTime = new Date(`${newMeetingForm.end_date}T${newMeetingForm.end_time}:00`);
+      const durationMinutes = Math.round((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60));
+      const meetingDate = startDateTime.toISOString();
+
+      // המרת participants מ-string ל-array
+      const participantsArray = newMeetingForm.participants 
+        ? newMeetingForm.participants.split(',').map(p => p.trim()).filter(p => p)
+        : [];
+
+      // המרת main_points ל-array (אם יש)
+      const keyPointsArray = newMeetingForm.main_points.filter(p => p && p.trim());
+
+      // המרת tasks מ-string ל-action_items array
+      const actionItemsArray = newMeetingForm.tasks
+        ? newMeetingForm.tasks.split('\n').filter(t => t.trim()).map(task => ({
+            description: task.trim(),
+            status: 'pending'
+          }))
+        : [];
+
+      // יצירת הפגישה - Meeting entity
+      const newMeeting = await base44.entities.Meeting.create({
+        customer_email: customer.email,
+        subject: finalSubject,
+        meeting_date: meetingDate,
+        start_date: newMeetingForm.start_date,
+        end_date: newMeetingForm.end_date,
         start_time: newMeetingForm.start_time,
         end_time: newMeetingForm.end_time,
+        duration_minutes: durationMinutes,
+        meeting_type: 'periodic_review',
         channel: newMeetingForm.channel,
         location: newMeetingForm.location,
         location_details: newMeetingForm.location_details,
-        description: newMeetingForm.description,
-        participants: newMeetingForm.participants,
-        main_points: newMeetingForm.main_points,
-        tasks: newMeetingForm.tasks,
-        next_meeting_date: newMeetingForm.next_meeting_date,
-        whatsapp_summary: newMeetingForm.whatsapp_summary,
+        status: 'scheduled',
+        manager_email: currentUser?.email,
+        notes: newMeetingForm.description,
+        participants: participantsArray,
+        participant_names: participantsArray,
+        key_points: keyPointsArray,
+        action_items: actionItemsArray,
+        next_meeting_date: newMeetingForm.next_meeting_date || null,
         send_reminder: newMeetingForm.send_reminder,
-        invite_customer: newMeetingForm.invite_customer
-      };
-
-      // יצירת הפגישה
-      const newMeeting = await base44.entities.CustomerGoal.create({
-        customer_email: customer.email,
-        name: finalSubject,
-        task_type: 'meeting',
-        start_date: newMeetingForm.start_date,
-        end_date: newMeetingForm.end_date,
-        description: newMeetingForm.description,
-        additional_notes: JSON.stringify(additionalData),
-        assignee_email: currentUser?.email,
-        status: 'open',
-        is_active: true,
-        priority: 'high'
+        invite_customer: newMeetingForm.invite_customer,
+        whatsapp_summary: newMeetingForm.whatsapp_summary || ''
       });
 
       // אם צריך לזמן בגוגל קלנדר
@@ -229,9 +248,8 @@ export default function MeetingsTab({ customer, currentUser }) {
             // לא נכשיל את יצירת הפגישה, רק נדווח
           } else if (calendarResult?.event_id) {
             // עדכון ה-google_event_id
-            additionalData.google_event_id = calendarResult.event_id;
-            await base44.entities.CustomerGoal.update(newMeeting.id, {
-              additional_notes: JSON.stringify(additionalData)
+            await base44.entities.Meeting.update(newMeeting.id, {
+              google_event_id: calendarResult.event_id
             });
           }
         } catch (calendarError) {
@@ -269,30 +287,52 @@ export default function MeetingsTab({ customer, currentUser }) {
     
     setIsSaving(true);
     try {
-      const additionalData = {
+      // חישוב משך הפגישה בדקות
+      const startDateTime = new Date(`${selectedMeeting.start_date}T${selectedMeeting.start_time}:00`);
+      const endDateTime = new Date(`${selectedMeeting.end_date}T${selectedMeeting.end_time}:00`);
+      const durationMinutes = Math.round((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60));
+      const meetingDate = startDateTime.toISOString();
+
+      // המרת participants מ-string ל-array
+      const participantsArray = selectedMeeting.participants 
+        ? selectedMeeting.participants.split(',').map(p => p.trim()).filter(p => p)
+        : [];
+
+      // המרת main_points ל-array
+      const keyPointsArray = Array.isArray(selectedMeeting.main_points) 
+        ? selectedMeeting.main_points.filter(p => p && p.trim())
+        : [];
+
+      // המרת tasks מ-string ל-action_items array
+      const actionItemsArray = selectedMeeting.tasks
+        ? selectedMeeting.tasks.split('\n').filter(t => t.trim()).map(task => ({
+            description: task.trim(),
+            status: 'pending'
+          }))
+        : [];
+
+      await base44.entities.Meeting.update(selectedMeeting.id, {
+        subject: selectedMeeting.subject,
+        meeting_date: meetingDate,
+        start_date: selectedMeeting.start_date,
+        end_date: selectedMeeting.end_date,
         start_time: selectedMeeting.start_time,
         end_time: selectedMeeting.end_time,
+        duration_minutes: durationMinutes,
         channel: selectedMeeting.channel,
         location: selectedMeeting.location,
         location_details: selectedMeeting.location_details,
-        description: selectedMeeting.description,
-        participants: selectedMeeting.participants,
-        main_points: selectedMeeting.main_points,
-        tasks: selectedMeeting.tasks,
-        next_meeting_date: selectedMeeting.next_meeting_date,
-        whatsapp_summary: selectedMeeting.whatsapp_summary,
-        google_event_id: selectedMeeting.google_event_id,
+        status: selectedMeeting.status,
+        notes: selectedMeeting.description,
+        participants: participantsArray,
+        participant_names: participantsArray,
+        key_points: keyPointsArray,
+        action_items: actionItemsArray,
+        next_meeting_date: selectedMeeting.next_meeting_date || null,
+        whatsapp_summary: selectedMeeting.whatsapp_summary || '',
+        google_event_id: selectedMeeting.google_event_id || null,
         send_reminder: selectedMeeting.send_reminder,
         invite_customer: selectedMeeting.invite_customer
-      };
-
-      await base44.entities.CustomerGoal.update(selectedMeeting.id, {
-        name: selectedMeeting.subject,
-        start_date: selectedMeeting.start_date,
-        end_date: selectedMeeting.end_date,
-        description: selectedMeeting.description,
-        additional_notes: JSON.stringify(additionalData),
-        status: selectedMeeting.status === 'completed' ? 'done' : (selectedMeeting.status === 'cancelled' ? 'cancelled' : 'open')
       });
 
       // סנכרון לפיירברי
@@ -323,8 +363,7 @@ export default function MeetingsTab({ customer, currentUser }) {
 
     try {
       // עדכון סטטוס לפני מחיקה כדי לסנכרן לפיירברי
-      await base44.entities.CustomerGoal.update(meetingId, { 
-        is_active: false,
+      await base44.entities.Meeting.update(meetingId, { 
         status: 'cancelled'
       });
 
@@ -338,6 +377,9 @@ export default function MeetingsTab({ customer, currentUser }) {
         console.error('Failed to sync meeting cancellation to Fireberry:', fireberryError);
         // לא נכשיל את מחיקת הפגישה אם הסנכרון נכשל
       }
+
+      // מחיקה פיזית (או רק עדכון סטטוס - תלוי במדיניות)
+      // await base44.entities.Meeting.delete(meetingId); // אם רוצים מחיקה פיזית
 
       queryClient.invalidateQueries(['customerMeetings', customer.email]);
       setShowMeetingDetailsModal(false);

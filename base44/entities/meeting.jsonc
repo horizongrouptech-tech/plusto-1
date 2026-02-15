@@ -135,6 +135,75 @@
       "format": "email",
       "description": "אימייל מנהל הכספים שניהל את הפגישה"
     },
+    "subject": {
+      "type": "string",
+      "description": "נושא הפגישה"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "תאריך התחלה"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "תאריך סיום"
+    },
+    "start_time": {
+      "type": "string",
+      "format": "time",
+      "description": "שעת התחלה (HH:mm)"
+    },
+    "end_time": {
+      "type": "string",
+      "format": "time",
+      "description": "שעת סיום (HH:mm)"
+    },
+    "channel": {
+      "type": "string",
+      "enum": ["zoom", "teams", "phone", "office", "google_meet"],
+      "default": "zoom",
+      "description": "ערוץ הפגישה"
+    },
+    "location": {
+      "type": "string",
+      "description": "מיקום הפגישה"
+    },
+    "location_details": {
+      "type": "string",
+      "description": "פרטי מיקום נוספים"
+    },
+    "send_reminder": {
+      "type": "boolean",
+      "default": true,
+      "description": "האם לשלוח תזכורת"
+    },
+    "invite_customer": {
+      "type": "boolean",
+      "default": true,
+      "description": "האם להזמין את הלקוח"
+    },
+    "google_event_id": {
+      "type": "string",
+      "description": "מזהה אירוע בגוגל קלנדר"
+    },
+    "whatsapp_summary": {
+      "type": "string",
+      "description": "סיכום פגישה לשליחה בוואטסאפ"
+    },
+    "fireberry_meeting_id": {
+      "type": "string",
+      "description": "מזהה הפגישה בפיירברי (לסנכרון דו-כיווני)"
+    },
+    "fireberry_synced_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "מועד סנכרון אחרון עם פיירברי"
+    },
+    "related_fireberry_account_id": {
+      "type": "string",
+      "description": "מזהה הלקוח בפיירברי"
+    },
     "notes": {
       "type": "string",
       "description": "הערות נוספות"
@@ -168,6 +237,7 @@
   },
   "required": [
     "customer_email",
+    "subject",
     "meeting_date",
     "meeting_type"
   ],

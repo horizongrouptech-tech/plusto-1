@@ -16,32 +16,17 @@ Deno.serve(async (req) => {
     }
 
     // קריאת הפגישה עם הרשאות admin כדי לוודא שיש גישה לכל השדות
-    const meetings = await base44.asServiceRole.entities.CustomerGoal.filter({ id: meetingId });
+    const meetings = await base44.asServiceRole.entities.Meeting.filter({ id: meetingId });
     const meeting = meetings[0];
     
     if (!meeting) {
       return Response.json({ error: 'Meeting not found' }, { status: 404 });
     }
 
-    // בדיקה שזו באמת פגישה
-    if (meeting.task_type !== 'meeting' && meeting.task_type !== 'meeting_summary') {
-      return Response.json({ error: 'This is not a meeting' }, { status: 400 });
-    }
-
-    console.log(`📅 Meeting details - ID: ${meeting.id}, Customer Email: ${meeting.customer_email}, Name: ${meeting.name}`);
+    console.log(`📅 Meeting details - ID: ${meeting.id}, Customer Email: ${meeting.customer_email}, Subject: ${meeting.subject}`);
 
     // אם אין fireberry_meeting_id, זו פגישה חדשה שצריך ליצור בפיירברי
     const isNewMeeting = !meeting.fireberry_meeting_id;
-
-    // פענוח additional_notes (JSON)
-    let additionalData = {};
-    try {
-      if (meeting.additional_notes && meeting.additional_notes.startsWith('{')) {
-        additionalData = JSON.parse(meeting.additional_notes);
-      }
-    } catch (e) {
-      console.warn('Failed to parse additional_notes:', e);
-    }
 
     // קריאת נתוני הלקוח - חיפוש קודם ב-OnboardingRequest
     let customerName = '';
@@ -97,9 +82,9 @@ Deno.serve(async (req) => {
 
     // קריאת fireberry_user_id של האחראי לפגישה
     let assigneeFireberryUserId = null;
-    if (meeting.assignee_email) {
+    if (meeting.manager_email) {
       const assigneeUsers = await base44.asServiceRole.entities.User.filter({ 
-        email: meeting.assignee_email 
+        email: meeting.manager_email 
       });
       
       if (assigneeUsers.length > 0 && assigneeUsers[0].fireberry_user_id) {
@@ -120,13 +105,11 @@ Deno.serve(async (req) => {
     };
 
     // קביעת סטטוס הפגישה
-    let meetingStatus = additionalData.status || 'scheduled';
-    if (meeting.status === 'done') meetingStatus = 'completed';
-    if (meeting.status === 'cancelled') meetingStatus = 'cancelled';
+    let meetingStatus = meeting.status || 'scheduled';
 
     // בניית תאריכי התחלה וסיום
-    const startTime = additionalData.start_time || '10:00';
-    const endTime = additionalData.end_time || '11:00';
+    const startTime = meeting.start_time || '10:00';
+    const endTime = meeting.end_time || '11:00';
     const startDate = meeting.start_date || new Date().toISOString().split('T')[0];
     const endDate = meeting.end_date || startDate;
     
@@ -137,18 +120,18 @@ Deno.serve(async (req) => {
     const fireberryPayload = {
       meetingid: meeting.fireberry_meeting_id || null,
       pcfPlastoMeetingId: meeting.id,
-      subject: meeting.name || 'פגישת ניהול כספים',
-      description: additionalData.description || meeting.description || meeting.notes || '',
+      subject: meeting.subject || 'פגישת ניהול כספים',
+      description: meeting.notes || meeting.description || '',
       start_datetime: startDateTime,
       end_datetime: endDateTime,
-      location: additionalData.location || additionalData.channel || '',
-      channel: additionalData.channel || 'zoom',
+      location: meeting.location || meeting.channel || '',
+      channel: meeting.channel || 'zoom',
       statuscode: statusToFireberry[meetingStatus] || 1,
       pcfsystemfield35: fireberryAccountId,
       customer_name: customerName,
       business_name: businessName,
       ownerid: assigneeFireberryUserId,
-      participants: additionalData.participants || '',
+      participants: Array.isArray(meeting.participants) ? meeting.participants.join(', ') : (meeting.participants || ''),
       isNewMeeting: isNewMeeting,
       itemType: 'meeting' // להבדיל ממשימות
     };
@@ -193,7 +176,7 @@ Deno.serve(async (req) => {
       console.log(`New meeting created in Fireberry with ID: ${responseData.meetingid}`);
     }
 
-    await base44.asServiceRole.entities.CustomerGoal.update(meetingId, updateData);
+    await base44.asServiceRole.entities.Meeting.update(meetingId, updateData);
 
     return Response.json({ 
       success: true,

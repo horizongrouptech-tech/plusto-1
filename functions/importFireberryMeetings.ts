@@ -82,15 +82,26 @@ Deno.serve(async (req) => {
     // עיבוד כל פגישה
     for (const fbMeeting of meetings) {
       try {
-        // בדיקה אם הפגישה כבר קיימת במערכת לפי pcfPlastoMeetingId
+        // בדיקה אם הפגישה כבר קיימת במערכת לפי pcfPlastoMeetingId או fireberry_meeting_id
         let existingMeeting = null;
         if (fbMeeting.pcfPlastoMeetingId) {
-          const existingMeetings = await base44.asServiceRole.entities.CustomerGoal.filter({ 
+          const existingMeetings = await base44.asServiceRole.entities.Meeting.filter({ 
             id: fbMeeting.pcfPlastoMeetingId 
           });
           if (existingMeetings.length > 0) {
             existingMeeting = existingMeetings[0];
-            console.log(`✅ Found existing meeting: ${existingMeeting.id}`);
+            console.log(`✅ Found existing meeting by ID: ${existingMeeting.id}`);
+          }
+        }
+        
+        // אם לא נמצא לפי ID, נחפש לפי fireberry_meeting_id
+        if (!existingMeeting && fbMeeting.meetingid) {
+          const existingByFireberry = await base44.asServiceRole.entities.Meeting.filter({
+            fireberry_meeting_id: fbMeeting.meetingid
+          });
+          if (existingByFireberry.length > 0) {
+            existingMeeting = existingByFireberry[0];
+            console.log(`✅ Found existing meeting by fireberry_meeting_id: ${existingMeeting.id}`);
           }
         }
 
@@ -135,57 +146,57 @@ Deno.serve(async (req) => {
         const endDate = endDateTime.toISOString().split('T')[0];
         const startTime = startDateTime.toTimeString().slice(0, 5); // HH:MM
         const endTime = endDateTime.toTimeString().slice(0, 5); // HH:MM
+        const meetingDate = startDateTime.toISOString(); // date-time format
+
+        // חישוב משך הפגישה בדקות
+        const durationMinutes = Math.round((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60));
 
         // חיפוש האחראי לפגישה לפי fireberry_user_id
-        let assigneeEmail = null;
+        let managerEmail = null;
         if (fbMeeting.ownerid) {
           const assigneeUsers = await base44.asServiceRole.entities.User.filter({ 
             fireberry_user_id: fbMeeting.ownerid 
           });
 
           if (assigneeUsers.length > 0) {
-            assigneeEmail = assigneeUsers[0].email;
-            console.log(`✅ Assignee found: ${assigneeEmail} for fireberry_user_id: ${fbMeeting.ownerid}`);
+            managerEmail = assigneeUsers[0].email;
+            console.log(`✅ Manager found: ${managerEmail} for fireberry_user_id: ${fbMeeting.ownerid}`);
           } else {
             console.log(`⚠️ No user found for fireberry_user_id: ${fbMeeting.ownerid}`);
           }
         }
 
-        // בניית additional_notes (JSON)
-        const additionalData = {
+        // בניית אובייקט הפגישה - Meeting entity
+        const meetingData = {
+          customer_email: customerEmail || '', // חובה - אם אין לקוח, נשתמש ב-string ריק (אבל זה לא אידיאלי)
+          subject: fbMeeting.subject || 'פגישת ניהול כספים',
+          meeting_date: meetingDate,
+          start_date: startDate,
+          end_date: endDate,
           start_time: startTime,
           end_time: endTime,
+          duration_minutes: durationMinutes,
+          meeting_type: 'periodic_review', // default
           channel: fbMeeting.channel || 'zoom',
           location: fbMeeting.location || '',
           location_details: '',
-          description: fbMeeting.description || '',
-          participants: fbMeeting.participants || '',
-          main_points: ['', '', '', '', ''],
-          tasks: '',
-          next_meeting_date: '',
-          whatsapp_summary: '',
           status: statusMapping[fbMeeting.statuscode] || 'scheduled',
+          manager_email: managerEmail,
+          notes: fbMeeting.description || '',
+          participants: fbMeeting.participants ? (Array.isArray(fbMeeting.participants) ? fbMeeting.participants : [fbMeeting.participants]) : [],
+          participant_names: fbMeeting.participants ? (typeof fbMeeting.participants === 'string' ? [fbMeeting.participants] : fbMeeting.participants) : [],
+          key_points: [],
+          action_items: [],
+          topics_discussed: [],
+          decisions_made: [],
+          next_meeting_date: null,
           send_reminder: true,
-          invite_customer: true
-        };
-
-        // בניית אובייקט הפגישה
-        const meetingData = {
-          name: fbMeeting.subject || 'פגישת ניהול כספים',
-          task_type: 'meeting',
-          start_date: startDate,
-          end_date: endDate,
-          description: fbMeeting.description || '',
-          additional_notes: JSON.stringify(additionalData),
-          customer_email: customerEmail, // יכול להיות null אם לא נמצא לקוח
-          related_fireberry_account_id: fireberryAccountId || null,
-          assignee_email: assigneeEmail, 
-          status: statusMapping[fbMeeting.statuscode] === 'completed' ? 'done' : 
-                  (statusMapping[fbMeeting.statuscode] === 'cancelled' ? 'cancelled' : 'open'),
-          is_active: true,
-          order_index: 0,
+          invite_customer: true,
+          google_event_id: null,
+          whatsapp_summary: '',
           fireberry_meeting_id: fbMeeting.meetingid,
-          fireberry_synced_at: new Date().toISOString()
+          fireberry_synced_at: new Date().toISOString(),
+          related_fireberry_account_id: fireberryAccountId || null
         };
 
         let finalMeeting;
@@ -193,11 +204,11 @@ Deno.serve(async (req) => {
         // אם הפגישה קיימת - עדכון, אחרת - יצירה
         if (existingMeeting) {
           console.log(`🔄 Updating existing meeting: ${existingMeeting.id}`);
-          await base44.asServiceRole.entities.CustomerGoal.update(existingMeeting.id, meetingData);
+          await base44.asServiceRole.entities.Meeting.update(existingMeeting.id, meetingData);
           finalMeeting = { id: existingMeeting.id };
         } else {
           console.log(`➕ Creating new meeting`);
-          finalMeeting = await base44.asServiceRole.entities.CustomerGoal.create(meetingData);
+          finalMeeting = await base44.asServiceRole.entities.Meeting.create(meetingData);
         }
         
         results.success++;
