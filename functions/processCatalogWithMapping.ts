@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     // ספירת שורות נתונים בלבד (ללא שורות מטא-דטה וכותרת)
     if (isExcel) {
       const buffer = await response.arrayBuffer();
-      const workbook = xlsx.read(buffer, { type: 'buffer' });
+      const workbook = xlsx.read(buffer, { type: 'buffer', sheetRows: 1 });
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       const range = xlsx.utils.decode_range(firstSheet['!ref'] || 'A1');
       const totalFileRows = range.e.r - range.s.r + 1; // total rows in file (1-based)
