@@ -92,21 +92,38 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     return dateString;
   };
 
+  const formatDateDisplay = (dateString) => {
+    if (!dateString) return '';
+    try {
+      let d;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        d = new Date(dateString);
+      } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+        d = parse(dateString, 'dd/MM/yyyy', new Date(), { locale: he });
+      } else {
+        return dateString;
+      }
+      return isValid(d) ? format(d, 'd MMM yyyy', { locale: he }) : dateString;
+    } catch {
+      return dateString;
+    }
+  };
+
   const displayDate = (dateString) => {
     if (!dateString) return '';
     try {
+      let d;
       if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-        const date = new Date(dateString);
-        return isValid(date) ? format(date, 'dd/MM/yyyy', { locale: he }) : dateString;
+        d = new Date(dateString);
+      } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+        d = parse(dateString, 'dd/MM/yyyy', new Date(), { locale: he });
+      } else {
+        return dateString;
       }
-      if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
-        const parsed = parse(dateString, 'dd/MM/yyyy', new Date(), { locale: he });
-        return isValid(parsed) ? format(parsed, 'dd/MM/yyyy', { locale: he }) : dateString;
-      }
-    } catch (e) {
-      // אם זה לא תאריך תקין, החזר את המחרוזת
+      return isValid(d) ? format(d, 'dd/MM/yyyy', { locale: he }) : dateString;
+    } catch {
+      return dateString;
     }
-    return dateString;
   };
 
   const getDateForCalendar = (dateString) => {
@@ -848,9 +865,9 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
             displayValue={
             goal.end_date ?
             <div className="flex items-center gap-1">
-                                    <CalendarIcon className="w-3 h-3" />
-                                    <span>{format(new Date(goal.end_date), 'dd/MM/yyyy', { locale: he })}</span>
-                                    {goal.due_time && <span className="mr-1">{goal.due_time}</span>}
+                                    <CalendarIcon className="w-3 h-3 shrink-0" />
+                                    <span>{formatDateDisplay(goal.end_date)}</span>
+                                    {goal.due_time && <span className="mr-1 text-horizon-accent">{goal.due_time}</span>}
                                 </div> :
 
             <span className="text-gray-400">ללא תאריך</span>
