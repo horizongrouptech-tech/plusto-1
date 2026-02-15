@@ -93,12 +93,13 @@ export default function CustomerManagementNew() {
     enabled: !!user
   });
 
-  // טעינת משימות ללקוח הנבחר
+  // טעינת משימות ללקוח הנבחר (משותף עם גאנט - is_active: true לסנכרון)
   const { data: tasks = [], isLoading: isLoadingTasks } = useQuery({
     queryKey: ['customerGoals', selectedCustomer?.email],
     queryFn: () => base44.entities.CustomerGoal.filter({
-      customer_email: selectedCustomer.email
-    }, '-created_date'),
+      customer_email: selectedCustomer.email,
+      is_active: true
+    }, 'order_index'),
     enabled: !!selectedCustomer?.email
   });
 

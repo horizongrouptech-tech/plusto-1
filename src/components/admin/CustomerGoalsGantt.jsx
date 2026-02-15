@@ -5,7 +5,7 @@ import { Plus, Loader2, Target, Download, BookOpen } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import GoalGroup from './goals/GoalGroup';
 import GoalsSummaryDashboard from './goals/GoalsSummaryDashboard';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { generateGoalsHTML } from '../shared/generateGoalsHTML';
 import { openPrintWindow } from '../shared/printUtils';
 import GoalTemplateSelector from '../trial/GoalTemplateSelector';
@@ -13,47 +13,35 @@ import { useUsers } from '../shared/UsersContext';
 
 import { toast } from "sonner";
 export default function CustomerGoalsGantt({ customer }) {
-    const [goals, setGoals] = useState([]);
+    const queryClient = useQueryClient();
     const [currentUser, setCurrentUser] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
     const [collapsedGoals, setCollapsedGoals] = useState(() => {
         const initial = {};
         return initial;
     });
     const [showTemplateSelector, setShowTemplateSelector] = useState(false);
 
-    const fetchData = useCallback(async (showLoadingSpinner = true) => {
-        if (!customer?.email) {
-            setIsLoading(false);
-            return;
-        }
-        if (showLoadingSpinner) {
-            setIsLoading(true);
-        }
-        try {
+    const { data: rawGoals = [], isLoading } = useQuery({
+        queryKey: ['customerGoals', customer?.email],
+        queryFn: async () => {
             const [goalsData, userData] = await Promise.all([
                 base44.entities.CustomerGoal.filter({ customer_email: customer.email, is_active: true }, 'order_index'),
-                showLoadingSpinner ? base44.auth.me() : Promise.resolve(currentUser)
+                base44.auth.me()
             ]);
-            // סינון משימות צ'קליסט יומי
-            setGoals(goalsData.filter(g => g.task_type !== 'daily_checklist_360'));
-            if (showLoadingSpinner) {
-                setCurrentUser(userData);
-            }
-        } catch (error) {
-            console.error("Error fetching goals data:", error);
-        } finally {
-            if (showLoadingSpinner) {
-                setIsLoading(false);
-            }
-        }
-    }, [customer?.email, currentUser]);
+            setCurrentUser(userData);
+            return goalsData;
+        },
+        enabled: !!customer?.email
+    });
 
-    useEffect(() => {
-        if (customer?.email) {
-            fetchData(true);
-        }
-    }, [customer?.email]);
+    const goals = useMemo(() =>
+        rawGoals.filter(g => g.task_type !== 'daily_checklist_360' && g.is_active !== false),
+        [rawGoals]
+    );
+
+    const refreshData = useCallback(() => {
+        queryClient.invalidateQueries(['customerGoals', customer?.email]);
+    }, [queryClient, customer?.email]);
 
     // טעינת פרטי מנהל הכספים המשויך ללקוח (אם קיים)
     const { data: financialManager } = useQuery({
@@ -162,7 +150,7 @@ export default function CustomerGoalsGantt({ customer }) {
                 order_index: newOrderIndex,
                 end_date: defaultEndDate.toISOString().split('T')[0] // פורמט YYYY-MM-DD
             });
-            await fetchData(false);
+            refreshData();
         } catch (error) {
             console.error("Error adding new goal:", error);
         }
@@ -240,24 +228,15 @@ export default function CustomerGoalsGantt({ customer }) {
             const [movedGoal] = reorderedGoals.splice(source.index, 1);
             reorderedGoals.splice(destination.index, 0, movedGoal);
 
-            const updatedGoals = [...goals];
-            reorderedGoals.forEach((goal, index) => {
-                const goalIndex = updatedGoals.findIndex(g => g.id === goal.id);
-                if (goalIndex !== -1) {
-                    updatedGoals[goalIndex] = { ...updatedGoals[goalIndex], order_index: index };
-                }
-            });
-            setGoals(updatedGoals);
-
             const updatePromises = reorderedGoals.map((goal, index) => 
                 base44.entities.CustomerGoal.update(goal.id, { order_index: index })
             );
             
             await Promise.all(updatePromises);
-            
+            refreshData();
         } catch (error) {
             console.error("Error reordering goals:", error);
-            await fetchData(false);
+            refreshData();
         }
     };
 
@@ -348,7 +327,7 @@ export default function CustomerGoalsGantt({ customer }) {
                                                     goal={goal}
                                                     subtasks={subtasksByGoal[goal.id] || []}
                                                     users={assignableUsers}
-                                                    refreshData={() => fetchData(false)}
+                                                    refreshData={refreshData}
                                                     allGoals={goals}
                                                     isDragging={snapshot.isDragging}
                                                     isCollapsed={collapsedGoals[goal.id]}
@@ -371,7 +350,7 @@ export default function CustomerGoalsGantt({ customer }) {
                     customer={customer}
                     isOpen={showTemplateSelector}
                     onClose={() => setShowTemplateSelector(false)}
-                    onGoalCreated={() => fetchData(false)}
+                    onGoalCreated={refreshData}
                 />
             )}
         </div>

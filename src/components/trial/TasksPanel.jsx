@@ -36,6 +36,14 @@ export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCo
     enabled: !!customer?.email
   });
 
+  // יעדים ראשיים בלבד - לשיוך משימה חדשה (לא תת-משימות)
+  const parentGoals = useMemo(() => {
+    const explicitGoals = allGoals.filter(g => g.task_type === 'goal');
+    const goalsWithSubtasks = allGoals.filter(g => allGoals.some(t => t.parent_id === g.id));
+    const parentGoalIds = new Set([...explicitGoals.map(g => g.id), ...goalsWithSubtasks.map(g => g.id)]);
+    return allGoals.filter(g => !g.parent_id && parentGoalIds.has(g.id));
+  }, [allGoals]);
+
   // סינון משימות לפי תאריך התחלה - רק משימות שהתאריך שלהן הגיע
   const relevantTasks = useMemo(() => {
     const now = new Date();
@@ -87,7 +95,7 @@ export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCo
 
     const completedTasks = relevantTasks.filter(t => 
       t.status === 'done'
-    ).slice(0, 5); // רק 5 אחרונות
+    ).slice(0, 20); // 20 משימות שהושלמו לאחרונה
 
     return { todayTasks, overdueTasks, inProgressTasks, openTasks, completedTasks };
   }, [relevantTasks]);
@@ -335,7 +343,7 @@ export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCo
         onClose={() => setShowCreateTaskModal(false)}
         customer={customer}
         currentUser={currentUser}
-        allGoals={allGoals}
+        allGoals={parentGoals}
         onSuccess={() => {
           setShowCreateTaskModal(false);
           if (onRefresh) onRefresh();

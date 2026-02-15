@@ -166,25 +166,29 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const { data: goals = [], isLoading: tasksLoading } = useQuery({
     queryKey: ['allRelevantTasks', currentUser.email, isAdmin],
     queryFn: async () => {
+      const filterByParentGoals = (tasks) => {
+        const explicitGoals = tasks.filter(t => t.task_type === 'goal');
+        const goalsWithSubtasks = tasks.filter(t => tasks.some(other => other.parent_id === t.id));
+        const parentGoalIds = new Set([...explicitGoals.map(t => t.id), ...goalsWithSubtasks.map(t => t.id)]);
+        return tasks.filter(t =>
+          t.task_type !== 'daily_checklist_360' && !parentGoalIds.has(t.id)
+        );
+      };
+
       if (isAdmin) {
         const allTasks = await base44.entities.CustomerGoal.filter({ is_active: true }, 'order_index');
-        // סינון משימות צ'קליסט יומי
-        return allTasks.filter(t => t.task_type !== 'daily_checklist_360' && t.task_type !== 'goal');
+        return filterByParentGoals(allTasks);
       } else {
         const myCustomers = allCustomers.map((c) => c.email);
         const customerTasks = await base44.entities.CustomerGoal.filter({
           is_active: true
         }, 'order_index');
 
-        const relevantTasks = customerTasks.filter((task) =>
-          // סינון משימות צ'קליסט יומי ויעדים – מציגים רק משימות
-          task.task_type !== 'daily_checklist_360' && task.task_type !== 'goal' && (
-            task.assignee_email === currentUser.email ||
-            myCustomers.includes(task.customer_email)
-          )
+        const tasksOnly = filterByParentGoals(customerTasks);
+        return tasksOnly.filter((task) =>
+          task.assignee_email === currentUser.email ||
+          myCustomers.includes(task.customer_email)
         );
-
-        return relevantTasks;
       }
     },
     enabled: !!allCustomers.length || isAdmin,

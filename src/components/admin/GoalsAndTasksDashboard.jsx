@@ -176,12 +176,6 @@ export default function GoalsAndTasksDashboard({ customer }) {
     }
   }, [allGoals, activeStatFilter, identifyGoals]);
 
-  // חישוב יעדים פתוחים - צריך להיות לפני כל return מותנה
-  const openParentGoals = useMemo(() => {
-    const { parentGoals } = identifyGoals;
-    return parentGoals.filter((g) => g.status !== 'done' && g.status !== 'cancelled');
-  }, [identifyGoals]);
-
   const getStatusDisplay = (status) => {
     const statusConfig = {
       open: { label: 'פתוח', icon: Circle, color: 'text-blue-500', bgColor: 'bg-blue-500/20' },
@@ -612,14 +606,14 @@ export default function GoalsAndTasksDashboard({ customer }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {openParentGoals.length === 0 ?
+          {identifyGoals.parentGoals.length === 0 ?
           <div className="text-center py-8">
               <Target className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-              <p className="text-horizon-accent">אין יעדים פתוחים להצגה.</p>
+              <p className="text-horizon-accent">אין יעדים להצגה.</p>
             </div> :
 
           <div className="space-y-3">
-              {openParentGoals.map((goal) => {
+              {identifyGoals.parentGoals.map((goal) => {
               const statusDisplay = getStatusDisplay(goal.status);
               const StatusIcon = statusDisplay.icon;
               const subtasks = allGoals.filter((t) => t.parent_id === goal.id);
