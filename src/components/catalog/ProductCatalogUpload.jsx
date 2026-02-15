@@ -250,8 +250,11 @@ export default function ProductCatalogUpload({
       }
 
       setFileHeaders(parseResult.data.headers);
+      // שמירת מדגם בלבד לתצוגה מקדימה
       setRawData(parseResult.data.raw_data);
       setHeaderRowIndex(parseResult.data.header_row_index || 0);
+
+      console.log(`קובץ עם ${parseResult.data.total_rows} שורות - נטען מדגם של ${parseResult.data.raw_data.length} שורות לתצוגה מקדימה`);
       
       setLocalProgress(50);
       setLocalStatus('פותח אשף מיפוי...');

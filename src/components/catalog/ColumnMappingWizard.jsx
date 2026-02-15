@@ -232,8 +232,8 @@ export default function ColumnMappingWizard({
     
     const processPreview = async () => {
       try {
-        // הגבלת הנתונים ל-500 שורות מקסימום לעיבוד
-        const dataToProcess = rawData.slice(0, Math.min(rawData.length, 500));
+        // עיבוד רק מדגם קטן - העיבוד האמיתי יהיה ברקע
+        const dataToProcess = rawData.slice(0, Math.min(rawData.length, 100));
         const actualTotalRows = rawData.length;
         
         // תצוגה מקדימה של 20 שורות
