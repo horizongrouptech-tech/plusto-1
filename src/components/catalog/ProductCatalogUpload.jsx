@@ -187,6 +187,7 @@ export default function ProductCatalogUpload({
   const [existingProfiles, setExistingProfiles] = useState([]);
   const [useAdvancedUpload, setUseAdvancedUpload] = useState(true);
   const [headerRowIndex, setHeaderRowIndex] = useState(0);
+  const [totalRowsFromParse, setTotalRowsFromParse] = useState(0);
   
   // טעינת פרופילים קיימים
   useEffect(() => {
@@ -253,6 +254,7 @@ export default function ProductCatalogUpload({
       // שמירת מדגם בלבד לתצוגה מקדימה
       setRawData(parseResult.data.raw_data);
       setHeaderRowIndex(parseResult.data.header_row_index || 0);
+      setTotalRowsFromParse(parseResult.data.total_rows || 0);
 
       console.log(`קובץ עם ${parseResult.data.total_rows} שורות - נטען מדגם של ${parseResult.data.raw_data.length} שורות לתצוגה מקדימה`);
       
@@ -288,7 +290,8 @@ export default function ProductCatalogUpload({
         catalog_id: selectedCatalogId,
         mapping: mappingConfig.mapping,
         import_with_errors: mappingConfig.importWithErrors,
-        header_row_index: headerRowIndex
+        header_row_index: headerRowIndex,
+        total_rows: totalRowsFromParse
       });
 
       if (!result?.success) {
