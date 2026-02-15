@@ -243,7 +243,7 @@ export default function ProductCatalogUpload({
       setLocalStatus('מנתח כותרות קובץ...');
 
       // קריאת כותרות הקובץ דרך ה-SDK
-      const parseResult = await base44.functions.invoke('parseFileHeaders', { file_url });
+      const { data: parseResult } = await base44.functions.invoke('parseFileHeaders', { file_url });
       
       if (!parseResult?.success) {
         throw new Error(parseResult?.error || 'שגיאה בניתוח הקובץ');
@@ -279,7 +279,7 @@ export default function ProductCatalogUpload({
     setLocalStatus('מעבד מוצרים לפי המיפוי...');
 
     try {
-      const result = await base44.functions.invoke('processCatalogWithMapping', {
+      const { data: result } = await base44.functions.invoke('processCatalogWithMapping', {
         customer_email: customer.email,
         file_url: uploadedFileUrl,
         catalog_id: selectedCatalogId,
