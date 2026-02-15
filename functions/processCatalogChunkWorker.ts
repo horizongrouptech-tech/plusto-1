@@ -226,8 +226,13 @@ Deno.serve(async (req) => {
         }
       }
 
-      // בדיקת שדות חובה
-      if (!product.product_name || product.product_name.trim() === '') {
+      // בדיקת שדות חובה - דילוג על שורות ריקות לגמרי (ללא שם וללא ברקוד)
+      const hasProductName = product.product_name && product.product_name.trim() !== '';
+      const hasBarcode = product.barcode && String(product.barcode).trim() !== '';
+      if (!hasProductName && !hasBarcode) {
+        continue; // שורה ריקה - לא יוצרים מוצר
+      }
+      if (!hasProductName) {
         validationErrors.push('שם מוצר חסר');
         if (import_with_errors) {
           product.product_name = `מוצר ללא שם - שורה ${globalRowIndex + 1}`;

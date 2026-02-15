@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
         headers: headerInfo.headers,
         header_row_index: headerInfo.index,
         total_rows: dataRows.length,
-        raw_data: rawData.slice(0, 100), // 100 שורות לתצוגה מקדימה - מספיק לאימות
+        raw_data: rawData.slice(0, 500), // 500 שורות לתצוגה מקדימה
         file_type: isExcel ? 'excel' : 'csv',
         sample_data: rawData.slice(0, 5)
       }

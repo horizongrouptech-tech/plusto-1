@@ -70,14 +70,17 @@ Deno.serve(async (req) => {
 
     let totalRows;
     
-    // ספירת שורות נתונים בלבד (ללא שורות מטא-דטה וכותרת)
+    // ספירת שורות נתונים - קריאה מלאה וספירה אמיתית (לא dimension של Excel שמטעה למיליוני שורות)
     if (isExcel) {
       const buffer = await response.arrayBuffer();
       const workbook = xlsx.read(buffer, { type: 'buffer' });
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const range = xlsx.utils.decode_range(firstSheet['!ref'] || 'A1');
-      const totalFileRows = range.e.r - range.s.r + 1; // total rows in file (1-based)
-      totalRows = totalFileRows - header_row_index - 1; // subtract header and pre-header rows
+      const allRows = xlsx.utils.sheet_to_json(firstSheet, { header: 1, defval: null });
+      const nonEmptyRows = (allRows || []).filter((row) =>
+        Array.isArray(row) && row.some((cell) => cell !== null && cell !== '')
+      );
+      const dataRows = nonEmptyRows.slice(header_row_index + 1);
+      totalRows = dataRows.length;
     } else {
       const buffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(buffer);
