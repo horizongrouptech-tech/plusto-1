@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import * as xlsx from 'npm:xlsx@0.18.5';
 
 // עדכון סטטוס תהליך
