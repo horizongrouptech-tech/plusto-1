@@ -229,47 +229,57 @@ export default function ColumnMappingWizard({
   // יצירת תצוגה מקדימה
   useEffect(() => {
     if (step === 2 && rawData.length > 0) {
-      const preview = rawData.slice(0, 20).map((row, index) => {
-        const mappedRow = {};
-        
-        SYSTEM_FIELDS.forEach(field => {
-          const sourceColumn = mapping[field.key];
-          if (sourceColumn && row[sourceColumn] !== undefined) {
-            mappedRow[field.key] = cleanValue(row[sourceColumn], field.type);
-          } else {
-            mappedRow[field.key] = field.type === 'number' ? 0 : '';
-          }
+      try {
+        const preview = rawData.slice(0, 20).map((row, index) => {
+          const mappedRow = {};
+          
+          SYSTEM_FIELDS.forEach(field => {
+            const sourceColumn = mapping[field.key];
+            if (sourceColumn && row[sourceColumn] !== undefined) {
+              mappedRow[field.key] = cleanValue(row[sourceColumn], field.type);
+            } else {
+              mappedRow[field.key] = field.type === 'number' ? 0 : '';
+            }
+          });
+          
+          mappedRow._originalIndex = index;
+          mappedRow._errors = validateRow(row, mapping);
+          
+          return mappedRow;
         });
         
-        mappedRow._originalIndex = index;
-        mappedRow._errors = validateRow(row, mapping);
+        setPreviewData(preview);
         
-        return mappedRow;
-      });
-      
-      setPreviewData(preview);
-      
-      // אימות רק על מדגם של 200 שורות ראשונות (במקום כל הקובץ)
-      const sampleSize = Math.min(rawData.length, 200);
-      const sampleValidation = rawData.slice(0, sampleSize).map((row, index) => {
-        const errors = validateRow(row, mapping);
-        return { index, errors, isValid: errors.length === 0 };
-      });
-      
-      // חישוב הערכה של שורות תקינות/לא תקינות
-      const sampleValidCount = sampleValidation.filter(r => r.isValid).length;
-      const sampleInvalidCount = sampleValidation.filter(r => !r.isValid).length;
-      const validPercentage = sampleValidCount / sampleSize;
-      
-      const estimatedValid = Math.round(rawData.length * validPercentage);
-      const estimatedInvalid = rawData.length - estimatedValid;
-      
-      setValidationResults({
-        valid: Array(estimatedValid).fill({ isValid: true }),
-        invalid: Array(estimatedInvalid).fill({ isValid: false }),
-        isSample: rawData.length > sampleSize,
-        sampleSize: sampleSize
-      });
+        // אימות רק על מדגם של 100 שורות (הקטנתי מ-200)
+        const sampleSize = Math.min(rawData.length, 100);
+        const sampleValidation = rawData.slice(0, sampleSize).map((row, index) => {
+          const errors = validateRow(row, mapping);
+          return { index, errors, isValid: errors.length === 0 };
+        });
+        
+        // חישוב הערכה של שורות תקינות/לא תקינות
+        const sampleValidCount = sampleValidation.filter(r => r.isValid).length;
+        const validPercentage = sampleValidCount / sampleSize;
+        
+        const estimatedValid = Math.round(rawData.length * validPercentage);
+        const estimatedInvalid = rawData.length - estimatedValid;
+        
+        setValidationResults({
+          valid: Array(estimatedValid).fill({ isValid: true }),
+          invalid: Array(estimatedInvalid).fill({ isValid: false }),
+          isSample: true,
+          sampleSize: sampleSize,
+          totalRows: rawData.length
+        });
+      } catch (error) {
+        console.error('Error in preview generation:', error);
+        setValidationResults({
+          valid: [],
+          invalid: [],
+          isSample: true,
+          error: 'שגיאה ביצירת תצוגה מקדימה'
+        });
+      }
     }
   }, [step, mapping, rawData]);
 
@@ -466,11 +476,18 @@ export default function ColumnMappingWizard({
           <div className="space-y-6 py-4">
             {/* סיכום אימות */}
             <div className="space-y-3">
-              {validationResults.isSample && (
+              {validationResults.error ? (
+                <Alert className="bg-red-500/10 border-red-500/30">
+                  <AlertCircle className="w-4 h-4 text-red-400" />
+                  <AlertDescription className="text-red-300 text-sm">
+                    {validationResults.error}
+                  </AlertDescription>
+                </Alert>
+              ) : validationResults.isSample && (
                 <Alert className="bg-blue-500/10 border-blue-500/30">
                   <AlertCircle className="w-4 h-4 text-blue-400" />
                   <AlertDescription className="text-blue-300 text-sm">
-                    הקובץ גדול ({rawData.length.toLocaleString()} שורות). האימות בוצע על מדגם של {validationResults.sampleSize} שורות ראשונות. 
+                    הקובץ גדול ({(validationResults.totalRows || rawData.length).toLocaleString()} שורות). האימות בוצע על מדגם של {validationResults.sampleSize} שורות ראשונות. 
                     המספרים המוצגים הם הערכה סטטיסטית.
                   </AlertDescription>
                 </Alert>
