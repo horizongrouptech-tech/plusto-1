@@ -21,6 +21,7 @@ export default function InlineEditableField({
   const [editValue, setEditValue] = useState(value);
   const inputRef = useRef(null);
   const containerRef = useRef(null);
+  const popoverContentRef = useRef(null);
   const isSavingRef = useRef(false);
 
   useEffect(() => {
@@ -53,6 +54,7 @@ export default function InlineEditableField({
 
   useEffect(() => {
     const handleClickOutside = (event) => {
+      if (popoverContentRef.current?.contains(event.target)) return;
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         handleSave();
       }
@@ -134,7 +136,7 @@ export default function InlineEditableField({
               <CalendarIcon className="w-3 h-3 ml-1" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 bg-horizon-card border-horizon">
+          <PopoverContent ref={popoverContentRef} className="w-auto p-0 bg-horizon-card border-horizon">
             <Calendar
               mode="single"
               selected={editValue && isValid(new Date(editValue)) ? new Date(editValue) : undefined}

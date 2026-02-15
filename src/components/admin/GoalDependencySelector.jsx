@@ -62,11 +62,18 @@ export default function GoalDependencySelector({ goal, allGoals, refreshData }) 
           <Button
             variant="ghost"
             size="sm"
-            className="text-horizon-primary hover:bg-horizon-primary/10 h-7"
+            className="text-horizon-primary hover:bg-horizon-primary/10 h-7 min-w-0 max-w-full"
             disabled={isUpdating}
           >
-            <Link2 className="w-4 h-4 ml-1" />
-            {currentDependencies.length > 0 ? `תלוי ב-${currentDependencies.length} יעדים` : 'שייך ליעד אחר'}
+            <Link2 className="w-4 h-4 ml-1 shrink-0" />
+            <span className="truncate">
+              {currentDependencies.length > 0 ? `תלוי ב-${currentDependencies.length} יעדים` : (
+                <>
+                  <span className="hidden sm:inline">שייך ליעד אחר</span>
+                  <span className="sm:hidden">קשר</span>
+                </>
+              )}
+            </span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 bg-horizon-dark border-horizon p-3" dir="rtl">

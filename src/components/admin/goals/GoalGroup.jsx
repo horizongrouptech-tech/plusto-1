@@ -74,7 +74,8 @@ export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals
     return (
         <Card className={`card-horizon ${isDragging ? 'opacity-50' : ''}`}>
             <div className="p-4 space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="min-w-0 flex-1">
                     <GoalRow
                         goal={goal}
                         users={users}
@@ -82,7 +83,8 @@ export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals
                         allGoals={allGoals}
                         isParent={true}
                     />
-                    <div className="flex items-center gap-2">
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
                         {subtasks.length > 0 && (
                             <Button
                                 variant="ghost"

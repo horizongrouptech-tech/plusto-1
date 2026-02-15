@@ -661,13 +661,13 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
   }
 
   return (
-    <div className={`flex items-center gap-3 p-3 rounded-lg transition-all ${isDragging ? 'opacity-50' : ''} ${
+    <div className={`flex flex-wrap sm:flex-nowrap items-center gap-3 p-3 rounded-lg transition-all min-w-0 ${isDragging ? 'opacity-50' : ''} ${
       isParent 
         ? 'bg-horizon-card/60 border border-horizon-primary/40 font-semibold hover:border-horizon-primary/60' 
         : 'bg-horizon-card/20 border border-horizon/50 ps-6 hover:border-horizon-primary/30'
     }`}>
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-3 items-center">
-                <div className="md:col-span-2 flex items-center gap-2">
+            <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-center">
+                <div className="sm:col-span-2 flex items-center gap-2 min-w-0">
                     {isParent ? (
                       <Target className="w-4 h-4 text-horizon-primary shrink-0" />
                     ) : (
@@ -676,10 +676,10 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                     <div className={`w-3 h-3 rounded-full ${getStatusColor(goal.status)} shrink-0`}></div>
                     <InlineEditableField
             value={goal.name}
-            displayValue={<span className="text-horizon-text">{goal.name}</span>}
+            displayValue={<span className="text-horizon-text truncate block">{goal.name}</span>}
             onSave={(newValue) => handleQuickSave('name', newValue)}
             placeholder="הזן שם..."
-            className="flex-1" />
+            className="flex-1 min-w-0" />
 
                 </div>
 
@@ -716,8 +716,8 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                     </Popover>
                 </div>
 
-                <div className="flex items-center gap-2 text-sm text-horizon-text">
-                    <div className="flex items-center gap-1 flex-wrap">
+                <div className="flex items-center gap-2 text-sm text-horizon-text min-w-0">
+                    <div className="flex items-center gap-1 flex-wrap min-w-0">
                         {/* Show system users from assigned_users */}
                         {(goal.assigned_users || []).slice(0, 2).map((email) => {
               const user = users.find((u) => u.email === email);
@@ -859,7 +859,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                     </Popover>
                 </div>
 
-                <div className="flex items-center gap-2 text-sm text-horizon-accent">
+                <div className="flex items-center gap-2 text-sm text-horizon-accent min-w-0 shrink-0">
                     <InlineEditableField
             value={goal.end_date}
             displayValue={
@@ -879,12 +879,14 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                 </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0">
                 {isParent &&
+        <div className="min-w-0 max-w-[140px] sm:max-w-none">
         <GoalDependencySelector
           goal={goal}
           allGoals={allGoals}
           refreshData={refreshData} />
+        </div>
 
         }
                 {goal.notes &&
