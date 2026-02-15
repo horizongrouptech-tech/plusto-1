@@ -6,6 +6,8 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, FileText, CheckCircle2, AlertCircle, X, Wand2, Loader2 } from "lucide-react";
 import { base44 } from '@/api/base44Client';
+import { parseFileHeaders } from '@/functions/parseFileHeaders';
+import { processCatalogWithMapping } from '@/functions/processCatalogWithMapping';
 import ColumnMappingWizard from './ColumnMappingWizard';
 
 const HEADER_MAPPING = {
@@ -242,15 +244,15 @@ export default function ProductCatalogUpload({
       setLocalStatus('מנתח כותרות קובץ...');
 
       // קריאת כותרות הקובץ
-      const parseResult = await base44.functions.parseFileHeaders({ file_url });
+      const { data: parseResult } = await parseFileHeaders({ file_url });
       
-      if (parseResult?.error) {
-        throw new Error(parseResult.error || 'שגיאה בניתוח הקובץ');
+      if (!parseResult?.success) {
+        throw new Error(parseResult?.error || 'שגיאה בניתוח הקובץ');
       }
 
-      setFileHeaders(parseResult.headers || []);
-      setRawData(parseResult.sample_data || []);
-      setHeaderRowIndex(parseResult.header_row_index || 0);
+      setFileHeaders(parseResult.data.headers);
+      setRawData(parseResult.data.raw_data);
+      setHeaderRowIndex(parseResult.data.header_row_index || 0);
       
       setLocalProgress(50);
       setLocalStatus('פותח אשף מיפוי...');
@@ -278,7 +280,7 @@ export default function ProductCatalogUpload({
     setLocalStatus('מעבד מוצרים לפי המיפוי...');
 
     try {
-      const result = await base44.functions.processCatalogWithMapping({
+      const { data: result } = await processCatalogWithMapping({
         customer_email: customer.email,
         file_url: uploadedFileUrl,
         catalog_id: selectedCatalogId,
