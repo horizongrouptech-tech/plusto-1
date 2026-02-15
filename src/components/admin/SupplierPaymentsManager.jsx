@@ -250,7 +250,7 @@ export default function SupplierPaymentsManager({ supplier, customer, isOpen, on
           paid_date: new Date().toISOString().split('T')[0]
         });
       } else {
-        await base44.entities.CustomerGoal.update(payment.id, { status: 'done' });
+        await base44.entities.CustomerGoal.update(payment.id, { status: 'done', is_active: true });
       }
       queryClient.invalidateQueries(['supplierPayments', supplier.id, customer.email]);
     } catch (error) {

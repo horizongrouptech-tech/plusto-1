@@ -64,7 +64,7 @@ export default function DailyTasks({ user }) {
 
     const updateMutation = useMutation({
         mutationFn: async ({ taskId, status }) => {
-            await base44.entities.CustomerGoal.update(taskId, { status });
+            await base44.entities.CustomerGoal.update(taskId, { status, is_active: true });
             // סנכרון לפיירברי
             try {
                 await syncTaskToFireberry({ taskId });

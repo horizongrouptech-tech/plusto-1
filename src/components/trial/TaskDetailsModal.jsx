@@ -99,7 +99,8 @@ export default function TaskDetailsModal({
         notes: editedTask.notes,
         due_time: editedTask.due_time,
         customer_email: editedTask.customer_email || customer?.email,
-        depends_on_goal_ids: editedTask.depends_on_goal_ids || []
+        depends_on_goal_ids: editedTask.depends_on_goal_ids || [],
+        is_active: task.is_active !== false
       };
 
       await base44.entities.CustomerGoal.update(task.id, dataToSave);

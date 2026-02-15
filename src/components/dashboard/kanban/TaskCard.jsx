@@ -35,7 +35,8 @@ export default function TaskCard({ task, customer, parentGoal, onTaskClick, onMa
       const currentAssignees = task.assigned_users || [];
       if (!currentAssignees.includes(email)) {
         await base44.entities.CustomerGoal.update(task.id, {
-          assigned_users: [...currentAssignees, email]
+          assigned_users: [...currentAssignees, email],
+          is_active: task.is_active !== false
         });
       }
     } catch (error) {
@@ -51,7 +52,8 @@ export default function TaskCard({ task, customer, parentGoal, onTaskClick, onMa
     try {
       const currentAssignees = task.assigned_users || [];
       await base44.entities.CustomerGoal.update(task.id, {
-        assigned_users: currentAssignees.filter(e => e !== email)
+        assigned_users: currentAssignees.filter(e => e !== email),
+        is_active: task.is_active !== false
       });
     } catch (error) {
       console.error('Error removing assignee:', error);

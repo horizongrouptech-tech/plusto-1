@@ -405,7 +405,10 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
 
 
   const updateTaskMutation = useMutation({
-    mutationFn: ({ taskId, updateData }) => base44.entities.CustomerGoal.update(taskId, updateData),
+    mutationFn: ({ taskId, updateData }) => base44.entities.CustomerGoal.update(taskId, {
+      ...updateData,
+      is_active: updateData.is_active !== false
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries(['allRelevantTasks']); // Invalidate the broader query
       setIsTaskModalOpen(false);
@@ -427,7 +430,8 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         await base44.entities.CustomerGoal.update(taskId, {
           status: 'done',
           last_completed_at: new Date().toISOString(),
-          times_completed: (task.times_completed || 0) + 1
+          times_completed: (task.times_completed || 0) + 1,
+          is_active: task.is_active !== false
         });
         
         // קרא לפונקציה ליצירת המשימה הבאה
@@ -438,7 +442,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         }
       } else {
         // משימה רגילה
-        await base44.entities.CustomerGoal.update(taskId, { status: 'done' });
+        await base44.entities.CustomerGoal.update(taskId, { status: 'done', is_active: true });
       }
     },
     onSuccess: () => {
@@ -485,7 +489,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const handleRestoreTask = async (taskId) => {
     if (confirm('האם לשחזר את המשימה למצב "פתוח"?')) {
       try {
-        await base44.entities.CustomerGoal.update(taskId, { status: 'open' });
+        await base44.entities.CustomerGoal.update(taskId, { status: 'open', is_active: true });
         queryClient.invalidateQueries(['allRelevantTasks']);
         toast.success('המשימה שוחזרה בהצלחה!');
       } catch (error) {

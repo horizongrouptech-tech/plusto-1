@@ -117,7 +117,10 @@ export default function UnifiedTaskModal({
 
       let savedTask;
       if (mode === 'edit' && existingTask) {
-        await base44.entities.CustomerGoal.update(existingTask.id, taskData);
+        await base44.entities.CustomerGoal.update(existingTask.id, {
+          ...taskData,
+          is_active: existingTask.is_active !== false
+        });
         savedTask = { ...existingTask, ...taskData };
         toast.success('המשימה עודכנה בהצלחה');
       } else {

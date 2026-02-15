@@ -142,7 +142,10 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
   };
   const handleQuickStatusChange = async (newStatus) => {
     try {
-      await base44.entities.CustomerGoal.update(goal.id, { status: newStatus });
+      await base44.entities.CustomerGoal.update(goal.id, {
+        status: newStatus,
+        is_active: goal.is_active !== false
+      });
 
       // רענון מיידי
       if (refreshData) {
@@ -181,7 +184,8 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
         assignee_email: editedGoal.assignee_email,
         external_responsible: editedGoal.external_responsible,
         notes: editedGoal.notes,
-        due_time: editedGoal.due_time
+        due_time: editedGoal.due_time,
+        is_active: goal.is_active !== false
       });
 
       // רענון מיידי - לא ממתינים

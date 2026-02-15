@@ -404,7 +404,10 @@ export default function CustomerManagementNew() {
         }}
         onSave={async (updatedTask) => {
           try {
-            await base44.entities.CustomerGoal.update(updatedTask.id, updatedTask);
+            await base44.entities.CustomerGoal.update(updatedTask.id, {
+              ...updatedTask,
+              is_active: updatedTask.is_active !== false
+            });
             queryClient.invalidateQueries(['customerGoals', selectedCustomer.email]);
             setTaskModalOpen(false);
             toast.success('המשימה עודכנה');

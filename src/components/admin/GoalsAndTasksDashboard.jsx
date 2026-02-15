@@ -189,7 +189,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
 
   const handleMarkAsDone = async (taskId) => {
     try {
-      await base44.entities.CustomerGoal.update(taskId, { status: 'done' });
+      await base44.entities.CustomerGoal.update(taskId, { status: 'done', is_active: true });
 
       // רענון מיידי
       queryClient.invalidateQueries(['customerGoals', customer.email]);
@@ -226,7 +226,10 @@ export default function GoalsAndTasksDashboard({ customer }) {
         } else {
           // הסר את השיוך של התת-משימות
           for (const subtask of subtasks) {
-            const updateData = { parent_id: null };
+            const updateData = {
+              parent_id: null,
+              is_active: subtask.is_active !== false
+            };
             // וידוא ש-end_date תקין (שדה נדרש)
             if (!subtask.end_date || subtask.end_date === null) {
               updateData.end_date = task.end_date || new Date().toISOString().split('T')[0];
@@ -1287,6 +1290,7 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
       }
 
       dataToUpdate.tagged_users = taggedUsers;
+      dataToUpdate.is_active = task.is_active !== false;
 
       const oldTaggedUsers = task.tagged_users || [];
       const newlyTagged = taggedUsers.filter((email) => !oldTaggedUsers.includes(email));

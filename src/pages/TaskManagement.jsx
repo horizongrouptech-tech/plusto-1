@@ -86,7 +86,10 @@ export default function TaskManagement() {
 
   const updateTaskMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      await base44.entities.CustomerGoal.update(id, data);
+      await base44.entities.CustomerGoal.update(id, {
+        ...data,
+        is_active: data.is_active !== false
+      });
       // סנכרון לפיירברי
       try {
         const { syncTaskToFireberry } = await import('@/functions/syncTaskToFireberry');

@@ -99,7 +99,10 @@ export default function TaskCreationModal({ isOpen, onClose, currentUser, isAdmi
 
   // Mutation for updating a task
   const updateTaskMutation = useMutation({
-    mutationFn: ({ id, updatedTaskData }) => base44.entities.CustomerGoal.update(id, updatedTaskData),
+    mutationFn: ({ id, updatedTaskData }) => base44.entities.CustomerGoal.update(id, {
+      ...updatedTaskData,
+      is_active: updatedTaskData.is_active !== false
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries(['dailyTasks']); // Invalidate relevant queries
       onClose(); // Close modal on success
