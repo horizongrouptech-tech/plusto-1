@@ -52,11 +52,24 @@ Deno.serve(async (req) => {
       const batch = itemsToFix.slice(i, i + BATCH_SIZE);
       console.log(`מעבד מנה ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(itemsToFix.length / BATCH_SIZE)}`);
       
-      const batchPromises = batch.map(item => {
-        console.log(`מעדכן: ${item.name} (${item.id}) -> task_type: 'goal'`);
-        return base44.asServiceRole.entities.CustomerGoal.update(item.id, {
-          task_type: 'goal'
-        });
+      const batchPromises = batch.map(async (item) => {
+        try {
+          console.log(`מעדכן: ${item.name} (${item.id}) -> task_type: 'goal'`);
+          
+          // מביא את הנתונים העדכניים של הפריט
+          const currentItem = await base44.asServiceRole.entities.CustomerGoal.get(item.id);
+          
+          // מעדכן רק את task_type, שומר על כל השאר
+          await base44.asServiceRole.entities.CustomerGoal.update(item.id, {
+            ...currentItem,
+            task_type: 'goal'
+          });
+          
+          return { success: true, id: item.id };
+        } catch (error) {
+          console.error(`שגיאה בעדכון ${item.id}:`, error.message);
+          return { success: false, id: item.id, error: error.message };
+        }
       });
       
       await Promise.all(batchPromises);
