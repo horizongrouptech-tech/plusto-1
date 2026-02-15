@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, FileText, CheckCircle2, AlertCircle, X, Wand2, Loader2 } from "lucide-react";
 import { base44 } from '@/api/base44Client';
+import { parseFileHeaders } from '@/functions/parseFileHeaders';
 import { processCatalogWithMapping } from '@/functions/processCatalogWithMapping';
 import ColumnMappingWizard from './ColumnMappingWizard';
 
@@ -242,8 +243,8 @@ export default function ProductCatalogUpload({
       setLocalProgress(30);
       setLocalStatus('מנתח כותרות קובץ...');
 
-      // קריאת כותרות הקובץ דרך ה-SDK
-      const parseResult = await base44.functions.invoke('parseFileHeaders', { file_url });
+      // קריאת כותרות הקובץ
+      const parseResult = await parseFileHeaders({ file_url });
       
       if (!parseResult?.success) {
         throw new Error(parseResult?.error || 'שגיאה בניתוח הקובץ');
