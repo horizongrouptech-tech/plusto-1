@@ -232,10 +232,19 @@ export default function CustomerManagementNew() {
         </Button>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div
+        className="flex-1 grid overflow-hidden"
+        style={{
+          gridTemplateColumns: `
+            ${!customerListCollapsed ? 'minmax(240px, 320px)' : 'auto'}
+            minmax(560px, 1fr)
+            ${!tasksCollapsed ? 'minmax(240px, 320px)' : 'auto'}
+          `
+        }}
+      >
         {/* פאנל לקוחות */}
         {!customerListCollapsed && (
-        <div className="w-80 border-l border-horizon flex-shrink-0">
+        <div className="border-l border-horizon min-w-0 overflow-hidden">
           <CustomerListPanel
             customers={filteredCustomers}
             selectedCustomer={selectedCustomer}
@@ -269,6 +278,7 @@ export default function CustomerManagementNew() {
         )}
 
         {/* Workboard - אזור העבודה המרכזי */}
+        <div className="min-w-0 overflow-hidden flex flex-col">
         <WorkboardPanel
         customer={selectedCustomer}
         activeTab={activeWorkboardTab}
@@ -297,6 +307,7 @@ export default function CustomerManagementNew() {
         isGenerating={isGeneratingRecs}
         currentUser={user}
       />
+        </div>
 
         {/* כפתור הצגה של פאנל משימות */}
         {tasksCollapsed && (
@@ -314,7 +325,7 @@ export default function CustomerManagementNew() {
 
         {/* פאנל משימות */}
         {!tasksCollapsed && (
-          <div className="w-80 border-r border-horizon flex-shrink-0">
+          <div className="border-r border-horizon min-w-0 overflow-hidden">
             <TasksPanel
               customer={selectedCustomer}
               tasks={tasks}

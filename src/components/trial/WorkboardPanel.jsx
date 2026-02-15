@@ -92,7 +92,7 @@ export default function WorkboardPanel({
   const visibleTabs = tabs;
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-horizon-dark">
+    <div className="flex-1 flex flex-col overflow-hidden min-w-0 bg-horizon-dark">
       {/* Customer Header */}
       <div className="bg-horizon-card border-b border-horizon px-6 py-4" dir="rtl">
         <div className="flex items-center justify-between">
@@ -133,7 +133,7 @@ export default function WorkboardPanel({
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-auto p-4" dir="rtl">
+      <div className="flex-1 overflow-auto p-4 min-w-0" dir="rtl">
         {activeTab === 'files' && (
           <div className="space-y-6">
             <CustomerFileUploadManager customer={customer} />
