@@ -249,15 +249,26 @@ export default function ColumnMappingWizard({
       
       setPreviewData(preview);
       
-      // אימות כל הנתונים
-      const allValidation = rawData.map((row, index) => {
+      // אימות רק על מדגם של 200 שורות ראשונות (במקום כל הקובץ)
+      const sampleSize = Math.min(rawData.length, 200);
+      const sampleValidation = rawData.slice(0, sampleSize).map((row, index) => {
         const errors = validateRow(row, mapping);
         return { index, errors, isValid: errors.length === 0 };
       });
       
+      // חישוב הערכה של שורות תקינות/לא תקינות
+      const sampleValidCount = sampleValidation.filter(r => r.isValid).length;
+      const sampleInvalidCount = sampleValidation.filter(r => !r.isValid).length;
+      const validPercentage = sampleValidCount / sampleSize;
+      
+      const estimatedValid = Math.round(rawData.length * validPercentage);
+      const estimatedInvalid = rawData.length - estimatedValid;
+      
       setValidationResults({
-        valid: allValidation.filter(r => r.isValid),
-        invalid: allValidation.filter(r => !r.isValid)
+        valid: Array(estimatedValid).fill({ isValid: true }),
+        invalid: Array(estimatedInvalid).fill({ isValid: false }),
+        isSample: rawData.length > sampleSize,
+        sampleSize: sampleSize
       });
     }
   }, [step, mapping, rawData]);
@@ -454,25 +465,43 @@ export default function ColumnMappingWizard({
         {step === 2 && (
           <div className="space-y-6 py-4">
             {/* סיכום אימות */}
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="bg-green-500/10 border-green-500/30">
-                <CardContent className="p-4 flex items-center gap-3">
-                  <CheckCircle2 className="w-8 h-8 text-green-400" />
-                  <div>
-                    <div className="text-2xl font-bold text-green-400">{validationResults.valid.length}</div>
-                    <div className="text-sm text-green-300">שורות תקינות</div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-red-500/10 border-red-500/30">
-                <CardContent className="p-4 flex items-center gap-3">
-                  <AlertCircle className="w-8 h-8 text-red-400" />
-                  <div>
-                    <div className="text-2xl font-bold text-red-400">{validationResults.invalid.length}</div>
-                    <div className="text-sm text-red-300">שורות עם שגיאות</div>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="space-y-3">
+              {validationResults.isSample && (
+                <Alert className="bg-blue-500/10 border-blue-500/30">
+                  <AlertCircle className="w-4 h-4 text-blue-400" />
+                  <AlertDescription className="text-blue-300 text-sm">
+                    הקובץ גדול ({rawData.length.toLocaleString()} שורות). האימות בוצע על מדגם של {validationResults.sampleSize} שורות ראשונות. 
+                    המספרים המוצגים הם הערכה סטטיסטית.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              <div className="grid grid-cols-2 gap-4">
+                <Card className="bg-green-500/10 border-green-500/30">
+                  <CardContent className="p-4 flex items-center gap-3">
+                    <CheckCircle2 className="w-8 h-8 text-green-400" />
+                    <div>
+                      <div className="text-2xl font-bold text-green-400">
+                        {validationResults.valid.length.toLocaleString()}
+                        {validationResults.isSample && <span className="text-sm">~</span>}
+                      </div>
+                      <div className="text-sm text-green-300">שורות תקינות {validationResults.isSample && '(הערכה)'}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-red-500/10 border-red-500/30">
+                  <CardContent className="p-4 flex items-center gap-3">
+                    <AlertCircle className="w-8 h-8 text-red-400" />
+                    <div>
+                      <div className="text-2xl font-bold text-red-400">
+                        {validationResults.invalid.length.toLocaleString()}
+                        {validationResults.isSample && <span className="text-sm">~</span>}
+                      </div>
+                      <div className="text-sm text-red-300">שורות עם שגיאות {validationResults.isSample && '(הערכה)'}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
 
             {/* תצוגה מקדימה */}
