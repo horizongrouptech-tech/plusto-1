@@ -244,7 +244,7 @@ export default function ProductCatalogUpload({
       setLocalStatus('מנתח כותרות קובץ...');
 
       // קריאת כותרות הקובץ
-      const { data: parseResult } = await parseFileHeaders({ file_url });
+      const parseResult = await base44.functions.parseFileHeaders({ file_url });
       
       if (!parseResult?.success) {
         throw new Error(parseResult?.error || 'שגיאה בניתוח הקובץ');
