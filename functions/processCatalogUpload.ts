@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.5.0';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { parse } from "npm:csv-parse/sync";
 
 function normalizeHeaders(headers) {
