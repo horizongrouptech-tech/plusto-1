@@ -246,13 +246,13 @@ export default function ProductCatalogUpload({
       // קריאת כותרות הקובץ
       const parseResult = await base44.functions.parseFileHeaders({ file_url });
       
-      if (!parseResult?.success) {
-        throw new Error(parseResult?.error || 'שגיאה בניתוח הקובץ');
+      if (parseResult?.error) {
+        throw new Error(parseResult.error || 'שגיאה בניתוח הקובץ');
       }
 
-      setFileHeaders(parseResult.data.headers);
-      setRawData(parseResult.data.raw_data);
-      setHeaderRowIndex(parseResult.data.header_row_index || 0);
+      setFileHeaders(parseResult.headers || []);
+      setRawData(parseResult.sample_data || []);
+      setHeaderRowIndex(parseResult.header_row_index || 0);
       
       setLocalProgress(50);
       setLocalStatus('פותח אשף מיפוי...');
