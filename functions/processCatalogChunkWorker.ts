@@ -70,11 +70,16 @@ function processCSVRaw(content) {
 }
 
 // עיבוד Excel - מחזיר מערך של מערכים (raw arrays)
+// חייב להיות זהה לאורקסטרטור - כולל סינון שורות ריקות!
 function processExcelRaw(buffer) {
   const workbook = xlsx.read(buffer, { type: 'buffer' });
   const firstSheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[firstSheetName];
-  return xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: null });
+  const allRows = xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: null });
+  // סינון זהה לאורקסטרטור - רק שורות עם תוכן אמיתי (לא null ולא ריק)
+  return (allRows || []).filter((row) =>
+    Array.isArray(row) && row.some((cell) => cell != null && String(cell).trim() !== '')
+  );
 }
 
 // עדכון סטטוס
@@ -182,9 +187,10 @@ Deno.serve(async (req) => {
     }
 
     const headers = headerRow.map(cell => cleanCell(cell));
+    // dataRows = שורות אחרי הכותרת. כלול רק שורות עם תוכן (כבר מסונן ב-Excel path)
     const dataRows = allRawRows.slice(headerRowIdx + 1);
 
-    // המרת שורות גולמיות לאובייקטים
+    // המרת שורות גולמיות לאובייקטים - סינון נוסף לשורות שבהן כל הערכים ריקים
     const allRecords = dataRows.map(row => {
       if (!row || !Array.isArray(row)) return null;
       const obj = {};
@@ -194,10 +200,20 @@ Deno.serve(async (req) => {
         }
       });
       return obj;
-    }).filter(obj => obj && Object.keys(obj).length > 0);
+    }).filter((obj) => {
+      if (!obj || Object.keys(obj).length === 0) return false;
+      // דילוג על שורות שבהן כל הערכים ריקים/whitespace
+      const hasMeaningfulValue = Object.values(obj).some((v) => v != null && String(v).trim() !== '');
+      return hasMeaningfulValue;
+    });
 
-    // חילוץ החלק הרלוונטי
+    // חילוץ החלק הרלוונטי - startRow/endRow מתואמים ל-total_rows מהאורקסטרטור
     const records = allRecords.slice(startRow, endRow);
+
+    // Sanity check: אם יש אי-התאמה חמורה בין allRecords ל-total_rows, לא ליצור מוצרים "משוערים"
+    if (allRecords.length > total_rows * 2) {
+      console.warn(`Worker: allRecords.length=${allRecords.length} >> total_rows=${total_rows} - ייתכן אי-התאמה באורקסטרטור`);
+    }
 
     // עיבוד המוצרים
     const productsToCreate = [];

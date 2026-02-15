@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       const allRows = xlsx.utils.sheet_to_json(firstSheet, { header: 1, defval: null });
       const nonEmptyRows = (allRows || []).filter((row) =>
-        Array.isArray(row) && row.some((cell) => cell !== null && cell !== '')
+        Array.isArray(row) && row.some((cell) => cell != null && String(cell).trim() !== '')
       );
       const dataRows = nonEmptyRows.slice(header_row_index + 1);
       totalRows = dataRows.length;
@@ -91,6 +91,12 @@ Deno.serve(async (req) => {
 
     if (!totalRows || totalRows <= 0) {
       throw new Error('הקובץ ריק או לא נמצאו נתונים');
+    }
+
+    // הגבלת בטיחות: מניעת "מיליוני מוצרים" מקבצים עם dimension שגוי
+    const MAX_ROWS = 500_000;
+    if (totalRows > MAX_ROWS) {
+      throw new Error(`הקובץ מכיל ${totalRows.toLocaleString()} שורות - הגבלה של ${MAX_ROWS.toLocaleString()} שורות מקסימום. פצל את הקובץ או בדוק את מבנה הקובץ.`);
     }
 
     // חישוב chunks
