@@ -228,9 +228,16 @@ export default function ColumnMappingWizard({
 
   // יצירת תצוגה מקדימה
   useEffect(() => {
-    if (step === 2 && rawData.length > 0) {
+    if (step !== 2 || rawData.length === 0) return;
+    
+    const processPreview = async () => {
       try {
-        const preview = rawData.slice(0, 20).map((row, index) => {
+        // הגבלת הנתונים ל-500 שורות מקסימום לעיבוד
+        const dataToProcess = rawData.slice(0, Math.min(rawData.length, 500));
+        const actualTotalRows = rawData.length;
+        
+        // תצוגה מקדימה של 20 שורות
+        const preview = dataToProcess.slice(0, 20).map((row, index) => {
           const mappedRow = {};
           
           SYSTEM_FIELDS.forEach(field => {
@@ -250,37 +257,45 @@ export default function ColumnMappingWizard({
         
         setPreviewData(preview);
         
-        // אימות רק על מדגם של 100 שורות (הקטנתי מ-200)
-        const sampleSize = Math.min(rawData.length, 100);
-        const sampleValidation = rawData.slice(0, sampleSize).map((row, index) => {
-          const errors = validateRow(row, mapping);
-          return { index, errors, isValid: errors.length === 0 };
-        });
+        // אימות על מדגם קטן של 50 שורות בלבד
+        const sampleSize = Math.min(dataToProcess.length, 50);
+        let validCount = 0;
         
-        // חישוב הערכה של שורות תקינות/לא תקינות
-        const sampleValidCount = sampleValidation.filter(r => r.isValid).length;
-        const validPercentage = sampleValidCount / sampleSize;
+        for (let i = 0; i < sampleSize; i++) {
+          const errors = validateRow(dataToProcess[i], mapping);
+          if (errors.length === 0) validCount++;
+        }
         
-        const estimatedValid = Math.round(rawData.length * validPercentage);
-        const estimatedInvalid = rawData.length - estimatedValid;
+        // הערכה סטטיסטית
+        const validPercentage = validCount / sampleSize;
+        const estimatedValid = Math.round(actualTotalRows * validPercentage);
+        const estimatedInvalid = actualTotalRows - estimatedValid;
         
         setValidationResults({
           valid: Array(estimatedValid).fill({ isValid: true }),
           invalid: Array(estimatedInvalid).fill({ isValid: false }),
           isSample: true,
           sampleSize: sampleSize,
-          totalRows: rawData.length
+          totalRows: actualTotalRows
         });
+        
       } catch (error) {
         console.error('Error in preview generation:', error);
+        // במקרה של שגיאה, הערך שכל השורות תקינות
         setValidationResults({
-          valid: [],
+          valid: Array(rawData.length).fill({ isValid: true }),
           invalid: [],
           isSample: true,
-          error: 'שגיאה ביצירת תצוגה מקדימה'
+          sampleSize: 0,
+          totalRows: rawData.length,
+          error: 'לא ניתן לאמת - הקובץ גדול מדי. כל השורות יייובאו.'
         });
       }
-    }
+    };
+    
+    // עיכוב קטן כדי למנוע עומס על הדפדפן
+    const timer = setTimeout(processPreview, 100);
+    return () => clearTimeout(timer);
   }, [step, mapping, rawData]);
 
   // בדיקה אם המיפוי תקין - רק שם מוצר הוא חובה
@@ -661,6 +676,12 @@ export default function ColumnMappingWizard({
         <DialogFooter className="flex justify-between gap-2">
 
           <div className="flex gap-2">
+            {step > 1 && (
+              <Button variant="outline" onClick={() => setStep(step - 1)} className="border-horizon text-horizon-text">
+                <ArrowLeft className="w-4 h-4 rotate-180 ml-2" />
+                חזור
+              </Button>
+            )}
             <Button variant="outline" onClick={onClose} className="border-horizon text-horizon-text">
               ביטול
             </Button>
