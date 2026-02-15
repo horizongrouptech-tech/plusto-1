@@ -42,18 +42,33 @@ Deno.serve(async (req) => {
       });
     }
 
-    // שלב 3: מעדכן את הפריטים
-    const updatePromises = itemsToFix.map(item => {
-      console.log(`מעדכן: ${item.name} (${item.id}) -> task_type: 'goal'`);
-      return base44.asServiceRole.entities.CustomerGoal.update(item.id, {
-        task_type: 'goal'
+    // שלב 3: מעדכן את הפריטים במנות כדי למנוע Rate Limit
+    const BATCH_SIZE = 10; // מעדכן 10 פריטים בכל מנה
+    const DELAY_BETWEEN_BATCHES = 1000; // המתנה של שנייה בין מנות
+    
+    let updatedCount = 0;
+    
+    for (let i = 0; i < itemsToFix.length; i += BATCH_SIZE) {
+      const batch = itemsToFix.slice(i, i + BATCH_SIZE);
+      console.log(`מעבד מנה ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(itemsToFix.length / BATCH_SIZE)}`);
+      
+      const batchPromises = batch.map(item => {
+        console.log(`מעדכן: ${item.name} (${item.id}) -> task_type: 'goal'`);
+        return base44.asServiceRole.entities.CustomerGoal.update(item.id, {
+          task_type: 'goal'
+        });
       });
-    });
+      
+      await Promise.all(batchPromises);
+      updatedCount += batch.length;
+      
+      // המתנה בין מנות (מלבד המנה האחרונה)
+      if (i + BATCH_SIZE < itemsToFix.length) {
+        await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
+      }
+    }
 
-    // מבצע את כל העדכונים במקביל
-    await Promise.all(updatePromises);
-
-    console.log('כל העדכונים בוצעו בהצלחה!');
+    console.log(`כל העדכונים בוצעו בהצלחה! עודכנו ${updatedCount} פריטים`);
 
     return Response.json({
       success: true,
