@@ -31,7 +31,8 @@ Deno.serve(async (req) => {
     catalog_id, 
     mapping,
     import_with_errors = false,
-    header_row_index = 0
+    header_row_index = 0,
+    total_rows: total_rows_from_client
   } = await req.json();
 
   if (!customer_email || !file_url || !catalog_id || !mapping) {
@@ -55,51 +56,45 @@ Deno.serve(async (req) => {
   try {
     await updateProcessStatus(base44, process.id, 10, 'running', 'בודק גודל הקובץ...');
 
-    // הורדת הקובץ
-    const response = await fetch(file_url);
-    if (!response.ok) {
-      throw new Error(`נכשל בהורדת הקובץ: ${response.statusText}`);
-    }
+    const MAX_ROWS = 100_000;
+    let totalRows: number;
 
-    // זיהוי סוג קובץ
-    const contentType = response.headers.get('content-type') || '';
-    const isExcel = contentType.includes('spreadsheet') || 
-                    contentType.includes('excel') ||
-                    file_url.toLowerCase().endsWith('.xlsx') ||
-                    file_url.toLowerCase().endsWith('.xls');
-
-    let totalRows;
-    
-    // ספירת שורות נתונים - קריאה מלאה וספירה אמיתית (לא dimension של Excel שמטעה למיליוני שורות)
-    if (isExcel) {
-      const buffer = await response.arrayBuffer();
-      const workbook = xlsx.read(buffer, { type: 'buffer' });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const allRows = xlsx.utils.sheet_to_json(firstSheet, { header: 1, defval: null });
-      const nonEmptyRows = (allRows || []).filter((row) =>
-        Array.isArray(row) && row.some((cell) => cell != null && String(cell).trim() !== '')
-      );
-      const dataRows = nonEmptyRows.slice(header_row_index + 1);
-      totalRows = dataRows.length;
+    // מקור יחיד לאמת: total_rows מ-parseFileHeaders (נשלח מהקליינט)
+    if (total_rows_from_client != null && typeof total_rows_from_client === 'number' && total_rows_from_client > 0) {
+      totalRows = Math.floor(total_rows_from_client);
     } else {
+      // fallback: חישוב מהקובץ (לא מומלץ - dimension של Excel עלול לטעות)
+      const response = await fetch(file_url);
+      if (!response.ok) {
+        throw new Error(`נכשל בהורדת הקובץ: ${response.statusText}`);
+      }
+      const contentType = response.headers.get('content-type') || '';
+      const isExcel = contentType.includes('spreadsheet') || contentType.includes('excel') ||
+        file_url.toLowerCase().endsWith('.xlsx') || file_url.toLowerCase().endsWith('.xls');
       const buffer = await response.arrayBuffer();
-      const uint8Array = new Uint8Array(buffer);
-      const text = new TextDecoder('utf-8').decode(uint8Array);
-      const lines = text.split(/\r\n|\n/).filter(line => line.trim());
-      totalRows = lines.length - header_row_index - 1; // subtract header and pre-header rows
+      if (isExcel) {
+        const workbook = xlsx.read(buffer, { type: 'buffer' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const allRows = xlsx.utils.sheet_to_json(firstSheet, { header: 1, defval: null });
+        const nonEmptyRows = (allRows || []).filter((row) =>
+          Array.isArray(row) && row.some((cell) => cell != null && String(cell).trim() !== '')
+        );
+        totalRows = nonEmptyRows.slice(header_row_index + 1).length;
+      } else {
+        const text = new TextDecoder('utf-8').decode(new Uint8Array(buffer));
+        const lines = text.split(/\r\n|\n/).filter(line => line.trim());
+        totalRows = lines.length - header_row_index - 1;
+      }
     }
 
     if (!totalRows || totalRows <= 0) {
       throw new Error('הקובץ ריק או לא נמצאו נתונים');
     }
 
-    // הגבלת בטיחות: מניעת "מיליוני מוצרים" מקבצים עם dimension שגוי
-    const MAX_ROWS = 500_000;
     if (totalRows > MAX_ROWS) {
-      throw new Error(`הקובץ מכיל ${totalRows.toLocaleString()} שורות - הגבלה של ${MAX_ROWS.toLocaleString()} שורות מקסימום. פצל את הקובץ או בדוק את מבנה הקובץ.`);
+      throw new Error(`הקובץ מכיל ${totalRows.toLocaleString()} שורות - הגבלה של ${MAX_ROWS.toLocaleString()} שורות מקסימום. פצל את הקובץ.`);
     }
 
-    // חישוב chunks
     const CHUNK_SIZE = 2000;
     const totalChunks = Math.ceil(totalRows / CHUNK_SIZE);
 
