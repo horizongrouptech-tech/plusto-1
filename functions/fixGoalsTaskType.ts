@@ -43,8 +43,8 @@ Deno.serve(async (req) => {
     }
 
     // שלב 3: מעדכן את הפריטים במנות כדי למנוע Rate Limit
-    const BATCH_SIZE = 10; // מעדכן 10 פריטים בכל מנה
-    const DELAY_BETWEEN_BATCHES = 1000; // המתנה של שנייה בין מנות
+    const BATCH_SIZE = 5; // מעדכן 5 פריטים בכל מנה
+    const DELAY_BETWEEN_BATCHES = 2000; // המתנה של 2 שניות בין מנות
     
     let updatedCount = 0;
     
