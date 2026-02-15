@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
     });
 
     // קריאה ל-worker הראשון
-    await base44.asServiceRole.functions.invoke('processCatalogChunkWorker', {
+    await base44.asServiceRole.functions.invoke('catalogChunkProcessor', {
       process_id: process.id,
       chunk_number: 0,
       total_chunks: totalChunks
