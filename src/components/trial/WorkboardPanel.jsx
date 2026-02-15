@@ -13,7 +13,7 @@ import {
   Globe,
   Users
 } from 'lucide-react';
-import { ReactFlowProvider } from 'reactflow';
+import { ReactFlowProvider } from '@xyflow/react';
 
 // ייבוא קומפוננטות קיימות
 import CustomerFileUploadManager from '@/components/admin/CustomerFileUploadManager';
