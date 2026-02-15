@@ -323,7 +323,9 @@ Deno.serve(async (req) => {
       // זה החלק האחרון - סיום התהליך
       await updateProcessStatus(base44, process_id, 95, 'running', 'מעדכן ישות קטלוג...');
 
-      // ספירת כל המוצרים בקטלוג
+      // ספירת המוצרים שנוצרו בייבוא הנוכחי בלבד
+      const importStartTime = new Date(processStatus.started_at);
+      
       let totalCount = 0;
       let hasMore = true;
       let skip = 0;
@@ -331,7 +333,11 @@ Deno.serve(async (req) => {
       
       while (hasMore) {
         const batch = await base44.asServiceRole.entities.ProductCatalog.filter(
-          { catalog_id, is_active: true },
+          { 
+            catalog_id, 
+            is_active: true,
+            created_date: { $gte: importStartTime.toISOString() }
+          },
           '-created_date',
           countBatchSize,
           skip
@@ -343,8 +349,13 @@ Deno.serve(async (req) => {
         }
       }
       
+      // עדכון product_count עם כל המוצרים בקטלוג (כולל ישנים)
+      const allProductsCount = await base44.asServiceRole.entities.ProductCatalog.filter(
+        { catalog_id, is_active: true }
+      ).then(products => products.length);
+      
       await base44.asServiceRole.entities.Catalog.update(catalog_id, {
-        product_count: totalCount,
+        product_count: allProductsCount,
         last_generated_at: new Date().toISOString(),
         status: 'ready'
       });
@@ -356,7 +367,7 @@ Deno.serve(async (req) => {
       };
 
       await updateProcessStatus(base44, process_id, 100, 'completed', 
-        `הושלם! נוצרו ${totalCount.toLocaleString('he-IL')} מוצרים`, resultData);
+        `הושלם! נוצרו ${totalCount.toLocaleString('he-IL')} מוצרים חדשים`, resultData);
 
       return new Response(JSON.stringify({
         success: true,
