@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Check, X, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { format } from 'date-fns';
+import { format, parse, isValid } from 'date-fns';
 import { he } from 'date-fns/locale';
 
 export default function InlineEditableField({ 
@@ -95,26 +95,52 @@ export default function InlineEditableField({
   }
 
   if (type === 'date') {
+    const normalizeDateInput = (input) => {
+      if (!input || !input.trim()) return null;
+      const s = input.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+      try {
+        const parsed = parse(s, 'dd/MM/yyyy', new Date(), { locale: he });
+        if (isValid(parsed)) {
+          return format(parsed, 'yyyy-MM-dd');
+        }
+      } catch (_) {}
+      return null;
+    };
+
+    const displayDateForInput = (val) => {
+      if (!val) return '';
+      try {
+        const d = new Date(val);
+        if (isValid(d)) return format(d, 'dd/MM/yyyy', { locale: he });
+      } catch (_) {}
+      return val;
+    };
+
     return (
       <div ref={containerRef} className="flex items-center gap-1">
-        <Popover open={isEditing} onOpenChange={(open) => {
-          if (!open) {
-            setIsEditing(false);
-          }
-        }}>
+        <Input
+          ref={inputRef}
+          type="text"
+          value={displayDateForInput(editValue)}
+          onChange={(e) => setEditValue(normalizeDateInput(e.target.value) || e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="DD/MM/YYYY"
+          className="bg-horizon-card border-horizon-primary text-horizon-text h-8 text-sm w-28"
+        />
+        <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 text-xs bg-horizon-card border-horizon-primary">
+            <Button variant="outline" size="sm" className="h-8 text-xs bg-horizon-card border-horizon-primary shrink-0">
               <CalendarIcon className="w-3 h-3 ml-1" />
-              {editValue ? format(new Date(editValue), 'dd/MM/yyyy', { locale: he }) : 'בחר תאריך'}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0 bg-horizon-card border-horizon">
             <Calendar
               mode="single"
-              selected={editValue ? new Date(editValue) : undefined}
+              selected={editValue && isValid(new Date(editValue)) ? new Date(editValue) : undefined}
               onSelect={async (date) => {
                 if (date) {
-                  const formatted = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                  const formatted = format(date, 'yyyy-MM-dd');
                   setEditValue(formatted);
                   await handleSave(formatted);
                 }
@@ -124,6 +150,19 @@ export default function InlineEditableField({
             />
           </PopoverContent>
         </Popover>
+        <Button variant="ghost" size="icon" onClick={() => {
+          const normalized = normalizeDateInput(editValue) || (editValue && /^\d{4}-\d{2}-\d{2}$/.test(editValue) ? editValue : null);
+          if (normalized) {
+            handleSave(normalized);
+          } else {
+            handleCancel();
+          }
+        }} className="h-6 w-6 text-green-400 shrink-0">
+          <Check className="w-3 h-3" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={handleCancel} className="h-6 w-6 text-red-400 shrink-0">
+          <X className="w-3 h-3" />
+        </Button>
       </div>
     );
   }

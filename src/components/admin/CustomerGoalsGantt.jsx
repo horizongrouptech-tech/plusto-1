@@ -353,6 +353,7 @@ export default function CustomerGoalsGantt({ customer }) {
                                                     isDragging={snapshot.isDragging}
                                                     isCollapsed={collapsedGoals[goal.id]}
                                                     onToggleCollapse={() => setCollapsedGoals(prev => ({ ...prev, [goal.id]: !prev[goal.id] }))}
+                                                    onExpandAfterAdd={() => setCollapsedGoals(prev => ({ ...prev, [goal.id]: false }))}
                                                 />
                                             </div>
                                         )}

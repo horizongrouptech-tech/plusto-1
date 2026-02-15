@@ -7,7 +7,7 @@ import GoalRow from './GoalRow';
 import { base44 } from '@/api/base44Client';
 
 import { toast } from "sonner";
-export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals, isDragging, isCollapsed, onToggleCollapse }) {
+export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals, isDragging, isCollapsed, onToggleCollapse, onExpandAfterAdd }) {
     const [isExpanded, setIsExpanded] = useState(!isCollapsed);
 
     // סנכרון עם state מהקומפוננטה האב
@@ -38,6 +38,7 @@ export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals
             
             if (newSubtask) {
                 await refreshData();
+                onExpandAfterAdd?.();
             }
         } catch (error) {
             console.error("Error adding subtask:", error);

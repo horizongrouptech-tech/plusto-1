@@ -228,7 +228,9 @@ export default function FloatingAgentChat({
   agentName = "customer_business_advisor_agent", 
   currentPageName, 
   selectedCustomer, 
-  pageContext 
+  pageContext,
+  position = "right",
+  title = "יועץ עסקי AI"
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -572,16 +574,18 @@ export default function FloatingAgentChat({
     };
   };
 
+  const positionClass = position === "left" ? "left-6" : "right-6";
+
   if (!isOpen) {
     return (
       <div 
-        className="fixed bottom-6 right-6 z-50"
+        className={`fixed bottom-6 ${positionClass} z-50`}
         style={{ direction: 'ltr' }}
       >
         <Button
           onClick={toggleOpen}
           className="bg-gradient-to-br from-horizon-primary to-horizon-secondary hover:opacity-90 text-white rounded-full h-16 w-16 shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center justify-center group relative"
-          title="פתח צ'אט עם יועץ עסקי AI (Ctrl+/)"
+          title={`פתח צ'אט עם ${title} (Ctrl+/)`}
         >
           <MessageCircle className="w-8 h-8 group-hover:scale-110 transition-transform" />
           <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white animate-pulse" />
@@ -594,7 +598,7 @@ export default function FloatingAgentChat({
 
   return (
     <div 
-      className={`fixed z-50 transition-all duration-300 ${chatSize === 'fullscreen' ? '' : 'bottom-6 right-6'}`}
+      className={`fixed z-50 transition-all duration-300 ${chatSize === 'fullscreen' ? '' : `bottom-6 ${positionClass}`}`}
       style={{ 
         ...sizeStyles,
         direction: 'rtl'
@@ -610,7 +614,7 @@ export default function FloatingAgentChat({
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <CardTitle className="text-base font-bold">יועץ עסקי AI</CardTitle>
+                  <CardTitle className="text-base font-bold">{title}</CardTitle>
                   {isAdmin && <Badge className="bg-white/20 text-white text-xs py-0">אדמין</Badge>}
                 </div>
                 {selectedCustomer ? (

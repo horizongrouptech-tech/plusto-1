@@ -4030,6 +4030,13 @@ export default function AdminPage() {
     <FloatingAgentChat
       currentUser={currentUser}
       agentName="plusto_user_guide_agent"
+      title="יועץ עסקי AI"
+    />
+    <FloatingAgentChat
+      currentUser={currentUser}
+      agentName="timool_recommendations_agent"
+      title="סוכן המלצות"
+      position="left"
     />
     </div> 
   );

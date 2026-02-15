@@ -16,7 +16,9 @@ import {
   MessageSquare,
   Edit,
   Check,
-  UserPlus } from
+  UserPlus,
+  Target,
+  ListChecks } from
 'lucide-react';
 import { format, parse, isValid } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -62,7 +64,8 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
   };
 
   const handleDateInputChange = (field, value) => {
-    setEditedGoal({ ...editedGoal, [field]: value });
+    const normalized = value ? normalizeDate(value) : null;
+    setEditedGoal({ ...editedGoal, [field]: normalized || value });
   };
 
   const normalizeDate = (dateString) => {
@@ -92,16 +95,34 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
   const displayDate = (dateString) => {
     if (!dateString) return '';
     try {
-      const date = new Date(dateString);
-      if (isValid(date)) {
-        return format(date, 'dd/MM/yyyy');
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const date = new Date(dateString);
+        return isValid(date) ? format(date, 'dd/MM/yyyy', { locale: he }) : dateString;
+      }
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+        const parsed = parse(dateString, 'dd/MM/yyyy', new Date(), { locale: he });
+        return isValid(parsed) ? format(parsed, 'dd/MM/yyyy', { locale: he }) : dateString;
       }
     } catch (e) {
+      // אם זה לא תאריך תקין, החזר את המחרוזת
+    }
+    return dateString;
+  };
 
-
-
-      // אם זה לא תאריך תקין, פשוט החזר את המחרוזת
-    }return dateString;};
+  const getDateForCalendar = (dateString) => {
+    if (!dateString) return undefined;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      const d = new Date(dateString);
+      return isValid(d) ? d : undefined;
+    }
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+      try {
+        const parsed = parse(dateString, 'dd/MM/yyyy', new Date(), { locale: he });
+        return isValid(parsed) ? parsed : undefined;
+      } catch (_) {}
+    }
+    return undefined;
+  };
   const handleQuickStatusChange = async (newStatus) => {
     try {
       await base44.entities.CustomerGoal.update(goal.id, { status: newStatus });
@@ -519,7 +540,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                                 <PopoverContent className="w-auto p-0 bg-horizon-card border-horizon">
                                     <Calendar
                     mode="single"
-                    selected={editedGoal.start_date ? new Date(editedGoal.start_date) : undefined}
+                    selected={getDateForCalendar(editedGoal.start_date)}
                     onSelect={(date) => setEditedGoal({
                       ...editedGoal,
                       start_date: date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` : null
@@ -552,7 +573,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                                 <PopoverContent className="w-auto p-0 bg-horizon-card border-horizon">
                                     <Calendar
                     mode="single"
-                    selected={editedGoal.end_date ? new Date(editedGoal.end_date) : undefined}
+                    selected={getDateForCalendar(editedGoal.end_date)}
                     onSelect={(date) => setEditedGoal({
                       ...editedGoal,
                       end_date: date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` : null
@@ -623,10 +644,19 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
   }
 
   return (
-    <div className={`flex items-center gap-3 p-3 bg-horizon-card/30 border border-horizon rounded-lg hover:border-horizon-primary/50 transition-all ${isDragging ? 'opacity-50' : ''} ${isParent ? 'font-semibold' : ''}`}>
+    <div className={`flex items-center gap-3 p-3 rounded-lg transition-all ${isDragging ? 'opacity-50' : ''} ${
+      isParent 
+        ? 'bg-horizon-card/60 border border-horizon-primary/40 font-semibold hover:border-horizon-primary/60' 
+        : 'bg-horizon-card/20 border border-horizon/50 ps-6 hover:border-horizon-primary/30'
+    }`}>
             <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-3 items-center">
                 <div className="md:col-span-2 flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full ${getStatusColor(goal.status)}`}></div>
+                    {isParent ? (
+                      <Target className="w-4 h-4 text-horizon-primary shrink-0" />
+                    ) : (
+                      <ListChecks className="w-3 h-3 text-horizon-accent shrink-0" />
+                    )}
+                    <div className={`w-3 h-3 rounded-full ${getStatusColor(goal.status)} shrink-0`}></div>
                     <InlineEditableField
             value={goal.name}
             displayValue={<span className="text-horizon-text">{goal.name}</span>}
