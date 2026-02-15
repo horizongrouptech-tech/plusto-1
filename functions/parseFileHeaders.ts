@@ -34,11 +34,24 @@ function findHeaderRow(rows, maxRowsToCheck = 15) {
     if (!row || !Array.isArray(row)) continue;
     
     const cleanedRow = row.map(cleanCell);
-    const matchCount = cleanedRow.filter(cell => 
-      knownHeaders.some(h => cell.toLowerCase().includes(h.toLowerCase()))
-    ).length;
     
-    if (matchCount >= 2) {
+    // בדיקה אם יש תאים עם טקסט (לא רק מספרים)
+    const hasTextCells = cleanedRow.some(cell => {
+      const trimmed = cell.trim();
+      return trimmed && isNaN(Number(trimmed));
+    });
+    
+    // בדיקה אם יש התאמה לכותרות ידועות
+    const matchCount = cleanedRow.filter(cell => {
+      const trimmed = cell.trim().toLowerCase();
+      return knownHeaders.some(h => {
+        const headerLower = h.toLowerCase();
+        return trimmed === headerLower || trimmed.includes(headerLower) || headerLower.includes(trimmed);
+      });
+    }).length;
+    
+    // אם יש טקסט ולפחות 2 כותרות מזוהות
+    if (hasTextCells && matchCount >= 2) {
       return { index: i, headers: cleanedRow.filter(h => h !== '') };
     }
   }
