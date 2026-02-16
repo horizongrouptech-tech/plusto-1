@@ -70,16 +70,14 @@ function processCSVRaw(content) {
 }
 
 // עיבוד Excel - מחזיר מערך של מערכים (raw arrays)
-// חייב להיות זהה לאורקסטרטור - כולל סינון שורות ריקות!
+// ⚠️ ללא סינון - מחזיר את כל השורות כפי שהן בקובץ!
 function processExcelRaw(buffer) {
   const workbook = xlsx.read(buffer, { type: 'buffer' });
   const firstSheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[firstSheetName];
   const allRows = xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: null });
-  // סינון זהה לאורקסטרטור - רק שורות עם תוכן אמיתי (לא null ולא ריק)
-  return (allRows || []).filter((row) =>
-    Array.isArray(row) && row.some((cell) => cell != null && String(cell).trim() !== '')
-  );
+  // החזר את כל השורות ללא סינון - הסינון יקרה אחר כך
+  return allRows || [];
 }
 
 // עדכון סטטוס
