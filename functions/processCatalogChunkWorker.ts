@@ -105,9 +105,9 @@ const updateProcessStatus = async (base44, processId, progress, status, currentS
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
 
-  const { process_id, chunk_number, total_chunks } = await req.json();
+  const { process_id, chunk_number, start_row, end_row } = await req.json();
 
-  if (!process_id || chunk_number === undefined || !total_chunks) {
+  if (!process_id || chunk_number === undefined || start_row === undefined || end_row === undefined) {
     return new Response(JSON.stringify({ 
       success: false, 
       error: 'חסרים פרמטרים נדרשים' 
@@ -134,19 +134,20 @@ Deno.serve(async (req) => {
       catalog_id, 
       customer_email, 
       total_rows,
-      chunk_size,
+      num_chunks,
       import_with_errors,
       header_row_index = 0
     } = metadata;
 
-    // חישוב טווח השורות (relative to data rows, not raw file rows)
-    const startRow = chunk_number * chunk_size;
-    const endRow = Math.min((chunk_number + 1) * chunk_size, total_rows);
+    // 🎯 שימוש בטווח שהתקבל מהפרמטרים
+    const startRow = start_row;
+    const endRow = end_row;
 
+    const progressPercent = Math.round((endRow / total_rows) * 100);
     await updateProcessStatus(base44, process_id, 
-      Math.round((chunk_number / total_chunks) * 100), 
+      progressPercent, 
       'running', 
-      `מעבד חלק ${chunk_number + 1}/${total_chunks} (שורות ${startRow + 1}-${endRow})...`);
+      `מעבד חלק ${chunk_number + 1}/${num_chunks} (שורות ${startRow + 1}-${endRow})...`);
 
     // הורדת הקובץ
     const response = await fetch(file_url);
@@ -207,12 +208,14 @@ Deno.serve(async (req) => {
       return hasMeaningfulValue;
     });
 
-    // חילוץ החלק הרלוונטי - startRow/endRow מתואמים ל-total_rows מהאורקסטרטור
+    // 🎯 חילוץ רק הטווח המבוקש - כל chunk מעבד רק את השורות שלו
     const records = allRecords.slice(startRow, endRow);
+    
+    console.log(`Chunk ${chunk_number}: Processing rows ${startRow}-${endRow} (${records.length} records)`);
 
-    // Sanity check: אם יש אי-התאמה חמורה בין allRecords ל-total_rows, לא ליצור מוצרים "משוערים"
-    if (allRecords.length > total_rows * 2) {
-      console.warn(`Worker: allRecords.length=${allRecords.length} >> total_rows=${total_rows} - ייתכן אי-התאמה באורקסטרטור`);
+    // Sanity check: וידוא שלא עוברים על total_rows
+    if (endRow > total_rows) {
+      console.warn(`Worker: endRow=${endRow} > total_rows=${total_rows} - חישוב שגוי!`);
     }
 
     // עיבוד המוצרים
@@ -322,20 +325,26 @@ Deno.serve(async (req) => {
       }
     }
 
-    // בדיקה אם יש עוד chunks
-    if (chunk_number + 1 < total_chunks) {
+    // 🎯 בדיקה אם יש עוד chunks לפי end_row < total_rows
+    if (endRow < total_rows) {
+      const nextStartRow = endRow;
+      const chunkSize = Math.ceil(total_rows / num_chunks);
+      const nextEndRow = Math.min(nextStartRow + chunkSize, total_rows);
+      
       // קריאה עצמית לחלק הבא
       await base44.asServiceRole.functions.invoke('processCatalogChunkWorker', {
         process_id,
         chunk_number: chunk_number + 1,
-        total_chunks
+        start_row: nextStartRow,
+        end_row: nextEndRow
       });
       
       return new Response(JSON.stringify({
         success: true,
         chunk_completed: chunk_number + 1,
         products_created_in_chunk: createdCount,
-        next_chunk: chunk_number + 2
+        next_chunk: chunk_number + 2,
+        next_range: `${nextStartRow}-${nextEndRow}`
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
@@ -391,12 +400,12 @@ Deno.serve(async (req) => {
 
       const resultData = {
         total_products_created: totalCount,
-        total_chunks_processed: total_chunks,
+        total_chunks_processed: num_chunks,
         catalog_id
       };
 
       await updateProcessStatus(base44, process_id, 100, 'completed', 
-        `הושלם! נוצרו ${totalCount.toLocaleString('he-IL')} מוצרים חדשים`, resultData);
+        `הושלם! נוצרו ${totalCount.toLocaleString('he-IL')} מוצרים חדשים (${num_chunks} חלקים)`, resultData);
 
       return new Response(JSON.stringify({
         success: true,

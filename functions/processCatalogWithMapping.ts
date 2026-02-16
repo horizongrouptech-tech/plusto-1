@@ -95,11 +95,12 @@ Deno.serve(async (req) => {
       throw new Error(`הקובץ מכיל ${totalRows.toLocaleString()} שורות - הגבלה של ${MAX_ROWS.toLocaleString()} שורות מקסימום. פצל את הקובץ.`);
     }
 
-    const CHUNK_SIZE = 2000;
-    const totalChunks = Math.ceil(totalRows / CHUNK_SIZE);
+    // 🎯 חלוקה ל-20 chunks מדויקים
+    const NUM_CHUNKS = 20;
+    const chunkSize = Math.ceil(totalRows / NUM_CHUNKS);
 
     await updateProcessStatus(base44, process.id, 20, 'running', 
-      `זוהו ${totalRows.toLocaleString('he-IL')} מוצרים. מתחיל עיבוד ב-${totalChunks} חלקים...`);
+      `זוהו ${totalRows.toLocaleString('he-IL')} מוצרים. מתחיל עיבוד ב-${NUM_CHUNKS} חלקים של ${chunkSize.toLocaleString('he-IL')} שורות...`);
 
     // שמירת מטא-דטה ל-ProcessStatus
     await base44.asServiceRole.entities.ProcessStatus.update(process.id, {
@@ -109,17 +110,19 @@ Deno.serve(async (req) => {
         catalog_id,
         customer_email,
         total_rows: totalRows,
-        chunk_size: CHUNK_SIZE,
+        chunk_size: chunkSize,
+        num_chunks: NUM_CHUNKS,
         import_with_errors,
         header_row_index
       }
     });
 
-    // קריאה ל-worker הראשון
+    // קריאה ל-worker הראשון עם start_row ו-end_row
     await base44.asServiceRole.functions.invoke('processCatalogChunkWorker', {
       process_id: process.id,
       chunk_number: 0,
-      total_chunks: totalChunks
+      start_row: 0,
+      end_row: Math.min(chunkSize, totalRows)
     });
 
     // החזרת תגובה מיידית - העיבוד ממשיך ברקע
