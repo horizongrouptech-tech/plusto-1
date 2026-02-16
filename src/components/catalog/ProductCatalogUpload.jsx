@@ -317,7 +317,8 @@ export default function ProductCatalogUpload({
 
     } catch (error) {
       console.error('Error processing with mapping:', error);
-      setError(`שגיאה בעיבוד: ${error.message}`);
+      const serverMessage = error.response?.data?.error ?? error.data?.error ?? error.message;
+      setError(`שגיאה בעיבוד: ${serverMessage}`);
       setLocalProcessing(false);
       setLocalProgress(0);
       setLocalStatus('');

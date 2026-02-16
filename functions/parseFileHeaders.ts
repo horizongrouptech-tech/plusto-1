@@ -90,6 +90,7 @@ function processCSV(content) {
 
 // צמצום טווח הגיליון לפי תאים קיימים (מונע מיליוני שורות ריקות מ-!ref רחב ב-Excel)
 function clampSheetRef(worksheet) {
+  if (!worksheet || typeof worksheet !== 'object') return;
   const cellKeys = Object.keys(worksheet).filter((k) => !k.startsWith('!'));
   if (cellKeys.length < 10) return;
   let maxRow = 0;
@@ -111,8 +112,14 @@ function clampSheetRef(worksheet) {
 // עיבוד קובץ Excel
 function processExcel(buffer) {
   const workbook = xlsx.read(buffer, { type: 'buffer' });
-  const firstSheetName = workbook.SheetNames[0];
+  const firstSheetName = workbook.SheetNames?.[0];
+  if (!firstSheetName) {
+    throw new Error('קובץ Excel ללא גיליונות');
+  }
   const worksheet = workbook.Sheets[firstSheetName];
+  if (!worksheet) {
+    throw new Error('גיליון Excel לא נמצא');
+  }
   clampSheetRef(worksheet);
   const rows = xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: null });
   return rows.filter(row => Array.isArray(row) && row.some(cell => cell !== null && cell !== ''));
