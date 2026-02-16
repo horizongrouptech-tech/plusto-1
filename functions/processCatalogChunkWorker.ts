@@ -322,23 +322,27 @@ Deno.serve(async (req) => {
 
     // יצירת המוצרים
     let createdCount = 0;
+    console.log(`💾 [WORKER CREATE] התחלת יצירת ${productsToCreate.length} מוצרים...`);
+    
     if (productsToCreate.length > 0) {
       const batchSize = 200;
       
       for (let i = 0; i < productsToCreate.length; i += batchSize) {
         const batch = productsToCreate.slice(i, i + batchSize);
+        console.log(`📦 [WORKER BATCH] יוצר batch ${Math.floor(i/batchSize) + 1}, גודל=${batch.length}`);
         
         try {
           await base44.asServiceRole.entities.ProductCatalog.bulkCreate(batch);
           createdCount += batch.length;
+          console.log(`✅ [WORKER BATCH SUCCESS] נוצרו ${batch.length} מוצרים, סה"כ עד כה=${createdCount}`);
         } catch (batchError) {
-          console.error(`שגיאה ב-batch:`, batchError);
+          console.error(`❌ [WORKER BATCH ERROR] שגיאה ב-batch:`, batchError);
           for (const product of batch) {
             try {
               await base44.asServiceRole.entities.ProductCatalog.create(product);
               createdCount++;
             } catch (singleError) {
-              console.error('שגיאה ביצירת מוצר בודד:', singleError);
+              console.error('❌ [WORKER SINGLE ERROR] שגיאה ביצירת מוצר בודד:', singleError);
             }
           }
         }
@@ -348,6 +352,8 @@ Deno.serve(async (req) => {
         }
       }
     }
+    
+    console.log(`✅ [WORKER CREATE DONE] נוצרו ${createdCount} מוצרים ב-chunk ${chunk_number}`);
 
     // אין צורך לעדכן מונה מצטבר - ה-worker האחרון יספור את כל המוצרים
 
