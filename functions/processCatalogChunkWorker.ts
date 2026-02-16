@@ -306,21 +306,50 @@ Deno.serve(async (req) => {
       // זה החלק האחרון - סיום התהליך
       await updateProcessStatus(base44, process_id, 95, 'running', 'מעדכן ישות קטלוג...');
 
-      // ספירה – שימוש ב-count ולא ב-filter (filter מחזיר תוצאה מקוצרת!)
+      // ספירה מדויקת של כל המוצרים החדשים והפעילים
       const processStartTime = processStatus.started_at;
       console.log(`🔍 [WORKER COUNT] מתחיל ספירת מוצרים חדשים מאז ${processStartTime}...`);
-      
-      const newProductsCount = await base44.asServiceRole.entities.ProductCatalog.count({
-        catalog_id,
-        created_date: { $gte: processStartTime }
-      });
+
+      // ספירת מוצרים חדשים עם לולאה
+      let newProductsCount = 0;
+      let skip = 0;
+      const batchSize = 1000;
+
+      while (true) {
+        const batch = await base44.asServiceRole.entities.ProductCatalog.filter(
+          { catalog_id, created_date: { $gte: processStartTime } },
+          '-created_date',
+          batchSize,
+          skip
+        );
+
+        newProductsCount += batch.length;
+
+        if (batch.length < batchSize) break;
+        skip += batchSize;
+      }
+
       console.log(`📊 [WORKER COUNT RESULT] מוצרים חדשים: ${newProductsCount}`);
-      
+
+      // ספירת כל המוצרים הפעילים בקטלוג
       console.log(`🔍 [WORKER COUNT] מתחיל ספירת כל המוצרים הפעילים בקטלוג...`);
-      const allProductsCount = await base44.asServiceRole.entities.ProductCatalog.count({
-        catalog_id,
-        is_active: true
-      });
+      let allProductsCount = 0;
+      skip = 0;
+
+      while (true) {
+        const batch = await base44.asServiceRole.entities.ProductCatalog.filter(
+          { catalog_id, is_active: true },
+          '-created_date',
+          batchSize,
+          skip
+        );
+
+        allProductsCount += batch.length;
+
+        if (batch.length < batchSize) break;
+        skip += batchSize;
+      }
+
       console.log(`📊 [WORKER COUNT RESULT] סה"כ מוצרים פעילים: ${allProductsCount}`);
       
       console.log(`💾 [WORKER UPDATE CATALOG] מעדכן Catalog ${catalog_id} עם product_count=${allProductsCount}`);
