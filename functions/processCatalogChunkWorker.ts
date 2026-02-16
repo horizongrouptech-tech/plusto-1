@@ -132,115 +132,34 @@ Deno.serve(async (req) => {
     }
 
     const { 
-      file_url, 
+      parsed_records, // 🎯 הנתונים המעובדים כבר!
       mapping, 
       catalog_id, 
       customer_email, 
       total_rows,
-      num_chunks,
-      import_with_errors,
-      header_row_index = 0
+      import_with_errors
     } = metadata;
     
-    console.log(`📊 [WORKER METADATA] catalog_id=${catalog_id}, total_rows=${total_rows}, num_chunks=${num_chunks}, header_row_index=${header_row_index}`);
+    console.log(`📊 [WORKER METADATA] catalog_id=${catalog_id}, total_rows=${total_rows}`);
 
-    // 🎯 שימוש בטווח שהתקבל מהפרמטרים
+    if (!parsed_records || !Array.isArray(parsed_records)) {
+      throw new Error('חסרים נתונים מעובדים ב-metadata');
+    }
+
     const startRow = start_row;
     const endRow = end_row;
 
-    const progressPercent = Math.round((endRow / total_rows) * 100);
-    console.log(`📈 [WORKER PROGRESS] chunk=${chunk_number + 1}/${num_chunks}, progress=${progressPercent}%`);
-    await updateProcessStatus(base44, process_id, 
-      progressPercent, 
-      'running', 
-      `מעבד חלק ${chunk_number + 1}/${num_chunks} (שורות ${startRow + 1}-${endRow})...`);
-
-    // הורדת הקובץ
-    console.log(`📥 [WORKER] מוריד קובץ: ${file_url}`);
-    const response = await fetch(file_url);
-    if (!response.ok) {
-      console.error(`❌ [WORKER ERROR] נכשל בהורדת הקובץ: ${response.statusText}`);
-      throw new Error(`נכשל בהורדת הקובץ: ${response.statusText}`);
-    }
-    console.log(`✅ [WORKER] קובץ הורד בהצלחה`);
-
-    // זיהוי וניתוח - תמיד כ-raw arrays
-    const contentType = response.headers.get('content-type') || '';
-    const isExcel = contentType.includes('spreadsheet') || 
-                    contentType.includes('excel') ||
-                    file_url.toLowerCase().endsWith('.xlsx') ||
-                    file_url.toLowerCase().endsWith('.xls');
-    
-    console.log(`📄 [WORKER FILE TYPE] isExcel=${isExcel}, contentType=${contentType}`);
-
-    let allRawRows;
-    
-    if (isExcel) {
-      const buffer = await response.arrayBuffer();
-      console.log(`📊 [WORKER] מנתח Excel, גודל buffer: ${buffer.byteLength} bytes`);
-      allRawRows = processExcelRaw(buffer);
-      console.log(`✅ [WORKER] Excel נותח, סה"כ שורות גולמיות: ${allRawRows.length}`);
-    } else {
-      const buffer = await response.arrayBuffer();
-      const uint8Array = new Uint8Array(buffer);
-      let text;
-      try {
-        text = new TextDecoder('utf-8').decode(uint8Array);
-      } catch (e) {
-        text = new TextDecoder('windows-1255').decode(uint8Array);
-      }
-      console.log(`📊 [WORKER] מנתח CSV, אורך טקסט: ${text.length} תווים`);
-      allRawRows = processCSVRaw(text);
-      console.log(`✅ [WORKER] CSV נותח, סה"כ שורות גולמיות: ${allRawRows.length}`);
-    }
-
-    // בניית אובייקטים באמצעות שורת הכותרת הנכונה
-    const headerRowIdx = header_row_index || 0;
-    const headerRow = allRawRows[headerRowIdx];
-    
-    console.log(`📋 [WORKER HEADERS] header_row_index=${headerRowIdx}`);
-
-    if (!headerRow || !Array.isArray(headerRow)) {
-      console.error(`❌ [WORKER ERROR] שורת כותרת לא נמצאה באינדקס ${headerRowIdx}`);
-      throw new Error(`שורת כותרת לא נמצאה באינדקס ${headerRowIdx}`);
-    }
-
-    const headers = headerRow.map(cell => cleanCell(cell));
-    console.log(`✅ [WORKER HEADERS] כותרות: ${JSON.stringify(headers.slice(0, 10))}... (${headers.length} עמודות)`);
-    
-    // dataRows = שורות אחרי הכותרת - ללא סינון מוקדם!
-    const dataRows = allRawRows.slice(headerRowIdx + 1);
-    console.log(`📊 [WORKER DATA ROWS] סה"כ שורות נתונים (אחרי כותרת): ${dataRows.length}`);
-
-    // המרת שורות גולמיות לאובייקטים
-    console.log(`🔄 [WORKER] ממיר שורות גולמיות לאובייקטים...`);
-    const allRecords = dataRows.map(row => {
-      if (!row || !Array.isArray(row)) return null;
-      const obj = {};
-      headers.forEach((header, i) => {
-        if (header && row[i] !== undefined && row[i] !== null) {
-          obj[header] = row[i];
-        }
-      });
-      return obj;
-    }).filter((obj) => {
-      if (!obj || Object.keys(obj).length === 0) return false;
-      // סינון רק שורות שבאמת ריקות לחלוטין
-      const hasMeaningfulValue = Object.values(obj).some((v) => v != null && String(v).trim() !== '');
-      return hasMeaningfulValue;
-    });
-    
-    console.log(`✅ [WORKER RECORDS] סה"כ רשומות תקינות אחרי סינון: ${allRecords.length}`);
-
-    // 🎯 חילוץ רק הטווח המבוקש - כל chunk מעבד רק את השורות שלו
-    const records = allRecords.slice(startRow, endRow);
+    // 🎯 חילוץ רק הטווח המבוקש
+    const records = parsed_records.slice(startRow, endRow);
     
     console.log(`🎯 [WORKER CHUNK] chunk=${chunk_number}, טווח=${startRow}-${endRow}, רשומות לעיבוד=${records.length}`);
 
-    // Sanity check: וידוא שלא עוברים על total_rows
-    if (endRow > total_rows) {
-      console.warn(`⚠️ [WORKER WARNING] endRow=${endRow} > total_rows=${total_rows} - חישוב שגוי!`);
-    }
+    const progressPercent = Math.round((endRow / total_rows) * 100);
+    console.log(`📈 [WORKER PROGRESS] progress=${progressPercent}%`);
+    await updateProcessStatus(base44, process_id, 
+      progressPercent, 
+      'running', 
+      `מעבד שורות ${startRow + 1}-${endRow}...`);
 
     // עיבוד המוצרים
     const productsToCreate = [];
