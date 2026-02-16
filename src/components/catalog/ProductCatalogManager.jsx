@@ -208,25 +208,15 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
       setFilteredProducts(batch);
       setCurrentPage(pageNum);
       
-      // ✅ תיקון: השתמש ב-base44.entities.ProductCatalog.count (ProductCatalog.count לא קיים)
-      try {
-        const totalCount = await base44.entities.ProductCatalog.count(filterQuery);
-        setTotalProducts(totalCount);
-      } catch (countError) {
-        console.error("Error counting products:", countError);
-        
-        // ✅ Fallback 1: אם יש 100 מוצרים, כנראה יש עוד
+      // שימוש ב-product_count ישירות מישות Catalog (מעודכן על ידי worker)
+      const selectedCatalog = catalogs.find(c => c.id === selectedCatalogId);
+      if (selectedCatalog?.product_count) {
+        setTotalProducts(selectedCatalog.product_count);
+      } else {
+        // Fallback: אם אין product_count, נעריך לפי גודל batch
         if (batch.length === PRODUCTS_PER_PAGE) {
-          // נשתמש ב-product_count מה-Catalog אם קיים
-          const selectedCatalog = catalogs.find(c => c.id === selectedCatalogId);
-          if (selectedCatalog?.product_count) {
-            setTotalProducts(selectedCatalog.product_count);
-          } else {
-            // אם אין, נניח שיש עוד (נקבע מספר גדול)
-            setTotalProducts((pageNum * PRODUCTS_PER_PAGE) + 1); // לפחות עוד עמוד אחד
-          }
+          setTotalProducts((pageNum * PRODUCTS_PER_PAGE) + 1);
         } else {
-          // אם יש פחות מ-100, זה העמוד האחרון
           setTotalProducts((pageNum - 1) * PRODUCTS_PER_PAGE + batch.length);
         }
       }
