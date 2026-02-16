@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
     }
 
     const { 
-      temp_file_path, // 🎯 נתיב לקובץ הזמני
+      all_records, // 🎯 הנתונים נשמרים ב-metadata (אין גישת filesystem)
       mapping, 
       catalog_id, 
       customer_email, 
@@ -143,23 +143,12 @@ Deno.serve(async (req) => {
 
     console.log(`📊 [WORKER METADATA] catalog_id=${catalog_id}, total_rows=${total_rows}`);
 
-    // קריאת הנתונים מהקובץ הזמני
-    if (!temp_file_path) {
-      throw new Error('חסר נתיב לקובץ הנתונים הזמני');
+    // קריאת הנתונים מ-metadata
+    if (!all_records || !Array.isArray(all_records)) {
+      throw new Error('חסרים נתונים ב-metadata של התהליך');
     }
-
-    let parsed_records;
-    try {
-      const fileContent = await Deno.readTextFile(temp_file_path);
-      parsed_records = JSON.parse(fileContent);
-      console.log(`📂 [WORKER] נטענו ${parsed_records.length} רשומות מקובץ זמני`);
-    } catch (error) {
-      throw new Error(`שגיאה בקריאת קובץ זמני: ${error.message}`);
-    }
-
-    if (!parsed_records || !Array.isArray(parsed_records)) {
-      throw new Error('חסרים נתונים מעובדים בקובץ הזמני');
-    }
+    const parsed_records = all_records;
+    console.log(`📂 [WORKER] נטענו ${parsed_records.length} רשומות מ-metadata`);
 
     const startRow = start_row;
     const endRow = end_row;
@@ -319,15 +308,14 @@ Deno.serve(async (req) => {
     } else {
       console.log(`🏁 [WORKER FINAL] זה הchunk האחרון! מתחיל ספירה סופית...`);
       
-      // ניקוי קובץ זמני
+      // ניקוי all_records מ-metadata (לשחרור זיכרון – אין קובץ למחוק)
       try {
-        const tempFilePath = metadata.temp_file_path;
-        if (tempFilePath) {
-          await Deno.remove(tempFilePath);
-          console.log(`🗑️ [WORKER CLEANUP] קובץ זמני נמחק: ${tempFilePath}`);
-        }
+        const { all_records: _discard, ...restMetadata } = metadata;
+        await base44.asServiceRole.entities.ProcessStatus.update(process_id, {
+          metadata: restMetadata
+        });
       } catch (e) {
-        console.warn('Could not delete temp file:', e);
+        console.warn('Could not clear metadata all_records:', e);
       }
       
       // זה החלק האחרון - סיום התהליך

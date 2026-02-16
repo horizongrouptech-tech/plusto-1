@@ -178,17 +178,12 @@ Deno.serve(async (req) => {
     await updateProcessStatus(base44, process.id, 30, 'running', 
       `מעבד ${totalRows.toLocaleString('he-IL')} מוצרים...`);
 
-    // שמירת הנתונים ב-/tmp – נתיב יציב שנשאר עד שה-Worker האחרון מוחק אותו (makeTempDir נמחק אוטומטית כשהאורקסטרטור מסתיים)
-    const tempDir = "/tmp";
-    await Deno.mkdir(tempDir, { recursive: true });
-    const tempFilePath = `${tempDir}/catalog_${process.id}.json`;
-    await Deno.writeTextFile(tempFilePath, JSON.stringify(allRecords));
-    console.log(`💾 Saved ${totalRows} records to temp file: ${tempFilePath}`);
-
-    // שמירת רק המטא-דטה הקטן
+    // שמירת הנתונים ב-metadata (ללא filesystem – אין גישת כתיבה ל-/tmp בסביבה)
+    const CHUNK_SIZE = 500;
+    const totalChunks = Math.ceil(totalRows / CHUNK_SIZE);
     await base44.asServiceRole.entities.ProcessStatus.update(process.id, {
       metadata: {
-        temp_file_path: tempFilePath, // 🎯 נתיב לקובץ הזמני במקום הנתונים עצמם
+        all_records: allRecords,
         mapping,
         catalog_id,
         customer_email,
@@ -197,13 +192,14 @@ Deno.serve(async (req) => {
         header_row_index
       }
     });
+    console.log(`💾 נשמרו ${totalRows} רשומות ב-metadata`);
 
     // קריאה ל-worker - fire-and-forget
     base44.asServiceRole.functions.invoke('processCatalogChunkWorker', {
       process_id: process.id,
       chunk_number: 0,
       start_row: 0,
-      end_row: Math.min(500, totalRows)
+      end_row: Math.min(CHUNK_SIZE, totalRows)
     }).catch(err => {
       console.error('Worker invoke failed:', err);
       updateProcessStatus(base44, process.id, 0, 'failed',
