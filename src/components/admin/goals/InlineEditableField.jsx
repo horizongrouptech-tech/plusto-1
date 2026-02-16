@@ -19,6 +19,7 @@ export default function InlineEditableField({
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const inputRef = useRef(null);
   const containerRef = useRef(null);
   const popoverContentRef = useRef(null);
@@ -121,20 +122,24 @@ export default function InlineEditableField({
 
     return (
       <div ref={containerRef} className="flex items-center gap-1">
-        <Input
-          ref={inputRef}
-          type="text"
-          value={displayDateForInput(editValue)}
-          onChange={(e) => setEditValue(normalizeDateInput(e.target.value) || e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="DD/MM/YYYY"
-          className="bg-horizon-card border-horizon-primary text-horizon-text h-8 text-sm w-28"
-        />
-        <Popover>
+        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 text-xs bg-horizon-card border-horizon-primary shrink-0">
-              <CalendarIcon className="w-3 h-3 ml-1" />
-            </Button>
+            <div
+              className="flex items-center gap-1.5 flex-1 cursor-pointer min-w-[7rem] bg-horizon-card border border-horizon-primary rounded-md h-8 px-2 hover:border-horizon-primary/80 transition-colors"
+              onClick={() => setCalendarOpen(true)}
+            >
+              <Input
+                ref={inputRef}
+                type="text"
+                value={displayDateForInput(editValue)}
+                onChange={(e) => setEditValue(normalizeDateInput(e.target.value) || e.target.value)}
+                onKeyDown={handleKeyDown}
+                onFocus={() => setCalendarOpen(true)}
+                placeholder="DD/MM/YYYY"
+                className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 h-7 px-0 text-sm w-full min-w-0 cursor-pointer"
+              />
+              <CalendarIcon className="w-3 h-3 shrink-0 text-horizon-primary" />
+            </div>
           </PopoverTrigger>
           <PopoverContent ref={popoverContentRef} className="w-auto p-0 bg-horizon-card border-horizon">
             <Calendar
@@ -145,6 +150,7 @@ export default function InlineEditableField({
                   const formatted = format(date, 'yyyy-MM-dd');
                   setEditValue(formatted);
                   await handleSave(formatted);
+                  setCalendarOpen(false);
                 }
               }}
               locale={he}
