@@ -127,6 +127,7 @@ Deno.serve(async (req) => {
     const { metadata } = processStatus;
     
     if (!metadata) {
+      console.error(`❌ [WORKER ERROR] חסר metadata בתהליך`);
       throw new Error('חסר metadata בתהליך');
     }
 
@@ -140,12 +141,15 @@ Deno.serve(async (req) => {
       import_with_errors,
       header_row_index = 0
     } = metadata;
+    
+    console.log(`📊 [WORKER METADATA] catalog_id=${catalog_id}, total_rows=${total_rows}, num_chunks=${num_chunks}, header_row_index=${header_row_index}`);
 
     // 🎯 שימוש בטווח שהתקבל מהפרמטרים
     const startRow = start_row;
     const endRow = end_row;
 
     const progressPercent = Math.round((endRow / total_rows) * 100);
+    console.log(`📈 [WORKER PROGRESS] chunk=${chunk_number + 1}/${num_chunks}, progress=${progressPercent}%`);
     await updateProcessStatus(base44, process_id, 
       progressPercent, 
       'running', 
