@@ -86,88 +86,92 @@ Deno.serve(async (req) => {
   });
 
   try {
-    await updateProcessStatus(base44, process.id, 10, 'running', 'בודק גודל הקובץ...');
+    await updateProcessStatus(base44, process.id, 10, 'running', 'מוריד ומנתח את הקובץ...');
+
+    // 🎯 הורדה וניתוח של הקובץ פעם אחת בלבד!
+    const response = await fetch(file_url);
+    if (!response.ok) {
+      throw new Error(`נכשל בהורדת הקובץ: ${response.statusText}`);
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    const isExcel = contentType.includes('spreadsheet') || contentType.includes('excel') ||
+      file_url.toLowerCase().endsWith('.xlsx') || file_url.toLowerCase().endsWith('.xls');
+
+    let allRawRows;
+    
+    if (isExcel) {
+      const buffer = await response.arrayBuffer();
+      allRawRows = processExcelRaw(buffer);
+      console.log(`📊 Excel: ${allRawRows.length} שורות גולמיות`);
+    } else {
+      const buffer = await response.arrayBuffer();
+      const text = new TextDecoder('utf-8').decode(new Uint8Array(buffer));
+      allRawRows = processCSVRaw(text);
+      console.log(`📊 CSV: ${allRawRows.length} שורות גולמיות`);
+    }
+
+    // בניית אובייקטים
+    const headerRow = allRawRows[header_row_index];
+    if (!headerRow || !Array.isArray(headerRow)) {
+      throw new Error(`שורת כותרת לא נמצאה באינדקס ${header_row_index}`);
+    }
+
+    const headers = headerRow.map(cell => cleanCell(cell));
+    const dataRows = allRawRows.slice(header_row_index + 1);
+    
+    const allRecords = dataRows.map(row => {
+      if (!row || !Array.isArray(row)) return null;
+      const obj = {};
+      headers.forEach((header, i) => {
+        if (header && row[i] !== undefined && row[i] !== null) {
+          obj[header] = row[i];
+        }
+      });
+      return obj;
+    }).filter(obj => {
+      if (!obj || Object.keys(obj).length === 0) return false;
+      return Object.values(obj).some(v => v != null && String(v).trim() !== '');
+    });
+
+    const totalRows = allRecords.length;
+    console.log(`✅ ${totalRows} רשומות תקינות לעיבוד`);
 
     const MAX_ROWS = 100_000;
-    let totalRows: number;
-
-    // מקור יחיד לאמת: total_rows מ-parseFileHeaders (נשלח מהקליינט)
-    if (total_rows_from_client != null && typeof total_rows_from_client === 'number' && total_rows_from_client > 0) {
-      totalRows = Math.floor(total_rows_from_client);
-      console.log('✅ Using total_rows from client:', totalRows);
-    } else {
-      console.warn('⚠️ total_rows_from_client missing or invalid, using fallback calculation');
-      // fallback: חישוב מהקובץ
-      const response = await fetch(file_url);
-      if (!response.ok) {
-        throw new Error(`נכשל בהורדת הקובץ: ${response.statusText}`);
-      }
-      const contentType = response.headers.get('content-type') || '';
-      const isExcel = contentType.includes('spreadsheet') || contentType.includes('excel') ||
-        file_url.toLowerCase().endsWith('.xlsx') || file_url.toLowerCase().endsWith('.xls');
-      const buffer = await response.arrayBuffer();
-      if (isExcel) {
-        const workbook = xlsx.read(buffer, { type: 'buffer' });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const allRows = xlsx.utils.sheet_to_json(firstSheet, { header: 1, defval: null });
-        console.log('📊 Excel: total rows from sheet_to_json:', allRows.length);
-        const nonEmptyRows = (allRows || []).filter((row) =>
-          Array.isArray(row) && row.some((cell) => cell != null && String(cell).trim() !== '')
-        );
-        console.log('📊 Excel: non-empty rows:', nonEmptyRows.length);
-        totalRows = nonEmptyRows.slice(header_row_index + 1).length;
-        console.log(`📊 Excel: data rows after header (index ${header_row_index}):`, totalRows);
-      } else {
-        const text = new TextDecoder('utf-8').decode(new Uint8Array(buffer));
-        const lines = text.split(/\r\n|\n/).filter(line => line.trim());
-        totalRows = lines.length - header_row_index - 1;
-        console.log('📊 CSV: total data rows:', totalRows);
-      }
-    }
-
-    console.log('🎯 Final totalRows:', totalRows);
-
-    if (!totalRows || totalRows <= 0) {
-      throw new Error(`הקובץ ריק או לא נמצאו נתונים (totalRows=${totalRows}, total_rows_from_client=${total_rows_from_client})`);
-    }
-
     if (totalRows > MAX_ROWS) {
-      throw new Error(`הקובץ מכיל ${totalRows.toLocaleString()} שורות - הגבלה של ${MAX_ROWS.toLocaleString()} שורות מקסימום. פצל את הקובץ.`);
+      throw new Error(`הקובץ מכיל ${totalRows.toLocaleString()} שורות - מקסימום ${MAX_ROWS.toLocaleString()}`);
     }
 
-    // 🎯 חלוקה ל-20 chunks מדויקים
-    const NUM_CHUNKS = 20;
-    const chunkSize = Math.ceil(totalRows / NUM_CHUNKS);
+    if (totalRows === 0) {
+      throw new Error('הקובץ ריק או לא נמצאו נתונים');
+    }
 
-    await updateProcessStatus(base44, process.id, 20, 'running', 
-      `זוהו ${totalRows.toLocaleString('he-IL')} מוצרים. מתחיל עיבוד ב-${NUM_CHUNKS} חלקים של ${chunkSize.toLocaleString('he-IL')} שורות...`);
+    await updateProcessStatus(base44, process.id, 30, 'running', 
+      `מעבד ${totalRows.toLocaleString('he-IL')} מוצרים...`);
 
-    // שמירת מטא-דטה ל-ProcessStatus
+    // שמירת הנתונים המעובדים במטא-דטה
     await base44.asServiceRole.entities.ProcessStatus.update(process.id, {
       metadata: {
-        file_url,
+        parsed_records: allRecords, // 🎯 כל הנתונים המעובדים!
         mapping,
         catalog_id,
         customer_email,
         total_rows: totalRows,
-        chunk_size: chunkSize,
-        num_chunks: NUM_CHUNKS,
         import_with_errors,
         header_row_index
       }
     });
 
-    // קריאה ל-worker הראשון – fire-and-forget (ללא await) כדי למנוע timeout/502
-    // האורקסטרטור מחזיר מיד, ה-worker רץ ברקע
+    // קריאה ל-worker - fire-and-forget
     base44.asServiceRole.functions.invoke('processCatalogChunkWorker', {
       process_id: process.id,
       chunk_number: 0,
       start_row: 0,
-      end_row: Math.min(chunkSize, totalRows)
+      end_row: Math.min(500, totalRows)
     }).catch(err => {
       console.error('Worker invoke failed:', err);
       updateProcessStatus(base44, process.id, 0, 'failed',
-        `שגיאה בהפעלת העיבוד: ${err?.message || err}`, null, err?.message || String(err));
+        `שגיאה: ${err?.message || err}`, null, err?.message || String(err));
     });
 
     // החזרת תגובה מיידית - העיבוד ממשיך ברקע
