@@ -179,8 +179,7 @@ Deno.serve(async (req) => {
       success: true,
       process_id: process.id,
       total_rows: totalRows,
-      total_chunks: NUM_CHUNKS,
-      message: `התחיל עיבוד ${totalRows.toLocaleString('he-IL')} מוצרים ב-${NUM_CHUNKS} שלבים`
+      message: `התחיל עיבוד ${totalRows.toLocaleString('he-IL')} מוצרים`
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
