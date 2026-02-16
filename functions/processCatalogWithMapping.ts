@@ -25,6 +25,9 @@ const updateProcessStatus = async (base44, processId, progress, status, currentS
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
 
+  const payload = await req.json();
+  console.log('📥 Received payload:', JSON.stringify(payload, null, 2));
+
   const { 
     customer_email, 
     file_url, 
@@ -33,7 +36,9 @@ Deno.serve(async (req) => {
     import_with_errors = false,
     header_row_index = 0,
     total_rows: total_rows_from_client
-  } = await req.json();
+  } = payload;
+
+  console.log('🔍 total_rows_from_client:', total_rows_from_client, 'type:', typeof total_rows_from_client);
 
   if (!customer_email || !file_url || !catalog_id || !mapping) {
     return new Response(JSON.stringify({ 
@@ -62,8 +67,10 @@ Deno.serve(async (req) => {
     // מקור יחיד לאמת: total_rows מ-parseFileHeaders (נשלח מהקליינט)
     if (total_rows_from_client != null && typeof total_rows_from_client === 'number' && total_rows_from_client > 0) {
       totalRows = Math.floor(total_rows_from_client);
+      console.log('✅ Using total_rows from client:', totalRows);
     } else {
-      // fallback: חישוב מהקובץ (לא מומלץ - dimension של Excel עלול לטעות)
+      console.warn('⚠️ total_rows_from_client missing or invalid, using fallback calculation');
+      // fallback: חישוב מהקובץ
       const response = await fetch(file_url);
       if (!response.ok) {
         throw new Error(`נכשל בהורדת הקובץ: ${response.statusText}`);
@@ -76,19 +83,25 @@ Deno.serve(async (req) => {
         const workbook = xlsx.read(buffer, { type: 'buffer' });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         const allRows = xlsx.utils.sheet_to_json(firstSheet, { header: 1, defval: null });
+        console.log('📊 Excel: total rows from sheet_to_json:', allRows.length);
         const nonEmptyRows = (allRows || []).filter((row) =>
           Array.isArray(row) && row.some((cell) => cell != null && String(cell).trim() !== '')
         );
+        console.log('📊 Excel: non-empty rows:', nonEmptyRows.length);
         totalRows = nonEmptyRows.slice(header_row_index + 1).length;
+        console.log(`📊 Excel: data rows after header (index ${header_row_index}):`, totalRows);
       } else {
         const text = new TextDecoder('utf-8').decode(new Uint8Array(buffer));
         const lines = text.split(/\r\n|\n/).filter(line => line.trim());
         totalRows = lines.length - header_row_index - 1;
+        console.log('📊 CSV: total data rows:', totalRows);
       }
     }
 
+    console.log('🎯 Final totalRows:', totalRows);
+
     if (!totalRows || totalRows <= 0) {
-      throw new Error('הקובץ ריק או לא נמצאו נתונים');
+      throw new Error(`הקובץ ריק או לא נמצאו נתונים (totalRows=${totalRows}, total_rows_from_client=${total_rows_from_client})`);
     }
 
     if (totalRows > MAX_ROWS) {

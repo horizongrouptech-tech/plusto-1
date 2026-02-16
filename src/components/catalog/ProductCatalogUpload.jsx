@@ -284,6 +284,12 @@ export default function ProductCatalogUpload({
     setLocalStatus('מעבד מוצרים לפי המיפוי...');
 
     try {
+      console.log('📤 שולח לעיבוד:', { 
+        total_rows: totalRowsFromParse, 
+        header_row_index: headerRowIndex,
+        mapping: mappingConfig.mapping 
+      });
+
       const { data: result } = await base44.functions.invoke('processCatalogWithMapping', {
         customer_email: customer.email,
         file_url: uploadedFileUrl,
