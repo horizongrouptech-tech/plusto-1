@@ -323,6 +323,18 @@ Deno.serve(async (req) => {
       }
     }
 
+    // עדכון מונה מצטבר ב-metadata
+    const currentMetadata = processStatus.metadata || {};
+    const previouslyCreated = currentMetadata.products_created_so_far || 0;
+    const newTotal = previouslyCreated + createdCount;
+    
+    await base44.asServiceRole.entities.ProcessStatus.update(process_id, {
+      metadata: {
+        ...currentMetadata,
+        products_created_so_far: newTotal
+      }
+    });
+
     // 🎯 בדיקה אם יש עוד chunks לפי end_row < total_rows
     if (endRow < total_rows) {
       const nextStartRow = endRow;
@@ -351,39 +363,9 @@ Deno.serve(async (req) => {
       // זה החלק האחרון - סיום התהליך
       await updateProcessStatus(base44, process_id, 95, 'running', 'מעדכן ישות קטלוג...');
 
-      // ספירת המוצרים שנוצרו בייבוא הנוכחי בלבד
-      const importStartTime = new Date(processStatus.started_at);
-      
-      let totalCount = 0;
-      let skip = 0;
-      const countBatchSize = 5000;
-      const maxIterations = 100; // הגנה מפני לולאות אינסופיות
-      let iterations = 0;
-      
-      while (iterations < maxIterations) {
-        const batch = await base44.asServiceRole.entities.ProductCatalog.filter(
-          { 
-            catalog_id, 
-            is_active: true,
-            created_date: { $gte: importStartTime.toISOString() }
-          },
-          '-created_date',
-          countBatchSize,
-          skip
-        );
-        
-        if (batch.length === 0) break;
-        
-        totalCount += batch.length;
-        skip += countBatchSize; // תמיד להגדיל לפי הגודל המלא, לא לפי batch.length
-        iterations++;
-        
-        if (batch.length < countBatchSize) break; // סיימנו
-      }
-      
-      if (iterations >= maxIterations) {
-        console.warn(`הגענו למקסימום איטרציות (${maxIterations}) בספירת מוצרים - ייתכן שיש יותר מוצרים`);
-      }
+      // שימוש במונה המצטבר שנשמר ב-metadata
+      const currentMetadata = processStatus.metadata || {};
+      const totalCount = currentMetadata.products_created_so_far || 0;
       
       // עדכון product_count עם כל המוצרים בקטלוג (כולל ישנים)
       const allProductsCount = await base44.asServiceRole.entities.ProductCatalog.filter(
