@@ -585,6 +585,7 @@ export default function ProductCatalogUpload({
           }}
           fileHeaders={fileHeaders}
           rawData={rawData}
+          totalRows={totalRowsFromParse}
           customer={customer}
           catalogId={selectedCatalogId}
           onMappingComplete={handleMappingComplete}

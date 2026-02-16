@@ -21,6 +21,37 @@ function processCSVRaw(content) {
   }
 }
 
+// זיהוי שורת כותרת (זהה ל-parseFileHeaders) – fallback כש-header_row_index לא עובד
+function findHeaderRow(rows, maxRowsToCheck = 15) {
+  const knownHeaders = [
+    'שם מוצר', 'שם פריט', 'שם המוצר', 'תיאור', 'תאור', 'מוצר', 'product_name', 'name', 'פריט', 'תחמור',
+    'ברקוד', 'מק"ט', 'מקט', 'barcode', 'sku', 'קוד',
+    'מחיר', 'מחיר עלות', 'מחיר מכירה', 'עלות', 'price', 'cost', 'מחיר גלם', 'מחיר יחידה',
+    'קטגוריה', 'category', 'תמחורים', 'מתחורים', 'תפריט', 'ספק', 'supplier',
+    'מכירות', 'סה"כ מכירות', 'מלאי', 'כמות', 'כמה נמכר'
+  ];
+  for (let i = 0; i < Math.min(rows.length, maxRowsToCheck); i++) {
+    const row = rows[i];
+    if (!row || !Array.isArray(row)) continue;
+    const cleanedRow = row.map(cell => cleanCell(cell));
+    const hasTextCells = cleanedRow.some(cell => {
+      const t = String(cell).trim();
+      return t && isNaN(Number(t));
+    });
+    const matchCount = cleanedRow.filter(cell => {
+      const t = String(cell).trim().toLowerCase();
+      return knownHeaders.some(h => t === h.toLowerCase() || t.includes(h.toLowerCase()) || h.toLowerCase().includes(t));
+    }).length;
+    if (hasTextCells && matchCount >= 2) {
+      return { index: i, headers: cleanedRow };
+    }
+  }
+  if (rows.length > 0 && rows[0]) {
+    return { index: 0, headers: rows[0].map(cell => cleanCell(cell)) };
+  }
+  return null;
+}
+
 // צמצום טווח הגיליון לפי תאים קיימים (מונע מיליוני שורות ריקות מ-!ref רחב ב-Excel)
 function clampSheetRef(worksheet) {
   if (!worksheet || typeof worksheet !== 'object') return;
@@ -42,7 +73,7 @@ function clampSheetRef(worksheet) {
   }
 }
 
-// עיבוד Excel
+// עיבוד Excel – תואם ל-parseFileHeaders (סינון שורות ריקות)
 function processExcelRaw(buffer) {
   const workbook = xlsx.read(buffer, { type: 'buffer' });
   const firstSheetName = workbook.SheetNames?.[0];
@@ -54,7 +85,8 @@ function processExcelRaw(buffer) {
     throw new Error('גיליון Excel לא נמצא');
   }
   clampSheetRef(worksheet);
-  return xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: null }) || [];
+  const rows = xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: null }) || [];
+  return rows.filter(row => Array.isArray(row) && row.some(cell => cell !== null && cell !== ''));
 }
 
 // עדכון סטטוס תהליך
@@ -135,7 +167,13 @@ Deno.serve(async (req) => {
       console.log(`📊 Excel: ${allRawRows.length} שורות גולמיות`);
     } else {
       const buffer = await response.arrayBuffer();
-      const text = new TextDecoder('utf-8').decode(new Uint8Array(buffer));
+      const uint8Array = new Uint8Array(buffer);
+      let text;
+      try {
+        text = new TextDecoder('utf-8').decode(uint8Array);
+      } catch {
+        text = new TextDecoder('windows-1255').decode(uint8Array);
+      }
       allRawRows = processCSVRaw(text);
       console.log(`📊 CSV: ${allRawRows.length} שורות גולמיות`);
     }
@@ -163,7 +201,35 @@ Deno.serve(async (req) => {
       return Object.values(obj).some(v => v != null && String(v).trim() !== '');
     });
 
-    const totalRows = allRecords.length;
+    let totalRows = allRecords.length;
+    let recordsToUse = allRecords;
+
+    // Fallback: אם לא נמצאו רשומות – נסה זיהוי שורת כותרת אוטומטי (כמו parseFileHeaders)
+    if (totalRows === 0 && allRawRows.length > 1) {
+      const headerInfo = findHeaderRow(allRawRows);
+      if (headerInfo) {
+        const { index: hi, headers: h } = headerInfo;
+        const fallbackRecords = allRawRows.slice(hi + 1).map(row => {
+          if (!row || !Array.isArray(row)) return null;
+          const obj = {};
+          h.forEach((header, i) => {
+            if (header && row[i] !== undefined && row[i] !== null) {
+              obj[header] = row[i];
+            }
+          });
+          return obj;
+        }).filter(obj => {
+          if (!obj || Object.keys(obj).length === 0) return false;
+          return Object.values(obj).some(v => v != null && String(v).trim() !== '');
+        });
+        if (fallbackRecords.length > 0) {
+          recordsToUse = fallbackRecords;
+          totalRows = fallbackRecords.length;
+          console.log(`🔄 Fallback: נמצאו ${totalRows} רשומות עם findHeaderRow`);
+        }
+      }
+    }
+
     console.log(`✅ ${totalRows} רשומות תקינות לעיבוד`);
 
     const MAX_ROWS = 100_000;
@@ -183,7 +249,7 @@ Deno.serve(async (req) => {
     const totalChunks = Math.ceil(totalRows / CHUNK_SIZE);
     await base44.asServiceRole.entities.ProcessStatus.update(process.id, {
       metadata: {
-        all_records: allRecords,
+        all_records: recordsToUse,
         mapping,
         catalog_id,
         customer_email,

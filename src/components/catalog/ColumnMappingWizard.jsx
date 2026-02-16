@@ -160,6 +160,7 @@ export default function ColumnMappingWizard({
   onClose,
   fileHeaders,
   rawData,
+  totalRows,
   customer,
   catalogId,
   onMappingComplete,
@@ -234,7 +235,7 @@ export default function ColumnMappingWizard({
       try {
         // עיבוד רק מדגם קטן - העיבוד האמיתי יהיה ברקע
         const dataToProcess = rawData.slice(0, Math.min(rawData.length, 100));
-        const actualTotalRows = rawData.length;
+        const actualTotalRows = totalRows ?? rawData.length;
         
         // תצוגה מקדימה של 20 שורות
         const preview = dataToProcess.slice(0, 20).map((row, index) => {
@@ -296,7 +297,7 @@ export default function ColumnMappingWizard({
     // עיכוב קטן כדי למנוע עומס על הדפדפן
     const timer = setTimeout(processPreview, 100);
     return () => clearTimeout(timer);
-  }, [step, mapping, rawData]);
+  }, [step, mapping, rawData, totalRows]);
 
   // בדיקה אם המיפוי תקין - רק שם מוצר הוא חובה
   const isMappingValid = useMemo(() => {
@@ -358,7 +359,8 @@ export default function ColumnMappingWizard({
     }
   };
 
-  const unmappedHeaders = fileHeaders.filter(h => !Object.values(mapping).includes(h));
+  const displayHeaders = fileHeaders.filter(h => h != null && String(h).trim() !== '');
+  const unmappedHeaders = displayHeaders.filter(h => !Object.values(mapping).includes(h));
   const mappedFieldsCount = Object.keys(mapping).length;
 
   return (
@@ -442,7 +444,7 @@ export default function ColumnMappingWizard({
                         </SelectTrigger>
                         <SelectContent className="bg-horizon-dark border-horizon">
                           <SelectItem value="_none_">-- ללא --</SelectItem>
-                          {fileHeaders.map(header => (
+                          {displayHeaders.map(header => (
                             <SelectItem key={header} value={header}>
                               {header}
                             </SelectItem>
@@ -504,7 +506,7 @@ export default function ColumnMappingWizard({
                 <Alert className="bg-blue-500/10 border-blue-500/30">
                   <AlertCircle className="w-4 h-4 text-blue-400" />
                   <AlertDescription className="text-blue-300 text-sm">
-                    הקובץ גדול ({(validationResults.totalRows || rawData.length).toLocaleString()} שורות). האימות בוצע על מדגם של {validationResults.sampleSize} שורות ראשונות. 
+                    הקובץ גדול ({(totalRows ?? validationResults.totalRows ?? rawData.length).toLocaleString()} שורות). האימות בוצע על מדגם של {validationResults.sampleSize} שורות ראשונות. 
                     המספרים המוצגים הם הערכה סטטיסטית.
                   </AlertDescription>
                 </Alert>

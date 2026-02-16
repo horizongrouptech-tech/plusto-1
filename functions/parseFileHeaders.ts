@@ -52,13 +52,13 @@ function findHeaderRow(rows, maxRowsToCheck = 15) {
     
     // אם יש טקסט ולפחות 2 כותרות מזוהות
     if (hasTextCells && matchCount >= 2) {
-      return { index: i, headers: cleanedRow.filter(h => h !== '') };
+      return { index: i, headers: cleanedRow };
     }
   }
   
   // אם לא נמצאה שורת כותרת מזוהה, השתמש בשורה הראשונה
   if (rows.length > 0 && rows[0]) {
-    return { index: 0, headers: rows[0].map(cleanCell).filter(h => h !== '') };
+    return { index: 0, headers: rows[0].map(cleanCell) };
   }
   
   return null;
