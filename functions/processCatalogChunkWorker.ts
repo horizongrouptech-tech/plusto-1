@@ -132,18 +132,32 @@ Deno.serve(async (req) => {
     }
 
     const { 
-      parsed_records, // 🎯 הנתונים המעובדים כבר!
+      temp_file_path, // 🎯 נתיב לקובץ הזמני
       mapping, 
       catalog_id, 
       customer_email, 
       total_rows,
       import_with_errors
     } = metadata;
-    
+
     console.log(`📊 [WORKER METADATA] catalog_id=${catalog_id}, total_rows=${total_rows}`);
 
+    // קריאת הנתונים מהקובץ הזמני
+    if (!temp_file_path) {
+      throw new Error('חסר נתיב לקובץ הנתונים הזמני');
+    }
+
+    let parsed_records;
+    try {
+      const fileContent = await Deno.readTextFile(temp_file_path);
+      parsed_records = JSON.parse(fileContent);
+      console.log(`📂 [WORKER] נטענו ${parsed_records.length} רשומות מקובץ זמני`);
+    } catch (error) {
+      throw new Error(`שגיאה בקריאת קובץ זמני: ${error.message}`);
+    }
+
     if (!parsed_records || !Array.isArray(parsed_records)) {
-      throw new Error('חסרים נתונים מעובדים ב-metadata');
+      throw new Error('חסרים נתונים מעובדים בקובץ הזמני');
     }
 
     const startRow = start_row;

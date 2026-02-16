@@ -149,10 +149,15 @@ Deno.serve(async (req) => {
     await updateProcessStatus(base44, process.id, 30, 'running', 
       `מעבד ${totalRows.toLocaleString('he-IL')} מוצרים...`);
 
-    // שמירת הנתונים המעובדים במטא-דטה
+    // שמירת הנתונים כקובץ זמני במקום metadata (למנוע 502)
+    const tempFilePath = `/tmp/catalog_${process.id}.json`;
+    await Deno.writeTextFile(tempFilePath, JSON.stringify(allRecords));
+    console.log(`💾 Saved ${totalRows} records to temp file: ${tempFilePath}`);
+
+    // שמירת רק המטא-דטה הקטן
     await base44.asServiceRole.entities.ProcessStatus.update(process.id, {
       metadata: {
-        parsed_records: allRecords, // 🎯 כל הנתונים המעובדים!
+        temp_file_path: tempFilePath, // 🎯 נתיב לקובץ הזמני במקום הנתונים עצמם
         mapping,
         catalog_id,
         customer_email,
