@@ -38,6 +38,7 @@ import { UploadFile } from "@/integrations/Core";
 import { ProcessStatus } from '@/entities/ProcessStatus';
 import CatalogProgressTracker from "./CatalogProgressTracker";
 import CatalogGenerationProgressBar from "./CatalogGenerationProgressBar";
+import CatalogUploadProgressCard from "./CatalogUploadProgressCard";
 import SetDefaultCatalogButton from "../admin/SetDefaultCatalogButton";
 
 import { Catalog } from "@/entities/Catalog";
@@ -148,6 +149,9 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
   const [selectedCatalogName, setSelectedCatalogName] = useState('');
   const [isRefreshingProgress, setIsRefreshingProgress] = useState(false);
   const [isCancellingGeneration, setIsCancellingGeneration] = useState(false);
+
+  const [uploadProgressCardData, setUploadProgressCardData] = useState(null);
+  const [isRefreshingUploadProgress, setIsRefreshingUploadProgress] = useState(false);
 
   const updateCatalogStats = useCallback(async () => {
     if (!selectedCatalogId) {
@@ -301,6 +305,16 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
       clearInterval(processCheckInterval);
     }
     setActiveProcessId(processId);
+    setUploadProgressCardData({
+      processId,
+      processType,
+      progress: 0,
+      currentStep: 'מתחיל...',
+      status: 'running',
+      errorMessage: null,
+      resultData: null,
+      catalogName: selectedCatalogName,
+    });
 
     const interval = setInterval(async () => {
       try {
@@ -310,61 +324,63 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
           clearInterval(interval);
           setProcessCheckInterval(null);
           setActiveProcessId(null);
-          
-          if (process?.status === 'completed') {
+
+          const finalStatus = process?.status || 'failed';
+          const finalData = {
+            processId,
+            processType,
+            progress: finalStatus === 'completed' ? 100 : process?.progress || 0,
+            currentStep: process?.current_step || '',
+            status: finalStatus,
+            errorMessage: process?.error_message || null,
+            resultData: process?.result_data || null,
+            catalogName: selectedCatalogName,
+          };
+          setUploadProgressCardData(finalData);
+          setProcessingStatus(finalData.currentStep || (finalStatus === 'completed' ? 'הושלם!' : 'נכשל'));
+          setProgress(finalData.progress);
+          setIsProcessing(false);
+          setIsCleaning(false);
+
+          if (finalStatus === 'completed') {
             if (processType === 'upload') {
-              setProcessingStatus('העלאה הושלמה בהצלחה!');
-              setProgress(100);
               await loadCatalogs();
               if (process.result_data?.catalog_id) {
                 setSelectedCatalogId(process.result_data.catalog_id);
               }
-            } else { // cleaning
-              setCleaningStatus('ניקוי הושלם בהצלחה!');
-              setProgress(100);
+            } else {
               setCleaningResults(process.result_data);
               setIsCleanResultsOpen(true);
             }
             await loadCatalog(1);
-          } else if (process?.status === 'failed') {
-             const errorMsg = process.error_message || 'תהליך נכשל';
-             if (processType === 'upload') setProcessingStatus(`שגיאה: ${errorMsg}`);
-             else setCleaningStatus(`שגיאה: ${errorMsg}`);
-          } else if (process?.status === 'cancelled') {
-             if (processType === 'upload') setProcessingStatus('העלאה בוטלה');
-             else setCleaningStatus('ניקוי בוטל');
           }
-
-          setTimeout(() => {
-              setIsProcessing(false);
-              setIsCleaning(false);
-              setProcessingStatus('');
-              setCleaningStatus('');
-              setProgress(0);
-          }, 5000);
-
           return;
         }
 
+        const step = process.current_step || 'מעבד...';
+        const prog = process.progress || 0;
         if (processType === 'upload') {
-          setProcessingStatus(process.current_step || 'מעבד...');
-          setProgress(process.progress || 0);
-        } else { // cleaning
-          setCleaningStatus(process.current_step || 'מנקה...');
-          setProgress(process.progress || 0);
+          setProcessingStatus(step);
+          setProgress(prog);
+        } else {
+          setCleaningStatus(step);
+          setProgress(prog);
         }
+        setUploadProgressCardData(prev => prev ? { ...prev, progress: prog, currentStep: step, status: 'running' } : null);
 
       } catch (error) {
         console.error("Error tracking progress:", error);
         clearInterval(interval);
         setProcessCheckInterval(null);
         setActiveProcessId(null);
+        setUploadProgressCardData(prev => prev ? { ...prev, status: 'failed', errorMessage: error?.message || 'שגיאה בבדיקת סטטוס' } : null);
       }
     }, 3000);
 
     setProcessCheckInterval(interval);
   }, [
     processCheckInterval,
+    selectedCatalogName,
     setActiveProcessId,
     setProcessCheckInterval,
     setProcessingStatus,
@@ -422,12 +438,32 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                  setIsProcessing(true);
                  setProcessingStatus(process.current_step || 'מעבד...');
                  setProgress(process.progress || 0);
+                 setUploadProgressCardData({
+                   processId: process.id,
+                   processType: 'upload',
+                   progress: process.progress || 0,
+                   currentStep: process.current_step || 'מעבד...',
+                   status: 'running',
+                   errorMessage: null,
+                   resultData: null,
+                   catalogName: selectedCatalogName,
+                 });
                  startProgressTracking(process.id, 'upload');
             } else if (process.process_type === 'catalog_cleaning') {
                  setActiveProcessId(process.id);
                  setIsCleaning(true);
                  setCleaningStatus(process.current_step || 'מנקה...');
                  setProgress(process.progress || 0);
+                 setUploadProgressCardData({
+                   processId: process.id,
+                   processType: 'cleaning',
+                   progress: process.progress || 0,
+                   currentStep: process.current_step || 'מנקה...',
+                   status: 'running',
+                   errorMessage: null,
+                   resultData: null,
+                   catalogName: selectedCatalogName,
+                 });
                  startProgressTracking(process.id, 'cleaning');
             }
             break;
@@ -890,6 +926,45 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     setShowAddProductModal(false);
   };
 
+  const handleDismissUploadProgress = useCallback(() => {
+    setUploadProgressCardData(null);
+    setActiveProcessId(null);
+    setIsProcessing(false);
+    setIsCleaning(false);
+    setProcessingStatus('');
+    setCleaningStatus('');
+    setProgress(0);
+    if (processCheckInterval) {
+      clearInterval(processCheckInterval);
+      setProcessCheckInterval(null);
+    }
+  }, [processCheckInterval]);
+
+  const handleRefreshUploadProgress = useCallback(async () => {
+    const data = uploadProgressCardData;
+    if (!data?.processId) return;
+    setIsRefreshingUploadProgress(true);
+    try {
+      const process = await ProcessStatus.get(data.processId);
+      if (process) {
+        setUploadProgressCardData(prev => prev ? {
+          ...prev,
+          progress: process.progress || 0,
+          currentStep: process.current_step || prev.currentStep,
+          status: process.status || prev.status,
+          errorMessage: process.error_message || null,
+          resultData: process.result_data || null,
+        } : null);
+        setProcessingStatus(process.current_step || '');
+        setProgress(process.progress || 0);
+      }
+    } catch (e) {
+      console.error('Refresh upload progress failed:', e);
+    } finally {
+      setIsRefreshingUploadProgress(false);
+    }
+  }, [uploadProgressCardData?.processId]);
+
   if (isLoading && !products.length && !catalogs.length && customer?.email) {
     return (
       <Card className="card-horizon">
@@ -906,6 +981,20 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
 
   return (
     <div className="space-y-6" dir="rtl">
+      {uploadProgressCardData && (
+        <CatalogUploadProgressCard
+          processType={uploadProgressCardData.processType}
+          progress={uploadProgressCardData.progress}
+          currentStep={uploadProgressCardData.currentStep}
+          status={uploadProgressCardData.status}
+          errorMessage={uploadProgressCardData.errorMessage}
+          resultData={uploadProgressCardData.resultData}
+          catalogName={uploadProgressCardData.catalogName}
+          onRefresh={handleRefreshUploadProgress}
+          onDismiss={handleDismissUploadProgress}
+          isRefreshing={isRefreshingUploadProgress}
+        />
+      )}
       <Card className="card-horizon">
         <CardHeader>
           <div className="flex items-start flex-wrap gap-4">
@@ -1030,17 +1119,6 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
               )}
             </div>
           </div>
-          {(isCleaning || isProcessing) && (
-             <div className="mt-4 pt-4 border-t border-horizon">
-              <div className="flex justify-between items-center mb-2">
-                 <span className="text-sm font-medium text-horizon-accent">
-                    {isCleaning ? cleaningStatus : processingStatus}
-                 </span>
-                 <span className="text-sm font-bold text-horizon-text">{progress}%</span>
-              </div>
-              <Progress value={progress} className="w-full h-2 bg-horizon-card/50" />
-            </div>
-          )}
         </CardHeader>
         <CardContent>
           {selectedCatalogId ? (
