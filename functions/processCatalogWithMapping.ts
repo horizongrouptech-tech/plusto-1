@@ -1,5 +1,32 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import * as xlsx from 'npm:xlsx@0.18.5';
+import { parse } from "npm:csv-parse@5.5.2/sync";
+
+// ניקוי תא
+function cleanCell(cell) {
+  if (cell === null || cell === undefined) return '';
+  return String(cell).trim()
+    .replace(/[\uFEFF\u200E\u200F\u202A-\u202E]/g, '')
+    .replace(/\s+/g, ' ').trim();
+}
+
+// עיבוד CSV
+function processCSVRaw(content) {
+  const lines = content.split(/\r\n|\n/).filter(line => line.trim());
+  const delimiter = (lines[0] || '').includes('\t') ? '\t' : ',';
+  try {
+    return parse(content, { delimiter, skip_empty_lines: true, relax_column_count: true });
+  } catch (e) {
+    return lines.map(line => line.split(delimiter).map(v => v?.trim() || ''));
+  }
+}
+
+// עיבוד Excel
+function processExcelRaw(buffer) {
+  const workbook = xlsx.read(buffer, { type: 'buffer' });
+  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+  return xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: null }) || [];
+}
 
 // עדכון סטטוס תהליך
 const updateProcessStatus = async (base44, processId, progress, status, currentStep, resultData = null, errorMessage = null) => {
