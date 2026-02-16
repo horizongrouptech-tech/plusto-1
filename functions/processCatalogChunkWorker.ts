@@ -276,30 +276,27 @@ Deno.serve(async (req) => {
 
     // אין צורך לעדכן מונה מצטבר - ה-worker האחרון יספור את כל המוצרים
 
-    // 🎯 בדיקה אם יש עוד chunks לפי end_row < total_rows
+    // 🎯 בדיקה אם יש עוד chunks
     if (endRow < total_rows) {
       const nextStartRow = endRow;
-      const chunkSize = Math.ceil(total_rows / num_chunks);
-      const nextEndRow = Math.min(nextStartRow + chunkSize, total_rows);
+      const nextEndRow = Math.min(nextStartRow + 500, total_rows);
       
       console.log(`🔄 [WORKER NEXT] מפעיל chunk הבא: ${chunk_number + 1}, טווח=${nextStartRow}-${nextEndRow}`);
       
-      // קריאה עצמית לחלק הבא
-      await base44.asServiceRole.functions.invoke('processCatalogChunkWorker', {
+      // קריאה עצמית לחלק הבא - fire-and-forget
+      base44.asServiceRole.functions.invoke('processCatalogChunkWorker', {
         process_id,
         chunk_number: chunk_number + 1,
         start_row: nextStartRow,
         end_row: nextEndRow
-      });
+      }).catch(err => console.error(`Worker ${chunk_number + 1} failed:`, err));
       
-      console.log(`✅ [WORKER NEXT DONE] chunk ${chunk_number + 1} הופעל בהצלחה`);
+      console.log(`✅ [WORKER NEXT DONE] chunk ${chunk_number + 1} הופעל`);
       
       return new Response(JSON.stringify({
         success: true,
         chunk_completed: chunk_number + 1,
-        products_created_in_chunk: createdCount,
-        next_chunk: chunk_number + 2,
-        next_range: `${nextStartRow}-${nextEndRow}`
+        products_created_in_chunk: createdCount
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
