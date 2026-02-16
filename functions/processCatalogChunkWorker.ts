@@ -156,10 +156,13 @@ Deno.serve(async (req) => {
       `מעבד חלק ${chunk_number + 1}/${num_chunks} (שורות ${startRow + 1}-${endRow})...`);
 
     // הורדת הקובץ
+    console.log(`📥 [WORKER] מוריד קובץ: ${file_url}`);
     const response = await fetch(file_url);
     if (!response.ok) {
+      console.error(`❌ [WORKER ERROR] נכשל בהורדת הקובץ: ${response.statusText}`);
       throw new Error(`נכשל בהורדת הקובץ: ${response.statusText}`);
     }
+    console.log(`✅ [WORKER] קובץ הורד בהצלחה`);
 
     // זיהוי וניתוח - תמיד כ-raw arrays
     const contentType = response.headers.get('content-type') || '';
@@ -167,12 +170,16 @@ Deno.serve(async (req) => {
                     contentType.includes('excel') ||
                     file_url.toLowerCase().endsWith('.xlsx') ||
                     file_url.toLowerCase().endsWith('.xls');
+    
+    console.log(`📄 [WORKER FILE TYPE] isExcel=${isExcel}, contentType=${contentType}`);
 
     let allRawRows;
     
     if (isExcel) {
       const buffer = await response.arrayBuffer();
+      console.log(`📊 [WORKER] מנתח Excel, גודל buffer: ${buffer.byteLength} bytes`);
       allRawRows = processExcelRaw(buffer);
+      console.log(`✅ [WORKER] Excel נותח, סה"כ שורות גולמיות: ${allRawRows.length}`);
     } else {
       const buffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(buffer);
@@ -182,7 +189,9 @@ Deno.serve(async (req) => {
       } catch (e) {
         text = new TextDecoder('windows-1255').decode(uint8Array);
       }
+      console.log(`📊 [WORKER] מנתח CSV, אורך טקסט: ${text.length} תווים`);
       allRawRows = processCSVRaw(text);
+      console.log(`✅ [WORKER] CSV נותח, סה"כ שורות גולמיות: ${allRawRows.length}`);
     }
 
     // בניית אובייקטים באמצעות שורת הכותרת הנכונה
