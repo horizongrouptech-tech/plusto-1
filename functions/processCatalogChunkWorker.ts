@@ -213,6 +213,7 @@ Deno.serve(async (req) => {
     console.log(`📊 [WORKER DATA ROWS] סה"כ שורות נתונים (אחרי כותרת): ${dataRows.length}`);
 
     // המרת שורות גולמיות לאובייקטים
+    console.log(`🔄 [WORKER] ממיר שורות גולמיות לאובייקטים...`);
     const allRecords = dataRows.map(row => {
       if (!row || !Array.isArray(row)) return null;
       const obj = {};
@@ -228,15 +229,17 @@ Deno.serve(async (req) => {
       const hasMeaningfulValue = Object.values(obj).some((v) => v != null && String(v).trim() !== '');
       return hasMeaningfulValue;
     });
+    
+    console.log(`✅ [WORKER RECORDS] סה"כ רשומות תקינות אחרי סינון: ${allRecords.length}`);
 
     // 🎯 חילוץ רק הטווח המבוקש - כל chunk מעבד רק את השורות שלו
     const records = allRecords.slice(startRow, endRow);
     
-    console.log(`Chunk ${chunk_number}: Processing rows ${startRow}-${endRow} (${records.length} records)`);
+    console.log(`🎯 [WORKER CHUNK] chunk=${chunk_number}, טווח=${startRow}-${endRow}, רשומות לעיבוד=${records.length}`);
 
     // Sanity check: וידוא שלא עוברים על total_rows
     if (endRow > total_rows) {
-      console.warn(`Worker: endRow=${endRow} > total_rows=${total_rows} - חישוב שגוי!`);
+      console.warn(`⚠️ [WORKER WARNING] endRow=${endRow} > total_rows=${total_rows} - חישוב שגוי!`);
     }
 
     // עיבוד המוצרים
