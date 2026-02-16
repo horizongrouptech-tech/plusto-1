@@ -321,17 +321,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // עדכון מונה מצטבר ב-metadata
-    const currentMetadata = processStatus.metadata || {};
-    const previouslyCreated = currentMetadata.products_created_so_far || 0;
-    const newTotal = previouslyCreated + createdCount;
-    
-    await base44.asServiceRole.entities.ProcessStatus.update(process_id, {
-      metadata: {
-        ...currentMetadata,
-        products_created_so_far: newTotal
-      }
-    });
+    // אין צורך לעדכן מונה מצטבר - ה-worker האחרון יספור את כל המוצרים
 
     // 🎯 בדיקה אם יש עוד chunks לפי end_row < total_rows
     if (endRow < total_rows) {
@@ -361,9 +351,12 @@ Deno.serve(async (req) => {
       // זה החלק האחרון - סיום התהליך
       await updateProcessStatus(base44, process_id, 95, 'running', 'מעדכן ישות קטלוג...');
 
-      // טעינה מחדש מה-DB לקבלת המונה המעודכן מכל ה-chunks
-      const freshProcessStatus = await base44.asServiceRole.entities.ProcessStatus.get(process_id);
-      const totalCount = freshProcessStatus.metadata?.products_created_so_far || 0;
+      // ספירה ישירה של כל המוצרים שנוצרו בהרצה זו (לפי created_date)
+      const processStartTime = processStatus.started_at;
+      const newProductsCount = await base44.asServiceRole.entities.ProductCatalog.filter({
+        catalog_id,
+        created_date: { $gte: processStartTime }
+      }).then(products => products.length);
       
       // עדכון product_count עם כל המוצרים בקטלוג (כולל ישנים)
       const allProductsCount = await base44.asServiceRole.entities.ProductCatalog.filter(
@@ -377,18 +370,18 @@ Deno.serve(async (req) => {
       });
 
       const resultData = {
-        total_products_created: totalCount,
+        total_products_created: newProductsCount,
         total_chunks_processed: num_chunks,
         catalog_id
       };
 
       await updateProcessStatus(base44, process_id, 100, 'completed', 
-        `הושלם! נוצרו ${totalCount.toLocaleString('he-IL')} מוצרים חדשים (${num_chunks} חלקים)`, resultData);
+        `הושלם! נוצרו ${newProductsCount.toLocaleString('he-IL')} מוצרים חדשים (${num_chunks} חלקים)`, resultData);
 
       return new Response(JSON.stringify({
         success: true,
         completed: true,
-        total_products: totalCount,
+        total_products: newProductsCount,
         process_id
       }), {
         status: 200,
