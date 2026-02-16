@@ -117,7 +117,9 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     total: 0,
     complete: 0,
     incomplete: 0,
-    needsReview: 0
+    needsReview: 0,
+    recommended: 0,
+    suggested: 0
   });
   const [activeTab, setActiveTab] = useState("catalog");
   
@@ -147,15 +149,53 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
   const [isRefreshingProgress, setIsRefreshingProgress] = useState(false);
   const [isCancellingGeneration, setIsCancellingGeneration] = useState(false);
 
-  const updateCatalogStats = useCallback((catalogData) => {
-    const stats = {
-      total: catalogData.length,
-      complete: catalogData.filter(p => p.data_quality === 'complete').length,
-      incomplete: catalogData.filter(p => p.data_quality === 'incomplete').length,
-      needsReview: catalogData.filter(p => p.needs_review).length
-    };
-    setCatalogStats(stats);
-  }, []);
+  const updateCatalogStats = useCallback(async () => {
+    if (!selectedCatalogId) {
+      setCatalogStats({ total: 0, complete: 0, incomplete: 0, needsReview: 0, recommended: 0, suggested: 0 });
+      return;
+    }
+
+    try {
+      // ספירת מוצרים בכל קטגוריה
+      const [total, complete, incomplete, needsReview, recommended, suggested] = await Promise.all([
+        // סה"כ מוצרים פעילים
+        base44.entities.ProductCatalog.filter({ catalog_id: selectedCatalogId, is_active: true }, '-created_date', 1).then(r => {
+          const catalog = catalogs.find(c => c.id === selectedCatalogId);
+          return catalog?.product_count || r.length;
+        }),
+        // מוצרים עם נתונים מלאים
+        countAllProducts({ catalog_id: selectedCatalogId, is_active: true, data_quality: 'complete' }),
+        // מוצרים עם נתונים חסרים
+        countAllProducts({ catalog_id: selectedCatalogId, is_active: true, data_quality: 'incomplete' }),
+        // מוצרים שצריכים בדיקה
+        countAllProducts({ catalog_id: selectedCatalogId, is_active: true, needs_review: true }),
+        // מוצרים מומלצים
+        countAllProducts({ catalog_id: selectedCatalogId, is_active: true, is_recommended: true }),
+        // הצעות AI
+        countAllProducts({ catalog_id: selectedCatalogId, is_active: true, is_suggested: true })
+      ]);
+
+      setCatalogStats({ total, complete, incomplete, needsReview, recommended, suggested });
+    } catch (error) {
+      console.error('Error updating catalog stats:', error);
+    }
+  }, [selectedCatalogId, catalogs]);
+
+  // פונקציה עזר לספירת מוצרים
+  const countAllProducts = async (query) => {
+    let count = 0;
+    let skip = 0;
+    const batchSize = 1000;
+
+    while (true) {
+      const batch = await base44.entities.ProductCatalog.filter(query, '-created_date', batchSize, skip);
+      count += batch.length;
+      if (batch.length < batchSize) break;
+      skip += batchSize;
+    }
+
+    return count;
+  };
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
@@ -221,7 +261,8 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
         }
       }
       
-      updateCatalogStats(batch);
+      // עדכון סטטיסטיקות לכל הקטלוג (לא רק העמוד הנוכחי)
+      await updateCatalogStats();
     } catch (error) {
       console.error("Error loading catalog:", error);
     } finally {
@@ -530,7 +571,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     } else {
         setProducts([]);
         setFilteredProducts([]);
-        updateCatalogStats([]);
+        updateCatalogStats();
         setIsLoading(false);
     }
   }, [selectedCatalogId, categoryFilter, qualityFilter, sourceFilter, loadCatalog, checkForActiveProcesses, checkForActiveCatalogGeneration, updateCatalogStats]);
@@ -1015,13 +1056,11 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                 <div className="text-sm text-red-300">טעון בדיקה</div>
               </div>
               <div className="bg-blue-500/10 p-4 rounded-lg text-center border border-blue-500/20">
-                <div className="text-2xl font-bold text-blue-400">{products.filter(p => p.is_recommended).length}</div>
+                <div className="text-2xl font-bold text-blue-400">{catalogStats.recommended}</div>
                 <div className="text-sm text-blue-300">מומלצים</div>
               </div>
               <div className="bg-purple-500/10 p-4 rounded-lg text-center border border-purple-500/20">
-                <div className="text-2xl font-bold text-purple-400">
-                  {products.filter(p => p.is_suggested || p.data_source === 'ai_suggestion').length}
-                </div>
+                <div className="text-2xl font-bold text-purple-400">{catalogStats.suggested}</div>
                 <div className="text-sm text-purple-300">הצעות AI</div>
               </div>
             </div>
