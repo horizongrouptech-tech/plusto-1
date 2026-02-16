@@ -21,10 +21,31 @@ function processCSVRaw(content) {
   }
 }
 
+// צמצום טווח הגיליון לפי תאים קיימים (מונע מיליוני שורות ריקות מ-!ref רחב ב-Excel)
+function clampSheetRef(worksheet) {
+  const cellKeys = Object.keys(worksheet).filter((k) => !k.startsWith('!'));
+  if (cellKeys.length < 10) return;
+  let maxRow = 0;
+  let maxCol = 'A';
+  cellKeys.forEach((key) => {
+    const match = key.match(/^([A-Z]+)(\d+)$/);
+    if (match) {
+      const col = match[1];
+      const row = parseInt(match[2], 10);
+      if (row > maxRow) maxRow = row;
+      if (col.length > maxCol.length || (col.length === maxCol.length && col > maxCol)) maxCol = col;
+    }
+  });
+  if (maxRow > 1) {
+    worksheet['!ref'] = `A1:${maxCol}${maxRow}`;
+  }
+}
+
 // עיבוד Excel
 function processExcelRaw(buffer) {
   const workbook = xlsx.read(buffer, { type: 'buffer' });
   const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+  clampSheetRef(worksheet);
   return xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: null }) || [];
 }
 

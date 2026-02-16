@@ -88,12 +88,32 @@ function processCSV(content) {
   return rows;
 }
 
+// צמצום טווח הגיליון לפי תאים קיימים (מונע מיליוני שורות ריקות מ-!ref רחב ב-Excel)
+function clampSheetRef(worksheet) {
+  const cellKeys = Object.keys(worksheet).filter((k) => !k.startsWith('!'));
+  if (cellKeys.length < 10) return;
+  let maxRow = 0;
+  let maxCol = 'A';
+  cellKeys.forEach((key) => {
+    const match = key.match(/^([A-Z]+)(\d+)$/);
+    if (match) {
+      const col = match[1];
+      const row = parseInt(match[2], 10);
+      if (row > maxRow) maxRow = row;
+      if (col.length > maxCol.length || (col.length === maxCol.length && col > maxCol)) maxCol = col;
+    }
+  });
+  if (maxRow > 1) {
+    worksheet['!ref'] = `A1:${maxCol}${maxRow}`;
+  }
+}
+
 // עיבוד קובץ Excel
 function processExcel(buffer) {
   const workbook = xlsx.read(buffer, { type: 'buffer' });
   const firstSheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[firstSheetName];
-  
+  clampSheetRef(worksheet);
   const rows = xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: null });
   return rows.filter(row => Array.isArray(row) && row.some(cell => cell !== null && cell !== ''));
 }

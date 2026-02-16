@@ -1326,6 +1326,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
               customer={customer}
               selectedCatalogId={selectedCatalogId}
               onUploadComplete={loadCatalog}
+              onProcessStarted={startProgressTracking ? (processId) => startProgressTracking(processId, 'upload') : undefined}
               onProcessFile={handleUploadAndProcess}
               isProcessing={isProcessing}
               processingStatus={processingStatus}

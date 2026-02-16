@@ -167,6 +167,7 @@ export default function ProductCatalogUpload({
   customer,
   selectedCatalogId,
   onUploadComplete,
+  onProcessStarted,
   onProcessFile,
   isProcessing,
   processingStatus,
@@ -276,18 +277,18 @@ export default function ProductCatalogUpload({
     }
   };
 
-  // טיפול בהשלמת המיפוי
+  // טיפול בהשלמת המיפוי – fire-and-forget: מפעיל עיבוד ברקע ומעביר שליטה ל-startProgressTracking בהורה
   const handleMappingComplete = async (mappingConfig) => {
     setShowMappingWizard(false);
     setLocalProcessing(true);
     setLocalProgress(60);
-    setLocalStatus('מעבד מוצרים לפי המיפוי...');
+    setLocalStatus('מתחיל עיבוד...');
 
     try {
-      console.log('📤 שולח לעיבוד:', { 
-        total_rows: totalRowsFromParse, 
+      console.log('📤 שולח לעיבוד:', {
+        total_rows: totalRowsFromParse,
         header_row_index: headerRowIndex,
-        mapping: mappingConfig.mapping 
+        mapping: mappingConfig.mapping
       });
 
       const { data: result } = await base44.functions.invoke('processCatalogWithMapping', {
@@ -304,20 +305,15 @@ export default function ProductCatalogUpload({
         throw new Error(result?.error || 'עיבוד הקובץ נכשל');
       }
 
-      setLocalProgress(100);
-      const errorsMsg = result.products_with_errors > 0 ? `, ${result.products_with_errors} דורשים עריכה` : '';
-      setLocalStatus(`הושלם! נוצרו ${result.created_count} מוצרים${errorsMsg}`);
-
-      setTimeout(() => {
-        setLocalProcessing(false);
-        setLocalProgress(0);
-        setLocalStatus('');
-        setFile(null);
-        setUploadedFileUrl('');
-        if (onUploadComplete) {
-          onUploadComplete();
-        }
-      }, 3000);
+      // העיבוד רץ ברקע – מעבירים את התצוגה להורה (startProgressTracking)
+      if (result.process_id && onProcessStarted) {
+        onProcessStarted(result.process_id);
+      }
+      setLocalProcessing(false);
+      setLocalProgress(0);
+      setLocalStatus('');
+      setFile(null);
+      setUploadedFileUrl('');
 
     } catch (error) {
       console.error('Error processing with mapping:', error);

@@ -81,7 +81,7 @@ function processExcelRaw(buffer) {
 }
 
 // עדכון סטטוס
-const updateProcessStatus = async (base44, processId, progress, status, currentStep, resultData = null) => {
+const updateProcessStatus = async (base44, processId, progress, status, currentStep, resultData = null, errorMessage = null) => {
   try {
     const updateData = {
       progress: Math.min(Math.max(progress, 0), 100),
@@ -90,7 +90,8 @@ const updateProcessStatus = async (base44, processId, progress, status, currentS
     };
     
     if (resultData) updateData.result_data = resultData;
-    if (status === 'completed') {
+    if (errorMessage) updateData.error_message = errorMessage;
+    if (status === 'completed' || status === 'failed') {
       updateData.completed_at = new Date().toISOString();
     }
     
@@ -386,6 +387,9 @@ Deno.serve(async (req) => {
       });
       console.log(`✅ [WORKER UPDATE CATALOG DONE] Catalog עודכן בהצלחה`);
 
+      const CHUNK_SIZE = 500;
+      const num_chunks = Math.ceil(total_rows / CHUNK_SIZE);
+
       const resultData = {
         total_products_created: newProductsCount,
         total_chunks_processed: num_chunks,
@@ -412,8 +416,8 @@ Deno.serve(async (req) => {
     console.error(`❌❌❌ [WORKER FATAL ERROR] chunk=${chunk_number}, error:`, error);
     console.error(`❌ [WORKER STACK]`, error.stack);
     
-    await updateProcessStatus(base44, process_id, 0, 'failed', 
-      `שגיאה בחלק ${chunk_number + 1}: ${error.message}`, null);
+    const errorMsg = `שגיאה בחלק ${chunk_number + 1}: ${error.message}`;
+    await updateProcessStatus(base44, process_id, 0, 'failed', errorMsg, null, errorMsg);
     
     return new Response(JSON.stringify({ 
       success: false, 

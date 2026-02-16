@@ -1,0 +1,36 @@
+---
+description: סוכן טיםול – המלצות מערכת וצ'אטבוטים. חל בעת עבודה על מנועי המלצות, תזמור, וצ'אט פנימי.
+globs: "src/components/logic/*Recommendation*.jsx,src/components/logic/unifiedRecommendationOrchestrator.jsx,src/components/shared/EmergencyChat.jsx,src/components/admin/AIChatAssistant.jsx,src/components/admin/FloatingAgentChat.jsx,src/pages/Admin.jsx,src/pages/Recommendations.jsx,base44/entities/recommendation.jsonc"
+alwaysApply: false
+---
+
+# סוכן טיםול – המלצות מערכת וצ'אטבוטים
+
+## תפקיד הסוכן
+סוכן טיםול מטפל בכל מה שקשור להמלצות המערכת: מתי ואיך לייצר המלצות, איזה מנוע להפעיל, ואיך להפנות בין צ'אטבוטים.
+
+## מנועי המלצות – מתי להשתמש במה
+
+| תרחיש | מנוע | קובץ |
+|--------|------|------|
+| אדמין/מנהל לוחץ "צור המלצות מערכת" | Enhanced | `generateEnhancedRecommendations` ב-`enhancedRecommendationEngine.jsx` |
+| משתמש בדף המלצות | Inventory-Based | `generateInventoryBasedRecommendations` ב-`inventoryBasedRecommendationEngine.jsx` |
+| המלצה למוצר בודד (כולל וואטסאפ) | Targeted | `generateTargetedRecommendation` ב-`targetedRecommendationEngine.jsx` |
+| Fallback כשאין מלאי | recommendationEngine | `generateFallbackRecommendations` ב-`recommendationEngine.jsx` |
+
+## זרימת המנוע המשודרג (Enhanced)
+1. `collectBusinessData(customer)` – ProductCatalog, Product, FileUpload, Supplier, BusinessForecast.
+2. `hasSufficientInternalData = hasProductCatalog || fileAnalysis.hasSignificantData`.
+3. עם נתונים → `DETAILED_RECOMMENDATION_SCHEMA`; בלי → `SIMPLIFIED_RECOMMENDATION_SCHEMA` + `add_context_from_internet: true`.
+4. `buildEnhancedPrompt` → `generateUnifiedRecommendations` (InvokeLLM) → `processRecommendations` → `Recommendation.create`.
+5. שמירה עם `related_data.generation_method` (data_based / market_research_based) ו-`schema_used`.
+
+## צ'אטבוטים – לא להחליף
+- **EmergencyChat** (Layout): לקוח קצה – סיוע חירום, הכוונה במערכת, הסלמה לפגישה. תשובה חופשית (ללא schema).
+- **AIChatAssistant** (CustomerManagement): מנהל כספים – שאלות על לקוח + יצירת/אישור המלצות. תגובה ב-JSON עם `message` + אובייקט `recommendation` אופציונלי.
+- **FloatingAgentChat**: סוכן Base44 לפי `agentName` (למשל `plusto_user_guide_agent`, `timool_recommendations_agent`). סוכן טיםול להמלצות = `timool_recommendations_agent`.
+
+## כללי עקביות
+- אל תעקוף את `collectBusinessData`, `buildEnhancedPrompt` או `processRecommendations` – להשתמש בהם כשמוסיפים לוגיקת המלצות.
+- ישות ההמלצה: `recommendation.jsonc` – קטגוריות pricing, bundles, promotions, suppliers, strategic_moves, inventory; source: admin_generated, whatsapp_request, automatic_engine, goal_oriented.
+- פניות תמיכה בנושא המלצות: ישות `AgentSupportTicket` (customer_email, manager_email, subject, description, type: bug_report/feature_request).
