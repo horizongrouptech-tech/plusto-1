@@ -392,21 +392,28 @@ Deno.serve(async (req) => {
 
       // ספירה – שימוש ב-count ולא ב-filter (filter מחזיר תוצאה מקוצרת!)
       const processStartTime = processStatus.started_at;
+      console.log(`🔍 [WORKER COUNT] מתחיל ספירת מוצרים חדשים מאז ${processStartTime}...`);
+      
       const newProductsCount = await base44.asServiceRole.entities.ProductCatalog.count({
         catalog_id,
         created_date: { $gte: processStartTime }
       });
+      console.log(`📊 [WORKER COUNT RESULT] מוצרים חדשים: ${newProductsCount}`);
       
+      console.log(`🔍 [WORKER COUNT] מתחיל ספירת כל המוצרים הפעילים בקטלוג...`);
       const allProductsCount = await base44.asServiceRole.entities.ProductCatalog.count({
         catalog_id,
         is_active: true
       });
+      console.log(`📊 [WORKER COUNT RESULT] סה"כ מוצרים פעילים: ${allProductsCount}`);
       
+      console.log(`💾 [WORKER UPDATE CATALOG] מעדכן Catalog ${catalog_id} עם product_count=${allProductsCount}`);
       await base44.asServiceRole.entities.Catalog.update(catalog_id, {
         product_count: allProductsCount,
         last_generated_at: new Date().toISOString(),
         status: 'ready'
       });
+      console.log(`✅ [WORKER UPDATE CATALOG DONE] Catalog עודכן בהצלחה`);
 
       const resultData = {
         total_products_created: newProductsCount,
@@ -414,6 +421,8 @@ Deno.serve(async (req) => {
         catalog_id
       };
 
+      console.log(`🎉 [WORKER COMPLETE] התהליך הושלם! מוצרים חדשים=${newProductsCount}, סה"כ בקטלוג=${allProductsCount}`);
+      
       await updateProcessStatus(base44, process_id, 100, 'completed', 
         `הושלם! נוצרו ${newProductsCount.toLocaleString('he-IL')} מוצרים חדשים (${num_chunks} חלקים)`, resultData);
 
