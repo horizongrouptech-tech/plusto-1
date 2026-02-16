@@ -351,17 +351,17 @@ Deno.serve(async (req) => {
       // זה החלק האחרון - סיום התהליך
       await updateProcessStatus(base44, process_id, 95, 'running', 'מעדכן ישות קטלוג...');
 
-      // ספירה ישירה של כל המוצרים שנוצרו בהרצה זו (לפי created_date)
+      // ספירה – שימוש ב-count ולא ב-filter (filter מחזיר תוצאה מקוצרת!)
       const processStartTime = processStatus.started_at;
-      const newProductsCount = await base44.asServiceRole.entities.ProductCatalog.filter({
+      const newProductsCount = await base44.asServiceRole.entities.ProductCatalog.count({
         catalog_id,
         created_date: { $gte: processStartTime }
-      }).then(products => products.length);
+      });
       
-      // עדכון product_count עם כל המוצרים בקטלוג (כולל ישנים)
-      const allProductsCount = await base44.asServiceRole.entities.ProductCatalog.filter(
-        { catalog_id, is_active: true }
-      ).then(products => products.length);
+      const allProductsCount = await base44.asServiceRole.entities.ProductCatalog.count({
+        catalog_id,
+        is_active: true
+      });
       
       await base44.asServiceRole.entities.Catalog.update(catalog_id, {
         product_count: allProductsCount,

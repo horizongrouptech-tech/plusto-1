@@ -518,7 +518,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
       // ✅ התראה אם יש יותר מוצרים
       if (catalogProducts.length === MAX_PRODUCTS_TO_SYNC) {
-        const totalCount = await ProductCatalog.count({
+        const totalCount = await base44.entities.ProductCatalog.count({
           customer_email: customer.email,
           is_active: true
         });
@@ -626,7 +626,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
         // ✅ התראה אם יש יותר מוצרים
         if (productsToSync.length === MAX_PRODUCTS_TO_SYNC) {
-          const totalCount = await ProductCatalog.count({
+          const totalCount = await base44.entities.ProductCatalog.count({
             catalog_id: selectedCatalogToSync.id,
             is_active: true
           });

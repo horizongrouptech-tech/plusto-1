@@ -313,6 +313,8 @@ export default function ColumnMappingWizard({
     if (!profileName.trim()) return;
     
     try {
+      // עמודה מזהה – ברקוד או שם מוצר (לזיהוי כפילויות)
+      const identifierColumn = mapping['barcode'] || mapping['product_name'] || null;
       await base44.entities.CatalogMappingProfile.create({
         customer_email: customer.email,
         profile_name: profileName,
