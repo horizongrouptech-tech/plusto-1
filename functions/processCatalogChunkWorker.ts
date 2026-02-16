@@ -104,8 +104,11 @@ Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
 
   const { process_id, chunk_number, start_row, end_row } = await req.json();
+  
+  console.log(`🟢 [WORKER START] chunk=${chunk_number}, start_row=${start_row}, end_row=${end_row}, process_id=${process_id}`);
 
   if (!process_id || chunk_number === undefined || start_row === undefined || end_row === undefined) {
+    console.error('❌ [WORKER ERROR] חסרים פרמטרים נדרשים');
     return new Response(JSON.stringify({ 
       success: false, 
       error: 'חסרים פרמטרים נדרשים' 
@@ -114,10 +117,13 @@ Deno.serve(async (req) => {
 
   try {
     // טעינת ProcessStatus
+    console.log(`📋 [WORKER] טוען ProcessStatus: ${process_id}`);
     const processStatus = await base44.asServiceRole.entities.ProcessStatus.get(process_id);
     if (!processStatus) {
+      console.error(`❌ [WORKER ERROR] לא נמצאה רשומת תהליך: ${process_id}`);
       throw new Error('לא נמצאה רשומת תהליך');
     }
+    console.log(`✅ [WORKER] ProcessStatus נטען בהצלחה`);
     const { metadata } = processStatus;
     
     if (!metadata) {
