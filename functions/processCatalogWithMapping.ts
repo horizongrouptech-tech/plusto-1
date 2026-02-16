@@ -178,8 +178,9 @@ Deno.serve(async (req) => {
     await updateProcessStatus(base44, process.id, 30, 'running', 
       `מעבד ${totalRows.toLocaleString('he-IL')} מוצרים...`);
 
-    // שמירת הנתונים כקובץ זמני – שימוש בתיקייה זמנית של המערכת (לא /tmp ישיר, כי בסביבות שונות /tmp עלול לא להיות זמין)
-    const tempDir = await Deno.makeTempDir({ prefix: "plusto_catalog_" });
+    // שמירת הנתונים ב-/tmp – נתיב יציב שנשאר עד שה-Worker האחרון מוחק אותו (makeTempDir נמחק אוטומטית כשהאורקסטרטור מסתיים)
+    const tempDir = "/tmp";
+    await Deno.mkdir(tempDir, { recursive: true });
     const tempFilePath = `${tempDir}/catalog_${process.id}.json`;
     await Deno.writeTextFile(tempFilePath, JSON.stringify(allRecords));
     console.log(`💾 Saved ${totalRows} records to temp file: ${tempFilePath}`);
