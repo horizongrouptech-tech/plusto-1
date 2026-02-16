@@ -197,14 +197,20 @@ Deno.serve(async (req) => {
     // בניית אובייקטים באמצעות שורת הכותרת הנכונה
     const headerRowIdx = header_row_index || 0;
     const headerRow = allRawRows[headerRowIdx];
+    
+    console.log(`📋 [WORKER HEADERS] header_row_index=${headerRowIdx}`);
 
     if (!headerRow || !Array.isArray(headerRow)) {
+      console.error(`❌ [WORKER ERROR] שורת כותרת לא נמצאה באינדקס ${headerRowIdx}`);
       throw new Error(`שורת כותרת לא נמצאה באינדקס ${headerRowIdx}`);
     }
 
     const headers = headerRow.map(cell => cleanCell(cell));
+    console.log(`✅ [WORKER HEADERS] כותרות: ${JSON.stringify(headers.slice(0, 10))}... (${headers.length} עמודות)`);
+    
     // dataRows = שורות אחרי הכותרת - ללא סינון מוקדם!
     const dataRows = allRawRows.slice(headerRowIdx + 1);
+    console.log(`📊 [WORKER DATA ROWS] סה"כ שורות נתונים (אחרי כותרת): ${dataRows.length}`);
 
     // המרת שורות גולמיות לאובייקטים
     const allRecords = dataRows.map(row => {
