@@ -114,12 +114,10 @@ Deno.serve(async (req) => {
 
   try {
     // טעינת ProcessStatus
-    const processStatusList = await base44.asServiceRole.entities.ProcessStatus.filter({ id: process_id });
-    if (!processStatusList || processStatusList.length === 0) {
+    const processStatus = await base44.asServiceRole.entities.ProcessStatus.get(process_id);
+    if (!processStatus) {
       throw new Error('לא נמצאה רשומת תהליך');
     }
-
-    const processStatus = processStatusList[0];
     const { metadata } = processStatus;
     
     if (!metadata) {
