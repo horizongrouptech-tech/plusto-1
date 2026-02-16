@@ -180,16 +180,16 @@ Deno.serve(async (req) => {
     // בניית אובייקטים באמצעות שורת הכותרת הנכונה
     const headerRowIdx = header_row_index || 0;
     const headerRow = allRawRows[headerRowIdx];
-    
+
     if (!headerRow || !Array.isArray(headerRow)) {
       throw new Error(`שורת כותרת לא נמצאה באינדקס ${headerRowIdx}`);
     }
 
     const headers = headerRow.map(cell => cleanCell(cell));
-    // dataRows = שורות אחרי הכותרת. כלול רק שורות עם תוכן (כבר מסונן ב-Excel path)
+    // dataRows = שורות אחרי הכותרת - ללא סינון מוקדם!
     const dataRows = allRawRows.slice(headerRowIdx + 1);
 
-    // המרת שורות גולמיות לאובייקטים - סינון נוסף לשורות שבהן כל הערכים ריקים
+    // המרת שורות גולמיות לאובייקטים
     const allRecords = dataRows.map(row => {
       if (!row || !Array.isArray(row)) return null;
       const obj = {};
@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
       return obj;
     }).filter((obj) => {
       if (!obj || Object.keys(obj).length === 0) return false;
-      // דילוג על שורות שבהן כל הערכים ריקים/whitespace
+      // סינון רק שורות שבאמת ריקות לחלוטין
       const hasMeaningfulValue = Object.values(obj).some((v) => v != null && String(v).trim() !== '');
       return hasMeaningfulValue;
     });
