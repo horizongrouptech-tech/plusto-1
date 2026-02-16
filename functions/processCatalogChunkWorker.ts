@@ -317,6 +317,18 @@ Deno.serve(async (req) => {
       });
     } else {
       console.log(`🏁 [WORKER FINAL] זה הchunk האחרון! מתחיל ספירה סופית...`);
+      
+      // ניקוי קובץ זמני
+      try {
+        const tempFilePath = metadata.temp_file_path;
+        if (tempFilePath) {
+          await Deno.remove(tempFilePath);
+          console.log(`🗑️ [WORKER CLEANUP] קובץ זמני נמחק: ${tempFilePath}`);
+        }
+      } catch (e) {
+        console.warn('Could not delete temp file:', e);
+      }
+      
       // זה החלק האחרון - סיום התהליך
       await updateProcessStatus(base44, process_id, 95, 'running', 'מעדכן ישות קטלוג...');
 
