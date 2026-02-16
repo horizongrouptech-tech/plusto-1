@@ -287,15 +287,29 @@ Deno.serve(async (req) => {
       
       console.log(`🔄 [WORKER NEXT] מפעיל chunk הבא: ${chunk_number + 1}, טווח=${nextStartRow}-${nextEndRow}`);
       
-      // קריאה עצמית לחלק הבא - fire-and-forget
-      base44.asServiceRole.functions.invoke('processCatalogChunkWorker', {
-        process_id,
-        chunk_number: chunk_number + 1,
-        start_row: nextStartRow,
-        end_row: nextEndRow
-      }).catch(err => console.error(`Worker ${chunk_number + 1} failed:`, err));
-      
-      console.log(`✅ [WORKER NEXT DONE] chunk ${chunk_number + 1} הופעל`);
+      const invokeNextChunk = async (retries = 3) => {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+          try {
+            await base44.asServiceRole.functions.invoke('processCatalogChunkWorker', {
+              process_id,
+              chunk_number: chunk_number + 1,
+              start_row: nextStartRow,
+              end_row: nextEndRow
+            });
+            console.log(`✅ [WORKER NEXT DONE] chunk ${chunk_number + 1} הופעל בהצלחה (ניסיון ${attempt})`);
+            return;
+          } catch (err) {
+            console.error(`Worker ${chunk_number + 1} failed (attempt ${attempt}/${retries}):`, err);
+            if (attempt < retries) {
+              await new Promise(r => setTimeout(r, 2000 * attempt));
+            } else {
+              await updateProcessStatus(base44, process_id, progressPercent, 'failed', 
+                `שגיאה בהפעלת חלק ${chunk_number + 2}: ${err?.message || err}`, null, err?.message || String(err));
+            }
+          }
+        }
+      };
+      invokeNextChunk().catch(err => console.error(`Worker next chunk invoke failed:`, err));
       
       return new Response(JSON.stringify({
         success: true,

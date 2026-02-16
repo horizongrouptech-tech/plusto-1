@@ -291,7 +291,7 @@ export default function ProductCatalogUpload({
         mapping: mappingConfig.mapping
       });
 
-      const { data: result } = await base44.functions.invoke('processCatalogWithMapping', {
+      const payload = {
         customer_email: customer.email,
         file_url: uploadedFileUrl,
         catalog_id: selectedCatalogId,
@@ -299,7 +299,11 @@ export default function ProductCatalogUpload({
         import_with_errors: mappingConfig.importWithErrors,
         header_row_index: headerRowIndex,
         total_rows: totalRowsFromParse
-      });
+      };
+      if (rawData?.length > 0 && totalRowsFromParse <= 500) {
+        payload.raw_data = rawData;
+      }
+      const { data: result } = await base44.functions.invoke('processCatalogWithMapping', payload);
 
       if (!result?.success) {
         throw new Error(result?.error || 'עיבוד הקובץ נכשל');

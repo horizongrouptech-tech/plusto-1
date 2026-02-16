@@ -360,7 +360,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
         setProcessCheckInterval(null);
         setActiveProcessId(null);
       }
-    }, 5000);
+    }, 3000);
 
     setProcessCheckInterval(interval);
   }, [
@@ -386,6 +386,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
         const runningProcesses = await ProcessStatus.filter({
             customer_email: customer.email,
             catalog_id: selectedCatalogId,
+            process_type: { $in: ['catalog_upload', 'catalog_cleaning'] },
             status: 'running',
         });
 
@@ -566,15 +567,20 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     if (selectedCatalogId) {
         setCurrentPage(1);
         loadCatalog(1);
-        checkForActiveProcesses(); 
-        checkForActiveCatalogGeneration();
     } else {
         setProducts([]);
         setFilteredProducts([]);
         updateCatalogStats();
         setIsLoading(false);
     }
-  }, [selectedCatalogId, categoryFilter, qualityFilter, sourceFilter, loadCatalog, checkForActiveProcesses, checkForActiveCatalogGeneration, updateCatalogStats]);
+  }, [selectedCatalogId, categoryFilter, qualityFilter, sourceFilter, loadCatalog, updateCatalogStats]);
+
+  useEffect(() => {
+    if (selectedCatalogId && customer?.email) {
+        checkForActiveProcesses();
+        checkForActiveCatalogGeneration();
+    }
+  }, [selectedCatalogId, customer?.email, checkForActiveProcesses, checkForActiveCatalogGeneration]);
 
   useEffect(() => {
     filterProducts();

@@ -123,15 +123,22 @@ Deno.serve(async (req) => {
     mapping,
     import_with_errors = false,
     header_row_index = 0,
-    total_rows: total_rows_from_client
+    total_rows: total_rows_from_client,
+    raw_data: pre_parsed_raw_data
   } = payload;
 
-  console.log('🔍 total_rows_from_client:', total_rows_from_client, 'type:', typeof total_rows_from_client);
+  console.log('🔍 total_rows_from_client:', total_rows_from_client, 'pre_parsed_raw_data:', pre_parsed_raw_data?.length);
 
-  if (!customer_email || !file_url || !catalog_id || !mapping) {
+  if (!customer_email || !catalog_id || !mapping) {
     return new Response(JSON.stringify({ 
       success: false, 
       error: 'חסרים פרמטרים נדרשים' 
+    }), { status: 400 });
+  }
+  if (!file_url && !(pre_parsed_raw_data && Array.isArray(pre_parsed_raw_data) && pre_parsed_raw_data.length > 0)) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: 'נדרש file_url או raw_data מנותח מראש' 
     }), { status: 400 });
   }
 
@@ -147,9 +154,27 @@ Deno.serve(async (req) => {
   });
 
   try {
+    let recordsToUse;
+    let totalRows;
+    let usedPreParsed = false;
+
+    if (pre_parsed_raw_data && Array.isArray(pre_parsed_raw_data) && pre_parsed_raw_data.length > 0) {
+      await updateProcessStatus(base44, process.id, 15, 'running', 'משתמש בנתונים מנותחים מראש...');
+      recordsToUse = pre_parsed_raw_data.filter(obj => 
+        obj && typeof obj === 'object' && 
+        Object.values(obj).some(v => v != null && String(v).trim() !== '')
+      );
+      totalRows = recordsToUse.length;
+      usedPreParsed = true;
+      console.log(`📊 שימוש ב-raw_data מראש: ${totalRows} רשומות`);
+    }
+
+    if (!usedPreParsed) {
     await updateProcessStatus(base44, process.id, 10, 'running', 'מוריד ומנתח את הקובץ...');
 
-    // 🎯 הורדה וניתוח של הקובץ פעם אחת בלבד!
+    if (!file_url) {
+      throw new Error('נדרש file_url כאשר אין raw_data מנותח');
+    }
     const response = await fetch(file_url);
     if (!response.ok) {
       throw new Error(`נכשל בהורדת הקובץ: ${response.statusText}`);
@@ -201,12 +226,12 @@ Deno.serve(async (req) => {
       return Object.values(obj).some(v => v != null && String(v).trim() !== '');
     });
 
-    let totalRows = allRecords.length;
-    let recordsToUse = allRecords;
+    totalRows = allRecords.length;
+    recordsToUse = allRecords;
 
-    // Fallback: אם לא נמצאו רשומות – נסה זיהוי שורת כותרת אוטומטי (כמו parseFileHeaders)
+    // Fallback: אם לא נמצאו רשומות – נסה זיהוי שורת כותרת אוטומטי עם חיפוש רחב יותר
     if (totalRows === 0 && allRawRows.length > 1) {
-      const headerInfo = findHeaderRow(allRawRows);
+      const headerInfo = findHeaderRow(allRawRows, 25);
       if (headerInfo) {
         const { index: hi, headers: h } = headerInfo;
         const fallbackRecords = allRawRows.slice(hi + 1).map(row => {
@@ -230,6 +255,8 @@ Deno.serve(async (req) => {
       }
     }
 
+    }  // סוף if (!recordsToUse || totalRows === 0)
+
     console.log(`✅ ${totalRows} רשומות תקינות לעיבוד`);
 
     const MAX_ROWS = 100_000;
@@ -238,7 +265,10 @@ Deno.serve(async (req) => {
     }
 
     if (totalRows === 0) {
-      throw new Error('הקובץ ריק או לא נמצאו נתונים');
+      const diag = usedPreParsed
+        ? 'הנתונים מנותחים מראש לא הכילו רשומות תקינות.'
+        : `אבחון: כותרת באינדקס ${header_row_index}. ודא שהקובץ כולל כותרות כמו "שם מוצר", "מחיר", "ברקוד" באחת השורות הראשונות.`;
+      throw new Error(`הקובץ ריק או לא נמצאו נתונים. ${diag}`);
     }
 
     await updateProcessStatus(base44, process.id, 30, 'running', 
