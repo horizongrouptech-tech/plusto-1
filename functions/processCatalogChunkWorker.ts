@@ -363,6 +363,8 @@ Deno.serve(async (req) => {
       const chunkSize = Math.ceil(total_rows / num_chunks);
       const nextEndRow = Math.min(nextStartRow + chunkSize, total_rows);
       
+      console.log(`🔄 [WORKER NEXT] מפעיל chunk הבא: ${chunk_number + 1}, טווח=${nextStartRow}-${nextEndRow}`);
+      
       // קריאה עצמית לחלק הבא
       await base44.asServiceRole.functions.invoke('processCatalogChunkWorker', {
         process_id,
@@ -370,6 +372,8 @@ Deno.serve(async (req) => {
         start_row: nextStartRow,
         end_row: nextEndRow
       });
+      
+      console.log(`✅ [WORKER NEXT DONE] chunk ${chunk_number + 1} הופעל בהצלחה`);
       
       return new Response(JSON.stringify({
         success: true,
@@ -382,6 +386,7 @@ Deno.serve(async (req) => {
         headers: { 'Content-Type': 'application/json' }
       });
     } else {
+      console.log(`🏁 [WORKER FINAL] זה הchunk האחרון! מתחיל ספירה סופית...`);
       // זה החלק האחרון - סיום התהליך
       await updateProcessStatus(base44, process_id, 95, 'running', 'מעדכן ישות קטלוג...');
 
