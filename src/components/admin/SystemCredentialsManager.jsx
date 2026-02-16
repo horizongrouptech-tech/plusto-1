@@ -54,11 +54,11 @@ export default function SystemCredentialsManager({ customer }) {
   const handleEdit = (system) => {
     setEditingSystem(system);
     setFormData({
-      system_name: system.system_name || '',
+      system_name: system.system_name || system.contact_name || '',
       system_url: system.system_url || '',
       username: system.username || '',
       password: system.password || '',
-      system_notes: system.system_notes || '',
+      system_notes: system.system_notes || system.notes || '',
     });
     setShowModal(true);
   };
@@ -74,12 +74,14 @@ export default function SystemCredentialsManager({ customer }) {
       const data = {
         customer_email: customer.email,
         record_type: 'system',
+        contact_name: formData.system_name,
+        contact_type: 'אחר',
         system_name: formData.system_name,
         system_url: formData.system_url,
         username: formData.username,
         password: formData.password,
         system_notes: formData.system_notes,
-        contact_type: 'אחר' // ערך ברירת מחדל למערכות
+        is_active: true
       };
 
       if (editingSystem) {
@@ -90,10 +92,11 @@ export default function SystemCredentialsManager({ customer }) {
         toast.success('מערכת נוספה בהצלחה!');
       }
 
-      queryClient.invalidateQueries(['serviceContacts', customer.email]);
+      queryClient.invalidateQueries({ queryKey: ['serviceContacts', customer.email] });
       setShowModal(false);
     } catch (error) {
-      toast.error('שגיאה בשמירה: ' + error.message);
+      console.error('Save error:', error);
+      toast.error('שגיאה בשמירה: ' + (error.message || 'שגיאה לא ידועה'));
     } finally {
       setIsSaving(false);
     }
@@ -104,7 +107,7 @@ export default function SystemCredentialsManager({ customer }) {
 
     try {
       await base44.entities.ServiceContact.update(systemId, { is_active: false });
-      queryClient.invalidateQueries(['serviceContacts', customer.email]);
+      queryClient.invalidateQueries({ queryKey: ['serviceContacts', customer.email] });
       toast.success('נמחק בהצלחה');
     } catch (error) {
       toast.error('שגיאה במחיקה: ' + error.message);
@@ -167,7 +170,7 @@ export default function SystemCredentialsManager({ customer }) {
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <Lock className="w-5 h-5 text-purple-400" />
-                        <h3 className="font-bold text-horizon-text">{system.system_name}</h3>
+                        <h3 className="font-bold text-horizon-text">{system.system_name || system.contact_name}</h3>
                       </div>
                       <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-xs">
                         מערכת
@@ -240,9 +243,9 @@ export default function SystemCredentialsManager({ customer }) {
                       )}
                     </div>
 
-                    {system.system_notes && (
+                    {(system.system_notes || system.notes) && (
                       <p className="text-xs text-horizon-accent/70 mb-3 line-clamp-2">
-                        {system.system_notes}
+                        {system.system_notes || system.notes}
                       </p>
                     )}
 
