@@ -333,6 +333,24 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     }
   };
 
+  // הסרת אחראי אוטומטי (assignee_email) – מוצג ברשימה אך לא ב-assigned_users
+  const handleRemoveAssigneeEmail = async () => {
+    if (isUpdatingAssignees) return;
+    setIsUpdatingAssignees(true);
+    try {
+      await base44.entities.CustomerGoal.update(goal.id, {
+        assignee_email: null,
+        is_active: goal.is_active !== false
+      });
+      await refreshData();
+    } catch (error) {
+      console.error('Error removing assignee_email:', error);
+      toast.error('שגיאה בהסרת האחראי');
+    } finally {
+      setIsUpdatingAssignees(false);
+    }
+  };
+
   const handleAddExternalAssignee = async () => {
     if (!newExternalAssignee.trim() || isUpdatingAssignees) return;
     setIsUpdatingAssignees(true);
@@ -452,12 +470,13 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                         <label className="text-sm text-horizon-accent mb-2 block">אחראי (בחר ממערכת)</label>
                         <Select
               value={editedGoal.assignee_email || ''}
-              onValueChange={(value) => setEditedGoal({ ...editedGoal, assignee_email: value })}>
+              onValueChange={(value) => setEditedGoal({ ...editedGoal, assignee_email: value || null })}>
 
                             <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
                                 <SelectValue placeholder="בחר אחראי" />
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="">ללא אחראי</SelectItem>
                                 {users.
                 filter((user) => {
                   // סינון: רק הלקוח הנוכחי והמנהל הכספים שלו
@@ -769,7 +788,26 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                                 {/* Section: System Users */}
                                 <div>
                                     <p className="text-xs font-semibold text-horizon-text mb-2">משתמשי מערכת:</p>
-                                    {(goal.assigned_users || []).length > 0 &&
+                                    {/* אחראי אוטומטי (assignee_email) – מוצג כאשר אין assigned_users או כאשר לא ברשימה */}
+                                    {goal.assignee_email && !(goal.assigned_users || []).includes(goal.assignee_email) && (
+                                      <div className="space-y-1 mb-2">
+                                        <div className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
+                                          <span className="text-xs text-horizon-text">
+                                            {users.find((u) => u.email === goal.assignee_email)?.full_name || goal.assignee_email.split('@')[0]}
+                                          </span>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => handleRemoveAssigneeEmail()}
+                                            className="h-5 w-5 p-0 !text-red-400 !bg-red-500/10 border border-red-500/30 hover:!bg-red-500/20 rounded"
+                                            disabled={isUpdatingAssignees}
+                                          >
+                                            <X className="w-3 h-3" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                    {(goal.assigned_users || []).length > 0 && (
                   <div className="space-y-1 mb-2">
                                             {goal.assigned_users.map((email) => {
                       const user = users.find((u) => u.email === email);
@@ -789,7 +827,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
 
                     })}
                                         </div>
-                  }
+                  )}
                                     <Select onValueChange={handleAddAssignee} disabled={isUpdatingAssignees}>
                                         <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text h-8 text-xs">
                                             <SelectValue placeholder="הוסף משתמש מערכת..." />
@@ -797,13 +835,12 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                                         <SelectContent className="bg-horizon-dark border-horizon">
                                             {users.
                       filter((u) => {
-                        if (!(goal.assigned_users || []).includes(u.email)) {
-                          if (!goal.customer_email) return true;
-                          return u.email === goal.customer_email ||
+                        if ((goal.assigned_users || []).includes(u.email)) return false;
+                        if (goal.assignee_email && u.email === goal.assignee_email) return false;
+                        if (!goal.customer_email) return true;
+                        return u.email === goal.customer_email ||
                           u.email === goal.assigned_manager_email ||
                           u.user_type === 'financial_manager';
-                        }
-                        return false;
                       }).
                       map((user) =>
                       <SelectItem key={user.email} value={user.email} className="text-xs">

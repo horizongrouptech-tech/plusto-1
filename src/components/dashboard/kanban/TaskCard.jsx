@@ -62,8 +62,30 @@ export default function TaskCard({ task, customer, parentGoal, onTaskClick, onMa
     }
   };
 
+  // הסרת אחראי אוטומטי (assignee_email)
+  const handleRemoveAssigneeEmail = async () => {
+    if (isUpdatingAssignees) return;
+    setIsUpdatingAssignees(true);
+    try {
+      await base44.entities.CustomerGoal.update(task.id, {
+        assignee_email: null,
+        is_active: task.is_active !== false
+      });
+    } catch (error) {
+      console.error('Error removing assignee_email:', error);
+    } finally {
+      setIsUpdatingAssignees(false);
+    }
+  };
+
   const assignedUsers = task.assigned_users || [];
-  const availableUsers = allUsers.filter(u => !assignedUsers.includes(u.email));
+  const hasAssigneeEmail = task.assignee_email && !assignedUsers.includes(task.assignee_email);
+  const displayAssignees = hasAssigneeEmail
+    ? [task.assignee_email, ...assignedUsers]
+    : assignedUsers;
+  const availableUsers = allUsers.filter(
+    u => !assignedUsers.includes(u.email) && (!task.assignee_email || u.email !== task.assignee_email)
+  );
 
   return (
     <div
@@ -126,15 +148,15 @@ export default function TaskCard({ task, customer, parentGoal, onTaskClick, onMa
         <Popover>
           <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-1 justify-end cursor-pointer hover:bg-horizon-primary/10 rounded px-1 py-0.5 transition-colors">
-              {assignedUsers.length > 0 ? (
+              {displayAssignees.length > 0 ? (
                 <div className="flex items-center gap-1 flex-wrap justify-end">
-                  {assignedUsers.slice(0, 2).map(email => {
+                  {displayAssignees.slice(0, 2).map(email => {
                     const user = allUsers.find(u => u.email === email);
                     return (
-                      <span key={email} className="truncate">{user?.full_name || email}</span>
+                      <span key={email} className="truncate">{user?.full_name || email?.split('@')[0]}</span>
                     );
                   })}
-                  {assignedUsers.length > 2 && <span>+{assignedUsers.length - 2}</span>}
+                  {displayAssignees.length > 2 && <span>+{displayAssignees.length - 2}</span>}
                 </div>
               ) : (
                 <span className="text-gray-400">ללא אחראי</span>
@@ -146,6 +168,25 @@ export default function TaskCard({ task, customer, parentGoal, onTaskClick, onMa
             <div className="space-y-2">
               <p className="text-xs font-semibold text-horizon-text mb-2">אחראים על המשימה:</p>
               
+              {/* אחראי אוטומטי (assignee_email) – ניתן להסרה */}
+              {hasAssigneeEmail && (
+                <div className="space-y-1 mb-2">
+                  <div className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
+                    <span className="text-xs text-horizon-text">
+                      {allUsers.find(u => u.email === task.assignee_email)?.full_name || task.assignee_email?.split('@')[0]}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleRemoveAssigneeEmail()}
+                      className="h-5 w-5 p-0 text-red-400 hover:text-red-300"
+                      disabled={isUpdatingAssignees}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              )}
               {assignedUsers.length > 0 && (
                 <div className="space-y-1 mb-2">
                   {assignedUsers.map(email => {

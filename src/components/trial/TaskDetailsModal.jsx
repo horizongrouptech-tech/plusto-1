@@ -252,13 +252,13 @@ export default function TaskDetailsModal({
                 <label className="text-sm text-horizon-accent mb-2 block">אחראי</label>
                 <Select
                   value={editedTask.assignee_email || ''}
-                  onValueChange={(value) => setEditedTask({ ...editedTask, assignee_email: value })}
+                  onValueChange={(value) => setEditedTask({ ...editedTask, assignee_email: value || null })}
                 >
                   <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text">
                     <SelectValue placeholder="בחר אחראי" />
                   </SelectTrigger>
                   <SelectContent className="bg-horizon-dark border-horizon">
-                    <SelectItem value={null}>ללא אחראי</SelectItem>
+                    <SelectItem value="">ללא אחראי</SelectItem>
                     {allUsers.map(user => (
                       <SelectItem key={user.email} value={user.email}>
                         {user.full_name}
