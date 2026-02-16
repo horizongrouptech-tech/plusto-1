@@ -117,12 +117,17 @@ Deno.serve(async (req) => {
       }
     });
 
-    // קריאה ל-worker הראשון עם start_row ו-end_row
-    await base44.asServiceRole.functions.invoke('processCatalogChunkWorker', {
+    // קריאה ל-worker הראשון – fire-and-forget (ללא await) כדי למנוע timeout/502
+    // האורקסטרטור מחזיר מיד, ה-worker רץ ברקע
+    base44.asServiceRole.functions.invoke('processCatalogChunkWorker', {
       process_id: process.id,
       chunk_number: 0,
       start_row: 0,
       end_row: Math.min(chunkSize, totalRows)
+    }).catch(err => {
+      console.error('Worker invoke failed:', err);
+      updateProcessStatus(base44, process.id, 0, 'failed',
+        `שגיאה בהפעלת העיבוד: ${err?.message || err}`, null, err?.message || String(err));
     });
 
     // החזרת תגובה מיידית - העיבוד ממשיך ברקע

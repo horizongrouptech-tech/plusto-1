@@ -208,9 +208,9 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
       setFilteredProducts(batch);
       setCurrentPage(pageNum);
       
-      // ✅ תיקון: נסה לספור, אבל אם זה נכשל, נשתמש ב-fallback
+      // ✅ תיקון: השתמש ב-base44.entities.ProductCatalog.count (ProductCatalog.count לא קיים)
       try {
-        const totalCount = await ProductCatalog.count(filterQuery);
+        const totalCount = await base44.entities.ProductCatalog.count(filterQuery);
         setTotalProducts(totalCount);
       } catch (countError) {
         console.error("Error counting products:", countError);
