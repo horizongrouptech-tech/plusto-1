@@ -438,7 +438,8 @@ Deno.serve(async (req) => {
     }
 
   } catch (error) {
-    console.error('Error in chunk worker:', error);
+    console.error(`❌❌❌ [WORKER FATAL ERROR] chunk=${chunk_number}, error:`, error);
+    console.error(`❌ [WORKER STACK]`, error.stack);
     
     await updateProcessStatus(base44, process_id, 0, 'failed', 
       `שגיאה בחלק ${chunk_number + 1}: ${error.message}`, null);
