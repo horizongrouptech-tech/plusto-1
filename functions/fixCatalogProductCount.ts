@@ -10,21 +10,39 @@ Deno.serve(async (req) => {
   }
   
   try {
-    // ספירת מוצרים פעילים בקטלוג
-    const count = await base44.asServiceRole.entities.ProductCatalog.count({
-      catalog_id,
-      is_active: true
-    });
+    // ספירת כל המוצרים הפעילים בקטלוג
+    let totalCount = 0;
+    let skip = 0;
+    const batchSize = 1000;
+    
+    while (true) {
+      const batch = await base44.asServiceRole.entities.ProductCatalog.filter(
+        { catalog_id, is_active: true },
+        '-created_date',
+        batchSize,
+        skip
+      );
+      
+      totalCount += batch.length;
+      
+      if (batch.length < batchSize) {
+        break;
+      }
+      
+      skip += batchSize;
+    }
+    
+    console.log(`Found ${totalCount} active products in catalog ${catalog_id}`);
     
     // עדכון הקטלוג
     await base44.asServiceRole.entities.Catalog.update(catalog_id, {
-      product_count: count
+      product_count: totalCount
     });
     
     return Response.json({ 
       success: true, 
       catalog_id, 
-      product_count: count 
+      product_count: totalCount 
     });
   } catch (error) {
     console.error('Error fixing catalog count:', error);
