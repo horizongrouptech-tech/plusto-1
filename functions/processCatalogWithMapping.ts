@@ -75,27 +75,6 @@ Deno.serve(async (req) => {
       if (isExcel) {
         const workbook = xlsx.read(buffer, { type: 'buffer' });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        
-        // תיקון !ref – כפי שב-parseFileHeaders, למניעת מיליוני שורות
-        const cellKeys = Object.keys(firstSheet).filter((k) => !k.startsWith('!'));
-        if (cellKeys.length >= 10) {
-          let maxRow = 0;
-          let maxCol = 'A';
-          for (const cell of cellKeys) {
-            const match = cell.match(/^([A-Z]+)(\d+)$/);
-            if (!match) continue;
-            const [, col, rowStr] = match;
-            const row = parseInt(rowStr, 10);
-            if (row > maxRow) {
-              maxRow = row;
-              maxCol = col;
-            }
-          }
-          if (maxRow > 0) {
-            firstSheet['!ref'] = `A1:${maxCol}${maxRow}`;
-          }
-        }
-        
         const allRows = xlsx.utils.sheet_to_json(firstSheet, { header: 1, defval: null });
         const nonEmptyRows = (allRows || []).filter((row) =>
           Array.isArray(row) && row.some((cell) => cell != null && String(cell).trim() !== '')

@@ -69,40 +69,12 @@ function processCSVRaw(content) {
   }
 }
 
-// תיקון !ref – Excel יכול לשמור טווח של מיליוני שורות; מגבילים לפי תאים אמיתיים
-function clampSheetRef(worksheet) {
-  const cellKeys = Object.keys(worksheet).filter((k) => !k.startsWith('!'));
-  if (cellKeys.length < 10) return;
-  
-  let maxRow = 0;
-  let maxCol = 'A';
-  
-  for (const cell of cellKeys) {
-    const match = cell.match(/^([A-Z]+)(\d+)$/);
-    if (!match) continue;
-    const [, col, rowStr] = match;
-    const row = parseInt(rowStr, 10);
-    if (row > maxRow) {
-      maxRow = row;
-      maxCol = col;
-    }
-  }
-  
-  if (maxRow > 0) {
-    worksheet['!ref'] = `A1:${maxCol}${maxRow}`;
-  }
-}
-
 // עיבוד Excel - מחזיר מערך של מערכים (raw arrays)
 // ⚠️ ללא סינון - מחזיר את כל השורות כפי שהן בקובץ!
 function processExcelRaw(buffer) {
   const workbook = xlsx.read(buffer, { type: 'buffer' });
   const firstSheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[firstSheetName];
-  
-  // תיקון !ref לפני sheet_to_json
-  clampSheetRef(worksheet);
-  
   const allRows = xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: null });
   // החזר את כל השורות ללא סינון - הסינון יקרה אחר כך
   return allRows || [];
