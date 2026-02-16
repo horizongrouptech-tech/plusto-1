@@ -178,8 +178,9 @@ Deno.serve(async (req) => {
     await updateProcessStatus(base44, process.id, 30, 'running', 
       `מעבד ${totalRows.toLocaleString('he-IL')} מוצרים...`);
 
-    // שמירת הנתונים כקובץ זמני במקום metadata (למנוע 502)
-    const tempFilePath = `/tmp/catalog_${process.id}.json`;
+    // שמירת הנתונים כקובץ זמני – שימוש בתיקייה זמנית של המערכת (לא /tmp ישיר, כי בסביבות שונות /tmp עלול לא להיות זמין)
+    const tempDir = await Deno.makeTempDir({ prefix: "plusto_catalog_" });
+    const tempFilePath = `${tempDir}/catalog_${process.id}.json`;
     await Deno.writeTextFile(tempFilePath, JSON.stringify(allRecords));
     console.log(`💾 Saved ${totalRows} records to temp file: ${tempFilePath}`);
 
