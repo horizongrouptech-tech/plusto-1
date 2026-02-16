@@ -361,9 +361,9 @@ Deno.serve(async (req) => {
       // זה החלק האחרון - סיום התהליך
       await updateProcessStatus(base44, process_id, 95, 'running', 'מעדכן ישות קטלוג...');
 
-      // שימוש במונה המצטבר שנשמר ב-metadata
-      const currentMetadata = processStatus.metadata || {};
-      const totalCount = currentMetadata.products_created_so_far || 0;
+      // טעינה מחדש מה-DB לקבלת המונה המעודכן מכל ה-chunks
+      const freshProcessStatus = await base44.asServiceRole.entities.ProcessStatus.get(process_id);
+      const totalCount = freshProcessStatus.metadata?.products_created_so_far || 0;
       
       // עדכון product_count עם כל המוצרים בקטלוג (כולל ישנים)
       const allProductsCount = await base44.asServiceRole.entities.ProductCatalog.filter(
