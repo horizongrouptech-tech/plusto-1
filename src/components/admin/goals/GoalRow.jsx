@@ -29,7 +29,7 @@ import InlineEditableField from './InlineEditableField';
 import GoalDependencySelector from '../GoalDependencySelector';
 
 import { toast } from "sonner";
-export default function GoalRow({ goal, users, refreshData, allGoals, isParent = false, isDragging = false }) {
+export default function GoalRow({ goal, users, refreshData, allGoals, isParent = false, isDragging = false, actionsSlot = null }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedGoal, setEditedGoal] = useState(goal);
   const [isSaving, setIsSaving] = useState(false);
@@ -676,14 +676,19 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
 
   }
 
+  const gridCols = 'minmax(0, 280px) auto minmax(80px, 140px) auto 120px auto auto auto 140px';
+
   return (
-    <div className={`flex flex-nowrap items-center gap-2 p-2 rounded-lg transition-all min-w-0 ${isDragging ? 'opacity-50' : ''} ${
-      isParent
-        ? 'bg-horizon-card/60 border border-horizon-primary/40 font-semibold hover:border-horizon-primary/60'
-        : 'bg-horizon-card/20 border border-horizon/50 ps-6 hover:border-horizon-primary/30'
-    }`}>
-      {/* 8. שם היעד + אייקון + נקודה */}
-      <div className="flex items-center gap-1.5 min-w-0 flex-1 max-w-[280px]">
+    <div
+      className={`grid items-center gap-x-2 gap-y-0 p-2 rounded-lg transition-all min-w-0 ${isDragging ? 'opacity-50' : ''} ${
+        isParent
+          ? 'bg-horizon-card/60 border border-horizon-primary/40 font-semibold hover:border-horizon-primary/60'
+          : 'bg-horizon-card/20 border border-horizon/50 ps-6 hover:border-horizon-primary/30'
+      }`}
+      style={{ gridTemplateColumns: gridCols }}
+    >
+      {/* 1. שם היעד + אייקון + נקודה */}
+      <div className="flex items-center gap-1.5 min-w-0">
         {isParent ? (
           <Target className="w-4 h-4 text-horizon-primary shrink-0" />
         ) : (
@@ -837,8 +842,8 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
         />
       </div>
 
-      {/* 4. תלות/שיוך - תמיד מקום כדי ליישר תאריך וסטטוס */}
-      <div className="w-[120px] sm:w-[140px] shrink-0 min-w-0">
+      {/* 5. תלות/שיוך - תמיד מקום כדי ליישר תאריך וסטטוס */}
+      <div className="min-w-0">
         {isParent ? (
           <GoalDependencySelector goal={goal} allGoals={allGoals} refreshData={refreshData} />
         ) : null}
@@ -872,12 +877,17 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
       </Popover>
 
       {/* עריכה, מחק */}
-      <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="text-horizon-primary hover:bg-horizon-primary/20 shrink-0" title="עריכה מלאה">
+      <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="text-horizon-primary hover:bg-horizon-primary/20 shrink-0 justify-self-start" title="עריכה מלאה">
         <Edit className="w-4 h-4" />
       </Button>
-      <Button variant="ghost" size="sm" onClick={handleDelete} className="text-red-400 hover:text-red-300 hover:bg-red-500/20 shrink-0" title="מחק">
+      <Button variant="ghost" size="sm" onClick={handleDelete} className="text-red-400 hover:text-red-300 hover:bg-red-500/20 shrink-0 justify-self-start" title="מחק">
         <Trash2 className="w-4 h-4" />
       </Button>
+
+      {/* 9. פעולות יעד (n) + הוסף משימה – רק כש־actionsSlot מסופק */}
+      <div className="flex items-center justify-end min-w-0">
+        {actionsSlot}
+      </div>
 
       {showComments && <GoalCommentsModal goal={goal} isOpen={showComments} onClose={() => setShowComments(false)} />}
     </div>
