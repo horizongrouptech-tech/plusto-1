@@ -163,36 +163,18 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     const total = catalogs.find(c => c.id === selectedCatalogId)?.product_count ?? 0;
 
     try {
-      const [complete, incomplete, needsReview, recommended, suggested, missingCost] = await Promise.all([
-        countAllProducts({ catalog_id: selectedCatalogId, is_active: true, data_quality: 'complete' }),
-        countAllProducts({ catalog_id: selectedCatalogId, is_active: true, data_quality: 'incomplete' }),
-        countAllProducts({ catalog_id: selectedCatalogId, is_active: true, needs_review: true }),
-        countAllProducts({ catalog_id: selectedCatalogId, is_active: true, is_recommended: true }),
-        countAllProducts({ catalog_id: selectedCatalogId, is_active: true, is_suggested: true }),
-        countAllProducts({ catalog_id: selectedCatalogId, is_active: true, cost_price: { $lte: 0 } })
-      ]);
-
-      setCatalogStats({ total, complete, incomplete, needsReview, recommended, suggested, missingCost });
+      const { data, error } = await base44.functions.invoke('getCatalogStats', { catalog_id: selectedCatalogId });
+      if (error) {
+        console.error('Error updating catalog stats:', error);
+        return;
+      }
+      if (data) {
+        setCatalogStats({ total, ...data });
+      }
     } catch (error) {
       console.error('Error updating catalog stats:', error);
     }
   }, [selectedCatalogId, catalogs]);
-
-  // פונקציה עזר לספירת מוצרים
-  const countAllProducts = async (query) => {
-    let count = 0;
-    let skip = 0;
-    const batchSize = 1000;
-
-    while (true) {
-      const batch = await base44.entities.ProductCatalog.filter(query, '-created_date', batchSize, skip);
-      count += batch.length;
-      if (batch.length < batchSize) break;
-      skip += batchSize;
-    }
-
-    return count;
-  };
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
