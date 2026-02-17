@@ -73,8 +73,8 @@ export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals
 
     return (
         <Card className={`card-horizon ${isDragging ? 'opacity-50' : ''}`}>
-            <div className="p-4 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="p-3 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div className="min-w-0 flex-1">
                     <GoalRow
                         goal={goal}
@@ -84,21 +84,7 @@ export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals
                         isParent={true}
                     />
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                        {subtasks.length > 0 && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                    setIsExpanded(!isExpanded);
-                                    if (onToggleCollapse) onToggleCollapse();
-                                }}
-                                className="text-horizon-accent hover:text-horizon-text"
-                            >
-                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                                <span className="mr-2">{subtasks.length} משימות</span>
-                            </Button>
-                        )}
+                    <div className="flex items-center gap-1.5 shrink-0">
                         <Button
                             onClick={handleAddSubtask}
                             size="sm"
@@ -108,6 +94,21 @@ export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals
                             <Plus className="w-4 h-4 ml-1" />
                             הוסף משימה
                         </Button>
+                        {subtasks.length > 0 && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                    setIsExpanded(!isExpanded);
+                                    if (onToggleCollapse) onToggleCollapse();
+                                }}
+                                className="text-horizon-accent hover:text-horizon-text"
+                                title={isExpanded ? 'סגור משימות' : 'הצג משימות'}
+                            >
+                                <span className="mr-1">({subtasks.length})</span>
+                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </Button>
+                        )}
                     </div>
                 </div>
 
@@ -118,7 +119,7 @@ export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals
                                 <div
                                     {...provided.droppableProps}
                                     ref={provided.innerRef}
-                                    className="pr-8 space-y-2"
+                                    className="pr-6 space-y-1.5"
                                 >
                                     {subtasks.map((subtask, index) => (
                                         <Draggable 

@@ -38,6 +38,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
   const [quickEditMode, setQuickEditMode] = useState(null); // 'name', 'date', 'notes'
   const [newExternalAssignee, setNewExternalAssignee] = useState('');
   const [newExternalAssigneeEdit, setNewExternalAssigneeEdit] = useState('');
+  const [notesPopoverOpen, setNotesPopoverOpen] = useState(false);
 
   // Helper function to normalize external_responsible to array
   const getExternalResponsible = (externalResp) => {
@@ -477,19 +478,11 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="">ללא אחראי</SelectItem>
-                                {users.
-                filter((user) => {
-                  // סינון: רק הלקוח הנוכחי והמנהל הכספים שלו
-                  if (!goal.customer_email) return true; // אם אין customer_email, הצג הכל
-                  return user.email === goal.customer_email ||
-                  user.email === goal.assigned_manager_email ||
-                  user.user_type === 'financial_manager';
-                }).
-                map((user) =>
-                <SelectItem key={user.email} value={user.email}>
-                                            {user.full_name}
-                                        </SelectItem>
-                )}
+                                {users.map((user) => (
+                                  <SelectItem key={user.email} value={user.email}>
+                                    {user.full_name}
+                                  </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -684,314 +677,210 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
   }
 
   return (
-    <div className={`flex flex-wrap sm:flex-nowrap items-center gap-3 p-3 rounded-lg transition-all min-w-0 ${isDragging ? 'opacity-50' : ''} ${
-      isParent 
-        ? 'bg-horizon-card/60 border border-horizon-primary/40 font-semibold hover:border-horizon-primary/60' 
+    <div className={`flex flex-nowrap items-center gap-2 p-2 rounded-lg transition-all min-w-0 ${isDragging ? 'opacity-50' : ''} ${
+      isParent
+        ? 'bg-horizon-card/60 border border-horizon-primary/40 font-semibold hover:border-horizon-primary/60'
         : 'bg-horizon-card/20 border border-horizon/50 ps-6 hover:border-horizon-primary/30'
     }`}>
-            <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-center">
-                <div className="sm:col-span-2 flex items-center gap-2 min-w-0">
-                    {isParent ? (
-                      <Target className="w-4 h-4 text-horizon-primary shrink-0" />
-                    ) : (
-                      <ListChecks className="w-3 h-3 text-horizon-accent shrink-0" />
-                    )}
-                    <div className={`w-3 h-3 rounded-full ${getStatusColor(goal.status)} shrink-0`}></div>
-                    <InlineEditableField
-            value={goal.name}
-            displayValue={<span className="text-horizon-text truncate block">{goal.name}</span>}
-            onSave={(newValue) => handleQuickSave('name', newValue)}
-            placeholder="הזן שם..."
-            className="flex-1 min-w-0" />
+      {/* 8. שם היעד + אייקון + נקודה */}
+      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+        {isParent ? (
+          <Target className="w-4 h-4 text-horizon-primary shrink-0" />
+        ) : (
+          <ListChecks className="w-3 h-3 text-horizon-accent shrink-0" />
+        )}
+        <div className={`w-3 h-3 rounded-full ${getStatusColor(goal.status)} shrink-0`} />
+        <InlineEditableField
+          value={goal.name}
+          displayValue={<span className="text-horizon-text truncate block" title={goal.name}>{goal.name}</span>}
+          onSave={(newValue) => handleQuickSave('name', newValue)}
+          placeholder="הזן שם..."
+          className="flex-1 min-w-0"
+        />
+      </div>
 
-                </div>
-
-                <div className="flex items-center gap-2 text-sm text-horizon-accent">
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <button className="focus:outline-none">
-                                <Badge className={`${getStatusColor(goal.status)} text-white cursor-pointer hover:opacity-80 transition-opacity`}>
-                                    {getStatusLabel(goal.status)}
-                                </Badge>
-                            </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-48 p-2 bg-horizon-dark border-horizon" dir="rtl">
-                            <div className="space-y-1">
-                                {statusOptions.map((option) =>
+      {/* 7. סטטוס */}
+      <div className="flex items-center shrink-0">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="focus:outline-none">
+              <Badge className={`${getStatusColor(goal.status)} text-white cursor-pointer hover:opacity-80 transition-opacity text-xs`}>
+                {getStatusLabel(goal.status)}
+              </Badge>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-48 p-2 bg-horizon-dark border-horizon" dir="rtl">
+            <div className="space-y-1">
+              {statusOptions.map((option) => (
                 <button
                   key={option.value}
                   onClick={() => handleQuickStatusChange(option.value)}
                   className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-right transition-colors ${
-                  goal.status === option.value ?
-                  'bg-horizon-primary/20 text-horizon-primary' :
-                  'text-horizon-text hover:bg-horizon-card'}`
-                  }>
+                    goal.status === option.value ? 'bg-horizon-primary/20 text-horizon-primary' : 'text-horizon-text hover:bg-horizon-card'
+                  }`}
+                >
+                  <div className={`w-3 h-3 rounded-full ${option.color}`} />
+                  <span className="text-sm">{option.label}</span>
+                  {goal.status === option.value && <Check className="w-4 h-4 mr-auto" />}
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
 
-                                        <div className={`w-3 h-3 rounded-full ${option.color}`}></div>
-                                        <span className="text-sm">{option.label}</span>
-                                        {goal.status === option.value &&
-                  <Check className="w-4 h-4 mr-auto" />
-                  }
-                                    </button>
-                )}
-                            </div>
-                        </PopoverContent>
-                    </Popover>
-                </div>
-
-                <div className="flex items-center gap-2 text-sm text-horizon-text min-w-0">
-                    <div className="flex items-center gap-1 flex-wrap min-w-0">
-                        {/* Show system users from assigned_users */}
-                        {(goal.assigned_users || []).slice(0, 2).map((email) => {
-              const user = users.find((u) => u.email === email);
-              return (
-                <Badge key={email} className="bg-blue-500/20 text-blue-700 dark:text-blue-300 text-xs border-blue-500/30">
-                                    {user?.full_name || email.split('@')[0]}
-                                </Badge>);
-
-            })}
-                        {(goal.assigned_users || []).length > 2 &&
-            <Badge className="bg-blue-500/20 text-blue-700 dark:text-blue-300 text-xs border-blue-500/30">
-                                +{(goal.assigned_users || []).length - 2}
-                            </Badge>
-            }
-                        
-                        {/* Show external assignees from external_responsible array */}
-                        {getExternalResponsible(goal.external_responsible).map((name, idx) =>
-            <Badge key={`ext-${idx}`} className="bg-purple-500/20 text-purple-700 dark:text-purple-300 text-xs border-purple-500/30">
-                                {name}
-                            </Badge>
-            )}
-                        
-                        {/* Show single assignee_email if no arrays */}
-                        {!(goal.assigned_users || []).length && !getExternalResponsible(goal.external_responsible).length && goal.assignee_email &&
+      {/* 6. אחראים + הוספת אחראי */}
+      <div className="flex items-center gap-1 text-sm text-horizon-text min-w-0 shrink-0">
+        <div className="flex items-center gap-1 flex-wrap min-w-0">
+          {(goal.assigned_users || []).slice(0, 2).map((email) => {
+            const user = users.find((u) => u.email === email);
+            return (
+              <Badge key={email} className="bg-blue-500/20 text-blue-700 dark:text-blue-300 text-xs border-blue-500/30">
+                {user?.full_name || email.split('@')[0]}
+              </Badge>
+            );
+          })}
+          {(goal.assigned_users || []).length > 2 && (
+            <Badge className="bg-blue-500/20 text-blue-700 dark:text-blue-300 text-xs border-blue-500/30">+{(goal.assigned_users || []).length - 2}</Badge>
+          )}
+          {getExternalResponsible(goal.external_responsible).map((name, idx) => (
+            <Badge key={`ext-${idx}`} className="bg-purple-500/20 text-purple-700 dark:text-purple-300 text-xs border-purple-500/30">{name}</Badge>
+          ))}
+          {!(goal.assigned_users || []).length && !getExternalResponsible(goal.external_responsible).length && goal.assignee_email && (
             <Badge className="bg-gray-500/20 text-gray-700 dark:text-gray-300 text-xs border-gray-500/30">
-                                {users.find((u) => u.email === goal.assignee_email)?.full_name || goal.assignee_email.split('@')[0]}
-                            </Badge>
-            }
-                        
-                        {/* Show placeholder if no assignees */}
-                        {!(goal.assigned_users || []).length && !getExternalResponsible(goal.external_responsible).length && !goal.assignee_email &&
+              {users.find((u) => u.email === goal.assignee_email)?.full_name || goal.assignee_email.split('@')[0]}
+            </Badge>
+          )}
+          {!(goal.assigned_users || []).length && !getExternalResponsible(goal.external_responsible).length && !goal.assignee_email && (
             <span className="text-gray-400 text-xs">ללא אחראי</span>
-            }
-                    </div>
-                    
-                    {/* Popover to add/remove assignees */}
-                    <Popover>
-                        <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <button className="hover:bg-horizon-primary/10 rounded p-1">
-                                <UserPlus className="w-3 h-3 text-horizon-primary" />
-                            </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80 bg-horizon-dark border-horizon p-3" dir="rtl" onClick={(e) => e.stopPropagation()}>
-                            <div className="space-y-3">
-                                {/* Section: System Users */}
-                                <div>
-                                    <p className="text-xs font-semibold text-horizon-text mb-2">משתמשי מערכת:</p>
-                                    {/* אחראי אוטומטי (assignee_email) – מוצג כאשר אין assigned_users או כאשר לא ברשימה */}
-                                    {goal.assignee_email && !(goal.assigned_users || []).includes(goal.assignee_email) && (
-                                      <div className="space-y-1 mb-2">
-                                        <div className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
-                                          <span className="text-xs text-horizon-text">
-                                            {users.find((u) => u.email === goal.assignee_email)?.full_name || goal.assignee_email.split('@')[0]}
-                                          </span>
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => handleRemoveAssigneeEmail()}
-                                            className="h-5 w-5 p-0 !text-red-400 !bg-red-500/10 border border-red-500/30 hover:!bg-red-500/20 rounded"
-                                            disabled={isUpdatingAssignees}
-                                          >
-                                            <X className="w-3 h-3" />
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    )}
-                                    {(goal.assigned_users || []).length > 0 && (
+          )}
+        </div>
+        <Popover>
+          <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <button className="hover:bg-horizon-primary/10 rounded p-1">
+              <UserPlus className="w-3 h-3 text-horizon-primary" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 bg-horizon-dark border-horizon p-3" dir="rtl" onClick={(e) => e.stopPropagation()}>
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-horizon-text mb-2">משתמשי מערכת:</p>
+                {goal.assignee_email && !(goal.assigned_users || []).includes(goal.assignee_email) && (
                   <div className="space-y-1 mb-2">
-                                            {goal.assigned_users.map((email) => {
+                    <div className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
+                      <span className="text-xs text-horizon-text">{users.find((u) => u.email === goal.assignee_email)?.full_name || goal.assignee_email.split('@')[0]}</span>
+                      <Button size="sm" variant="ghost" onClick={() => handleRemoveAssigneeEmail()} title="הסר אחראי" aria-label="הסר אחראי" className="h-5 w-5 p-0 !text-red-400 !bg-red-500/10 border border-red-500/30 hover:!bg-red-500/20 rounded shrink-0" disabled={isUpdatingAssignees}><X className="w-3 h-3" /></Button>
+                    </div>
+                  </div>
+                )}
+                {(goal.assigned_users || []).length > 0 && (
+                  <div className="space-y-1 mb-2">
+                    {goal.assigned_users.map((email) => {
                       const user = users.find((u) => u.email === email);
                       return (
                         <div key={email} className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
-                                                        <span className="text-xs text-horizon-text">{user?.full_name || email}</span>
-                                                        <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleRemoveAssignee(email)}
-                            className="h-5 w-5 p-0 !text-red-400 !bg-red-500/10 border border-red-500/30 hover:!bg-red-500/20 rounded"
-                            disabled={isUpdatingAssignees}>
-
-                                                            <X className="w-3 h-3" />
-                                                        </Button>
-                                                    </div>);
-
+                          <span className="text-xs text-horizon-text">{user?.full_name || email}</span>
+                          <Button size="sm" variant="ghost" onClick={() => handleRemoveAssignee(email)} title="הסר אחראי" aria-label="הסר אחראי" className="h-5 w-5 p-0 !text-red-400 !bg-red-500/10 border border-red-500/30 hover:!bg-red-500/20 rounded shrink-0" disabled={isUpdatingAssignees}><X className="w-3 h-3" /></Button>
+                        </div>
+                      );
                     })}
-                                        </div>
-                  )}
-                                    <Select onValueChange={handleAddAssignee} disabled={isUpdatingAssignees}>
-                                        <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text h-8 text-xs">
-                                            <SelectValue placeholder="הוסף משתמש מערכת..." />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-horizon-dark border-horizon">
-                                            {users.
-                      filter((u) => {
-                        if ((goal.assigned_users || []).includes(u.email)) return false;
-                        if (goal.assignee_email && u.email === goal.assignee_email) return false;
-                        if (!goal.customer_email) return true;
-                        return u.email === goal.customer_email ||
-                          u.email === goal.assigned_manager_email ||
-                          u.user_type === 'financial_manager';
-                      }).
-                      map((user) =>
-                      <SelectItem key={user.email} value={user.email} className="text-xs">
-                                                        {user.full_name}
-                                                    </SelectItem>
-                      )}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                
-                                {/* Section: External Assignees */}
-                                <div className="border-t border-horizon pt-3">
-                                    <p className="text-xs font-semibold text-horizon-text mb-2">אחראים חיצוניים:</p>
-                                    {getExternalResponsible(goal.external_responsible).length > 0 &&
+                  </div>
+                )}
+                <Select onValueChange={handleAddAssignee} disabled={isUpdatingAssignees}>
+                  <SelectTrigger className="bg-horizon-card border-horizon text-horizon-text h-8 text-xs"><SelectValue placeholder="הוסף משתמש מערכת..." /></SelectTrigger>
+                  <SelectContent className="bg-horizon-dark border-horizon">
+                    {users.filter((u) => !(goal.assigned_users || []).includes(u.email) && !(goal.assignee_email && u.email === goal.assignee_email)).map((user) => (
+                      <SelectItem key={user.email} value={user.email} className="text-xs">{user.full_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="border-t border-horizon pt-3">
+                <p className="text-xs font-semibold text-horizon-text mb-2">אחראים חיצוניים:</p>
+                {getExternalResponsible(goal.external_responsible).length > 0 && (
                   <div className="space-y-1 mb-2">
-                                            {getExternalResponsible(goal.external_responsible).map((name, idx) =>
-                    <div key={idx} className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
-                                                    <span className="text-xs text-horizon-text">{name}</span>
-                                                    <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleRemoveExternalAssignee(idx)}
-                        className="h-5 w-5 p-0 !text-red-400 !bg-red-500/10 border border-red-500/30 hover:!bg-red-500/20 rounded"
-                        disabled={isUpdatingAssignees}>
-
-                                                        <X className="w-3 h-3" />
-                                                    </Button>
-                                                </div>
-                    )}
-                                        </div>
-                  }
-                                    <div className="flex gap-2">
-                                        <Input
-                      placeholder="הזן שם (רו״ח, יועץ וכו')"
-                      value={newExternalAssignee}
-                      onChange={(e) => setNewExternalAssignee(e.target.value)}
-                      className="bg-horizon-card border-horizon text-horizon-text h-8 text-xs"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddExternalAssignee();
-                        }
-                      }} />
-
-                                        <Button
-                      size="sm"
-                      onClick={handleAddExternalAssignee}
-                      disabled={!newExternalAssignee.trim() || isUpdatingAssignees}
-                      className="h-8 text-xs btn-horizon-primary">
-
-                                            הוסף
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        </PopoverContent>
-                    </Popover>
+                    {getExternalResponsible(goal.external_responsible).map((name, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-horizon-card/50 rounded px-2 py-1">
+                        <span className="text-xs text-horizon-text">{name}</span>
+                        <Button size="sm" variant="ghost" onClick={() => handleRemoveExternalAssignee(idx)} title="הסר אחראי" aria-label="הסר אחראי" className="h-5 w-5 p-0 !text-red-400 !bg-red-500/10 border border-red-500/30 hover:!bg-red-500/20 rounded shrink-0" disabled={isUpdatingAssignees}><X className="w-3 h-3" /></Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Input placeholder="הזן שם (רו״ח, יועץ וכו')" value={newExternalAssignee} onChange={(e) => setNewExternalAssignee(e.target.value)} className="bg-horizon-card border-horizon text-horizon-text h-8 text-xs" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddExternalAssignee(); } }} />
+                  <Button size="sm" onClick={handleAddExternalAssignee} disabled={!newExternalAssignee.trim() || isUpdatingAssignees} className="h-8 text-xs btn-horizon-primary">הוסף</Button>
                 </div>
-
-                <div className="flex items-center gap-2 text-sm text-horizon-accent min-w-0 shrink-0">
-                    <InlineEditableField
-            value={goal.end_date}
-            displayValue={
-            goal.end_date ?
-            <div className="flex items-center gap-1">
-                                    <CalendarIcon className="w-3 h-3 shrink-0" />
-                                    <span>{formatDateDisplay(goal.end_date)}</span>
-                                    {goal.due_time && <span className="mr-1 text-horizon-accent">{goal.due_time}</span>}
-                                </div> :
-
-            <span className="text-gray-400">ללא תאריך</span>
-
-            }
-            onSave={(newValue) => handleQuickSave('end_date', newValue)}
-            type="date" />
-
-                </div>
+              </div>
             </div>
+          </PopoverContent>
+        </Popover>
+      </div>
 
-            <div className="flex items-center gap-1 shrink-0">
-                {isParent &&
-        <div className="min-w-0 max-w-[140px] sm:max-w-none">
-        <GoalDependencySelector
-          goal={goal}
-          allGoals={allGoals}
-          refreshData={refreshData} />
+      {/* 5. תאריך יעד */}
+      <div className="flex items-center gap-1 text-sm text-horizon-accent shrink-0">
+        <InlineEditableField
+          value={goal.end_date}
+          displayValue={
+            goal.end_date ? (
+              <div className="flex items-center gap-1">
+                <CalendarIcon className="w-3 h-3 shrink-0" />
+                <span>{formatDateDisplay(goal.end_date)}</span>
+                {goal.due_time && <span className="mr-1 text-horizon-accent">{goal.due_time}</span>}
+              </div>
+            ) : (
+              <span className="text-gray-400">ללא תאריך</span>
+            )
+          }
+          onSave={(newValue) => handleQuickSave('end_date', newValue)}
+          type="date"
+        />
+      </div>
+
+      {/* 4. תלות/שיוך */}
+      {isParent && (
+        <div className="min-w-0 max-w-[120px] sm:max-w-[140px] shrink-0">
+          <GoalDependencySelector goal={goal} allGoals={allGoals} refreshData={refreshData} />
         </div>
+      )}
 
-        }
-                {goal.notes &&
-        <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-              variant="ghost"
-              size="sm"
-              className="text-horizon-accent hover:text-horizon-text"
-              title={goal.notes}>
-
-                                <MessageSquare className="w-4 h-4" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80 bg-horizon-dark border-horizon" dir="rtl">
-                            <div className="space-y-2">
-                                <p className="text-xs font-semibold text-horizon-text">הערות:</p>
-                                <InlineEditableField
-                value={goal.notes}
-                displayValue={<p className="text-sm text-horizon-accent">{goal.notes}</p>}
-                onSave={(newValue) => handleQuickSave('notes', newValue)}
-                multiline={true}
-                placeholder="הוסף הערות..." />
-
-                            </div>
-                        </PopoverContent>
-                    </Popover>
-        }
-                <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowComments(true)}
-          className="text-horizon-accent hover:text-horizon-text"
-          title="דיונים">
-
-                    <MessageSquare className="w-4 h-4" />
-                </Button>
-                <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsEditing(true)}
-          className="text-horizon-primary hover:text-horizon-primary hover:bg-horizon-primary/20"
-          title="עריכה מלאה">
-
-                    <Edit className="w-4 h-4" />
-                </Button>
-                <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleDelete}
-          className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
-          title="מחק">
-
-                    <Trash2 className="w-4 h-4" />
-                </Button>
+      {/* 3. הערות ותגובות (מקום אחד) */}
+      <Popover open={notesPopoverOpen} onOpenChange={setNotesPopoverOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="sm" className="text-horizon-accent hover:text-horizon-text shrink-0" title="הערות ותגובות">
+            <MessageSquare className="w-4 h-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 bg-horizon-dark border-horizon" dir="rtl">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-horizon-text">הערות:</p>
+            <InlineEditableField
+              value={goal.notes}
+              displayValue={<p className="text-sm text-horizon-accent">{goal.notes || '—'}</p>}
+              onSave={(newValue) => handleQuickSave('notes', newValue)}
+              multiline={true}
+              placeholder="הוסף הערות..."
+            />
+            <div className="border-t border-horizon pt-2">
+              <Button variant="outline" size="sm" className="w-full border-horizon text-horizon-primary hover:bg-horizon-primary/10" onClick={() => { setNotesPopoverOpen(false); setShowComments(true); }}>
+                <MessageSquare className="w-4 h-4 ml-2" />
+                פתח דיונים ותגובות
+              </Button>
             </div>
+          </div>
+        </PopoverContent>
+      </Popover>
 
-            {showComments &&
-      <GoalCommentsModal
-        goal={goal}
-        isOpen={showComments}
-        onClose={() => setShowComments(false)} />
+      {/* עריכה, מחק */}
+      <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="text-horizon-primary hover:bg-horizon-primary/20 shrink-0" title="עריכה מלאה">
+        <Edit className="w-4 h-4" />
+      </Button>
+      <Button variant="ghost" size="sm" onClick={handleDelete} className="text-red-400 hover:text-red-300 hover:bg-red-500/20 shrink-0" title="מחק">
+        <Trash2 className="w-4 h-4" />
+      </Button>
 
-      }
-        </div>);
+      {showComments && <GoalCommentsModal goal={goal} isOpen={showComments} onClose={() => setShowComments(false)} />}
+    </div>
+  );
 
 }

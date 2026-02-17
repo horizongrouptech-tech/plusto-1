@@ -812,30 +812,18 @@ function CreateTaskModal_OLD({ isOpen, onClose, customer, currentUser, allGoals,
   const [status, setStatus] = useState('open');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // שימוש ב-Context במקום query מקומי
-  const { allUsers = [] } = useUsers();
-
-  // סינון משתמשים לפי הלוגיקה: משתמשים רגילים + מנהלי כספים המשויכים ללקוח
+  // רשימת אחראים = כל מי שיש לו גישה לתיק (כמו בגאנט)
+  const { allUsers = [], financialManagers = [], isAdmin } = useUsers();
   const relevantUsers = useMemo(() => {
-    if (!customer || !allUsers || allUsers.length === 0) return [];
-
-    const assignedPrimary = customer.assigned_financial_manager_email;
-    const assignedAdditional = customer.additional_assigned_financial_manager_emails || [];
-
-    // אם אין מנהלי כספים משויכים - להציג רק משתמשים רגילים
-    if (!assignedPrimary && assignedAdditional.length === 0) {
-      return allUsers.filter((u) => u.user_type !== 'financial_manager');
-    }
-
-    // משתמשים רגילים + מנהלי כספים משויכים בלבד
-    return allUsers.filter((u) => {
-      // אם זה לא מנהל כספים - להציג
-      if (u.user_type !== 'financial_manager') return true;
-
-      // אם זה מנהל כספים - להציג רק אם הוא משויך ללקוח
-      return u.email === assignedPrimary || assignedAdditional.includes(u.email);
-    });
-  }, [allUsers, customer]);
+    if (!customer) return [];
+    const seen = new Set();
+    const out = [];
+    const add = (u) => { if (u?.email && !seen.has(u.email)) { seen.add(u.email); out.push(u); } };
+    add({ email: customer.email, full_name: customer.business_name || customer.full_name });
+    if (isAdmin) allUsers.forEach(add);
+    else financialManagers.forEach(add);
+    return out;
+  }, [customer, isAdmin, allUsers, financialManagers]);
 
   useEffect(() => {
     if (!assigneeEmail && (customer || currentUser)) {
@@ -1183,10 +1171,8 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
   const [taggedUsers, setTaggedUsers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // שימוש ב-Context במקום query מקומי
-  const { allUsers = [] } = useUsers();
+  const { allUsers = [], financialManagers = [], isAdmin } = useUsers();
 
-  // קבלת נתוני הלקוח לצורך סינון
   const { data: customerData } = useQuery({
     queryKey: ['customerForEdit', task?.customer_email],
     queryFn: async () => {
@@ -1197,25 +1183,16 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
     enabled: isOpen && !!task?.customer_email
   });
 
-  // סינון משתמשים
+  // רשימת אחראים = כל מי שיש לו גישה לתיק
   const relevantUsers = useMemo(() => {
-    if (!allUsers || allUsers.length === 0) return [];
-
-    // אם אין נתוני לקוח עדיין, להציג את כל המשתמשים
-    if (!customerData) return allUsers;
-
-    const assignedPrimary = customerData.assigned_financial_manager_email;
-    const assignedAdditional = customerData.additional_assigned_financial_manager_emails || [];
-
-    if (!assignedPrimary && assignedAdditional.length === 0) {
-      return allUsers.filter((u) => u.user_type !== 'financial_manager');
-    }
-
-    return allUsers.filter((u) => {
-      if (u.user_type !== 'financial_manager') return true;
-      return u.email === assignedPrimary || assignedAdditional.includes(u.email);
-    });
-  }, [allUsers, customerData]);
+    const seen = new Set();
+    const out = [];
+    const add = (u) => { if (u?.email && !seen.has(u.email)) { seen.add(u.email); out.push(u); } };
+    if (customerData) add({ email: customerData.email, full_name: customerData.business_name || customerData.full_name });
+    if (isAdmin) allUsers.forEach(add);
+    else financialManagers.forEach(add);
+    return out;
+  }, [customerData, isAdmin, allUsers, financialManagers]);
 
   useEffect(() => {
     if (task) {
@@ -1553,25 +1530,17 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
   const [taggedUsers, setTaggedUsers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // שימוש ב-Context במקום query מקומי
-  const { allUsers = [] } = useUsers();
-
-  // סינון משתמשים
+  const { allUsers = [], financialManagers = [], isAdmin } = useUsers();
   const relevantUsers = useMemo(() => {
-    if (!customer || !allUsers || allUsers.length === 0) return [];
-
-    const assignedPrimary = customer.assigned_financial_manager_email;
-    const assignedAdditional = customer.additional_assigned_financial_manager_emails || [];
-
-    if (!assignedPrimary && assignedAdditional.length === 0) {
-      return allUsers.filter((u) => u.user_type !== 'financial_manager');
-    }
-
-    return allUsers.filter((u) => {
-      if (u.user_type !== 'financial_manager') return true;
-      return u.email === assignedPrimary || assignedAdditional.includes(u.email);
-    });
-  }, [allUsers, customer]);
+    if (!customer) return [];
+    const seen = new Set();
+    const out = [];
+    const add = (u) => { if (u?.email && !seen.has(u.email)) { seen.add(u.email); out.push(u); } };
+    add({ email: customer.email, full_name: customer.business_name || customer.full_name });
+    if (isAdmin) allUsers.forEach(add);
+    else financialManagers.forEach(add);
+    return out;
+  }, [customer, isAdmin, allUsers, financialManagers]);
 
   useEffect(() => {
     if (!assigneeEmail && (customer || currentUser)) {

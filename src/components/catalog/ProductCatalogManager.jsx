@@ -616,8 +616,10 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
   }, [selectedCatalogId, customer?.email, checkForActiveProcesses, checkForActiveCatalogGeneration]);
 
   useEffect(() => {
-    filterProducts();
-  }, [filterProducts]);
+    if (!searchTermDebounced.trim()) {
+      filterProducts();
+    }
+  }, [filterProducts, searchTermDebounced]);
 
   useEffect(() => {
     return () => {
@@ -1265,7 +1267,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                          {searchTerm && (
                            <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
                              <Badge variant="secondary" className="text-xs">
-                               {filteredProducts.length} תוצאות
+                               {searchTermDebounced.trim() ? `${filteredProducts.length} תוצאות בעמוד זה` : `${filteredProducts.length} תוצאות`}
                              </Badge>
                            </div>
                          )}

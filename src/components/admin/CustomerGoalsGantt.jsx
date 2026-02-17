@@ -43,26 +43,6 @@ export default function CustomerGoalsGantt({ customer }) {
         queryClient.invalidateQueries(['customerGoals', customer?.email]);
     }, [queryClient, customer?.email]);
 
-    // טעינת פרטי מנהל הכספים המשויך ללקוח (אם קיים)
-    const { data: financialManager } = useQuery({
-        queryKey: ['financialManager', customer?.assigned_financial_manager_email],
-        queryFn: async () => {
-            if (!customer?.assigned_financial_manager_email) return null;
-            try {
-                const manager = await base44.entities.User.filter({
-                    email: customer.assigned_financial_manager_email,
-                    user_type: 'financial_manager'
-                });
-                return manager.length > 0 ? manager[0] : null;
-            } catch (error) {
-                console.error("Error fetching financial manager:", error);
-                return null;
-            }
-        },
-        enabled: !!customer?.assigned_financial_manager_email,
-        staleTime: 10 * 60 * 1000 // 10 דקות
-    });
-
     const { topLevelGoals, subtasksByGoal } = useMemo(() => {
         const calculateParentGoalStatus = (subtasks) => {
             if (!subtasks || subtasks.length === 0) {
@@ -166,39 +146,33 @@ export default function CustomerGoalsGantt({ customer }) {
         }
     };
 
-    // ✅ טעינת כל המשתמשים (עובדים, שותפים וכו') דרך UsersContext
-    const { allUsers = [] } = useUsers();
-    
+    // רשימת אחראים = כל מי שיש לו גישה לתיק (מנהלי כספים + אדמינים + לקוח)
+    const { allUsers = [], financialManagers = [], isAdmin } = useUsers();
+
     const assignableUsers = useMemo(() => {
         if (!currentUser || !customer) return [];
-        
-        const users = [
-            { email: currentUser.email, full_name: `${currentUser.full_name} (אני)` },
-            { email: customer.email, full_name: customer.business_name || customer.full_name }
-        ];
-        
-        // הוספת מנהל הכספים המשויך ללקוח (אם קיים)
-        if (financialManager) {
-            users.push({
-                email: financialManager.email,
-                full_name: financialManager.full_name
-            });
-        }
-        
-        // ✅ הוספת כל המשתמשים מהמערכת (עובדים, שותפים וכו')
-        // סינון משתמשים שכבר קיימים ברשימה
-        const existingEmails = new Set(users.map(u => u.email));
-        allUsers.forEach(user => {
-            if (!existingEmails.has(user.email) && user.email && user.full_name) {
-                users.push({
-                    email: user.email,
-                    full_name: user.full_name
-                });
+
+        const existing = new Set();
+        const users = [];
+
+        const add = (email, full_name) => {
+            if (email && full_name && !existing.has(email)) {
+                existing.add(email);
+                users.push({ email, full_name });
             }
-        });
-        
+        };
+
+        add(currentUser.email, `${currentUser.full_name} (אני)`);
+        add(customer.email, customer.business_name || customer.full_name);
+
+        if (isAdmin) {
+            allUsers.forEach((u) => add(u.email, u.full_name));
+        } else {
+            financialManagers.forEach((u) => add(u.email, u.full_name));
+        }
+
         return users;
-    }, [currentUser, customer, financialManager, allUsers]);
+    }, [currentUser, customer, isAdmin, allUsers, financialManagers]);
 
     const summaryStats = useMemo(() => {
         const allSubtasks = Object.values(subtasksByGoal).flat();

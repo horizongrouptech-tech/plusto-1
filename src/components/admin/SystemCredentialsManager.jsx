@@ -36,8 +36,20 @@ export default function SystemCredentialsManager({ customer }) {
     enabled: !!customer?.email
   });
 
-  // סינון רק מערכות
-  const systemContacts = contacts.filter(c => c.record_type === 'system');
+  // סינון רק מערכות -- זיהוי לפי login_credentials (שדה שקיים בסכמה)
+  const systemContacts = contacts.filter(c => c.login_credentials?.length > 0);
+
+  // פונקציית עזר: חילוץ פרטי מערכת מרשומת ServiceContact
+  const getCredentials = (system) => {
+    const cred = system.login_credentials?.[0] || {};
+    return {
+      name: system.contact_name || cred.system_name || '',
+      url: cred.url || '',
+      username: cred.username || '',
+      password: cred.password || '',
+      notes: system.notes || cred.notes || '',
+    };
+  };
 
   const handleNew = () => {
     setEditingSystem(null);
@@ -53,12 +65,13 @@ export default function SystemCredentialsManager({ customer }) {
 
   const handleEdit = (system) => {
     setEditingSystem(system);
+    const cred = getCredentials(system);
     setFormData({
-      system_name: system.system_name || system.contact_name || '',
-      system_url: system.system_url || '',
-      username: system.username || '',
-      password: system.password || '',
-      system_notes: system.system_notes || system.notes || '',
+      system_name: cred.name,
+      system_url: cred.url,
+      username: cred.username,
+      password: cred.password,
+      system_notes: cred.notes,
     });
     setShowModal(true);
   };
@@ -73,15 +86,17 @@ export default function SystemCredentialsManager({ customer }) {
     try {
       const data = {
         customer_email: customer.email,
-        record_type: 'system',
         contact_name: formData.system_name,
         contact_type: 'אחר',
-        system_name: formData.system_name,
-        system_url: formData.system_url,
-        username: formData.username,
-        password: formData.password,
-        system_notes: formData.system_notes,
-        is_active: true
+        notes: formData.system_notes,
+        is_active: true,
+        login_credentials: [{
+          system_name: formData.system_name,
+          url: formData.system_url,
+          username: formData.username,
+          password: formData.password,
+          notes: formData.system_notes
+        }]
       };
 
       if (editingSystem) {
@@ -164,13 +179,15 @@ export default function SystemCredentialsManager({ customer }) {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {systemContacts.map(system => (
+              {systemContacts.map(system => {
+                const cred = getCredentials(system);
+                return (
                 <Card key={system.id} className="bg-horizon-card border-horizon hover:border-purple-500/50 transition-all border-r-4 border-r-purple-500">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <Lock className="w-5 h-5 text-purple-400" />
-                        <h3 className="font-bold text-horizon-text">{system.system_name || system.contact_name}</h3>
+                        <h3 className="font-bold text-horizon-text">{cred.name}</h3>
                       </div>
                       <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-xs">
                         מערכת
@@ -178,27 +195,27 @@ export default function SystemCredentialsManager({ customer }) {
                     </div>
 
                     <div className="space-y-2 mb-3">
-                      {system.system_url && (
+                      {cred.url && (
                         <div className="flex items-center gap-2 text-sm">
                           <Globe className="w-4 h-4 text-horizon-accent" />
                           <a 
-                            href={system.system_url.startsWith('http') ? system.system_url : `https://${system.system_url}`} 
+                            href={cred.url.startsWith('http') ? cred.url : `https://${cred.url}`} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="text-horizon-primary hover:underline truncate flex-1"
                           >
-                            {system.system_url}
+                            {cred.url}
                           </a>
                         </div>
                       )}
-                      {system.username && (
+                      {cred.username && (
                         <div className="flex items-center gap-2 text-sm text-horizon-text">
                           <User className="w-4 h-4 text-horizon-accent" />
-                          <span className="flex-1 truncate">{system.username}</span>
+                          <span className="flex-1 truncate">{cred.username}</span>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleCopyToClipboard(system.username, `user-${system.id}`)}
+                            onClick={() => handleCopyToClipboard(cred.username, `user-${system.id}`)}
                             className="h-6 w-6"
                           >
                             {copiedField === `user-${system.id}` ? (
@@ -209,11 +226,11 @@ export default function SystemCredentialsManager({ customer }) {
                           </Button>
                         </div>
                       )}
-                      {system.password && (
+                      {cred.password && (
                         <div className="flex items-center gap-2 text-sm text-horizon-text">
                           <Lock className="w-4 h-4 text-horizon-accent" />
                           <span className="flex-1 font-mono">
-                            {showPasswords[system.id] ? system.password : '••••••••'}
+                            {showPasswords[system.id] ? cred.password : '••••••••'}
                           </span>
                           <Button
                             variant="ghost"
@@ -230,7 +247,7 @@ export default function SystemCredentialsManager({ customer }) {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleCopyToClipboard(system.password, `pass-${system.id}`)}
+                            onClick={() => handleCopyToClipboard(cred.password, `pass-${system.id}`)}
                             className="h-6 w-6"
                           >
                             {copiedField === `pass-${system.id}` ? (
@@ -243,9 +260,9 @@ export default function SystemCredentialsManager({ customer }) {
                       )}
                     </div>
 
-                    {(system.system_notes || system.notes) && (
+                    {cred.notes && (
                       <p className="text-xs text-horizon-accent/70 mb-3 line-clamp-2">
-                        {system.system_notes || system.notes}
+                        {cred.notes}
                       </p>
                     )}
 
@@ -270,7 +287,8 @@ export default function SystemCredentialsManager({ customer }) {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

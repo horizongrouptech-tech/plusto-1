@@ -78,7 +78,7 @@ export const UsersProvider = ({ children }) => {
     retry: 1
   });
 
-  // טעינת מנהלי כספים (רק לאדמינים)
+  // טעינת מנהלי כספים (לכולם – לשימוש ברשימת אחראים/גישה לתיק)
   const { data: financialManagers = [] } = useQuery({
     queryKey: ['financialManagers'],
     queryFn: async () => {
@@ -93,7 +93,7 @@ export const UsersProvider = ({ children }) => {
         return [];
       }
     },
-    enabled: isAdmin,
+    enabled: !!currentUser,
     staleTime: 10 * 60 * 1000,
     retry: 1
   });
