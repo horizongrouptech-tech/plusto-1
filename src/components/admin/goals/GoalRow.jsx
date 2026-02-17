@@ -683,7 +683,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
         : 'bg-horizon-card/20 border border-horizon/50 ps-6 hover:border-horizon-primary/30'
     }`}>
       {/* 8. שם היעד + אייקון + נקודה */}
-      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+      <div className="flex items-center gap-1.5 min-w-0 flex-1 max-w-[280px]">
         {isParent ? (
           <Target className="w-4 h-4 text-horizon-primary shrink-0" />
         ) : (
@@ -692,7 +692,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
         <div className={`w-3 h-3 rounded-full ${getStatusColor(goal.status)} shrink-0`} />
         <InlineEditableField
           value={goal.name}
-          displayValue={<span className="text-horizon-text truncate block" title={goal.name}>{goal.name}</span>}
+          displayValue={<span className="text-horizon-text line-clamp-2 break-words block" title={goal.name}>{goal.name}</span>}
           onSave={(newValue) => handleQuickSave('name', newValue)}
           placeholder="הזן שם..."
           className="flex-1 min-w-0"
@@ -837,12 +837,12 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
         />
       </div>
 
-      {/* 4. תלות/שיוך */}
-      {isParent && (
-        <div className="min-w-0 max-w-[120px] sm:max-w-[140px] shrink-0">
+      {/* 4. תלות/שיוך - תמיד מקום כדי ליישר תאריך וסטטוס */}
+      <div className="w-[120px] sm:w-[140px] shrink-0 min-w-0">
+        {isParent ? (
           <GoalDependencySelector goal={goal} allGoals={allGoals} refreshData={refreshData} />
-        </div>
-      )}
+        ) : null}
+      </div>
 
       {/* 3. הערות ותגובות (מקום אחד) */}
       <Popover open={notesPopoverOpen} onOpenChange={setNotesPopoverOpen}>

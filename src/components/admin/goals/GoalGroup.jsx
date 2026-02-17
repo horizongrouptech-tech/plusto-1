@@ -120,7 +120,7 @@ export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals
                                 <div
                                     {...provided.droppableProps}
                                     ref={provided.innerRef}
-                                    className="pr-6 space-y-1.5"
+                                    className="pr-6 space-y-1.5 border-r border-horizon/40 bg-horizon-card/5 rounded-r-md pl-2"
                                 >
                                     {subtasks.map((subtask, index) => (
                                         <Draggable 
