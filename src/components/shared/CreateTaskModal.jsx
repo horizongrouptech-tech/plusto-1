@@ -309,7 +309,7 @@ export default function CreateTaskModal({ isOpen, onClose, customer, currentUser
               </SelectTrigger>
               <SelectContent className="bg-horizon-dark border-horizon">
                 <SelectItem value="no_goal">ללא שיוך ליעד</SelectItem>
-                {allGoals.map((goal) => (
+                {allGoals.filter(goal => goal.id && goal.id.trim() !== '').map((goal) => (
                   <SelectItem key={goal.id} value={goal.id}>
                     {goal.name}
                   </SelectItem>
@@ -325,7 +325,7 @@ export default function CreateTaskModal({ isOpen, onClose, customer, currentUser
                 <SelectValue placeholder="בחר אחראי" />
               </SelectTrigger>
               <SelectContent className="bg-horizon-dark border-horizon">
-                {relevantUsers.map((u) => (
+                {relevantUsers.filter(u => u.email && u.email.trim() !== '').map((u) => (
                   <SelectItem key={u.id} value={u.email}>
                     {u.full_name}
                   </SelectItem>
@@ -369,7 +369,7 @@ export default function CreateTaskModal({ isOpen, onClose, customer, currentUser
                 </SelectTrigger>
                 <SelectContent className="bg-horizon-dark border-horizon">
                   {relevantUsers
-                    .filter((u) => !taggedUsers.includes(u.email))
+                    .filter((u) => !taggedUsers.includes(u.email) && u.email && u.email.trim() !== '')
                     .map((u) => (
                       <SelectItem key={u.id} value={u.email}>
                         {u.full_name} ({u.email})
