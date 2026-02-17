@@ -315,7 +315,8 @@ export default function FloatingAgentChat({
               customer_in_focus: selectedCustomer?.email || currentUser.email,
               customer_name: selectedCustomer?.business_name || currentUser.business_name,
               page_context: pageContext || {},
-              assigned_customers_count: assignedCustomers.length
+              assigned_customers_count: assignedCustomers.length,
+              entity_instructions: "כשאתה יוצר יעד (goal) ב-CustomerGoal.create, חובה לשלוח task_type: 'goal'. כשאתה יוצר משימה (task) שמשויכת ליעד, שלח task_type: 'one_time' ו-parent_id של היעד. אל תיצור יעד בלי task_type: 'goal'."
             };
 
             activeConversation = await base44.agents.createConversation({
@@ -425,7 +426,8 @@ export default function FloatingAgentChat({
         current_page: currentPageName || 'unknown',
         customer_in_focus: selectedCustomer?.email || currentUser.email,
         customer_name: selectedCustomer?.business_name || currentUser.business_name,
-        page_context: pageContext || {}
+        page_context: pageContext || {},
+        entity_instructions: "כשאתה יוצר יעד (goal) ב-CustomerGoal.create, חובה לשלוח task_type: 'goal'. כשאתה יוצר משימה (task) שמשויכת ליעד, שלח task_type: 'one_time' ו-parent_id של היעד. אל תיצור יעד בלי task_type: 'goal'."
       };
 
       const newConversation = await base44.agents.createConversation({

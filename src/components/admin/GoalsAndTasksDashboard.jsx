@@ -276,9 +276,26 @@ export default function GoalsAndTasksDashboard({ customer }) {
         return;
       }
 
+      // שמירת parent_id לפני המחיקה - כדי להגן על סטטוס היעד-אב
+      const taskToDelete = allGoals.find(g => g.id === taskId);
+      const parentId = taskToDelete?.parent_id;
+
       try {
         // נסה מחיקה רגילה
         await base44.entities.CustomerGoal.delete(taskId);
+
+        // הגנה: אם למשימה שנמחקה יש יעד-אב, וודא שהוא מסומן task_type: 'goal'
+        if (parentId) {
+          try {
+            const parentGoal = allGoals.find(g => g.id === parentId);
+            if (parentGoal && parentGoal.task_type !== 'goal') {
+              await base44.entities.CustomerGoal.update(parentId, { task_type: 'goal' });
+            }
+          } catch (parentErr) {
+            console.error('Error ensuring parent goal type:', parentErr);
+          }
+        }
+
         await queryClient.invalidateQueries(['customerGoals', customer.email]);
         toast.success('המשימה נמחקה בהצלחה');
       } catch (error) {
@@ -286,9 +303,21 @@ export default function GoalsAndTasksDashboard({ customer }) {
         
         // אם נכשל בגלל RLS - נסה עם service role
         try {
-          const taskToDelete = allGoals.find(g => g.id === taskId);
           if (taskToDelete) {
             await base44.asServiceRole.entities.CustomerGoal.delete(taskId);
+
+            // הגנה: אם למשימה שנמחקה יש יעד-אב, וודא שהוא מסומן task_type: 'goal'
+            if (parentId) {
+              try {
+                const parentGoal = allGoals.find(g => g.id === parentId);
+                if (parentGoal && parentGoal.task_type !== 'goal') {
+                  await base44.entities.CustomerGoal.update(parentId, { task_type: 'goal' });
+                }
+              } catch (parentErr) {
+                console.error('Error ensuring parent goal type:', parentErr);
+              }
+            }
+
             await queryClient.invalidateQueries(['customerGoals', customer.email]);
             toast.success('המשימה נמחקה בהצלחה');
           }
@@ -1273,6 +1302,18 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
       const newlyTagged = taggedUsers.filter((email) => !oldTaggedUsers.includes(email));
 
       await base44.entities.CustomerGoal.update(id, dataToUpdate);
+
+      // הגנה: אם המשימה שויכה ליעד חדש, וודא שהיעד-אב מסומן task_type: 'goal'
+      if (dataToUpdate.parent_id) {
+        try {
+          const parentGoal = allGoals.find(g => g.id === dataToUpdate.parent_id);
+          if (parentGoal && parentGoal.task_type !== 'goal') {
+            await base44.entities.CustomerGoal.update(dataToUpdate.parent_id, { task_type: 'goal' });
+          }
+        } catch (parentErr) {
+          console.error('Error ensuring parent goal type:', parentErr);
+        }
+      }
 
       // עדכון מיידי ב-UI
       onSuccess();

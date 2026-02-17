@@ -1,7 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /**
- * פונקציה לתיקון סיווג יעדים - מעדכנת את כל הפריטים שאין להם parent_id להיות יעדים
+ * פונקציה לתיקון סיווג יעדים - לוגיקה חכמה:
+ * 1. פריטים עם תת-משימות שאינם מסומנים כ-goal -> מתקן ל-goal
+ * 2. לא נוגע במשימות עצמאיות (ללא parent_id וללא תת-משימות)
  */
 Deno.serve(async (req) => {
   try {
@@ -22,31 +24,55 @@ Deno.serve(async (req) => {
     
     console.log(`נמצאו ${allGoals.length} פריטים במערכת`);
 
-    // שלב 2: מזהה פריטים שצריכים להיות יעדים
+    // שלב 2: בניית מפת parent_id -> רשימת תת-משימות
+    const childrenByParent = new Map();
+    for (const item of allGoals) {
+      if (item.parent_id) {
+        if (!childrenByParent.has(item.parent_id)) {
+          childrenByParent.set(item.parent_id, []);
+        }
+        childrenByParent.get(item.parent_id).push(item);
+      }
+    }
+
+    // שלב 3: מזהה פריטים שצריכים להיות יעדים - רק אלה שיש להם תת-משימות
     const itemsToFix = allGoals.filter(item => {
-      // תנאי: אין parent_id (לא משימת-משנה) ו-task_type לא מוגדר כ-goal
-      const hasNoParent = !item.parent_id;
       const isNotGoal = item.task_type !== 'goal';
-      
-      return hasNoParent && isNotGoal;
+      const hasChildren = childrenByParent.has(item.id);
+      return isNotGoal && hasChildren;
     });
 
-    console.log(`נמצאו ${itemsToFix.length} פריטים שצריכים עדכון`);
+    console.log(`נמצאו ${itemsToFix.length} פריטים עם תת-משימות שצריכים עדכון ל-goal`);
+
+    // דוח על מצב כללי
+    const explicitGoals = allGoals.filter(item => item.task_type === 'goal');
+    const standaloneTasksNotGoal = allGoals.filter(item => 
+      !item.parent_id && item.task_type !== 'goal' && !childrenByParent.has(item.id)
+    );
+    const subtasks = allGoals.filter(item => !!item.parent_id);
+
+    console.log(`סטטיסטיקות: ${explicitGoals.length} יעדים מפורשים, ${standaloneTasksNotGoal.length} משימות עצמאיות, ${subtasks.length} תת-משימות`);
 
     if (itemsToFix.length === 0) {
       return Response.json({
         success: true,
         message: 'לא נמצאו פריטים שצריכים עדכון',
         totalChecked: allGoals.length,
-        itemsFixed: 0
+        itemsFixed: 0,
+        stats: {
+          explicitGoals: explicitGoals.length,
+          standaloneTasks: standaloneTasksNotGoal.length,
+          subtasks: subtasks.length
+        }
       });
     }
 
-    // שלב 3: מעדכן את הפריטים במנות כדי למנוע Rate Limit
-    const BATCH_SIZE = 5; // מעדכן 5 פריטים בכל מנה
-    const DELAY_BETWEEN_BATCHES = 2000; // המתנה של 2 שניות בין מנות
+    // שלב 4: מעדכן את הפריטים במנות כדי למנוע Rate Limit
+    const BATCH_SIZE = 5;
+    const DELAY_BETWEEN_BATCHES = 2000;
     
     let updatedCount = 0;
+    const results = [];
     
     for (let i = 0; i < itemsToFix.length; i += BATCH_SIZE) {
       const batch = itemsToFix.slice(i, i + BATCH_SIZE);
@@ -54,26 +80,23 @@ Deno.serve(async (req) => {
       
       const batchPromises = batch.map(async (item) => {
         try {
-          console.log(`מעדכן: ${item.name} (${item.id}) -> task_type: 'goal'`);
+          const childCount = childrenByParent.get(item.id)?.length || 0;
+          console.log(`מעדכן: ${item.name} (${item.id}) -> task_type: 'goal' (יש ${childCount} תת-משימות)`);
           
-          // מביא את הנתונים העדכניים של הפריט
-          const currentItem = await base44.asServiceRole.entities.CustomerGoal.get(item.id);
-          
-          // מעדכן רק את task_type, שומר על כל השאר
           await base44.asServiceRole.entities.CustomerGoal.update(item.id, {
-            ...currentItem,
             task_type: 'goal'
           });
           
-          return { success: true, id: item.id };
+          return { success: true, id: item.id, name: item.name, childCount };
         } catch (error) {
           console.error(`שגיאה בעדכון ${item.id}:`, error.message);
-          return { success: false, id: item.id, error: error.message };
+          return { success: false, id: item.id, name: item.name, error: error.message };
         }
       });
       
-      await Promise.all(batchPromises);
-      updatedCount += batch.length;
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+      updatedCount += batchResults.filter(r => r.success).length;
       
       // המתנה בין מנות (מלבד המנה האחרונה)
       if (i + BATCH_SIZE < itemsToFix.length) {
@@ -81,18 +104,24 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`כל העדכונים בוצעו בהצלחה! עודכנו ${updatedCount} פריטים`);
+    console.log(`כל העדכונים בוצעו! עודכנו ${updatedCount} פריטים`);
 
     return Response.json({
       success: true,
-      message: `עודכנו ${itemsToFix.length} פריטים להיות יעדים`,
+      message: `עודכנו ${updatedCount} פריטים להיות יעדים (רק כאלה עם תת-משימות)`,
       totalChecked: allGoals.length,
-      itemsFixed: itemsToFix.length,
-      details: itemsToFix.map(item => ({
-        id: item.id,
-        name: item.name,
-        customer_email: item.customer_email,
-        previousType: item.task_type
+      itemsFixed: updatedCount,
+      stats: {
+        explicitGoals: explicitGoals.length + updatedCount,
+        standaloneTasks: standaloneTasksNotGoal.length,
+        subtasks: subtasks.length
+      },
+      details: results.map(r => ({
+        id: r.id,
+        name: r.name,
+        success: r.success,
+        childCount: r.childCount,
+        error: r.error
       }))
     });
 

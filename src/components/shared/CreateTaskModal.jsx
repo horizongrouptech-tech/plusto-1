@@ -83,6 +83,8 @@ export default function CreateTaskModal({ isOpen, onClose, customer, currentUser
       // שילוב תאריך ושעה ל-reminder_date
       const reminderDateTime = reminderDate && reminderTime ? `${reminderDate}T${reminderTime}:00` : null;
 
+      const resolvedParentId = parentGoalId && parentGoalId !== 'no_goal' ? parentGoalId : null;
+
       const newTask = await base44.entities.CustomerGoal.create({
         customer_email: customer.email,
         name: name.trim(),
@@ -91,7 +93,7 @@ export default function CreateTaskModal({ isOpen, onClose, customer, currentUser
         end_date: endDate,
         end_date_time: endDateTime,
         reminder_date: reminderDateTime,
-        parent_id: parentGoalId && parentGoalId !== 'no_goal' ? parentGoalId : null,
+        parent_id: resolvedParentId,
         status,
         assignee_email: assigneeEmail || customer?.assigned_financial_manager_email || currentUser?.email,
         tagged_users: taggedUsers,
@@ -99,6 +101,18 @@ export default function CreateTaskModal({ isOpen, onClose, customer, currentUser
         is_active: true,
         order_index: 0
       });
+
+      // הגנה: אם המשימה משויכת ליעד, וודא שהיעד-אב מסומן task_type: 'goal'
+      if (resolvedParentId) {
+        try {
+          const parentGoal = allGoals.find(g => g.id === resolvedParentId);
+          if (parentGoal && parentGoal.task_type !== 'goal') {
+            await base44.entities.CustomerGoal.update(resolvedParentId, { task_type: 'goal' });
+          }
+        } catch (parentErr) {
+          console.error('Error ensuring parent goal type:', parentErr);
+        }
+      }
 
       // שליחת נוטיפיקציות ומיילים ברקע - לא חוסם
       Promise.all(taggedUsers.map(async (taggedEmail) => {
