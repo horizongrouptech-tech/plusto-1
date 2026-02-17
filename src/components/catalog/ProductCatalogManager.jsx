@@ -204,6 +204,8 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
       // Add quality filter if set
       if (qualityFilter === 'missing_cost') {
         filterQuery.cost_price = { $lte: 0 };
+      } else if (qualityFilter === 'needs_review') {
+        filterQuery.needs_review = true;
       } else if (qualityFilter !== 'all') {
         filterQuery.data_quality = qualityFilter;
       }
@@ -228,28 +230,47 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
           { supplier_item_code: { $contains: term } }
         ];
       }
-      
-      const batch = await ProductCatalog.filter(
-        filterQuery,
-        '-created_date',
-        PRODUCTS_PER_PAGE,
-        skip
-      );
-      
-      setProducts(batch);
-      setFilteredProducts(batch);
-      setCurrentPage(pageNum);
-      
-      // שימוש ב-product_count ישירות מישות Catalog (מעודכן על ידי worker)
-      const selectedCatalog = catalogs.find(c => c.id === selectedCatalogId);
-      if (selectedCatalog?.product_count) {
-        setTotalProducts(selectedCatalog.product_count);
+
+      if (term) {
+        // כמו חיפוש השירותים בתחזית: טוענים את כל התוצאות batches
+        const allResults = [];
+        let offset = 0;
+        const batchSize = 5000;
+        let hasMore = true;
+        while (hasMore) {
+          const batch = await ProductCatalog.filter(
+            filterQuery,
+            '-created_date',
+            batchSize,
+            offset
+          );
+          allResults.push(...batch);
+          offset += batch.length;
+          if (batch.length < batchSize) hasMore = false;
+        }
+        setProducts(allResults);
+        setFilteredProducts(allResults);
+        setTotalProducts(allResults.length);
+        setCurrentPage(1);
       } else {
-        // Fallback: אם אין product_count, נעריך לפי גודל batch
-        if (batch.length === PRODUCTS_PER_PAGE) {
-          setTotalProducts((pageNum * PRODUCTS_PER_PAGE) + 1);
+        const batch = await ProductCatalog.filter(
+          filterQuery,
+          '-created_date',
+          PRODUCTS_PER_PAGE,
+          skip
+        );
+        setProducts(batch);
+        setFilteredProducts(batch);
+        setCurrentPage(pageNum);
+        const selectedCatalog = catalogs.find(c => c.id === selectedCatalogId);
+        if (selectedCatalog?.product_count) {
+          setTotalProducts(selectedCatalog.product_count);
         } else {
-          setTotalProducts((pageNum - 1) * PRODUCTS_PER_PAGE + batch.length);
+          if (batch.length === PRODUCTS_PER_PAGE) {
+            setTotalProducts((pageNum * PRODUCTS_PER_PAGE) + 1);
+          } else {
+            setTotalProducts((pageNum - 1) * PRODUCTS_PER_PAGE + batch.length);
+          }
         }
       }
       
@@ -560,6 +581,8 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     if (qualityFilter !== "all") {
       if (qualityFilter === "missing_cost") {
         filtered = filtered.filter(product => !product.cost_price || product.cost_price === 0);
+      } else if (qualityFilter === "needs_review") {
+        filtered = filtered.filter(product => product.needs_review === true);
       } else {
         filtered = filtered.filter(product => product.data_quality === qualityFilter);
       }
@@ -1121,36 +1144,42 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
         </CardHeader>
         <CardContent>
           {selectedCatalogId ? (
+            (() => {
+              const catalogProductCount = catalogs.find(c => c.id === selectedCatalogId)?.product_count ?? 0;
+              const cap = (n) => Math.min(n, catalogProductCount);
+              return (
             <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
               <div className="bg-horizon-card/30 p-4 rounded-lg text-center">
-                <div className="text-2xl font-bold text-horizon-text">{(catalogs.find(c => c.id === selectedCatalogId)?.product_count ?? 0).toLocaleString()}</div>
+                <div className="text-2xl font-bold text-horizon-text">{catalogProductCount.toLocaleString()}</div>
                 <div className="text-sm text-horizon-accent">סה"כ מוצרים</div>
               </div>
-              <div className="bg-green-500/10 p-4 rounded-lg text-center border border-green-500/20">
-                <div className="text-2xl font-bold text-green-400">{catalogStats.complete}</div>
+              <button type="button" onClick={() => setQualityFilter(qualityFilter === 'complete' ? 'all' : 'complete')} className={`bg-green-500/10 p-4 rounded-lg border transition-all text-right ${qualityFilter === 'complete' ? 'ring-2 ring-green-400 border-green-400' : 'border-green-500/20 hover:bg-green-500/20 cursor-pointer'}`}>
+                <div className="text-2xl font-bold text-green-400">{cap(catalogStats.complete).toLocaleString()}</div>
                 <div className="text-sm text-green-300">נתונים מלאים</div>
-              </div>
-              <div className="bg-yellow-500/10 p-4 rounded-lg text-center border border-yellow-500/20">
-                <div className="text-2xl font-bold text-yellow-400">{catalogStats.incomplete}</div>
+              </button>
+              <button type="button" onClick={() => setQualityFilter(qualityFilter === 'incomplete' ? 'all' : 'incomplete')} className={`bg-yellow-500/10 p-4 rounded-lg border transition-all text-right ${qualityFilter === 'incomplete' ? 'ring-2 ring-yellow-400 border-yellow-400' : 'border-yellow-500/20 hover:bg-yellow-500/20 cursor-pointer'}`}>
+                <div className="text-2xl font-bold text-yellow-400">{cap(catalogStats.incomplete).toLocaleString()}</div>
                 <div className="text-sm text-yellow-300">נתונים חסרים</div>
-              </div>
-              <div className="bg-orange-500/10 p-4 rounded-lg text-center border border-orange-500/20">
-                <div className="text-2xl font-bold text-orange-400">{catalogStats.missingCost}</div>
+              </button>
+              <button type="button" onClick={() => setQualityFilter(qualityFilter === 'missing_cost' ? 'all' : 'missing_cost')} className={`bg-orange-500/10 p-4 rounded-lg border transition-all text-right ${qualityFilter === 'missing_cost' ? 'ring-2 ring-orange-400 border-orange-400' : 'border-orange-500/20 hover:bg-orange-500/20 cursor-pointer'}`}>
+                <div className="text-2xl font-bold text-orange-400">{cap(catalogStats.missingCost).toLocaleString()}</div>
                 <div className="text-sm text-orange-300">חסר מחיר קנייה</div>
-              </div>
-              <div className="bg-red-500/10 p-4 rounded-lg text-center border border-red-500/20">
-                <div className="text-2xl font-bold text-red-400">{catalogStats.needsReview}</div>
+              </button>
+              <button type="button" onClick={() => setQualityFilter(qualityFilter === 'needs_review' ? 'all' : 'needs_review')} className={`bg-red-500/10 p-4 rounded-lg border transition-all text-right ${qualityFilter === 'needs_review' ? 'ring-2 ring-red-400 border-red-400' : 'border-red-500/20 hover:bg-red-500/20 cursor-pointer'}`}>
+                <div className="text-2xl font-bold text-red-400">{cap(catalogStats.needsReview).toLocaleString()}</div>
                 <div className="text-sm text-red-300">טעון בדיקה</div>
-              </div>
+              </button>
               <div className="bg-blue-500/10 p-4 rounded-lg text-center border border-blue-500/20">
-                <div className="text-2xl font-bold text-blue-400">{catalogStats.recommended}</div>
+                <div className="text-2xl font-bold text-blue-400">{catalogStats.recommended.toLocaleString()}</div>
                 <div className="text-sm text-blue-300">מומלצים</div>
               </div>
               <div className="bg-purple-500/10 p-4 rounded-lg text-center border border-purple-500/20">
-                <div className="text-2xl font-bold text-purple-400">{catalogStats.suggested}</div>
+                <div className="text-2xl font-bold text-purple-400">{catalogStats.suggested.toLocaleString()}</div>
                 <div className="text-sm text-purple-300">הצעות AI</div>
               </div>
             </div>
+              );
+            })()
           ) : (
             <div className="text-center py-8">
               <p className="text-horizon-accent">יש לבחור קטלוג או ליצור קטלוג חדש כדי להתחיל.</p>
@@ -1267,7 +1296,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                          {searchTerm && (
                            <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
                              <Badge variant="secondary" className="text-xs">
-                               {searchTermDebounced.trim() ? `${filteredProducts.length} תוצאות בעמוד זה` : `${filteredProducts.length} תוצאות`}
+                               {searchTermDebounced.trim() ? `${totalProducts} תוצאות` : `${filteredProducts.length} תוצאות`}
                              </Badge>
                            </div>
                          )}
@@ -1297,6 +1326,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                         <option value="partial">נתונים חלקיים</option>
                         <option value="incomplete">נתונים חסרים</option>
                         <option value="missing_cost">חסר מחיר קנייה</option>
+                        <option value="needs_review">טעון בדיקה</option>
                       </select>
 
                       <select
@@ -1314,6 +1344,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                         size="sm"
                         onClick={() => {
                           setSearchTerm("");
+                          setSearchTermDebounced("");
                           setCategoryFilter("all");
                           setQualityFilter("all");
                           setSourceFilter("all");
@@ -1337,7 +1368,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                 </Card>
 
                 <ProductCatalogTable
-                   products={filteredProducts}
+                   products={searchTermDebounced.trim() ? products.slice((currentPage - 1) * PRODUCTS_PER_PAGE, currentPage * PRODUCTS_PER_PAGE) : filteredProducts}
                    onEdit={(product) => {
                      setEditingProduct(product);
                      setShowEditModal(true);
@@ -1353,10 +1384,9 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                     <div className="flex items-center justify-between gap-4">
                       <div className="text-sm text-horizon-accent">
                         {searchTermDebounced.trim() ? (
-                          filteredProducts.length > 0 ? (
+                          totalProducts > 0 ? (
                             <>
-                              תוצאות חיפוש – מוצרים {((currentPage - 1) * PRODUCTS_PER_PAGE) + 1}-{((currentPage - 1) * PRODUCTS_PER_PAGE) + filteredProducts.length}
-                              {filteredProducts.length === PRODUCTS_PER_PAGE && ' (ייתכן שיש עוד)'}
+                              תוצאות חיפוש – מוצרים {((currentPage - 1) * PRODUCTS_PER_PAGE) + 1}-{Math.min(currentPage * PRODUCTS_PER_PAGE, totalProducts)} מתוך {totalProducts}
                             </>
                           ) : (
                             'לא נמצאו תוצאות חיפוש'
@@ -1373,7 +1403,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => loadCatalog(1)}
+                          onClick={() => searchTermDebounced.trim() ? setCurrentPage(1) : loadCatalog(1)}
                           disabled={currentPage === 1 || isLoading || disableAllActions}
                           className="border-horizon text-horizon-text"
                         >
@@ -1382,7 +1412,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => loadCatalog(currentPage - 1)}
+                          onClick={() => searchTermDebounced.trim() ? setCurrentPage(currentPage - 1) : loadCatalog(currentPage - 1)}
                           disabled={currentPage === 1 || isLoading || disableAllActions}
                           className="border-horizon text-horizon-text"
                         >
@@ -1390,7 +1420,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                         </Button>
                         <span className="px-4 text-sm font-medium text-horizon-text">
                           {searchTermDebounced.trim() ? (
-                            <>תוצאות חיפוש – עמוד {currentPage}</>
+                            <>דף {currentPage} מתוך {Math.ceil(totalProducts / PRODUCTS_PER_PAGE) || 1}</>
                           ) : (
                             <>דף {currentPage} מתוך {Math.ceil(totalProducts / PRODUCTS_PER_PAGE) || 1}</>
                           )}
@@ -1398,12 +1428,8 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => loadCatalog(currentPage + 1)}
-                          disabled={
-                            searchTermDebounced.trim()
-                              ? filteredProducts.length < PRODUCTS_PER_PAGE || isLoading || disableAllActions
-                              : (currentPage >= Math.ceil(totalProducts / PRODUCTS_PER_PAGE) || isLoading || disableAllActions)
-                          }
+                          onClick={() => searchTermDebounced.trim() ? setCurrentPage(currentPage + 1) : loadCatalog(currentPage + 1)}
+                          disabled={currentPage >= Math.ceil(totalProducts / PRODUCTS_PER_PAGE) || isLoading || disableAllActions}
                           className="border-horizon text-horizon-text"
                         >
                           הבא
@@ -1411,8 +1437,8 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => loadCatalog(Math.ceil(totalProducts / PRODUCTS_PER_PAGE))}
-                          disabled={searchTermDebounced.trim() || currentPage >= Math.ceil(totalProducts / PRODUCTS_PER_PAGE) || isLoading || disableAllActions}
+                          onClick={() => searchTermDebounced.trim() ? setCurrentPage(Math.ceil(totalProducts / PRODUCTS_PER_PAGE)) : loadCatalog(Math.ceil(totalProducts / PRODUCTS_PER_PAGE))}
+                          disabled={currentPage >= Math.ceil(totalProducts / PRODUCTS_PER_PAGE) || isLoading || disableAllActions}
                           className="border-horizon text-horizon-text"
                         >
                           אחרון
