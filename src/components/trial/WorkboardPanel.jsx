@@ -133,7 +133,7 @@ export default function WorkboardPanel({
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-auto p-3 min-w-0" dir="rtl">
+      <div className="flex-1 overflow-auto p-4 min-w-0" dir="rtl">
         {activeTab === 'files' && (
           <div className="space-y-6">
             <CustomerFileUploadManager customer={customer} />

@@ -236,9 +236,9 @@ export default function CustomerManagementNew() {
         className="flex-1 grid overflow-hidden"
         style={{
           gridTemplateColumns: `
-            ${!customerListCollapsed ? 'minmax(200px, 260px)' : 'auto'}
-            minmax(400px, 1fr)
-            ${!tasksCollapsed ? 'minmax(200px, 260px)' : 'auto'}
+            ${!customerListCollapsed ? 'minmax(220px, 280px)' : 'auto'}
+            minmax(480px, 1fr)
+            ${!tasksCollapsed ? 'minmax(220px, 280px)' : 'auto'}
           `
         }}
       >

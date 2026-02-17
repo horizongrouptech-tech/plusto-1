@@ -785,6 +785,7 @@ export default function SmartFileUploader({ customerEmail, onUploadComplete }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [processingStatus, setProcessingStatus] = useState('');
   const [finalStatus, setFinalStatus] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleFileUpload = async (e) => {
@@ -1582,6 +1583,30 @@ The report language is Hebrew.
     fileInputRef.current?.click();
   };
 
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const mockEvent = { target: { files: [files[0]] } };
+      await handleFileUpload(mockEvent);
+    }
+  };
+
   const selectedCategoryObj = FILE_CATEGORIES.find(c => c.value === selectedCategory);
   const SelectedIcon = selectedCategoryObj?.icon || Upload;
 
@@ -1649,24 +1674,38 @@ The report language is Hebrew.
           className="hidden"
           disabled={isUploading || !selectedCategory}
         />
-        
-        <Button
-          onClick={triggerFileSelect}
-          disabled={isUploading || !selectedCategory || (selectedCategory === 'other' && !customFileName.trim())}
-          className="btn-horizon-primary w-full h-12"
+
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => {
+            if (!isUploading && selectedCategory && !(selectedCategory === 'other' && !customFileName.trim())) {
+              triggerFileSelect();
+            }
+          }}
+          className={`p-6 border-2 border-dashed rounded-lg text-center cursor-pointer transition-all
+            ${isDragging ? 'border-horizon-primary bg-horizon-primary/10' : 'border-horizon hover:border-horizon-primary/50'}
+            ${(isUploading || !selectedCategory || (selectedCategory === 'other' && !customFileName.trim())) ? 'opacity-50 cursor-not-allowed' : ''}
+          `}
         >
           {isUploading && !finalStatus ? (
             <>
-              <RefreshCw className="w-5 h-5 ml-2 animate-spin" />
-              מעלה...
+              <RefreshCw className="mx-auto w-10 h-10 text-horizon-primary mb-2 animate-spin" />
+              <p className="text-horizon-text text-sm">מעלה...</p>
             </>
           ) : (
             <>
-              <Upload className="w-5 h-5 ml-2" />
-              העלה קובץ
+              <Upload className="mx-auto w-10 h-10 text-horizon-accent mb-2" />
+              <p className="text-horizon-text text-sm">
+                {isDragging ? 'שחרר את הקובץ כאן' : 'גרור קובץ לכאן או לחץ לבחירה'}
+              </p>
+              <p className="text-xs text-horizon-accent mt-1">
+                תומך בקבצי Excel, CSV, PDF, ותמונות
+              </p>
             </>
           )}
-        </Button>
+        </div>
 
         {isUploading && uploadProgress > 0 && (
           <div className="space-y-2">

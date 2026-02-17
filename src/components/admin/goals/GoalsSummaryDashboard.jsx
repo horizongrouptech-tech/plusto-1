@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Target, ListChecks, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 
 const StatCard = ({ title, value, icon, colorClass = "text-horizon-text" }) => (
-    <div className="bg-horizon-card/30 p-4 rounded-lg text-center border border-horizon-border transition-all hover:border-horizon-primary hover:bg-horizon-card/50 min-w-0">
-        <div className={`text-3xl font-bold ${colorClass}`}>{value}</div>
+    <div className="bg-horizon-card/30 p-3 rounded-lg text-center border border-horizon-border transition-all hover:border-horizon-primary hover:bg-horizon-card/50 min-w-0">
+        <div className={`text-2xl font-bold ${colorClass}`}>{value}</div>
         <div className="text-sm text-horizon-accent flex items-center justify-center gap-2 mt-1">
             {icon}
             <span>{title}</span>

@@ -676,19 +676,16 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
 
   }
 
-  const gridCols = 'minmax(0, 280px) auto minmax(80px, 140px) auto 120px auto auto auto 140px';
-
   return (
     <div
-      className={`grid items-center gap-x-2 gap-y-0 p-2 rounded-lg transition-all min-w-0 ${isDragging ? 'opacity-50' : ''} ${
+      className={`flex flex-wrap items-center gap-2 p-2 rounded-lg transition-all min-w-0 ${isDragging ? 'opacity-50' : ''} ${
         isParent
           ? 'bg-horizon-card/60 border border-horizon-primary/40 font-semibold hover:border-horizon-primary/60'
           : 'bg-horizon-card/20 border border-horizon/50 ps-6 hover:border-horizon-primary/30'
       }`}
-      style={{ gridTemplateColumns: gridCols }}
     >
       {/* 1. שם היעד + אייקון + נקודה */}
-      <div className="flex items-center gap-1.5 min-w-0">
+      <div className="flex items-center gap-1.5 flex-1 min-w-[120px] max-w-[280px]">
         {isParent ? (
           <Target className="w-4 h-4 text-horizon-primary shrink-0" />
         ) : (
@@ -735,7 +732,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
       </div>
 
       {/* 6. אחראים + הוספת אחראי */}
-      <div className="flex items-center gap-1 text-sm text-horizon-text min-w-0 shrink-0">
+      <div className="flex items-center gap-1 text-sm text-horizon-text shrink-0 max-w-[140px] min-w-0">
         <div className="flex items-center gap-1 flex-wrap min-w-0">
           {(goal.assigned_users || []).slice(0, 2).map((email) => {
             const user = users.find((u) => u.email === email);
@@ -842,12 +839,12 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
         />
       </div>
 
-      {/* 5. תלות/שיוך - תמיד מקום כדי ליישר תאריך וסטטוס */}
-      <div className="min-w-0">
-        {isParent ? (
+      {/* 5. תלות/שיוך - רק ביעד */}
+      {isParent && (
+        <div className="shrink-0 max-w-[140px] min-w-0">
           <GoalDependencySelector goal={goal} allGoals={allGoals} refreshData={refreshData} />
-        ) : null}
-      </div>
+        </div>
+      )}
 
       {/* 3. הערות ותגובות (מקום אחד) */}
       <Popover open={notesPopoverOpen} onOpenChange={setNotesPopoverOpen}>
@@ -877,17 +874,15 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
       </Popover>
 
       {/* עריכה, מחק */}
-      <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="text-horizon-primary hover:bg-horizon-primary/20 shrink-0 justify-self-start" title="עריכה מלאה">
+      <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="text-horizon-primary hover:bg-horizon-primary/20 shrink-0" title="עריכה מלאה">
         <Edit className="w-4 h-4" />
       </Button>
-      <Button variant="ghost" size="sm" onClick={handleDelete} className="text-red-400 hover:text-red-300 hover:bg-red-500/20 shrink-0 justify-self-start" title="מחק">
+      <Button variant="ghost" size="sm" onClick={handleDelete} className="text-red-400 hover:text-red-300 hover:bg-red-500/20 shrink-0" title="מחק">
         <Trash2 className="w-4 h-4" />
       </Button>
 
-      {/* 9. פעולות יעד (n) + הוסף משימה – רק כש־actionsSlot מסופק */}
-      <div className="flex items-center justify-end min-w-0">
-        {actionsSlot}
-      </div>
+      {/* פעולות יעד (n) + הוסף משימה – רק כשקיים */}
+      {actionsSlot && <div className="shrink-0">{actionsSlot}</div>}
 
       {showComments && <GoalCommentsModal goal={goal} isOpen={showComments} onClose={() => setShowComments(false)} />}
     </div>
