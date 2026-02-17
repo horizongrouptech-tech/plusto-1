@@ -34,9 +34,15 @@ Deno.serve(async (req) => {
 
     const baseQuery = { catalog_id, is_active: true };
 
-    // כמות מוצרים בלבד (לא סכום שדות) – ספירת רשומות עם התנאי המתאים
+    // כמות מוצרים בלבד (לא סכום שדות). "נתונים מלאים" = מלאים וללא חריגים (מפריד מטבעון בדיקה/חסר מחיר)
+    const completeQuery = {
+      ...baseQuery,
+      data_quality: 'complete',
+      needs_review: { $ne: true },
+      cost_price: { $gt: 0 }
+    };
     const [complete, incomplete, needsReview, recommended, suggested, missingCost] = await Promise.all([
-      countAllProducts(base44, { ...baseQuery, data_quality: 'complete' }),
+      countAllProducts(base44, completeQuery),
       countAllProducts(base44, { ...baseQuery, data_quality: 'incomplete' }),
       countAllProducts(base44, { ...baseQuery, needs_review: true }),
       countAllProducts(base44, { ...baseQuery, is_recommended: true }),

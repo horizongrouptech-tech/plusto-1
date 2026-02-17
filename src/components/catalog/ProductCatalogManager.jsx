@@ -1149,31 +1149,31 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
               const cap = (n) => Math.min(n, catalogProductCount);
               return (
             <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
-              <div className="bg-horizon-card/30 p-4 rounded-lg text-center">
+              <div className="bg-horizon-card/30 p-4 rounded-lg text-center" title="סך כל המוצרים הפעילים בקטלוג">
                 <div className="text-2xl font-bold text-horizon-text">{catalogProductCount.toLocaleString()}</div>
                 <div className="text-sm text-horizon-accent">סה"כ מוצרים</div>
               </div>
-              <button type="button" onClick={() => setQualityFilter(qualityFilter === 'complete' ? 'all' : 'complete')} className={`bg-green-500/10 p-4 rounded-lg border transition-all text-right ${qualityFilter === 'complete' ? 'ring-2 ring-green-400 border-green-400' : 'border-green-500/20 hover:bg-green-500/20 cursor-pointer'}`}>
+              <button type="button" title="מוצרים עם שדות מלאים, ללא סימון טעון בדיקה, ועם מחיר קנייה – לחיצה מסננת" onClick={() => setQualityFilter(qualityFilter === 'complete' ? 'all' : 'complete')} className={`bg-green-500/10 p-4 rounded-lg border transition-all text-right ${qualityFilter === 'complete' ? 'ring-2 ring-green-400 border-green-400' : 'border-green-500/20 hover:bg-green-500/20 cursor-pointer'}`}>
                 <div className="text-2xl font-bold text-green-400">{cap(catalogStats.complete).toLocaleString()}</div>
                 <div className="text-sm text-green-300">נתונים מלאים</div>
               </button>
-              <button type="button" onClick={() => setQualityFilter(qualityFilter === 'incomplete' ? 'all' : 'incomplete')} className={`bg-yellow-500/10 p-4 rounded-lg border transition-all text-right ${qualityFilter === 'incomplete' ? 'ring-2 ring-yellow-400 border-yellow-400' : 'border-yellow-500/20 hover:bg-yellow-500/20 cursor-pointer'}`}>
+              <button type="button" title="מוצרים עם שדות חסרים (איכות נתונים incomplete) – לחיצה מסננת" onClick={() => setQualityFilter(qualityFilter === 'incomplete' ? 'all' : 'incomplete')} className={`bg-yellow-500/10 p-4 rounded-lg border transition-all text-right ${qualityFilter === 'incomplete' ? 'ring-2 ring-yellow-400 border-yellow-400' : 'border-yellow-500/20 hover:bg-yellow-500/20 cursor-pointer'}`}>
                 <div className="text-2xl font-bold text-yellow-400">{cap(catalogStats.incomplete).toLocaleString()}</div>
                 <div className="text-sm text-yellow-300">נתונים חסרים</div>
               </button>
-              <button type="button" onClick={() => setQualityFilter(qualityFilter === 'missing_cost' ? 'all' : 'missing_cost')} className={`bg-orange-500/10 p-4 rounded-lg border transition-all text-right ${qualityFilter === 'missing_cost' ? 'ring-2 ring-orange-400 border-orange-400' : 'border-orange-500/20 hover:bg-orange-500/20 cursor-pointer'}`}>
+              <button type="button" title="מוצרים ללא מחיר קנייה או עם מחיר 0 – לחיצה מסננת" onClick={() => setQualityFilter(qualityFilter === 'missing_cost' ? 'all' : 'missing_cost')} className={`bg-orange-500/10 p-4 rounded-lg border transition-all text-right ${qualityFilter === 'missing_cost' ? 'ring-2 ring-orange-400 border-orange-400' : 'border-orange-500/20 hover:bg-orange-500/20 cursor-pointer'}`}>
                 <div className="text-2xl font-bold text-orange-400">{cap(catalogStats.missingCost).toLocaleString()}</div>
                 <div className="text-sm text-orange-300">חסר מחיר קנייה</div>
               </button>
-              <button type="button" onClick={() => setQualityFilter(qualityFilter === 'needs_review' ? 'all' : 'needs_review')} className={`bg-red-500/10 p-4 rounded-lg border transition-all text-right ${qualityFilter === 'needs_review' ? 'ring-2 ring-red-400 border-red-400' : 'border-red-500/20 hover:bg-red-500/20 cursor-pointer'}`}>
+              <button type="button" title="מוצרים שסומנו כנדרשים בדיקה ידנית – לחיצה מסננת" onClick={() => setQualityFilter(qualityFilter === 'needs_review' ? 'all' : 'needs_review')} className={`bg-red-500/10 p-4 rounded-lg border transition-all text-right ${qualityFilter === 'needs_review' ? 'ring-2 ring-red-400 border-red-400' : 'border-red-500/20 hover:bg-red-500/20 cursor-pointer'}`}>
                 <div className="text-2xl font-bold text-red-400">{cap(catalogStats.needsReview).toLocaleString()}</div>
                 <div className="text-sm text-red-300">טעון בדיקה</div>
               </button>
-              <div className="bg-blue-500/10 p-4 rounded-lg text-center border border-blue-500/20">
+              <div className="bg-blue-500/10 p-4 rounded-lg text-center border border-blue-500/20" title="מוצרים שמומלצים על ידי המערכת">
                 <div className="text-2xl font-bold text-blue-400">{catalogStats.recommended.toLocaleString()}</div>
                 <div className="text-sm text-blue-300">מומלצים</div>
               </div>
-              <div className="bg-purple-500/10 p-4 rounded-lg text-center border border-purple-500/20">
+              <div className="bg-purple-500/10 p-4 rounded-lg text-center border border-purple-500/20" title="מוצרים שהוצעו על ידי AI">
                 <div className="text-2xl font-bold text-purple-400">{catalogStats.suggested.toLocaleString()}</div>
                 <div className="text-sm text-purple-300">הצעות AI</div>
               </div>
