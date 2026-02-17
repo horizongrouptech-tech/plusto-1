@@ -109,7 +109,7 @@ export default function DailyTasks({ user }) {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">כל הלקוחות</SelectItem>
-                                {clients?.map(c => (
+                                {clients?.filter(c => c.email && c.email.trim() !== '').map(c => (
                                     <SelectItem key={c.id} value={c.email}>
                                         {c.business_name || c.full_name}
                                     </SelectItem>
