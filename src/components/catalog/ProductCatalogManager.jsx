@@ -120,7 +120,8 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     incomplete: 0,
     needsReview: 0,
     recommended: 0,
-    suggested: 0
+    suggested: 0,
+    missingCost: 0
   });
   const [activeTab, setActiveTab] = useState("catalog");
   
@@ -155,31 +156,23 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
 
   const updateCatalogStats = useCallback(async () => {
     if (!selectedCatalogId) {
-      setCatalogStats({ total: 0, complete: 0, incomplete: 0, needsReview: 0, recommended: 0, suggested: 0 });
+      setCatalogStats({ total: 0, complete: 0, incomplete: 0, needsReview: 0, recommended: 0, suggested: 0, missingCost: 0 });
       return;
     }
 
+    const total = catalogs.find(c => c.id === selectedCatalogId)?.product_count ?? 0;
+
     try {
-      // ספירת מוצרים בכל קטגוריה
-      const [total, complete, incomplete, needsReview, recommended, suggested] = await Promise.all([
-        // סה"כ מוצרים פעילים
-        base44.entities.ProductCatalog.filter({ catalog_id: selectedCatalogId, is_active: true }, '-created_date', 1).then(r => {
-          const catalog = catalogs.find(c => c.id === selectedCatalogId);
-          return catalog?.product_count || r.length;
-        }),
-        // מוצרים עם נתונים מלאים
+      const [complete, incomplete, needsReview, recommended, suggested, missingCost] = await Promise.all([
         countAllProducts({ catalog_id: selectedCatalogId, is_active: true, data_quality: 'complete' }),
-        // מוצרים עם נתונים חסרים
         countAllProducts({ catalog_id: selectedCatalogId, is_active: true, data_quality: 'incomplete' }),
-        // מוצרים שצריכים בדיקה
         countAllProducts({ catalog_id: selectedCatalogId, is_active: true, needs_review: true }),
-        // מוצרים מומלצים
         countAllProducts({ catalog_id: selectedCatalogId, is_active: true, is_recommended: true }),
-        // הצעות AI
-        countAllProducts({ catalog_id: selectedCatalogId, is_active: true, is_suggested: true })
+        countAllProducts({ catalog_id: selectedCatalogId, is_active: true, is_suggested: true }),
+        countAllProducts({ catalog_id: selectedCatalogId, is_active: true, cost_price: { $lte: 0 } })
       ]);
 
-      setCatalogStats({ total, complete, incomplete, needsReview, recommended, suggested });
+      setCatalogStats({ total, complete, incomplete, needsReview, recommended, suggested, missingCost });
     } catch (error) {
       console.error('Error updating catalog stats:', error);
     }
@@ -1122,9 +1115,9 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
         </CardHeader>
         <CardContent>
           {selectedCatalogId ? (
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
               <div className="bg-horizon-card/30 p-4 rounded-lg text-center">
-                <div className="text-2xl font-bold text-horizon-text">{catalogStats.total.toLocaleString()}</div>
+                <div className="text-2xl font-bold text-horizon-text">{(catalogs.find(c => c.id === selectedCatalogId)?.product_count ?? 0).toLocaleString()}</div>
                 <div className="text-sm text-horizon-accent">סה"כ מוצרים</div>
               </div>
               <div className="bg-green-500/10 p-4 rounded-lg text-center border border-green-500/20">
@@ -1134,6 +1127,10 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
               <div className="bg-yellow-500/10 p-4 rounded-lg text-center border border-yellow-500/20">
                 <div className="text-2xl font-bold text-yellow-400">{catalogStats.incomplete}</div>
                 <div className="text-sm text-yellow-300">נתונים חסרים</div>
+              </div>
+              <div className="bg-orange-500/10 p-4 rounded-lg text-center border border-orange-500/20">
+                <div className="text-2xl font-bold text-orange-400">{catalogStats.missingCost}</div>
+                <div className="text-sm text-orange-300">חסר מחיר קנייה</div>
               </div>
               <div className="bg-red-500/10 p-4 rounded-lg text-center border border-red-500/20">
                 <div className="text-2xl font-bold text-red-400">{catalogStats.needsReview}</div>
