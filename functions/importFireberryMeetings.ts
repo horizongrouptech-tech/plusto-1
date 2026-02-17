@@ -82,29 +82,6 @@ Deno.serve(async (req) => {
     // עיבוד כל פגישה
     for (const fbMeeting of meetings) {
       try {
-        // בדיקה אם הפגישה כבר קיימת במערכת לפי pcfPlastoMeetingId או fireberry_meeting_id
-        let existingMeeting = null;
-        if (fbMeeting.pcfPlastoMeetingId) {
-          const existingMeetings = await base44.asServiceRole.entities.Meeting.filter({ 
-            id: fbMeeting.pcfPlastoMeetingId 
-          });
-          if (existingMeetings.length > 0) {
-            existingMeeting = existingMeetings[0];
-            console.log(`✅ Found existing meeting by ID: ${existingMeeting.id}`);
-          }
-        }
-        
-        // אם לא נמצא לפי ID, נחפש לפי fireberry_meeting_id
-        if (!existingMeeting && fbMeeting.meetingid) {
-          const existingByFireberry = await base44.asServiceRole.entities.Meeting.filter({
-            fireberry_meeting_id: fbMeeting.meetingid
-          });
-          if (existingByFireberry.length > 0) {
-            existingMeeting = existingByFireberry[0];
-            console.log(`✅ Found existing meeting by fireberry_meeting_id: ${existingMeeting.id}`);
-          }
-        }
-
         let customerEmail = null;
         // מזהה הלקוח בפיירברי
         let fireberryAccountId = fbMeeting.pcfsystemfield35 || fbMeeting.objectid || fbMeeting.accountid || fbMeeting.parentcustomerid || fbMeeting.regardingobjectid;
@@ -138,15 +115,97 @@ Deno.serve(async (req) => {
              }
         }
 
-        // המרת התאריכים
-        const startDateTime = fbMeeting.start_datetime ? new Date(fbMeeting.start_datetime) : new Date();
-        const endDateTime = fbMeeting.end_datetime ? new Date(fbMeeting.end_datetime) : new Date(startDateTime.getTime() + 60 * 60 * 1000); // שעה אחרי אם לא צוין
+        // המרת התאריכים - תיקון בעיית timezone
+        // פיירברי שולח תאריכים בפורמט ISO, אבל ללא timezone indicator
+        // נניח שהתאריכים הם ב-local time (Israel time = UTC+2/UTC+3)
+        // אבל נחלץ את הזמן ישירות מה-string כדי למנוע המרה אוטומטית
+        let startDateTime, endDateTime, startDate, endDate, startTime, endTime, meetingDate;
+        
+        if (fbMeeting.start_datetime) {
+          // אם יש T בפורמט, נחלץ את התאריך והשעה ישירות
+          if (fbMeeting.start_datetime.includes('T')) {
+            const [datePart, timePart] = fbMeeting.start_datetime.split('T');
+            startDate = datePart;
+            startTime = timePart.split(':').slice(0, 2).join(':');
+            // יצירת Date object עם התאריך והשעה (נניח שזה local time)
+            startDateTime = new Date(`${datePart}T${startTime}:00`);
+          } else {
+            startDate = fbMeeting.start_datetime.split(' ')[0];
+            startTime = fbMeeting.start_datetime.split(' ')[1]?.slice(0, 5) || '10:00';
+            startDateTime = new Date(`${startDate}T${startTime}:00`);
+          }
+        } else {
+          startDateTime = new Date();
+          startDate = startDateTime.toISOString().split('T')[0];
+          startTime = '10:00';
+        }
+        
+        if (fbMeeting.end_datetime) {
+          if (fbMeeting.end_datetime.includes('T')) {
+            const [datePart, timePart] = fbMeeting.end_datetime.split('T');
+            endDate = datePart;
+            endTime = timePart.split(':').slice(0, 2).join(':');
+            endDateTime = new Date(`${datePart}T${endTime}:00`);
+          } else {
+            endDate = fbMeeting.end_datetime.split(' ')[0];
+            endTime = fbMeeting.end_datetime.split(' ')[1]?.slice(0, 5) || '11:00';
+            endDateTime = new Date(`${endDate}T${endTime}:00`);
+          }
+        } else {
+          endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
+          endDate = endDateTime.toISOString().split('T')[0];
+          endTime = '11:00';
+        }
+        
+        meetingDate = startDateTime.toISOString(); // date-time format
 
-        const startDate = startDateTime.toISOString().split('T')[0];
-        const endDate = endDateTime.toISOString().split('T')[0];
-        const startTime = startDateTime.toTimeString().slice(0, 5); // HH:MM
-        const endTime = endDateTime.toTimeString().slice(0, 5); // HH:MM
-        const meetingDate = startDateTime.toISOString(); // date-time format
+        // בדיקה אם הפגישה כבר קיימת במערכת - לפי מספר קריטריונים
+        let existingMeeting = null;
+        
+        // 1. חיפוש לפי pcfPlastoMeetingId (אם קיים)
+        if (fbMeeting.pcfPlastoMeetingId) {
+          const existingMeetings = await base44.asServiceRole.entities.Meeting.filter({ 
+            id: fbMeeting.pcfPlastoMeetingId 
+          });
+          if (existingMeetings.length > 0) {
+            existingMeeting = existingMeetings[0];
+            console.log(`✅ Found existing meeting by pcfPlastoMeetingId: ${existingMeeting.id}`);
+          }
+        }
+        
+        // 2. אם לא נמצא לפי ID, נחפש לפי fireberry_meeting_id
+        if (!existingMeeting && fbMeeting.meetingid) {
+          const existingByFireberry = await base44.asServiceRole.entities.Meeting.filter({
+            fireberry_meeting_id: fbMeeting.meetingid
+          });
+          if (existingByFireberry.length > 0) {
+            existingMeeting = existingByFireberry[0];
+            console.log(`✅ Found existing meeting by fireberry_meeting_id: ${existingMeeting.id}`);
+          }
+        }
+        
+        // 3. אם עדיין לא נמצא, נחפש לפי תאריך + לקוח + נושא (למקרה שפגישה נוצרה בפיירברי ללא מזהה)
+        if (!existingMeeting && customerEmail && fbMeeting.subject) {
+          const existingByDetails = await base44.asServiceRole.entities.Meeting.filter({
+            customer_email: customerEmail,
+            start_date: startDate,
+            subject: fbMeeting.subject
+          });
+          if (existingByDetails.length > 0) {
+            // נבדוק גם את השעה (בטווח של 30 דקות)
+            const meetingTime = startDateTime.getTime();
+            const matchingMeeting = existingByDetails.find(m => {
+              if (!m.start_time) return false;
+              const meetingStartTime = new Date(`${m.start_date}T${m.start_time}:00`).getTime();
+              const timeDiff = Math.abs(meetingStartTime - meetingTime);
+              return timeDiff < 30 * 60 * 1000; // 30 דקות
+            });
+            if (matchingMeeting) {
+              existingMeeting = matchingMeeting;
+              console.log(`✅ Found existing meeting by date + customer + subject: ${existingMeeting.id}`);
+            }
+          }
+        }
 
         // חישוב משך הפגישה בדקות
         const durationMinutes = Math.round((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60));
