@@ -262,14 +262,17 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
         setProducts(batch);
         setFilteredProducts(batch);
         setCurrentPage(pageNum);
-        const selectedCatalog = catalogs.find(c => c.id === selectedCatalogId);
-        if (selectedCatalog?.product_count) {
-          setTotalProducts(selectedCatalog.product_count);
-        } else {
-          if (batch.length === PRODUCTS_PER_PAGE) {
-            setTotalProducts((pageNum * PRODUCTS_PER_PAGE) + 1);
+        // כשסינון איכות פעיל – totalProducts יועדכן ב-useEffect מ-catalogStats (כדי שהעמודים יתאימו לתוצאות המסוננות)
+        if (qualityFilter === 'all') {
+          const selectedCatalog = catalogs.find(c => c.id === selectedCatalogId);
+          if (selectedCatalog?.product_count) {
+            setTotalProducts(selectedCatalog.product_count);
           } else {
-            setTotalProducts((pageNum - 1) * PRODUCTS_PER_PAGE + batch.length);
+            if (batch.length === PRODUCTS_PER_PAGE) {
+              setTotalProducts((pageNum * PRODUCTS_PER_PAGE) + 1);
+            } else {
+              setTotalProducts((pageNum - 1) * PRODUCTS_PER_PAGE + batch.length);
+            }
           }
         }
       }
@@ -637,6 +640,23 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
         checkForActiveCatalogGeneration();
     }
   }, [selectedCatalogId, customer?.email, checkForActiveProcesses, checkForActiveCatalogGeneration]);
+
+  // סנכרון totalProducts עם סינון איכות – כשסינון פעיל, מספר העמודים לפי הספירה המסוננת (catalogStats)
+  useEffect(() => {
+    if (!selectedCatalogId) return;
+    const catalogProductCount = catalogs.find(c => c.id === selectedCatalogId)?.product_count ?? 0;
+    if (qualityFilter === 'all') {
+      setTotalProducts(catalogProductCount);
+    } else if (qualityFilter === 'complete') {
+      setTotalProducts(catalogStats.complete);
+    } else if (qualityFilter === 'incomplete') {
+      setTotalProducts(catalogStats.incomplete);
+    } else if (qualityFilter === 'needs_review') {
+      setTotalProducts(catalogStats.needsReview);
+    } else if (qualityFilter === 'missing_cost') {
+      setTotalProducts(catalogStats.missingCost);
+    }
+  }, [selectedCatalogId, qualityFilter, catalogStats.complete, catalogStats.incomplete, catalogStats.needsReview, catalogStats.missingCost, catalogs]);
 
   useEffect(() => {
     if (!searchTermDebounced.trim()) {
