@@ -24,9 +24,21 @@ Deno.serve(async (req) => {
     }
 
     console.log(`📅 Meeting details - ID: ${meeting.id}, Customer Email: ${meeting.customer_email}, Subject: ${meeting.subject}`);
+    console.log(`📅 Fireberry Meeting ID: ${meeting.fireberry_meeting_id || 'NOT SET'}`);
 
-    // אם אין fireberry_meeting_id, זו פגישה חדשה שצריך ליצור בפיירברי
+    // קביעת אם זו פגישה חדשה או עדכון
+    // אם יש fireberry_meeting_id, זו פגישה קיימת שצריך לעדכן
+    // אם אין fireberry_meeting_id, זו פגישה חדשה (או פגישה שעדיין לא סונכרנה)
+    // אבל אם יש pcfPlastoMeetingId בפיירברי, פיירברי יזהה אותה לפי זה
+    // לכן, אם יש fireberry_meeting_id, זה בהחלט עדכון
+    // אם אין fireberry_meeting_id, זה יכול להיות חדש או קיים (אם פיירברי יזהה לפי pcfPlastoMeetingId)
+    // אבל לפיירברי, אם יש pcfPlastoMeetingId, הוא צריך לזהות שזו פגישה קיימת
+    // לכן, נשלח isNewMeeting: false אם יש fireberry_meeting_id, אחרת true
+    // אבל פיירברי צריך לבדוק גם pcfPlastoMeetingId כדי לזהות פגישות קיימות
     const isNewMeeting = !meeting.fireberry_meeting_id;
+    
+    console.log(`📅 isNewMeeting: ${isNewMeeting} (fireberry_meeting_id: ${meeting.fireberry_meeting_id ? 'exists' : 'missing'})`);
+    console.log(`📅 pcfPlastoMeetingId: ${meeting.id} - Fireberry should check this to identify existing meetings`);
 
     // קריאת נתוני הלקוח - חיפוש קודם ב-OnboardingRequest
     let customerName = '';
