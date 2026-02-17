@@ -346,9 +346,56 @@ export default function MeetingsTab({ customer, currentUser }) {
         // לא נכשיל את עדכון הפגישה אם הסנכרון נכשל
       }
       
-      queryClient.invalidateQueries(['customerMeetings', customer.email]);
-      setShowMeetingDetailsModal(false);
-      setSelectedMeeting(null);
+      // עדכון הנתונים - טעינה מחדש מהשרת
+      await queryClient.invalidateQueries(['customerMeetings', customer.email]);
+      
+      // טעינת הפגישה המעודכנת מהשרת כדי לעדכן את selectedMeeting
+      const updatedMeetings = await base44.entities.Meeting.filter({
+        id: selectedMeeting.id
+      });
+      
+      if (updatedMeetings.length > 0) {
+        const updatedMeeting = updatedMeetings[0];
+        // המרת הנתונים לפורמט של selectedMeeting
+        const participantsStr = Array.isArray(updatedMeeting.participants) 
+          ? updatedMeeting.participants.join(', ') 
+          : (updatedMeeting.participants || '');
+        const mainPoints = Array.isArray(updatedMeeting.key_points) && updatedMeeting.key_points.length > 0
+          ? [...updatedMeeting.key_points, '', '', '', '', ''].slice(0, 5)
+          : ['', '', '', '', ''];
+        const tasksStr = Array.isArray(updatedMeeting.action_items) && updatedMeeting.action_items.length > 0
+          ? updatedMeeting.action_items.map(item => typeof item === 'string' ? item : item.description || '').join('\n')
+          : '';
+        
+        setSelectedMeeting({
+          id: updatedMeeting.id,
+          subject: updatedMeeting.subject || 'פגישת ניהול כספים',
+          start_date: updatedMeeting.start_date || (updatedMeeting.meeting_date ? updatedMeeting.meeting_date.split('T')[0] : new Date().toISOString().split('T')[0]),
+          start_time: updatedMeeting.start_time || (updatedMeeting.meeting_date ? updatedMeeting.meeting_date.split('T')[1]?.slice(0, 5) : '10:00'),
+          end_date: updatedMeeting.end_date || updatedMeeting.start_date || (updatedMeeting.meeting_date ? updatedMeeting.meeting_date.split('T')[0] : new Date().toISOString().split('T')[0]),
+          end_time: updatedMeeting.end_time || '11:00',
+          channel: updatedMeeting.channel || 'zoom',
+          location: updatedMeeting.location || '',
+          location_details: updatedMeeting.location_details || '',
+          status: updatedMeeting.status || 'scheduled',
+          description: updatedMeeting.notes || '',
+          participants: participantsStr,
+          main_points: mainPoints,
+          tasks: tasksStr,
+          next_meeting_date: updatedMeeting.next_meeting_date || '',
+          whatsapp_summary: updatedMeeting.whatsapp_summary || '',
+          google_event_id: updatedMeeting.google_event_id || '',
+          send_reminder: updatedMeeting.send_reminder !== false,
+          invite_customer: updatedMeeting.invite_customer !== false,
+          fireberry_meeting_id: updatedMeeting.fireberry_meeting_id || null,
+          fireberry_synced_at: updatedMeeting.fireberry_synced_at || null,
+          created_by: updatedMeeting.manager_email || '',
+          created_date: updatedMeeting.created_date || updatedMeeting.meeting_date,
+          _raw: updatedMeeting
+        });
+      }
+      
+      showSuccess('הפגישה עודכנה בהצלחה!');
     } catch (error) {
       console.error('Error updating meeting:', error);
       toast.error('שגיאה בעדכון פגישה');

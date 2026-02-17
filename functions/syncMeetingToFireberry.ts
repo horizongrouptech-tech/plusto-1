@@ -27,18 +27,23 @@ Deno.serve(async (req) => {
     console.log(`📅 Fireberry Meeting ID: ${meeting.fireberry_meeting_id || 'NOT SET'}`);
 
     // קביעת אם זו פגישה חדשה או עדכון
-    // אם יש fireberry_meeting_id, זו פגישה קיימת שצריך לעדכן
-    // אם אין fireberry_meeting_id, זו פגישה חדשה (או פגישה שעדיין לא סונכרנה)
-    // אבל אם יש pcfPlastoMeetingId בפיירברי, פיירברי יזהה אותה לפי זה
-    // לכן, אם יש fireberry_meeting_id, זה בהחלט עדכון
-    // אם אין fireberry_meeting_id, זה יכול להיות חדש או קיים (אם פיירברי יזהה לפי pcfPlastoMeetingId)
-    // אבל לפיירברי, אם יש pcfPlastoMeetingId, הוא צריך לזהות שזו פגישה קיימת
-    // לכן, נשלח isNewMeeting: false אם יש fireberry_meeting_id, אחרת true
-    // אבל פיירברי צריך לבדוק גם pcfPlastoMeetingId כדי לזהות פגישות קיימות
-    const isNewMeeting = !meeting.fireberry_meeting_id;
+    // אם יש fireberry_meeting_id, זו בהחלט פגישה קיימת שצריך לעדכן
+    // אם אין fireberry_meeting_id אבל יש pcfPlastoMeetingId (meeting.id), זו פגישה קיימת בפיירברי
+    // שצריך לזהות לפי pcfPlastoMeetingId ולעדכן
+    // רק אם אין גם fireberry_meeting_id וגם pcfPlastoMeetingId, זו פגישה חדשה
+    // אבל בפועל, תמיד יש meeting.id (pcfPlastoMeetingId), אז אם אין fireberry_meeting_id,
+    // זה אומר שהפגישה כבר קיימת בפיירברי אבל fireberry_meeting_id לא נשמר
+    // לכן, נשלח isNewMeeting: false אם יש pcfPlastoMeetingId (meeting.id)
+    const hasPlastoId = !!meeting.id; // תמיד יש id (pcfPlastoMeetingId)
+    const isNewMeeting = !meeting.fireberry_meeting_id && !hasPlastoId; // רק אם אין גם fireberry_meeting_id וגם pcfPlastoMeetingId
     
-    console.log(`📅 isNewMeeting: ${isNewMeeting} (fireberry_meeting_id: ${meeting.fireberry_meeting_id ? 'exists' : 'missing'})`);
-    console.log(`📅 pcfPlastoMeetingId: ${meeting.id} - Fireberry should check this to identify existing meetings`);
+    // אבל בפועל, תמיד יש meeting.id, אז אם אין fireberry_meeting_id,
+    // זה אומר שהפגישה כבר קיימת בפיירברי אבל fireberry_meeting_id לא נשמר
+    // לכן, נשלח isNewMeeting: false אם יש pcfPlastoMeetingId
+    // הפתרון: אם יש pcfPlastoMeetingId, זו פגישה קיימת ולכן isNewMeeting: false
+    const isNewMeetingFinal = !meeting.fireberry_meeting_id && !hasPlastoId ? true : false;
+    
+    console.log(`📅 isNewMeeting: ${isNewMeetingFinal} (fireberry_meeting_id: ${meeting.fireberry_meeting_id ? 'exists' : 'missing'}, pcfPlastoMeetingId: ${meeting.id})`);
 
     // קריאת נתוני הלקוח - חיפוש קודם ב-OnboardingRequest
     let customerName = '';
@@ -144,7 +149,7 @@ Deno.serve(async (req) => {
       business_name: businessName,
       ownerid: assigneeFireberryUserId,
       participants: Array.isArray(meeting.participants) ? meeting.participants.join(', ') : (meeting.participants || ''),
-      isNewMeeting: isNewMeeting,
+      isNewMeeting: isNewMeetingFinal,
       itemType: 'meeting' // להבדיל ממשימות
     };
 
@@ -183,9 +188,16 @@ Deno.serve(async (req) => {
     };
 
     // אם זו הייתה פגישה חדשה, נשמור את ה-meetingid שחזר מפיירברי
-    if (isNewMeeting && responseData && typeof responseData === 'object' && responseData.meetingid) {
-      updateData.fireberry_meeting_id = responseData.meetingid;
-      console.log(`New meeting created in Fireberry with ID: ${responseData.meetingid}`);
+    // אבל גם אם זו לא פגישה חדשה אבל אין fireberry_meeting_id, נשמור אותו אם פיירברי החזיר אותו
+    if (responseData && typeof responseData === 'object' && responseData.meetingid) {
+      if (isNewMeetingFinal) {
+        updateData.fireberry_meeting_id = responseData.meetingid;
+        console.log(`✅ New meeting created in Fireberry with ID: ${responseData.meetingid}`);
+      } else if (!meeting.fireberry_meeting_id) {
+        // אם אין fireberry_meeting_id אבל פיירברי החזיר אחד, נשמור אותו
+        updateData.fireberry_meeting_id = responseData.meetingid;
+        console.log(`✅ Fireberry meeting ID saved: ${responseData.meetingid} (was missing, now saved)`);
+      }
     }
 
     await base44.asServiceRole.entities.Meeting.update(meetingId, updateData);
