@@ -109,6 +109,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchTermDebounced, setSearchTermDebounced] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [qualityFilter, setQualityFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
@@ -215,6 +216,18 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
         filterQuery.is_suggested = { $ne: true };
         filterQuery.is_recommended = { $ne: true };
       }
+
+      // חיפוש על כל הקטלוג (שרת) – התאמה בשם, ברקוד, ספק, קטגוריה, קוד פריט
+      const term = searchTermDebounced.trim();
+      if (term) {
+        filterQuery.$or = [
+          { product_name: { $contains: term } },
+          { barcode: { $contains: term } },
+          { supplier: { $contains: term } },
+          { category: { $contains: term } },
+          { supplier_item_code: { $contains: term } }
+        ];
+      }
       
       const batch = await ProductCatalog.filter(
         filterQuery,
@@ -247,7 +260,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     } finally {
       setIsLoading(false);
     }
-  }, [customer.email, selectedCatalogId, categoryFilter, qualityFilter, sourceFilter, updateCatalogStats, catalogs]);
+  }, [customer.email, selectedCatalogId, categoryFilter, qualityFilter, sourceFilter, searchTermDebounced, updateCatalogStats, catalogs]);
 
 
 
@@ -530,7 +543,8 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
 
   const filterProducts = useCallback(() => {
     let filtered = [...products];
-    if (searchTerm) {
+    // כשהחיפוש רץ בשרת (searchTermDebounced לא ריק) – לא מסננים שוב לפי searchTerm
+    if (searchTerm && !searchTermDebounced.trim()) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(product =>
         product.product_name?.toLowerCase().includes(term) ||
@@ -566,13 +580,21 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
       }
     }
     setFilteredProducts(filtered);
-  }, [products, searchTerm, categoryFilter, qualityFilter, sourceFilter, setFilteredProducts]);
+  }, [products, searchTerm, searchTermDebounced, categoryFilter, qualityFilter, sourceFilter, setFilteredProducts]);
 
   useEffect(() => {
     if (customer?.email) {
       loadCatalogs();
     }
   }, [customer?.email, loadCatalogs]);
+
+  // Debounce search term so we don't hit the API on every keystroke
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearchTermDebounced(searchTerm);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
 
   useEffect(() => {
     if (selectedCatalogId) {
@@ -584,7 +606,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
         updateCatalogStats();
         setIsLoading(false);
     }
-  }, [selectedCatalogId, categoryFilter, qualityFilter, sourceFilter, loadCatalog, updateCatalogStats]);
+  }, [selectedCatalogId, categoryFilter, qualityFilter, sourceFilter, searchTermDebounced, loadCatalog, updateCatalogStats]);
 
   useEffect(() => {
     if (selectedCatalogId && customer?.email) {
@@ -1328,7 +1350,16 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between gap-4">
                       <div className="text-sm text-horizon-accent">
-                        {totalProducts > 0 ? (
+                        {searchTermDebounced.trim() ? (
+                          filteredProducts.length > 0 ? (
+                            <>
+                              תוצאות חיפוש – מוצרים {((currentPage - 1) * PRODUCTS_PER_PAGE) + 1}-{((currentPage - 1) * PRODUCTS_PER_PAGE) + filteredProducts.length}
+                              {filteredProducts.length === PRODUCTS_PER_PAGE && ' (ייתכן שיש עוד)'}
+                            </>
+                          ) : (
+                            'לא נמצאו תוצאות חיפוש'
+                          )
+                        ) : totalProducts > 0 ? (
                           <>
                             מוצרים {((currentPage - 1) * PRODUCTS_PER_PAGE) + 1}-{Math.min(currentPage * PRODUCTS_PER_PAGE, totalProducts)} מתוך {totalProducts}
                           </>
@@ -1356,13 +1387,21 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                           הקודם
                         </Button>
                         <span className="px-4 text-sm font-medium text-horizon-text">
-                          דף {currentPage} מתוך {Math.ceil(totalProducts / PRODUCTS_PER_PAGE) || 1}
+                          {searchTermDebounced.trim() ? (
+                            <>תוצאות חיפוש – עמוד {currentPage}</>
+                          ) : (
+                            <>דף {currentPage} מתוך {Math.ceil(totalProducts / PRODUCTS_PER_PAGE) || 1}</>
+                          )}
                         </span>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => loadCatalog(currentPage + 1)}
-                          disabled={currentPage >= Math.ceil(totalProducts / PRODUCTS_PER_PAGE) || isLoading || disableAllActions}
+                          disabled={
+                            searchTermDebounced.trim()
+                              ? filteredProducts.length < PRODUCTS_PER_PAGE || isLoading || disableAllActions
+                              : (currentPage >= Math.ceil(totalProducts / PRODUCTS_PER_PAGE) || isLoading || disableAllActions)
+                          }
                           className="border-horizon text-horizon-text"
                         >
                           הבא
@@ -1371,7 +1410,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
                           size="sm"
                           variant="outline"
                           onClick={() => loadCatalog(Math.ceil(totalProducts / PRODUCTS_PER_PAGE))}
-                          disabled={currentPage >= Math.ceil(totalProducts / PRODUCTS_PER_PAGE) || isLoading || disableAllActions}
+                          disabled={searchTermDebounced.trim() || currentPage >= Math.ceil(totalProducts / PRODUCTS_PER_PAGE) || isLoading || disableAllActions}
                           className="border-horizon text-horizon-text"
                         >
                           אחרון
