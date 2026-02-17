@@ -87,9 +87,14 @@ Deno.serve(async (req) => {
           const childCount = childrenByParent.get(item.id)?.length || 0;
           console.log(`מעדכן: ${item.name} (${item.id}) -> task_type: 'goal' (יש ${childCount} תת-משימות)`);
           
-          await base44.asServiceRole.entities.CustomerGoal.update(item.id, {
-            task_type: 'goal'
-          });
+          // 🔒 תיקון: וידוא שיש end_date תקין
+          const updatePayload = { task_type: 'goal' };
+          if (!item.end_date || item.end_date === null || item.end_date === 'null') {
+            updatePayload.end_date = item.start_date || new Date().toISOString().split('T')[0];
+            console.log(`  ⚠️ תיקון end_date חסר: ${updatePayload.end_date}`);
+          }
+          
+          await base44.asServiceRole.entities.CustomerGoal.update(item.id, updatePayload);
           
           return { success: true, id: item.id, name: item.name, childCount };
         } catch (error) {
