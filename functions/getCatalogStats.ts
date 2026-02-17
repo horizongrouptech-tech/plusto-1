@@ -6,7 +6,7 @@ async function countAllProducts(
 ): Promise<number> {
   let count = 0;
   let skip = 0;
-  const batchSize = 1000;
+  const batchSize = 5000;
 
   while (true) {
     const batch = await base44.entities.ProductCatalog.filter(
