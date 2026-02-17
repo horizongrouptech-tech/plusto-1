@@ -37,16 +37,23 @@ Deno.serve(async (req) => {
 
     // שלב 3: מזהה פריטים שצריכים עדכון task_type
     const itemsToFix = allGoals.filter(item => {
-      // אם אין task_type בכלל - צריך לתקן ל-goal
-      const hasNoTaskType = !item.task_type;
-      // אם יש תת-משימות אבל לא מסומן כ-goal - צריך לתקן
-      const hasChildren = childrenByParent.has(item.id);
+      // דלג על daily_checklist ו-recurring - הם צריכים להישאר כפי שהם
+      if (item.task_type === 'daily_checklist' || item.task_type === 'recurring') {
+        return false;
+      }
+      
+      // אם זו תת-משימה (יש parent_id) - לא נוגעים
+      if (item.parent_id) {
+        return false;
+      }
+      
+      // כל פריט ראשי (ללא parent_id) שאינו goal → צריך להפוך ל-goal
       const isNotGoal = item.task_type !== 'goal';
       
-      return hasNoTaskType || (isNotGoal && hasChildren);
+      return isNotGoal;
     });
 
-    console.log(`נמצאו ${itemsToFix.length} פריטים שצריכים עדכון ל-goal (ללא task_type או עם תת-משימות)`);
+    console.log(`נמצאו ${itemsToFix.length} פריטים ראשיים שצריכים עדכון ל-goal`);
 
     // דוח על מצב כללי
     const explicitGoals = allGoals.filter(item => item.task_type === 'goal');
@@ -117,7 +124,7 @@ Deno.serve(async (req) => {
 
     return Response.json({
       success: true,
-      message: `עודכנו ${updatedCount} פריטים להיות יעדים (רק כאלה עם תת-משימות)`,
+      message: `עודכנו ${updatedCount} פריטים ראשיים להיות יעדים`,
       totalChecked: allGoals.length,
       itemsFixed: updatedCount,
       stats: {
