@@ -186,6 +186,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
         external_responsible: editedGoal.external_responsible,
         notes: editedGoal.notes,
         due_time: editedGoal.due_time,
+        task_type: goal.task_type || 'goal', // 🔒 שמירת task_type
         is_active: goal.is_active !== false
       });
 
@@ -417,7 +418,10 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
         }
       }
 
-      const updateData = { [field]: finalValue };
+      const updateData = { 
+        [field]: finalValue,
+        task_type: goal.task_type || 'goal' // 🔒 שמירת task_type
+      };
       await base44.entities.CustomerGoal.update(goal.id, updateData);
       refreshData();
 
@@ -477,7 +481,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
                                 <SelectValue placeholder="בחר אחראי" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">ללא אחראי</SelectItem>
+                                <SelectItem value={null}>ללא אחראי</SelectItem>
                                 {users.map((user) => (
                                   <SelectItem key={user.email} value={user.email}>
                                     {user.full_name}

@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
           customer_email: customerEmail, // יכול להיות null אם לא נמצא לקוח
           related_fireberry_account_id: fireberryAccountId || null, // שמירת המזהה המקורי למקרה של שיוך עתידי
           assignee_email: assigneeEmail, 
-          task_type: 'one_time',
+          task_type: existingTask?.task_type || 'goal', // 🔒 שמירת task_type מקורי, ברירת מחדל goal
           is_active: true,
           order_index: 0,
           fireberry_task_id: fbTask.taskid,

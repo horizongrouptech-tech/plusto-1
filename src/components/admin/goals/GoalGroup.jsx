@@ -33,6 +33,7 @@ export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals
                 status: 'open',
                 assignee_email: goal.assignee_email,
                 order_index: newOrderIndex,
+                task_type: 'one_time', // 🔒 הגדרת task_type מפורש
                 end_date: defaultEndDate.toISOString().split('T')[0] // פורמט YYYY-MM-DD - שדה חובה!
             });
             

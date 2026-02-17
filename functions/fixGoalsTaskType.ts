@@ -35,14 +35,18 @@ Deno.serve(async (req) => {
       }
     }
 
-    // שלב 3: מזהה פריטים שצריכים להיות יעדים - רק אלה שיש להם תת-משימות
+    // שלב 3: מזהה פריטים שצריכים עדכון task_type
     const itemsToFix = allGoals.filter(item => {
-      const isNotGoal = item.task_type !== 'goal';
+      // אם אין task_type בכלל - צריך לתקן ל-goal
+      const hasNoTaskType = !item.task_type;
+      // אם יש תת-משימות אבל לא מסומן כ-goal - צריך לתקן
       const hasChildren = childrenByParent.has(item.id);
-      return isNotGoal && hasChildren;
+      const isNotGoal = item.task_type !== 'goal';
+      
+      return hasNoTaskType || (isNotGoal && hasChildren);
     });
 
-    console.log(`נמצאו ${itemsToFix.length} פריטים עם תת-משימות שצריכים עדכון ל-goal`);
+    console.log(`נמצאו ${itemsToFix.length} פריטים שצריכים עדכון ל-goal (ללא task_type או עם תת-משימות)`);
 
     // דוח על מצב כללי
     const explicitGoals = allGoals.filter(item => item.task_type === 'goal');
