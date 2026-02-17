@@ -224,7 +224,7 @@ export default function CustomerGoalsGantt({ customer }) {
     }
 
     return (
-        <div className="p-4 md:p-5 min-w-[360px] max-w-[960px] mx-auto" dir="rtl">
+        <div className="min-w-[360px]" dir="rtl">
             <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
                  <h2 className="text-2xl font-bold text-horizon-text flex items-center gap-3">
                     <Target className="text-horizon-primary" />
