@@ -103,7 +103,7 @@ export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals
 
     return (
         <Card className={`card-horizon ${isDragging ? 'opacity-50' : ''}`}>
-            <div className="p-3 space-y-3">
+            <div className="p-2 space-y-2">
                 <div className="min-w-0">
                     <GoalRow
                         goal={goal}

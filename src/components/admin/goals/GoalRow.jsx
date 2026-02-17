@@ -678,7 +678,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
 
   return (
     <div
-      className={`flex flex-wrap items-center gap-2 p-2 rounded-lg transition-all min-w-0 ${isDragging ? 'opacity-50' : ''} ${
+      className={`flex flex-wrap items-center gap-1.5 p-1.5 rounded-lg transition-all min-w-0 ${isDragging ? 'opacity-50' : ''} ${
         isParent
           ? 'bg-horizon-card/60 border border-horizon-primary/40 font-semibold hover:border-horizon-primary/60'
           : 'bg-horizon-card/20 border border-horizon/50 ps-6 hover:border-horizon-primary/30'
