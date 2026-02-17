@@ -119,7 +119,7 @@ export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCo
     >
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0 text-right">
-          <p className="text-sm text-horizon-text font-medium mb-1 break-words">{task.name}</p>
+          <p className="text-sm text-horizon-text font-medium mb-1 break-words line-clamp-3" title={task.name}>{task.name}</p>
           <div className="flex flex-wrap gap-1 items-center justify-end">
             {task.end_date && (
               <div className="flex items-center gap-1 text-xs text-horizon-accent">

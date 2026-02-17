@@ -14,7 +14,7 @@ const StatCard = ({ title, value, icon, colorClass = "text-horizon-text" }) => (
 
 export default function GoalsSummaryDashboard({ goalStats, subtaskStats }) {
     return (
-        <Card className="card-horizon mb-6">
+        <Card className="card-horizon mb-4">
             <CardHeader>
                 <CardTitle className="text-horizon-text">סיכום יעדים ומשימות</CardTitle>
             </CardHeader>
