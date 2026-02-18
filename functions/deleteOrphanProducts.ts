@@ -42,12 +42,18 @@ Deno.serve(async (req) => {
                 return !existingCatalogIds.includes(p.catalog_id);
             });
 
+            console.log(`[deleteOrphanProducts] Checked ${productBatch.length} products, found ${orphanBatch.length} orphans`);
+
             if (orphanBatch.length === 0) {
-                console.log(`[deleteOrphanProducts] No more orphan products found`);
-                break;
+                // If no orphans in this batch, but there are more products, continue checking
+                if (productBatch.length < DELETE_BATCH_SIZE) {
+                    console.log(`[deleteOrphanProducts] Completed - no more orphan products found`);
+                    break;
+                }
+                continue;
             }
 
-            console.log(`[deleteOrphanProducts] Processing batch ${Math.floor(totalDeletedCount / DELETE_BATCH_SIZE) + 1}: ${orphanBatch.length} products`);
+            console.log(`[deleteOrphanProducts] Processing batch: ${orphanBatch.length} orphan products`);
 
             // Delete products in this batch
             for (const product of orphanBatch) {
