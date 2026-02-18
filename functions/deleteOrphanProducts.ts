@@ -12,21 +12,23 @@ Deno.serve(async (req) => {
 
         console.log(`[deleteOrphanProducts] Admin ${user.email} initiated orphan product deletion`);
 
-        // Find all products without catalog_id
+        // Find orphan products without catalog_id - limit to 10,000 per run to avoid timeout
+        const BATCH_SIZE = 10000;
         const orphanProducts = await base44.asServiceRole.entities.Product.filter({
             $or: [
                 { catalog_id: null },
                 { catalog_id: '' }
             ]
-        });
+        }, '-created_date', BATCH_SIZE);
 
-        console.log(`[deleteOrphanProducts] Found ${orphanProducts.length} orphan products without catalog_id`);
+        console.log(`[deleteOrphanProducts] Found ${orphanProducts.length} orphan products in this batch (limit: ${BATCH_SIZE})`);
 
         if (orphanProducts.length === 0) {
             return Response.json({
                 success: true,
                 message: 'No orphan products found',
                 deleted_count: 0,
+                remaining: 0,
                 deleted_ids: []
             });
         }
@@ -59,7 +61,18 @@ Deno.serve(async (req) => {
             }
         }
 
+        // Check if there are more orphan products remaining
+        const remainingOrphans = await base44.asServiceRole.entities.Product.filter({
+            $or: [
+                { catalog_id: null },
+                { catalog_id: '' }
+            ]
+        }, '-created_date', 1);
+
+        const hasMore = remainingOrphans.length > 0;
+
         console.log(`[deleteOrphanProducts] Deletion complete. Deleted: ${deletedCount}/${orphanProducts.length}`);
+        console.log(`[deleteOrphanProducts] More orphan products remaining: ${hasMore ? 'Yes' : 'No'}`);
         
         if (errors.length > 0) {
             console.error(`[deleteOrphanProducts] Encountered ${errors.length} errors during deletion`);
@@ -67,9 +80,10 @@ Deno.serve(async (req) => {
 
         return Response.json({
             success: true,
-            message: `Successfully deleted ${deletedCount} orphan products out of ${orphanProducts.length} found`,
+            message: `Successfully deleted ${deletedCount} orphan products. ${hasMore ? 'More products remain - run again to continue.' : 'All orphan products cleared.'}`,
             deleted_count: deletedCount,
-            total_found: orphanProducts.length,
+            total_in_batch: orphanProducts.length,
+            remaining: hasMore,
             deleted_ids: deletedIds,
             errors: errors.length > 0 ? errors : null
         });
