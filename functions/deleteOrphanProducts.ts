@@ -12,56 +12,54 @@ Deno.serve(async (req) => {
 
         console.log(`[deleteOrphanProducts] Admin ${user.email} initiated orphan product deletion`);
 
-        // Find orphan products without catalog_id - limit to 10,000 per run to avoid timeout
-        const BATCH_SIZE = 5000;
-        const orphanProducts = await base44.asServiceRole.entities.Product.filter({
-            $or: [
-                { catalog_id: null },
-                { catalog_id: '' }
-            ]
-        }, '-created_date', BATCH_SIZE);
-
-        console.log(`[deleteOrphanProducts] Found ${orphanProducts.length} orphan products in this batch (limit: ${BATCH_SIZE})`);
-
-        if (orphanProducts.length === 0) {
-            return Response.json({
-                success: true,
-                message: 'No orphan products found',
-                deleted_count: 0,
-                remaining: 0,
-                deleted_ids: []
-            });
-        }
-
-        // Log sample of products that will be deleted
-        const sampleProducts = orphanProducts.slice(0, 5).map(p => ({
-            id: p.id,
-            description: p.description,
-            created_date: p.created_date
-        }));
-        console.log(`[deleteOrphanProducts] Sample of products to delete:`, sampleProducts);
-
-        // Delete each orphan product
-        let deletedCount = 0;
-        const deletedIds = [];
+        // Delete orphan products in small batches to avoid timeout
+        const DELETE_BATCH_SIZE = 100;
+        const MAX_TOTAL_TO_DELETE = 10000;
+        
+        let totalDeletedCount = 0;
+        const allDeletedIds = [];
         const errors = [];
+        
+        console.log(`[deleteOrphanProducts] Starting deletion - up to ${MAX_TOTAL_TO_DELETE} products, ${DELETE_BATCH_SIZE} at a time`);
 
-        for (const product of orphanProducts) {
-            try {
-                await base44.asServiceRole.entities.Product.delete(product.id);
-                deletedCount++;
-                deletedIds.push(product.id);
-                
-                if (deletedCount % 100 === 0) {
-                    console.log(`[deleteOrphanProducts] Progress: ${deletedCount}/${orphanProducts.length} deleted`);
+        while (totalDeletedCount < MAX_TOTAL_TO_DELETE) {
+            // Find next batch of orphan products
+            const orphanBatch = await base44.asServiceRole.entities.Product.filter({
+                $or: [
+                    { catalog_id: null },
+                    { catalog_id: '' }
+                ]
+            }, '-created_date', DELETE_BATCH_SIZE);
+
+            if (orphanBatch.length === 0) {
+                console.log(`[deleteOrphanProducts] No more orphan products found`);
+                break;
+            }
+
+            console.log(`[deleteOrphanProducts] Processing batch ${Math.floor(totalDeletedCount / DELETE_BATCH_SIZE) + 1}: ${orphanBatch.length} products`);
+
+            // Delete products in this batch
+            for (const product of orphanBatch) {
+                try {
+                    await base44.asServiceRole.entities.Product.delete(product.id);
+                    totalDeletedCount++;
+                    allDeletedIds.push(product.id);
+                } catch (error) {
+                    console.error(`[deleteOrphanProducts] Failed to delete product ${product.id}:`, error.message);
+                    errors.push({ product_id: product.id, error: error.message });
                 }
-            } catch (error) {
-                console.error(`[deleteOrphanProducts] Failed to delete product ${product.id}:`, error.message);
-                errors.push({ product_id: product.id, error: error.message });
+            }
+
+            console.log(`[deleteOrphanProducts] Batch complete. Total deleted: ${totalDeletedCount}`);
+
+            // If we got fewer products than the batch size, no more products remain
+            if (orphanBatch.length < DELETE_BATCH_SIZE) {
+                console.log(`[deleteOrphanProducts] Last batch complete - all orphan products cleared`);
+                break;
             }
         }
 
-        // Check if there are more orphan products remaining
+        // Check if there are still more orphan products remaining
         const remainingOrphans = await base44.asServiceRole.entities.Product.filter({
             $or: [
                 { catalog_id: null },
@@ -71,7 +69,7 @@ Deno.serve(async (req) => {
 
         const hasMore = remainingOrphans.length > 0;
 
-        console.log(`[deleteOrphanProducts] Deletion complete. Deleted: ${deletedCount}/${orphanProducts.length}`);
+        console.log(`[deleteOrphanProducts] Process complete. Total deleted: ${totalDeletedCount}`);
         console.log(`[deleteOrphanProducts] More orphan products remaining: ${hasMore ? 'Yes' : 'No'}`);
         
         if (errors.length > 0) {
@@ -80,11 +78,10 @@ Deno.serve(async (req) => {
 
         return Response.json({
             success: true,
-            message: `Successfully deleted ${deletedCount} orphan products. ${hasMore ? 'More products remain - run again to continue.' : 'All orphan products cleared.'}`,
-            deleted_count: deletedCount,
-            total_in_batch: orphanProducts.length,
+            message: `Successfully deleted ${totalDeletedCount} orphan products. ${hasMore ? 'More products remain - run again to continue.' : 'All orphan products cleared.'}`,
+            deleted_count: totalDeletedCount,
             remaining: hasMore,
-            deleted_ids: deletedIds,
+            deleted_ids: allDeletedIds,
             errors: errors.length > 0 ? errors : null
         });
 
