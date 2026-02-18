@@ -12,10 +12,26 @@ Deno.serve(async (req) => {
 
         console.log(`[deleteOrphanProducts] Admin ${user.email} initiated orphan product deletion from ProductCatalog`);
 
-        // First, get all existing catalog IDs
+        // Step 1: Delete all catalogs for gaya.gur333@gmail.com
+        const targetEmail = 'gaya.gur333@gmail.com';
+        console.log(`[deleteOrphanProducts] Deleting all catalogs for ${targetEmail}`);
+        
+        const gayaCatalogs = await base44.asServiceRole.entities.Catalog.filter({ customer_email: targetEmail });
+        console.log(`[deleteOrphanProducts] Found ${gayaCatalogs.length} catalogs for ${targetEmail}`);
+        
+        for (const catalog of gayaCatalogs) {
+            try {
+                await base44.asServiceRole.entities.Catalog.delete(catalog.id);
+                console.log(`[deleteOrphanProducts] Deleted catalog ${catalog.id} (${catalog.catalog_name})`);
+            } catch (err) {
+                console.error(`[deleteOrphanProducts] Error deleting catalog ${catalog.id}:`, err);
+            }
+        }
+
+        // Step 2: Get all remaining existing catalog IDs
         const existingCatalogs = await base44.asServiceRole.entities.Catalog.list();
         const existingCatalogIds = existingCatalogs.map(c => c.id);
-        console.log(`[deleteOrphanProducts] Found ${existingCatalogIds.length} existing catalogs`);
+        console.log(`[deleteOrphanProducts] Found ${existingCatalogIds.length} existing catalogs after cleanup`);
 
         // Delete orphan products in small batches to avoid timeout
         const DELETE_BATCH_SIZE = 1000;
