@@ -170,6 +170,17 @@ export default function MeetingsTab({ customer, currentUser }) {
 
   // יצירת פגישה חדשה
   const handleCreateMeeting = async () => {
+    // ולידציה
+    if (!newMeetingForm.start_date || !newMeetingForm.start_time || !newMeetingForm.end_time) {
+      showError('נא למלא תאריך ושעת התחלה וסיום');
+      return;
+    }
+
+    if (newMeetingForm.end_time <= newMeetingForm.start_time && newMeetingForm.start_date === newMeetingForm.end_date) {
+      showError('שעת הסיום חייבת להיות אחרי שעת ההתחלה');
+      return;
+    }
+
     setIsCreating(true);
     try {
       // נושא קבוע: פגישת ניהול כספים מספר X, [שם הלקוח]
@@ -177,11 +188,13 @@ export default function MeetingsTab({ customer, currentUser }) {
       // פורמט קבוע - לא ניתן לשינוי
       const finalSubject = `פגישת ניהול כספים מספר ${meetingNumber}, ${customer.business_name || customer.full_name}`;
 
-      // חישוב משך הפגישה בדקות
-      const startDateTime = new Date(`${newMeetingForm.start_date}T${newMeetingForm.start_time}:00`);
-      const endDateTime = new Date(`${newMeetingForm.end_date}T${newMeetingForm.end_time}:00`);
-      const durationMinutes = Math.round((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60));
-      const meetingDate = startDateTime.toISOString();
+      // חישוב משך הפגישה בדקות - ללא המרת timezone
+      const [startHour, startMin] = newMeetingForm.start_time.split(':').map(Number);
+      const [endHour, endMin] = newMeetingForm.end_time.split(':').map(Number);
+      const durationMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+      
+      // שמירת meeting_date כ-local time string (ללא המרה ל-UTC)
+      const meetingDate = `${newMeetingForm.start_date}T${newMeetingForm.start_time}:00`;
 
       // המרת participants מ-string ל-array
       const participantsArray = newMeetingForm.participants 
@@ -285,13 +298,21 @@ export default function MeetingsTab({ customer, currentUser }) {
   const handleUpdateMeeting = async () => {
     if (!selectedMeeting) return;
     
+    // ולידציה
+    if (!selectedMeeting.start_date || !selectedMeeting.start_time || !selectedMeeting.end_time) {
+      showError('נא למלא תאריך ושעת התחלה וסיום');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      // חישוב משך הפגישה בדקות
-      const startDateTime = new Date(`${selectedMeeting.start_date}T${selectedMeeting.start_time}:00`);
-      const endDateTime = new Date(`${selectedMeeting.end_date}T${selectedMeeting.end_time}:00`);
-      const durationMinutes = Math.round((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60));
-      const meetingDate = startDateTime.toISOString();
+      // חישוב משך הפגישה בדקות - ללא המרת timezone
+      const [startHour, startMin] = selectedMeeting.start_time.split(':').map(Number);
+      const [endHour, endMin] = selectedMeeting.end_time.split(':').map(Number);
+      const durationMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+      
+      // שמירת meeting_date כ-local time string (ללא המרה ל-UTC)
+      const meetingDate = `${selectedMeeting.start_date}T${selectedMeeting.start_time}:00`;
 
       // המרת participants מ-string ל-array
       const participantsArray = selectedMeeting.participants 
@@ -332,7 +353,9 @@ export default function MeetingsTab({ customer, currentUser }) {
         whatsapp_summary: selectedMeeting.whatsapp_summary || '',
         google_event_id: selectedMeeting.google_event_id || null,
         send_reminder: selectedMeeting.send_reminder,
-        invite_customer: selectedMeeting.invite_customer
+        invite_customer: selectedMeeting.invite_customer,
+        fireberry_meeting_id: selectedMeeting.fireberry_meeting_id || null,
+        fireberry_synced_at: selectedMeeting.fireberry_synced_at || null
       });
 
       // סנכרון לפיירברי
@@ -348,51 +371,14 @@ export default function MeetingsTab({ customer, currentUser }) {
       
       // עדכון הנתונים - טעינה מחדש מהשרת
       await queryClient.invalidateQueries(['customerMeetings', customer.email]);
+      await queryClient.refetchQueries(['customerMeetings', customer.email]);
       
-      // טעינת הפגישה המעודכנת מהשרת כדי לעדכן את selectedMeeting
-      const updatedMeetings = await base44.entities.Meeting.filter({
-        id: selectedMeeting.id
-      });
-      
-      if (updatedMeetings.length > 0) {
-        const updatedMeeting = updatedMeetings[0];
-        // המרת הנתונים לפורמט של selectedMeeting
-        const participantsStr = Array.isArray(updatedMeeting.participants) 
-          ? updatedMeeting.participants.join(', ') 
-          : (updatedMeeting.participants || '');
-        const mainPoints = Array.isArray(updatedMeeting.key_points) && updatedMeeting.key_points.length > 0
-          ? [...updatedMeeting.key_points, '', '', '', '', ''].slice(0, 5)
-          : ['', '', '', '', ''];
-        const tasksStr = Array.isArray(updatedMeeting.action_items) && updatedMeeting.action_items.length > 0
-          ? updatedMeeting.action_items.map(item => typeof item === 'string' ? item : item.description || '').join('\n')
-          : '';
-        
-        setSelectedMeeting({
-          id: updatedMeeting.id,
-          subject: updatedMeeting.subject || 'פגישת ניהול כספים',
-          start_date: updatedMeeting.start_date || (updatedMeeting.meeting_date ? updatedMeeting.meeting_date.split('T')[0] : new Date().toISOString().split('T')[0]),
-          start_time: updatedMeeting.start_time || (updatedMeeting.meeting_date ? updatedMeeting.meeting_date.split('T')[1]?.slice(0, 5) : '10:00'),
-          end_date: updatedMeeting.end_date || updatedMeeting.start_date || (updatedMeeting.meeting_date ? updatedMeeting.meeting_date.split('T')[0] : new Date().toISOString().split('T')[0]),
-          end_time: updatedMeeting.end_time || '11:00',
-          channel: updatedMeeting.channel || 'zoom',
-          location: updatedMeeting.location || '',
-          location_details: updatedMeeting.location_details || '',
-          status: updatedMeeting.status || 'scheduled',
-          description: updatedMeeting.notes || '',
-          participants: participantsStr,
-          main_points: mainPoints,
-          tasks: tasksStr,
-          next_meeting_date: updatedMeeting.next_meeting_date || '',
-          whatsapp_summary: updatedMeeting.whatsapp_summary || '',
-          google_event_id: updatedMeeting.google_event_id || '',
-          send_reminder: updatedMeeting.send_reminder !== false,
-          invite_customer: updatedMeeting.invite_customer !== false,
-          fireberry_meeting_id: updatedMeeting.fireberry_meeting_id || null,
-          fireberry_synced_at: updatedMeeting.fireberry_synced_at || null,
-          created_by: updatedMeeting.manager_email || '',
-          created_date: updatedMeeting.created_date || updatedMeeting.meeting_date,
-          _raw: updatedMeeting
-        });
+      // שימוש ב-query cache לקבלת הנתונים המעודכנים
+      const updatedMeetingsList = queryClient.getQueryData(['customerMeetings', customer.email]);
+      const refreshedMeeting = updatedMeetingsList?.find(m => m.id === selectedMeeting.id);
+
+      if (refreshedMeeting) {
+        setSelectedMeeting(refreshedMeeting);
       }
       
       showSuccess('הפגישה עודכנה בהצלחה!');

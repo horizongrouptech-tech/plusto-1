@@ -157,7 +157,8 @@ Deno.serve(async (req) => {
           endTime = '11:00';
         }
         
-        meetingDate = startDateTime.toISOString(); // date-time format
+        // שמירת meeting_date כ-local time string (ללא המרה ל-UTC)
+        meetingDate = `${startDate}T${startTime}:00`;
 
         // בדיקה אם הפגישה כבר קיימת במערכת - לפי מספר קריטריונים
         let existingMeeting = null;
