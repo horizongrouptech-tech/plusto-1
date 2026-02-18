@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
             // Delete products in this batch
             for (const product of orphanBatch) {
                 try {
-                    await base44.asServiceRole.entities.Product.delete(product.id);
+                    await base44.asServiceRole.entities.ProductCatalog.delete(product.id);
                     totalDeletedCount++;
                     allDeletedIds.push(product.id);
                 } catch (error) {
