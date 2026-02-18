@@ -169,20 +169,58 @@ Deno.serve(async (req) => {
       responseData = responseText;
     }
 
+    // FIX 1: Add comprehensive logging to diagnose Fireberry response
+    console.log(`📥 Fireberry webhook response type:`, typeof responseData);
+    console.log(`📥 Fireberry response keys:`, responseData && typeof responseData === 'object' ? Object.keys(responseData) : 'NOT AN OBJECT');
+    console.log(`📥 Fireberry response meetingid:`, responseData?.meetingid || 'MISSING');
+    console.log(`📥 Full Fireberry response:`, JSON.stringify(responseData, null, 2));
+
     // עדכון תאריך הסנכרון האחרון
     const updateData = {
       fireberry_synced_at: new Date().toISOString()
     };
 
-    // שמירת fireberry_meeting_id שחזר מפיירברי
-    if (responseData && typeof responseData === 'object' && responseData.meetingid) {
-      if (!meeting.fireberry_meeting_id) {
-        updateData.fireberry_meeting_id = responseData.meetingid;
-        console.log(`✅ Fireberry meeting ID saved: ${responseData.meetingid}`);
-      }
+    // FIX 2: Handle different response formats from Fireberry
+    let fireberryMeetingIdFromResponse = null;
+
+    if (responseData && typeof responseData === 'object') {
+      // Try different possible field names that Fireberry might return
+      fireberryMeetingIdFromResponse = responseData.meetingid || 
+                                         responseData.meeting_id || 
+                                         responseData.id || 
+                                         responseData.activityid;
+    } else if (typeof responseData === 'string') {
+      // If Fireberry returns a plain string (the meeting ID)
+      fireberryMeetingIdFromResponse = responseData.trim();
     }
 
-    await base44.asServiceRole.entities.Meeting.update(meetingId, updateData);
+    console.log(`📥 Extracted fireberry meeting ID from response:`, fireberryMeetingIdFromResponse || 'NONE');
+
+    // Save the fireberry_meeting_id if we got one back AND we don't already have one
+    if (fireberryMeetingIdFromResponse && !meeting.fireberry_meeting_id) {
+      updateData.fireberry_meeting_id = fireberryMeetingIdFromResponse;
+      console.log(`✅ Fireberry meeting ID will be saved: ${fireberryMeetingIdFromResponse}`);
+    }
+
+    // CRITICAL: Log what we're about to save
+    console.log(`💾 Update data being saved to Meeting entity:`, JSON.stringify(updateData, null, 2));
+
+    // FIX 3: Add error handling for database update
+    try {
+      const updatedMeeting = await base44.asServiceRole.entities.Meeting.update(meetingId, updateData);
+      console.log(`✅ Meeting updated successfully in database. fireberry_meeting_id is now:`, updatedMeeting.fireberry_meeting_id || 'STILL MISSING');
+      
+      // Verify the update actually persisted
+      const verifyMeeting = await base44.asServiceRole.entities.Meeting.filter({ id: meetingId });
+      if (verifyMeeting[0]?.fireberry_meeting_id) {
+        console.log(`✅ VERIFIED: fireberry_meeting_id persisted in database:`, verifyMeeting[0].fireberry_meeting_id);
+      } else {
+        console.error(`❌ WARNING: fireberry_meeting_id did NOT persist in database!`);
+      }
+    } catch (dbError) {
+      console.error(`❌ Database update failed:`, dbError);
+      throw new Error(`Failed to save fireberry_meeting_id: ${dbError.message}`);
+    }
 
     return Response.json({ 
       success: true,
