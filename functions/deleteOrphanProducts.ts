@@ -12,6 +12,11 @@ Deno.serve(async (req) => {
 
         console.log(`[deleteOrphanProducts] Admin ${user.email} initiated orphan product deletion from ProductCatalog`);
 
+        // First, get all existing catalog IDs
+        const existingCatalogs = await base44.asServiceRole.entities.Catalog.list();
+        const existingCatalogIds = existingCatalogs.map(c => c.id);
+        console.log(`[deleteOrphanProducts] Found ${existingCatalogIds.length} existing catalogs`);
+
         // Delete orphan products in small batches to avoid timeout
         const DELETE_BATCH_SIZE = 1000;
         const MAX_TOTAL_TO_DELETE = 10000;
@@ -23,13 +28,19 @@ Deno.serve(async (req) => {
         console.log(`[deleteOrphanProducts] Starting deletion - up to ${MAX_TOTAL_TO_DELETE} products, ${DELETE_BATCH_SIZE} at a time`);
 
         while (totalDeletedCount < MAX_TOTAL_TO_DELETE) {
-            // Find next batch of orphan products from ProductCatalog
-            const orphanBatch = await base44.asServiceRole.entities.ProductCatalog.filter({
-                $or: [
-                    { catalog_id: null },
-                    { catalog_id: '' }
-                ]
-            }, '-created_date', DELETE_BATCH_SIZE);
+            // Find next batch of all products to check
+            const productBatch = await base44.asServiceRole.entities.ProductCatalog.list('-created_date', DELETE_BATCH_SIZE);
+
+            if (productBatch.length === 0) {
+                console.log(`[deleteOrphanProducts] No more products found`);
+                break;
+            }
+
+            // Filter orphan products: no catalog_id OR catalog doesn't exist
+            const orphanBatch = productBatch.filter(p => {
+                if (!p.catalog_id || p.catalog_id === '') return true;
+                return !existingCatalogIds.includes(p.catalog_id);
+            });
 
             if (orphanBatch.length === 0) {
                 console.log(`[deleteOrphanProducts] No more orphan products found`);
