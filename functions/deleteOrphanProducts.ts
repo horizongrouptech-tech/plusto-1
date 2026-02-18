@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
         }
 
-        console.log(`[deleteOrphanProducts] Admin ${user.email} initiated orphan product deletion`);
+        console.log(`[deleteOrphanProducts] Admin ${user.email} initiated orphan product deletion from ProductCatalog`);
 
         // Delete orphan products in small batches to avoid timeout
         const DELETE_BATCH_SIZE = 1000;
@@ -23,8 +23,8 @@ Deno.serve(async (req) => {
         console.log(`[deleteOrphanProducts] Starting deletion - up to ${MAX_TOTAL_TO_DELETE} products, ${DELETE_BATCH_SIZE} at a time`);
 
         while (totalDeletedCount < MAX_TOTAL_TO_DELETE) {
-            // Find next batch of orphan products
-            const orphanBatch = await base44.asServiceRole.entities.Product.filter({
+            // Find next batch of orphan products from ProductCatalog
+            const orphanBatch = await base44.asServiceRole.entities.ProductCatalog.filter({
                 $or: [
                     { catalog_id: null },
                     { catalog_id: '' }
