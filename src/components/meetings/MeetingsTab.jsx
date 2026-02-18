@@ -332,6 +332,7 @@ export default function MeetingsTab({ customer, currentUser }) {
           }))
         : [];
 
+      // FIX 4: Preserve fireberry_meeting_id and related_fireberry_account_id on updates
       await base44.entities.Meeting.update(selectedMeeting.id, {
         subject: selectedMeeting.subject,
         meeting_date: meetingDate,
@@ -355,7 +356,8 @@ export default function MeetingsTab({ customer, currentUser }) {
         send_reminder: selectedMeeting.send_reminder,
         invite_customer: selectedMeeting.invite_customer,
         fireberry_meeting_id: selectedMeeting.fireberry_meeting_id || null,
-        fireberry_synced_at: selectedMeeting.fireberry_synced_at || null
+        fireberry_synced_at: selectedMeeting.fireberry_synced_at || null,
+        related_fireberry_account_id: selectedMeeting._raw?.related_fireberry_account_id || customer?.fireberry_account_id || null
       });
 
       // סנכרון לפיירברי
