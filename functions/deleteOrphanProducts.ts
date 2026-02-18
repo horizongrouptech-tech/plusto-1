@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
         console.log(`[deleteOrphanProducts] Admin ${user.email} initiated orphan product deletion`);
 
         // Delete orphan products in small batches to avoid timeout
-        const DELETE_BATCH_SIZE = 100;
+        const DELETE_BATCH_SIZE = 1000;
         const MAX_TOTAL_TO_DELETE = 10000;
         
         let totalDeletedCount = 0;
