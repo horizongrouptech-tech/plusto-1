@@ -69,22 +69,21 @@ Deno.serve(async (req) => {
 
             console.log(`[deleteOrphanProducts] Batch complete. Total deleted: ${totalDeletedCount}`);
 
-            // If we got fewer products than the batch size, no more products remain
-            if (orphanBatch.length < DELETE_BATCH_SIZE) {
-                console.log(`[deleteOrphanProducts] Last batch complete - all orphan products cleared`);
+            // If we processed the entire batch and got fewer products than batch size, we're done
+            if (productBatch.length < DELETE_BATCH_SIZE) {
+                console.log(`[deleteOrphanProducts] All products checked - cleanup complete`);
                 break;
             }
         }
 
-        // Check if there are still more orphan products remaining
-        const remainingOrphans = await base44.asServiceRole.entities.ProductCatalog.filter({
-            $or: [
-                { catalog_id: null },
-                { catalog_id: '' }
-            ]
-        }, '-created_date', 1);
+        // Final check: are there any orphan products left?
+        const finalCheck = await base44.asServiceRole.entities.ProductCatalog.list('-created_date', 100);
+        const finalOrphans = finalCheck.filter(p => {
+            if (!p.catalog_id || p.catalog_id === '') return true;
+            return !existingCatalogIds.includes(p.catalog_id);
+        });
 
-        const hasMore = remainingOrphans.length > 0;
+        const hasMore = finalOrphans.length > 0;
 
         console.log(`[deleteOrphanProducts] Process complete. Total deleted: ${totalDeletedCount}`);
         console.log(`[deleteOrphanProducts] More orphan products remaining: ${hasMore ? 'Yes' : 'No'}`);
