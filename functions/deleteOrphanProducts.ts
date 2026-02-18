@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
         }
 
         // Check if there are still more orphan products remaining
-        const remainingOrphans = await base44.asServiceRole.entities.Product.filter({
+        const remainingOrphans = await base44.asServiceRole.entities.ProductCatalog.filter({
             $or: [
                 { catalog_id: null },
                 { catalog_id: '' }
