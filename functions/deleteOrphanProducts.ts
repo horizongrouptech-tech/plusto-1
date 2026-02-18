@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
         console.log(`[deleteOrphanProducts] Admin ${user.email} initiated orphan product deletion`);
 
         // Find orphan products without catalog_id - limit to 10,000 per run to avoid timeout
-        const BATCH_SIZE = 10000;
+        const BATCH_SIZE = 5000;
         const orphanProducts = await base44.asServiceRole.entities.Product.filter({
             $or: [
                 { catalog_id: null },
