@@ -23,11 +23,11 @@ Deno.serve(async (req) => {
 
         while (hasMore) {
             try {
-                // מוחק 500 מוצרים בכל פעם
+                // מוחק 50 מוצרים בכל פעם (קטן יותר להימנע מ-rate limit)
                 const products = await base44.asServiceRole.entities.ProductCatalog.filter(
                     { customer_email },
                     '-created_date',
-                    500
+                    50
                 );
 
                 if (products.length === 0) {
@@ -37,14 +37,19 @@ Deno.serve(async (req) => {
 
                 console.log(`Found ${products.length} products to delete in this batch`);
 
-                // מחיקה בבאצ'
+                // מחיקה בבאצ' עם delay
                 for (const product of products) {
                     try {
                         await base44.asServiceRole.entities.ProductCatalog.delete(product.id);
                         totalDeleted++;
                         
-                        // לוג כל 100 מחיקות
-                        if (totalDeleted % 100 === 0) {
+                        // המתנה של 100ms כל 10 מחיקות
+                        if (totalDeleted % 10 === 0) {
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                        }
+                        
+                        // לוג כל 50 מחיקות
+                        if (totalDeleted % 50 === 0) {
                             console.log(`Deleted ${totalDeleted} products so far...`);
                         }
                     } catch (deleteError) {
@@ -53,6 +58,9 @@ Deno.serve(async (req) => {
                 }
 
                 console.log(`Batch completed. Total deleted so far: ${totalDeleted}`);
+                
+                // המתנה של 500ms בין באצ'ים
+                await new Promise(resolve => setTimeout(resolve, 500));
 
             } catch (batchError) {
                 console.error('Batch error:', batchError);
