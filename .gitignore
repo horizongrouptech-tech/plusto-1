@@ -31,3 +31,4 @@ dist-ssr
 
 # Base44
 base44/.app.jsonc
+.vercel
