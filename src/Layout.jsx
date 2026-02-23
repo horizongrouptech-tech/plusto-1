@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, Navigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import {
   LayoutDashboard,
   Upload,
@@ -621,35 +621,45 @@ function LayoutContent({ children, currentPageName }) {
   const loadUser = async () => {
     setIsLoading(true);
     try {
-      const currentUser = await base44.auth.me();
-      setUser(currentUser);
-      
-      if (currentUser) {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      setUser(profile ?? null);
+
+      if (profile) {
         setTimeout(async () => {
           try {
-            if (currentUser.id) {
-              await base44.entities.User.update(currentUser.id, {
-                last_activity: new Date().toISOString()
-              });
-            }
-            
-            if (currentUser.email) {
-              const userNotifications = await base44.entities.Notification.filter(
-                { recipient_email: currentUser.email, is_read: false },
-                '-created_date',
-                10
-              );
-              setNotifications(userNotifications);
+            await supabase
+              .from('profiles')
+              .update({ last_activity: new Date().toISOString() })
+              .eq('id', profile.id);
+
+            if (profile.email) {
+              const { data: userNotifications } = await supabase
+                .from('notifications')
+                .select('*')
+                .match({ recipient_email: profile.email, is_read: false })
+                .order('created_date', { ascending: false })
+                .limit(10);
+              setNotifications(userNotifications ?? []);
             }
 
-            await trackActivity('LOGIN', { userEmail: currentUser.email });
-            
+            await trackActivity('LOGIN', { userEmail: profile.email });
           } catch (error) {
             console.error("Error loading background data:", error);
           }
         }, 2000);
       }
-
     } catch (error) {
       console.error("Error loading user:", error);
       setUser(null);
@@ -663,8 +673,8 @@ function LayoutContent({ children, currentPageName }) {
   }, [location.pathname, currentPageName]);
 
   const handleLogout = async () => {
-    await base44.auth.logout();
-    window.location.reload();
+    await supabase.auth.signOut();
+    window.location.href = '/Welcome';
   };
 
   if (isLoading) {
@@ -766,8 +776,8 @@ function LayoutContent({ children, currentPageName }) {
                   size="sm"
                   onClick={async () => {
                     try {
-                      await base44.auth.logout();
-                      window.location.reload();
+                      await supabase.auth.signOut();
+                      window.location.href = '/Welcome';
                     } catch (error) {
                       console.error("Logout error:", error);
                     }
