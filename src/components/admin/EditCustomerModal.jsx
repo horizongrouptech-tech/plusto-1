@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { Loader2, Save, UserCog, User, Users } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from "sonner";
@@ -39,21 +40,8 @@ export default function EditCustomerModal({ isOpen, onClose, customer, onCustome
         general_notes: ''
     });
     // Removed isSaving state as useMutation provides isLoading
-    const [currentUser, setCurrentUser] = useState(null);
+    const { user: currentUser } = useAuth();
     const [isOnboardingSource, setIsOnboardingSource] = useState(false);
-
-    // טעינת המשתמש הנוכחי
-    useEffect(() => {
-        const loadUser = async () => {
-            try {
-                const user = await base44.auth.me();
-                setCurrentUser(user);
-            } catch (error) {
-                console.error('Error loading user:', error);
-            }
-        };
-        loadUser();
-    }, []);
 
     // טעינת רשימת מנהלי כספים (רק לאדמין)
     const { data: allFinancialManagers = [] } = useQuery({

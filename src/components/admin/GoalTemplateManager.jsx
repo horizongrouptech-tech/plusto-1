@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,10 +35,7 @@ export default function GoalTemplateManager() {
     queryFn: () => base44.entities.GoalTemplate.filter({ is_active: true }, '-usage_count')
   });
 
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me()
-  });
+  const { user: currentUser } = useAuth();
 
   const canEdit = canEditGoalTemplates(currentUser);
 

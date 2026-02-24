@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Loader2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -65,10 +66,7 @@ export default function CustomerManagementNew() {
   const queryClient = useQueryClient();
 
   // טעינת משתמש נוכחי
-  const { data: user } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me()
-  });
+  const { user } = useAuth();
 
   // טעינת לקוחות (כולל ארכיון)
   const { data: customers = [], isLoading: isLoadingCustomers } = useQuery({

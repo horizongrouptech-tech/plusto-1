@@ -1,9 +1,12 @@
 import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 
 export const trackActivity = async (actionType, details = {}) => {
   try {
-    const user = await base44.auth.me();
-    if (!user) return;
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return;
+    const user = await base44.entities.User.get(authUser.id).catch(() => ({ email: authUser.email, id: authUser.id }));
+    if (!user?.email) return;
 
     let [activity] = await base44.entities.UserActivity.filter({ user_email: user.email });
 

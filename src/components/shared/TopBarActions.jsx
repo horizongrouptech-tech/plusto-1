@@ -1,6 +1,8 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
+import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -36,8 +38,8 @@ export default function TopBarActions({ user }) {
     });
 
     const handleLogout = async () => {
-        await base44.auth.logout();
-        window.location.reload();
+        await supabase.auth.signOut();
+        window.location.href = '/Welcome';
     };
 
     const getInitials = (name) => {

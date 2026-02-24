@@ -42,10 +42,11 @@ import { openPrintWindow } from '../shared/printUtils';
 import { syncTaskToFireberry } from '@/functions/syncTaskToFireberry';
 import { useUsers } from '../shared/UsersContext';
 import CreateTaskModalShared from '../shared/CreateTaskModal';
+import { useAuth } from '@/lib/AuthContext';
 
 import { toast } from "sonner";
 export default function GoalsAndTasksDashboard({ customer }) {
-  const [currentUser, setCurrentUser] = useState(null);
+  const { user: currentUser } = useAuth();
   const [showGanttView, setShowGanttView] = useState(false);
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [showCreateGoalModal, setShowCreateGoalModal] = useState(false);
@@ -55,13 +56,6 @@ export default function GoalsAndTasksDashboard({ customer }) {
   const [expandedGoals, setExpandedGoals] = useState({});
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const loadUser = async () => {
-      const user = await base44.auth.me();
-      setCurrentUser(user);
-    };
-    loadUser();
-  }, []);
 
   // טעינת יעדים ומשימות מ-CustomerGoal
   const { data: rawGoals = [], isLoading: isLoadingGoals } = useQuery({

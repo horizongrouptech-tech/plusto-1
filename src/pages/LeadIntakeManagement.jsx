@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,10 +65,7 @@ export default function LeadIntakeManagement() {
   const [viewMode, setViewMode] = useState('kanban'); // 'kanban' or 'list'
 
   // Load current user
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me()
-  });
+  const { user: currentUser } = useAuth();
 
   const isAdmin = currentUser?.role === 'admin';
   const isFinancialManager = currentUser?.user_type === 'financial_manager';

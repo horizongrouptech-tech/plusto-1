@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2, Target, Download, BookOpen } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -14,7 +15,7 @@ import { useUsers } from '../shared/UsersContext';
 import { toast } from "sonner";
 export default function CustomerGoalsGantt({ customer }) {
     const queryClient = useQueryClient();
-    const [currentUser, setCurrentUser] = useState(null);
+    const { user: currentUser } = useAuth();
     const [collapsedGoals, setCollapsedGoals] = useState(() => {
         const initial = {};
         return initial;
@@ -24,11 +25,7 @@ export default function CustomerGoalsGantt({ customer }) {
     const { data: rawGoals = [], isLoading } = useQuery({
         queryKey: ['customerGoals', customer?.email],
         queryFn: async () => {
-            const [goalsData, userData] = await Promise.all([
-                base44.entities.CustomerGoal.filter({ customer_email: customer.email, is_active: true }, 'order_index'),
-                base44.auth.me()
-            ]);
-            setCurrentUser(userData);
+            const goalsData = await base44.entities.CustomerGoal.filter({ customer_email: customer.email, is_active: true }, 'order_index');
             return goalsData;
         },
         enabled: !!customer?.email

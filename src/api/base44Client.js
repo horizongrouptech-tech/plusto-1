@@ -1,21 +1,56 @@
-import { createClient } from '@base44/sdk';
-import { appParams } from '@/lib/app-params';
+/**
+ * base44Client.js — compatibility shim (Step 7 of migration)
+ *
+ * The @base44/sdk is no longer initialized. All call sites continue to work:
+ *   - base44.entities.*   → Supabase-backed (Step 4)
+ *   - base44.functions.invoke() → proxied to /api/<name> (Step 6, in progress)
+ *   - base44.auth.me()    → returns null (all calls replaced in Step 7)
+ *   - base44.auth.logout()→ Supabase signOut
+ */
 import * as entities from './entities';
+import { supabase } from './supabaseClient';
 
-const { appId, serverUrl, token, functionsVersion } = appParams;
+const functions = {
+  invoke: async (name, params = {}) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/${name}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify(params),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        console.warn(`[base44.functions.invoke] ${name} failed:`, err);
+        return { data: null, error: err };
+      }
+      const data = await res.json();
+      return { data, error: null };
+    } catch (e) {
+      console.warn(`[base44.functions.invoke] ${name} error:`, e.message);
+      return { data: null, error: e.message };
+    }
+  },
+};
 
-//Create a client with authentication required
-export const base44 = createClient({
-  appId,
-  serverUrl,
-  token,
-  functionsVersion,
-  requiresAuth: false
-});
+const auth = {
+  me: async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    return data ?? null;
+  },
+  logout: async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/Welcome';
+  },
+};
 
-// Step 4 — Replace the entity layer.
-// Override base44.entities with Supabase-backed implementations.
-// All call sites (base44.entities.X.filter/list/get/create/update/delete/bulkCreate)
-// continue to work with zero changes. base44.auth is intentionally left untouched
-// until Step 3 (auth migration) is complete.
-base44.entities = entities;
+export const base44 = {
+  entities,
+  functions,
+  auth,
+};

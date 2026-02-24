@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ const RESOLUTION_ACTIONS = [
 ];
 
 export default function UnknownFileQueueManager() {
+  const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const [selectedFile, setSelectedFile] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -70,7 +72,6 @@ export default function UnknownFileQueueManager() {
     if (!selectedFile) return;
     setIsSaving(true);
     try {
-      const currentUser = await base44.auth.me();
       const updateData = {
         admin_notes: adminNotes,
         status: newStatus

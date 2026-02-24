@@ -1,6 +1,7 @@
 import React, { createContext, useContext } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 
 const UsersContext = createContext(null);
 
@@ -13,19 +14,7 @@ export const useUsers = () => {
 };
 
 export const UsersProvider = ({ children }) => {
-  // טעינת המשתמש הנוכחי
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: async () => {
-      try {
-        return await base44.auth.me();
-      } catch (error) {
-        return null;
-      }
-    },
-    staleTime: 10 * 60 * 1000,
-    retry: 1
-  });
+  const { user: currentUser } = useAuth();
 
   const isAdmin = currentUser?.role === 'admin';
   const isFinancialManager = currentUser?.user_type === 'financial_manager';

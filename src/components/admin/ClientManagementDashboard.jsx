@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +27,7 @@ import ManagerAssignmentBoard from './ManagerAssignmentBoard';
 
 import { toast } from "sonner";
 export default function ClientManagementDashboard() {
+  const { user: currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [showInactive, setShowInactive] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
@@ -46,7 +48,7 @@ export default function ClientManagementDashboard() {
   const { data, isLoading } = useQuery({
     queryKey: ['allAdminClientsAndOnboarding'],
     queryFn: async () => {
-      const currentUserInQuery = await base44.auth.me();
+      const currentUserInQuery = currentUser;
       const isFinancialManager = currentUserInQuery?.role === 'user' && currentUserInQuery?.user_type === 'financial_manager';
       const isAdmin = currentUserInQuery?.role === 'admin';
 
@@ -135,7 +137,6 @@ export default function ClientManagementDashboard() {
 
   const clients = data?.clients || [];
   const allUsers = data?.allUsers || [];
-  const currentUser = data?.currentUser || null;
 
   useEffect(() => {
     if (clients && clients.length > 0 && !selectedClient) {
@@ -224,7 +225,7 @@ export default function ClientManagementDashboard() {
     
     if (window.confirm(`האם אתה בטוח שברצונך ${action} את הלקוח "${client.name}"?`)) {
       try {
-        const currentUserForAction = await base44.auth.me();
+        const currentUserForAction = currentUser;
         
         if (client.source === 'user') {
           await base44.functions.invoke('toggleClientStatus', { clientId: client.id, isActive: !isArchived });
