@@ -295,7 +295,7 @@ export const Core = { InvokeLLM, SendEmail, SendSMS, UploadFile, GenerateImage, 
 
 ---
 
-## Step 6 — Migrate the 89 backend functions
+## ~~Step 6 — Migrate the 89 backend functions~~ ✅ Done
 
 Convert every file in `functions/` (Deno) to `api/` (Node.js). The conversion is mostly mechanical:
 
