@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, Navigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { supabase } from "@/api/supabaseClient";
+import { useAuth } from "@/lib/AuthContext";
 import {
   LayoutDashboard,
   Upload,
@@ -594,17 +595,17 @@ function GlobalThemeStyles() {
 
 function LayoutContent({ children, currentPageName }) {
   const location = useLocation();
-  const [user, setUser] = useState(null);
+  // Use AuthContext instead of re-querying Supabase on every navigation.
+  const { user, isLoadingAuth } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [showMobileView, setShowMobileView] = useState(true);
-  
+
   // בדיקת מובייל
   const isMobile = useIsMobile();
-  
+
   // Safe theme hook usage - only use if available
   let theme = 'light';
   let toggleTheme = () => {};
@@ -618,69 +619,39 @@ function LayoutContent({ children, currentPageName }) {
     // Theme context not available yet
   }
 
-  const loadUser = async () => {
-    setIsLoading(true);
-    try {
-      // getSession() reads from localStorage cache (fast).
-      // getUser() makes a server round-trip on every navigation — too slow.
-      const { data: { session } } = await supabase.auth.getSession();
-      const authUser = session?.user ?? null;
-      if (!authUser) {
-        setUser(null);
-        setIsLoading(false);
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .single();
-
-      setUser(profile ?? null);
-
-      if (profile) {
-        setTimeout(async () => {
-          try {
-            await supabase
-              .from('profiles')
-              .update({ last_activity: new Date().toISOString() })
-              .eq('id', profile.id);
-
-            if (profile.email) {
-              const { data: userNotifications } = await supabase
-                .from('notifications')
-                .select('*')
-                .match({ recipient_email: profile.email, is_read: false })
-                .order('created_date', { ascending: false })
-                .limit(10);
-              setNotifications(userNotifications ?? []);
-            }
-
-            await trackActivity('LOGIN', { userEmail: profile.email });
-          } catch (error) {
-            console.error("Error loading background data:", error);
-          }
-        }, 2000);
-      }
-    } catch (error) {
-      console.error("Error loading user:", error);
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Background side-effects: update last_activity + load notifications.
+  // Runs once when the user profile is available (not on every navigation).
   useEffect(() => {
-    loadUser();
-  }, [location.pathname, currentPageName]);
+    if (!user?.id) return;
+    const timer = setTimeout(async () => {
+      try {
+        await supabase
+          .from('profiles')
+          .update({ last_activity: new Date().toISOString() })
+          .eq('id', user.id);
+        if (user.email) {
+          const { data: userNotifications } = await supabase
+            .from('notifications')
+            .select('*')
+            .match({ recipient_email: user.email, is_read: false })
+            .order('created_date', { ascending: false })
+            .limit(10);
+          setNotifications(userNotifications ?? []);
+        }
+        await trackActivity('LOGIN', { userEmail: user.email });
+      } catch (error) {
+        console.error("Error loading background data:", error);
+      }
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [user?.id]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = '/Welcome';
   };
 
-  if (isLoading) {
+  if (isLoadingAuth) {
     return (
       <LoadingScreen message="טוען את המערכת..." />
     );
