@@ -19,12 +19,14 @@ import {
   Loader2,
   ArrowRight
 } from "lucide-react";
-import { OnboardingRequest } from "@/entities/OnboardingRequest";
+
 // ייבוא רק הפונקציה הראשית
-import { approveOnboardingRequest } from '@/functions/approveOnboardingRequest';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { toast } from "sonner";
+import { OnboardingRequest } from '@/api/entities';
+import { approveOnboardingRequest } from '@/api/functions';
 export default function OnboardingRequestsModal({ isOpen, onClose }) {
   const [requests, setRequests] = useState([]);
   const [selectedRequest, setSelectedRequest] = useState(null);

@@ -9,12 +9,15 @@ import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ListTodo, Loader2, Save, UserPlus, Mail, X, CalendarIcon } from "lucide-react";
-import { base44 } from '@/api/base44Client';
+
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { useUsers } from './UsersContext';
-import { syncTaskToFireberry } from '@/functions/syncTaskToFireberry';
+
 import { toast } from "sonner";
+import { CustomerGoal, Notification } from '@/api/entities';
+import { SendEmail } from '@/api/integrations';
+import { syncTaskToFireberry } from '@/api/functions';
 
 export default function CreateTaskModal({ isOpen, onClose, customer, currentUser, allGoals = [], onSuccess }) {
   const [name, setName] = useState('');
@@ -85,7 +88,7 @@ export default function CreateTaskModal({ isOpen, onClose, customer, currentUser
 
       const resolvedParentId = parentGoalId && parentGoalId !== 'no_goal' ? parentGoalId : null;
 
-      const newTask = await base44.entities.CustomerGoal.create({
+      const newTask = await CustomerGoal.create({
         customer_email: customer.email,
         name: name.trim(),
         notes,
@@ -107,7 +110,7 @@ export default function CreateTaskModal({ isOpen, onClose, customer, currentUser
         try {
           const parentGoal = allGoals.find(g => g.id === resolvedParentId);
           if (parentGoal && parentGoal.task_type !== 'goal') {
-            await base44.entities.CustomerGoal.update(resolvedParentId, { task_type: 'goal' });
+            await CustomerGoal.update(resolvedParentId, { task_type: 'goal' });
           }
         } catch (parentErr) {
           console.error('Error ensuring parent goal type:', parentErr);
@@ -117,7 +120,7 @@ export default function CreateTaskModal({ isOpen, onClose, customer, currentUser
       // שליחת נוטיפיקציות ומיילים ברקע - לא חוסם
       Promise.all(taggedUsers.map(async (taggedEmail) => {
         try {
-          await base44.entities.Notification.create({
+          await Notification.create({
             recipient_email: taggedEmail,
             sender_email: currentUser?.email,
             type: 'tagged_in_task',
@@ -128,7 +131,7 @@ export default function CreateTaskModal({ isOpen, onClose, customer, currentUser
             priority: 'high'
           });
 
-          await base44.integrations.Core.SendEmail({
+          await SendEmail({
             to: taggedEmail,
             subject: `תויגת במשימה חדשה - ${name.trim()}`,
             body: `שלום,\n\n${currentUser?.full_name || currentUser?.email} תייג/תייגה אותך במשימה חדשה:\n\nשם המשימה: ${name.trim()}\nתאריך יעד: ${endDate}\n\n${notes ? `פרטים: ${notes}\n\n` : ''}היכנס למערכת לצפייה ועדכון.`

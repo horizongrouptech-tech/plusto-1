@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { 
   ClipboardList, Calendar, CheckCircle2, Circle, AlertCircle,
   FileText, Target, Loader2, ChevronDown, ChevronUp, ListChecks,
@@ -15,6 +15,8 @@ import { he } from 'date-fns/locale';
 import SystemCredentialsForm from './SystemCredentialsForm';
 import { toast } from "sonner";
 import ProductCatalogSection from './ProductCatalogSection';
+import { CustomerGoal, CashFlow } from '@/api/entities';
+import { generateFinancialManagerPreparation } from '@/api/functions';
 
 // משימות דפולטיביות לפגישה ראשונה
 const DEFAULT_FIRST_MEETING_TASKS = [
@@ -54,7 +56,7 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
   const { data: openTasks = [], isLoading: isLoadingTasks } = useQuery({
     queryKey: ['customerOpenTasks', customer?.email],
     queryFn: async () => {
-      const tasks = await base44.entities.CustomerGoal.filter({
+      const tasks = await CustomerGoal.filter({
         customer_email: customer.email,
         is_active: true,
         status: { $in: ['open', 'in_progress'] }
@@ -83,7 +85,7 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
     queryKey: ['cashflowAlerts', customer?.email],
     queryFn: async () => {
       try {
-        const cashflow = await base44.entities.CashFlow?.filter({
+        const cashflow = await CashFlow?.filter({
           customer_email: customer.email
         }, '-date');
         
@@ -125,7 +127,7 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
     setIsMarkingFirstMeeting(true);
     try {
       // יצירת סיכום פגישה ראשונה ריק
-      await base44.entities.CustomerGoal.create({
+      await CustomerGoal.create({
         customer_email: customer.email,
         name: `פגישה ראשונה - ${format(new Date(), 'dd/MM/yyyy')}`,
         task_type: 'meeting_summary',
@@ -166,7 +168,7 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
   const handleGeneratePreparation = async () => {
     setIsLoadingPreparation(true);
     try {
-      const response = await base44.functions.invoke('generateFinancialManagerPreparation', {
+      const response = await generateFinancialManagerPreparation({
         customerEmail: customer.email
       });
       setPreparationModal(response);
@@ -405,7 +407,7 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
     queryKey: ['cashflowForMeeting', customer?.email],
     queryFn: async () => {
       try {
-        const cashflow = await base44.entities.CashFlow?.filter({
+        const cashflow = await CashFlow?.filter({
           customer_email: customer.email
         }, '-date');
         
@@ -435,7 +437,7 @@ export default function MeetingPreparation({ customer, meetings = [], currentUse
     queryKey: ['customerGoalsForMeeting', customer?.email],
     queryFn: async () => {
       try {
-        const goals = await base44.entities.CustomerGoal.filter({
+        const goals = await CustomerGoal.filter({
           customer_email: customer.email,
           is_active: true,
           task_type: { $ne: 'meeting_summary' }

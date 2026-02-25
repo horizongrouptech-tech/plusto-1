@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, CheckSquare, Square, AlertTriangle, Calendar, ClipboardCheck, Filter, X, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format, isToday, parseISO } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from '@/components/ui/button';
-import { syncTaskToFireberry } from '@/functions/syncTaskToFireberry';
+
+import { CustomerGoal, User } from '@/api/entities';
+import { syncTaskToFireberry } from '@/api/functions';
 
 const TaskItem = ({ task, onUpdateStatus }) => {
     const isDelayed = task.status === 'delayed';
@@ -46,7 +48,7 @@ export default function DailyTasks({ user }) {
     const { data: tasks, isLoading: isLoadingTasks } = useQuery({
         queryKey: ['dailyTasks', user?.email],
         queryFn: async () => {
-            const allTasks = await base44.entities.CustomerGoal.filter({ 
+            const allTasks = await CustomerGoal.filter({ 
                 assignee_email: user.email, 
                 is_active: true,
             }, '-end_date');
@@ -59,12 +61,12 @@ export default function DailyTasks({ user }) {
 
     const { data: clients, isLoading: isLoadingClients } = useQuery({
         queryKey: ['allClientsForFilter'],
-        queryFn: () => base44.entities.User.filter({ role: 'user', is_active: true }),
+        queryFn: () => User.filter({ role: 'user', is_active: true }),
     });
 
     const updateMutation = useMutation({
         mutationFn: async ({ taskId, status }) => {
-            await base44.entities.CustomerGoal.update(taskId, { status, is_active: true });
+            await CustomerGoal.update(taskId, { status, is_active: true });
             // סנכרון לפיירברי
             try {
                 await syncTaskToFireberry({ taskId });

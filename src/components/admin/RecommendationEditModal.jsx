@@ -7,9 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, X, Loader2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+
 
 import { toast } from "sonner";
+import { Recommendation } from '@/api/entities';
 const MAX_DESCRIPTION_CHARS = 1024;
 
 export default function RecommendationEditModal({ isOpen, onClose, recommendation, customer, onSave }) {
@@ -67,7 +68,7 @@ export default function RecommendationEditModal({ isOpen, onClose, recommendatio
 
     setIsSaving(true);
     try {
-      await base44.entities.Recommendation.update(recommendation.id, {
+      await Recommendation.update(recommendation.id, {
         ...formData,
         action_steps: validSteps,
         expected_profit: parseFloat(formData.expected_profit) || 0,

@@ -6,10 +6,12 @@ import { Label } from "@/components/ui/label";
 // Keep Textarea import even if not used directly in form, might be used elsewhere or for future expansions
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { base44 } from '@/api/base44Client';
+
 import { Loader2, SearchCheck, ExternalLink, Plus } from 'lucide-react';
 
 import { toast } from "sonner";
+import { Supplier } from '@/api/entities';
+import { findAlternativeSuppliersOnline } from '@/api/functions';
 export default function FindAlternativeSupplierModal({ isOpen, onClose, customerEmail, currentUser, onSupplierAdded }) {
   // Original state variables removed/replaced: searchQuery, additionalDetails
   const [formData, setFormData] = useState({
@@ -50,7 +52,7 @@ export default function FindAlternativeSupplierModal({ isOpen, onClose, customer
     try {
       console.log("Attempting to invoke findAlternativeSuppliersOnline with formData:", formData, "customerEmail:", customerEmail); // Add log before calling
       
-      const { data, error: backendError } = await base44.functions.invoke('findAlternativeSuppliersOnline', {
+      const { data, error: backendError } = await findAlternativeSuppliersOnline({
         customer_email: customerEmail,
         search_query: formData.searchQuery,
         category: formData.category,
@@ -91,7 +93,7 @@ export default function FindAlternativeSupplierModal({ isOpen, onClose, customer
     setAddingSupplierIds(prev => new Set([...prev, tempId]));
     
     try {
-      await base44.entities.Supplier.create({
+      await Supplier.create({
         name: supplierData.name,
         contact_person: supplierData.contact_person || 'לא צוין',
         phone: supplierData.phone || 'לא צוין',

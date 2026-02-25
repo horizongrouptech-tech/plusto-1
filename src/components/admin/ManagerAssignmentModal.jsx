@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { base44 } from '@/api/base44Client';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Search, Save, X, Plus, Users, Building2 } from 'lucide-react';
-import { getFinancialManagers } from '@/functions/getFinancialManagers';
+
 
 import { toast } from "sonner";
+import { OnboardingRequest } from '@/api/entities';
+import { getFinancialManagers } from '@/api/functions';
 export default function ManagerAssignmentModal({ isOpen, onClose, currentUser }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [assignments, setAssignments] = useState({});
@@ -22,7 +24,7 @@ export default function ManagerAssignmentModal({ isOpen, onClose, currentUser })
   // טעינת כל בקשות האונבורדינג
   const { data: onboardingRequests = [], isLoading: loadingRequests } = useQuery({
     queryKey: ['onboardingRequests'],
-    queryFn: () => base44.entities.OnboardingRequest.list()
+    queryFn: () => OnboardingRequest.list()
   });
 
   // טעינת מנהלי כספים דרך backend function
@@ -110,7 +112,7 @@ export default function ManagerAssignmentModal({ isOpen, onClose, currentUser })
           JSON.stringify(originalRequest?.additional_assigned_financial_manager_emails || []) !== JSON.stringify(additionalEmails);
         
         if (needsUpdate) {
-          return base44.entities.OnboardingRequest.update(requestId, {
+          return OnboardingRequest.update(requestId, {
             assigned_financial_manager_email: managerEmail,
             additional_assigned_financial_manager_emails: additionalEmails
           });

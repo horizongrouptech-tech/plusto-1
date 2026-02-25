@@ -6,12 +6,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { toast } from "sonner";
 import { 
   ListChecks, Plus, Edit3, Trash2, Save, X, Loader2, 
   GripVertical, CheckCircle2, AlertCircle 
 } from 'lucide-react';
+import { SystemSettings } from '@/api/entities';
 
 // משימות דפולטיביות ללקוחות חדשים
 const DEFAULT_INITIAL_TASKS = [
@@ -41,7 +42,7 @@ export default function DefaultTasksManager({ isOpen, onClose, currentUser }) {
     queryFn: async () => {
       try {
         // נסה לטעון מישות SystemSettings או AppConfig
-        const settings = await base44.entities.SystemSettings?.filter({ 
+        const settings = await SystemSettings?.filter({ 
           setting_key: 'default_onboarding_tasks' 
         });
         
@@ -103,16 +104,16 @@ export default function DefaultTasksManager({ isOpen, onClose, currentUser }) {
     setIsSaving(true);
     try {
       // נסה לשמור ב-SystemSettings
-      const existingSettings = await base44.entities.SystemSettings?.filter({ 
+      const existingSettings = await SystemSettings?.filter({ 
         setting_key: 'default_onboarding_tasks' 
       });
       
       if (existingSettings && existingSettings.length > 0) {
-        await base44.entities.SystemSettings.update(existingSettings[0].id, {
+        await SystemSettings.update(existingSettings[0].id, {
           setting_value: JSON.stringify(tasks)
         });
-      } else if (base44.entities.SystemSettings) {
-        await base44.entities.SystemSettings.create({
+      } else if (SystemSettings) {
+        await SystemSettings.create({
           setting_key: 'default_onboarding_tasks',
           setting_value: JSON.stringify(tasks),
           description: 'משימות דפולטיביות ללקוחות חדשים'

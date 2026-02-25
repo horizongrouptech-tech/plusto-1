@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Phone, Mail, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
-import { Lead } from "@/entities/Lead";
-import { User } from "@/entities/User";
+
+
 import { toast } from "sonner";
+import { Lead, User } from '@/api/entities';
 
 export default function MyLeads() {
   const [leads, setLeads] = useState([]);

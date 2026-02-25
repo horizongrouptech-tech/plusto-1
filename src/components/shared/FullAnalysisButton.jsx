@@ -3,8 +3,10 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Sparkles, Loader2 } from "lucide-react";
-import { InvokeLLM } from "@/integrations/Core";
-import { FileUpload } from "@/entities/FileUpload";
+import { FileUpload } from '@/api/entities';
+import { InvokeLLM } from '@/api/integrations';
+
+
 
 const bankStatementSchema = {
   type: "object",

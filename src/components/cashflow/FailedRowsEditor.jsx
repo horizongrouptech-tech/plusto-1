@@ -6,10 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { base44 } from '@/api/base44Client';
+
 import { AlertTriangle, Save, Trash2, Plus, Edit, Loader2, CheckCircle2 } from 'lucide-react';
 
 import { toast } from "sonner";
+import { CashFlow } from '@/api/entities';
 const CATEGORIES = [
   'הכנסות', 'הוצאות', 'הכנסות מסליקה', 'הכנסה מסליקה', 'הכנסות סיבוס',
   'הכנסות וולט', 'הכנסות עסקיות', 'בנקאיות', 'הלוואה', 'פיקדון/חסכון',
@@ -107,7 +108,7 @@ export default function FailedRowsEditor({
       }
 
       if (entriesToSave.length > 0) {
-        await base44.entities.CashFlow.bulkCreate(entriesToSave);
+        await CashFlow.bulkCreate(entriesToSave);
         setSavedCount(entriesToSave.length);
         
         // הסר את השורות שנשמרו מהבחירה

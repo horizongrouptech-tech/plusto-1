@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { StrategicMove } from "@/entities/StrategicMove";
-import { User } from "@/entities/User";
+
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import StrategicMoveCard from "@/components/shared/StrategicMoveCard";
+import { StrategicMove, User } from '@/api/entities';
 
 export default function StrategicMovesPage() {
   const [strategicMoves, setStrategicMoves] = useState([]);

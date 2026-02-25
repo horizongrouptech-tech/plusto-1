@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { base44 } from '@/api/base44Client';
+
 import {
   ChevronLeft,
   Plus,
@@ -20,6 +20,7 @@ import GoalTemplateSelector from '@/components/trial/GoalTemplateSelector';
 import CreateTaskModal from '@/components/shared/CreateTaskModal';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from "sonner";
+import { CustomerGoal } from '@/api/entities';
 
 export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCollapse, onTaskClick, allUsers, currentUser }) {
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
@@ -29,7 +30,7 @@ export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCo
   // טעינת יעדים לצורך שיוך משימה ליעד
   const { data: allGoals = [] } = useQuery({
     queryKey: ['customerGoals', customer?.email],
-    queryFn: () => base44.entities.CustomerGoal.filter({
+    queryFn: () => CustomerGoal.filter({
       customer_email: customer.email,
       is_active: true
     }, 'order_index'),
@@ -103,7 +104,7 @@ export default function TasksPanel({ customer, tasks, isLoading, onRefresh, onCo
 
   const handleMarkDone = async (taskId) => {
     try {
-      await base44.entities.CustomerGoal.update(taskId, { status: 'done', is_active: true });
+      await CustomerGoal.update(taskId, { status: 'done', is_active: true });
       if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Error marking task done:", error);

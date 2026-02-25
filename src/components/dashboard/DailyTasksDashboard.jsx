@@ -30,7 +30,7 @@ import {
   User as UserIcon // Added User as UserIcon import
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -49,6 +49,8 @@ import CreateTaskModal from '../shared/CreateTaskModal';
 
 
 import { toast } from "sonner";
+import { CustomerGoal, OnboardingRequest, Recommendation, User } from '@/api/entities';
+import { generateRecurringTasks } from '@/api/functions';
 // פונקציה לקבלת קבוצת העבודה היומית
 const getTodayWorkGroup = () => {
   const dayOfWeek = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
@@ -101,7 +103,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     queryFn: async () => {
       if (isAdmin) {
         // אדמין רואה את כל OnboardingRequests הפעילים ושלא בארכיון
-        const onboardingReqs = await base44.entities.OnboardingRequest.filter({ 
+        const onboardingReqs = await OnboardingRequest.filter({ 
           is_active: true,
           is_archived: { $ne: true }
         });
@@ -117,7 +119,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         }));
       } else {
         // ⭐ מנהל כספים - טוען כל OnboardingRequests ומסנן בצד הלקוח (כולל מנהלים משניים!)
-        const allOnboardingReqs = await base44.entities.OnboardingRequest.filter({ 
+        const allOnboardingReqs = await OnboardingRequest.filter({ 
           is_active: true,
           is_archived: { $ne: true }
         });
@@ -176,11 +178,11 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       };
 
       if (isAdmin) {
-        const allTasks = await base44.entities.CustomerGoal.filter({ is_active: true }, 'order_index');
+        const allTasks = await CustomerGoal.filter({ is_active: true }, 'order_index');
         return filterByParentGoals(allTasks);
       } else {
         const myCustomers = allCustomers.map((c) => c.email);
-        const customerTasks = await base44.entities.CustomerGoal.filter({
+        const customerTasks = await CustomerGoal.filter({
           is_active: true
         }, 'order_index');
 
@@ -216,7 +218,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     queryKey: ['financialManagers'],
     queryFn: async () => {
       if (!isAdmin) return [];
-      const allUsers = await base44.entities.User.list();
+      const allUsers = await User.list();
       return allUsers.filter(u => u.user_type === 'financial_manager');
     },
     enabled: isAdmin,
@@ -341,7 +343,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
           assignee_email: currentUser.email,
           status: { $ne: 'archived' }
         };
-      return await base44.entities.Recommendation.filter(filter);
+      return await Recommendation.filter(filter);
     },
     staleTime: 5 * 60 * 1000, // 5 דקות cache
     gcTime: 10 * 60 * 1000,
@@ -408,7 +410,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     mutationFn: async ({ taskId, updateData }) => {
       // 🔒 קריאת המשימה המקורית לשמירת is_active
       const originalTask = goals.find(g => g.id === taskId);
-      return base44.entities.CustomerGoal.update(taskId, {
+      return CustomerGoal.update(taskId, {
         ...updateData,
         is_active: originalTask?.is_active !== false // שמירת הערך המקורי
       });
@@ -431,7 +433,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       
       if (task?.task_type === 'recurring') {
         // משימה חוזרת - עדכן עם תאריך השלמה
-        await base44.entities.CustomerGoal.update(taskId, {
+        await CustomerGoal.update(taskId, {
           status: 'done',
           last_completed_at: new Date().toISOString(),
           times_completed: (task.times_completed || 0) + 1,
@@ -440,13 +442,13 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         
         // קרא לפונקציה ליצירת המשימה הבאה
         try {
-          await base44.functions.invoke('generateRecurringTasks', {});
+          await generateRecurringTasks({});
         } catch (error) {
           console.error('Error generating next occurrence:', error);
         }
       } else {
         // משימה רגילה - שמור is_active המקורי
-        await base44.entities.CustomerGoal.update(taskId, { 
+        await CustomerGoal.update(taskId, { 
           status: 'done', 
           is_active: task?.is_active !== false // 🔒 שמירת הערך המקורי
         });
@@ -496,7 +498,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const handleRestoreTask = async (taskId) => {
     if (confirm('האם לשחזר את המשימה למצב "פתוח"?')) {
       try {
-        await base44.entities.CustomerGoal.update(taskId, { status: 'open', is_active: true });
+        await CustomerGoal.update(taskId, { status: 'open', is_active: true });
         queryClient.invalidateQueries(['allRelevantTasks']);
         toast.success('המשימה שוחזרה בהצלחה!');
       } catch (error) {

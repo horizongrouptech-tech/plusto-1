@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useTransition } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,8 @@ import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
 
 import { toast } from "sonner";
+import { FinancialManagerPerformance, OnboardingRequest, User } from '@/api/entities';
+import { calculateManagerPerformance } from '@/api/functions';
 export default function FinanceManagerPerformanceTable() {
   const [activeView, setActiveView] = useState('performance');
   const [isCalculating, setIsCalculating] = useState(false);
@@ -32,7 +34,7 @@ export default function FinanceManagerPerformanceTable() {
     queryKey: ['financeManagerPerformance'],
     queryFn: async () => {
       try {
-        return await base44.entities.FinancialManagerPerformance.filter({}, '-manager_score');
+        return await FinancialManagerPerformance.filter({}, '-manager_score');
       } catch (e) {
         console.error('Error loading performance data:', e);
         return [];
@@ -46,7 +48,7 @@ export default function FinanceManagerPerformanceTable() {
     queryKey: ['allFinancialManagers'],
     queryFn: async () => {
       try {
-        return await base44.entities.User.filter({ 
+        return await User.filter({ 
           user_type: 'financial_manager',
           is_active: true 
         });
@@ -63,7 +65,7 @@ export default function FinanceManagerPerformanceTable() {
     queryKey: ['allOnboardingRequests'],
     queryFn: async () => {
       try {
-        return await base44.entities.OnboardingRequest.filter({ 
+        return await OnboardingRequest.filter({ 
           status: 'approved',
           is_active: true 
         });
@@ -114,7 +116,7 @@ export default function FinanceManagerPerformanceTable() {
       console.log('🔄 Starting performance calculation...');
       
       // קריאה לפונקציה ו-AWAIT לסיום
-      const response = await base44.functions.invoke('calculateManagerPerformance');
+      const response = await calculateManagerPerformance();
       
       console.log('✅ Performance calculation response:', response);
       console.log('📊 Response data:', response.data);

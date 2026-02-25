@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Users, Plus, Edit3, Trash2, Phone, Mail, Building2, Loader2, MessageSquare, Lock, Eye, EyeOff, Monitor, User, Globe, Copy, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { ServiceContact } from '@/api/entities';
 
 export default function ServiceContactsTab({ customer }) {
   const queryClient = useQueryClient();
@@ -43,7 +44,7 @@ export default function ServiceContactsTab({ customer }) {
 
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ['serviceContacts', customer?.email],
-    queryFn: () => base44.entities.ServiceContact.filter({ 
+    queryFn: () => ServiceContact.filter({ 
       customer_email: customer.email,
       is_active: true 
     }),
@@ -154,10 +155,10 @@ export default function ServiceContactsTab({ customer }) {
       };
 
       if (editingContact) {
-        await base44.entities.ServiceContact.update(editingContact.id, data);
+        await ServiceContact.update(editingContact.id, data);
         toast.success('עודכן בהצלחה!');
       } else {
-        await base44.entities.ServiceContact.create(data);
+        await ServiceContact.create(data);
         toast.success(contactMode === 'person' ? 'איש קשר נוסף בהצלחה!' : 'מערכת נוספה בהצלחה!');
       }
 
@@ -174,7 +175,7 @@ export default function ServiceContactsTab({ customer }) {
     if (!confirm('האם למחוק?')) return;
 
     try {
-      await base44.entities.ServiceContact.update(contactId, { is_active: false });
+      await ServiceContact.update(contactId, { is_active: false });
       queryClient.invalidateQueries(['serviceContacts', customer.email]);
       toast.success('נמחק בהצלחה');
     } catch (error) {

@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MessageSquare, Send, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
-import { sendWhatsAppMessage } from "@/functions/sendWhatsAppMessage";
+import { sendWhatsAppMessage } from '@/api/functions';
+
 
 export default function WhatsAppTest() {
   const [formData, setFormData] = useState({

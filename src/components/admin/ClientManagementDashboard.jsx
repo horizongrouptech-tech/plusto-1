@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,8 @@ import ManagerAssignmentBoard from './ManagerAssignmentBoard';
 
 
 import { toast } from "sonner";
+import { OnboardingRequest, User } from '@/api/entities';
+import { approveOnboardingRequest, toggleClientStatus } from '@/api/functions';
 export default function ClientManagementDashboard() {
   const { user: currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -58,15 +60,15 @@ export default function ClientManagementDashboard() {
 
       if (isAdmin) {
         [users, onboardingRequests, allUsers] = await Promise.all([
-        base44.entities.User.filter({
+        User.filter({
           role: { $ne: 'admin' },
           user_type: { $ne: 'financial_manager' }
         }),
-        base44.entities.OnboardingRequest.filter({}),
-        base44.entities.User.list()]
+        OnboardingRequest.filter({}),
+        User.list()]
         );
       } else if (isFinancialManager) {
-        const allOnboardingRequests = await base44.entities.OnboardingRequest.list();
+        const allOnboardingRequests = await OnboardingRequest.list();
         onboardingRequests = allOnboardingRequests.filter((req) =>
         req.assigned_financial_manager_email === currentUserInQuery.email ||
         req.additional_assigned_financial_manager_emails?.includes(currentUserInQuery.email)
@@ -228,7 +230,7 @@ export default function ClientManagementDashboard() {
         const currentUserForAction = currentUser;
         
         if (client.source === 'user') {
-          await base44.functions.invoke('toggleClientStatus', { clientId: client.id, isActive: !isArchived });
+          await toggleClientStatus({ clientId: client.id, isActive: !isArchived });
         } else if (client.source === 'onboarding') {
           const updateData = {
             is_archived: !isArchived,
@@ -245,7 +247,7 @@ export default function ClientManagementDashboard() {
             updateData.archived_by = null;
           }
           
-          await base44.entities.OnboardingRequest.update(client.id, updateData);
+          await OnboardingRequest.update(client.id, updateData);
         }
         queryClient.invalidateQueries(['allAdminClientsAndOnboarding']);
       } catch (error) {
@@ -265,7 +267,7 @@ export default function ClientManagementDashboard() {
     try {
       console.log('Creating new OnboardingRequest with data:', formData);
 
-      const newOnboardingRequest = await base44.entities.OnboardingRequest.create({
+      const newOnboardingRequest = await OnboardingRequest.create({
         ...formData,
         status: 'pending',
         assigned_financial_manager_email: currentUser?.email
@@ -273,7 +275,7 @@ export default function ClientManagementDashboard() {
 
       console.log('OnboardingRequest created:', newOnboardingRequest.id);
 
-      const { data: approvalResult, error: approvalError } = await base44.functions.invoke('approveOnboardingRequest', {
+      const { data: approvalResult, error: approvalError } = await approveOnboardingRequest({
         onboarding_request_id: newOnboardingRequest.id
       });
 
@@ -301,11 +303,11 @@ export default function ClientManagementDashboard() {
   const handleAssignManager = async (clientId, clientSource, managerEmail) => {
     try {
       if (clientSource === 'onboarding') {
-        await base44.entities.OnboardingRequest.update(clientId, {
+        await OnboardingRequest.update(clientId, {
           assigned_financial_manager_email: managerEmail || null
         });
       } else {
-        await base44.entities.User.update(clientId, {
+        await User.update(clientId, {
           assigned_financial_manager_email: managerEmail || null
         });
       }

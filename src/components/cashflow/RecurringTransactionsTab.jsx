@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { base44 } from '@/api/base44Client';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   Plus, 
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { format, addMonths, addWeeks, addDays, addYears, isBefore, isAfter, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
+import { CashFlow } from '@/api/entities';
 
 export default function RecurringTransactionsTab({ customer, dateRange }) {
   const [showAddModal, setShowAddModal] = useState(false);
@@ -41,7 +42,7 @@ export default function RecurringTransactionsTab({ customer, dateRange }) {
   // טעינת תנועות קבועות
   const { data: recurringTransactions = [], isLoading } = useQuery({
     queryKey: ['recurringTransactions', customer?.email],
-    queryFn: () => base44.entities.CashFlow.filter({
+    queryFn: () => CashFlow.filter({
       customer_email: customer.email,
       is_recurring: true
     }, '-date'),
@@ -52,7 +53,7 @@ export default function RecurringTransactionsTab({ customer, dateRange }) {
   const { data: allCategories = [] } = useQuery({
     queryKey: ['cashFlowCategories', customer?.email],
     queryFn: async () => {
-      const entries = await base44.entities.CashFlow.filter({
+      const entries = await CashFlow.filter({
         customer_email: customer.email
       });
       const categories = [...new Set(entries.map(e => e.category).filter(Boolean))];
@@ -127,10 +128,10 @@ export default function RecurringTransactionsTab({ customer, dateRange }) {
       };
 
       if (editingTransaction) {
-        await base44.entities.CashFlow.update(editingTransaction.id, data);
+        await CashFlow.update(editingTransaction.id, data);
         toast.success('התנועה הקבועה עודכנה בהצלחה');
       } else {
-        await base44.entities.CashFlow.create(data);
+        await CashFlow.create(data);
         toast.success('התנועה הקבועה נוספה בהצלחה');
       }
 
@@ -151,7 +152,7 @@ export default function RecurringTransactionsTab({ customer, dateRange }) {
     if (!confirm('האם למחוק תנועה קבועה זו?')) return;
     
     try {
-      await base44.entities.CashFlow.delete(id);
+      await CashFlow.delete(id);
       queryClient.invalidateQueries(['recurringTransactions', customer.email]);
       queryClient.invalidateQueries(['cashFlow', customer.email]);
       toast.success('התנועה נמחקה');

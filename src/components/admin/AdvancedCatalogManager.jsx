@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Trash2, Eraser, Download, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
-import { deleteCatalogPermanently } from "@/functions/deleteCatalogPermanently";
-import { exportCatalogToExcel } from "@/functions/exportCatalogToExcel";
-import { cleanCatalogSmartly } from "@/functions/cleanCatalogSmartly";
+import { cleanCatalogSmartly, deleteCatalogPermanently, exportCatalogToExcel } from '@/api/functions';
+
+
+
 
 export default function AdvancedCatalogManager({ customer, onCatalogChange }) {
     const [isDeleting, setIsDeleting] = useState(false);

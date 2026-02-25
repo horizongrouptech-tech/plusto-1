@@ -1,8 +1,10 @@
+import { Product, ProductCatalog, StrategicMove } from '@/api/entities';
+import { InvokeLLM } from '@/api/integrations';
 
-import { InvokeLLM } from "@/integrations/Core";
-import { StrategicMove } from "@/entities/StrategicMove";
-import { Product } from "@/entities/Product";
-import { ProductCatalog } from "@/entities/ProductCatalog";
+
+
+
+
 
 /**
  * מנוע מהלכים אסטרטגיים - זיהוי הזדמנויות פריצת דרך

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { User } from "@/entities/User";
+
 import CustomerFileUploadManager from "../components/admin/CustomerFileUploadManager";
 import { Loader2 } from "lucide-react";
+import { User } from '@/api/entities';
 
 export default function FileUploadPage() {
   const [user, setUser] = useState(null);

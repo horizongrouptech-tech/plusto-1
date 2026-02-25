@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { 
   Calendar, FileText, ClipboardList, Plus, Edit3, Trash2, 
   Eye, Loader2, Clock, User, CheckCircle2, AlertCircle,
@@ -23,6 +23,8 @@ import { format, formatDistanceToNow, isAfter, isBefore, isToday, isTomorrow, ad
 import { he } from 'date-fns/locale';
 import { toast } from "sonner";
 import { useGlobalToast } from '@/components/utils/useGlobalToast';
+import { Meeting } from '@/api/entities';
+import { scheduleMeeting, sendWhatsAppMessage, syncMeetingToFireberry } from '@/api/functions';
 
 // סטטוסים אפשריים לפגישה
 const MEETING_STATUSES = [
@@ -77,7 +79,7 @@ export default function MeetingsTab({ customer, currentUser }) {
   const { data: meetings = [], isLoading } = useQuery({
     queryKey: ['customerMeetings', customer?.email],
     queryFn: async () => {
-      const meetingsList = await base44.entities.Meeting.filter({
+      const meetingsList = await Meeting.filter({
         customer_email: customer.email
       }, '-meeting_date');
       
@@ -213,7 +215,7 @@ export default function MeetingsTab({ customer, currentUser }) {
         : [];
 
       // יצירת הפגישה - Meeting entity
-      const newMeeting = await base44.entities.Meeting.create({
+      const newMeeting = await Meeting.create({
         customer_email: customer.email,
         subject: finalSubject,
         meeting_date: meetingDate,
@@ -242,7 +244,7 @@ export default function MeetingsTab({ customer, currentUser }) {
       // אם צריך לזמן בגוגל קלנדר
       if (newMeetingForm.invite_customer || newMeetingForm.send_reminder) {
         try {
-          const { data: calendarResult, error: calendarError } = await base44.functions.invoke('scheduleMeeting', {
+          const { data: calendarResult, error: calendarError } = await scheduleMeeting({
             meeting_id: newMeeting.id,
             customer_email: customer.email,
             financial_manager_email: currentUser?.email,
@@ -261,7 +263,7 @@ export default function MeetingsTab({ customer, currentUser }) {
             // לא נכשיל את יצירת הפגישה, רק נדווח
           } else if (calendarResult?.event_id) {
             // עדכון ה-google_event_id
-            await base44.entities.Meeting.update(newMeeting.id, {
+            await Meeting.update(newMeeting.id, {
               google_event_id: calendarResult.event_id
             });
           }
@@ -273,7 +275,7 @@ export default function MeetingsTab({ customer, currentUser }) {
 
       // סנכרון לפיירברי
       try {
-        await base44.functions.invoke('syncMeetingToFireberry', {
+        await syncMeetingToFireberry({
           meetingId: newMeeting.id
         });
         console.log('✅ Meeting synced to Fireberry successfully');
@@ -333,7 +335,7 @@ export default function MeetingsTab({ customer, currentUser }) {
         : [];
 
       // FIX 4: Preserve fireberry_meeting_id and related_fireberry_account_id on updates
-      await base44.entities.Meeting.update(selectedMeeting.id, {
+      await Meeting.update(selectedMeeting.id, {
         subject: selectedMeeting.subject,
         meeting_date: meetingDate,
         start_date: selectedMeeting.start_date,
@@ -362,7 +364,7 @@ export default function MeetingsTab({ customer, currentUser }) {
 
       // סנכרון לפיירברי
       try {
-        await base44.functions.invoke('syncMeetingToFireberry', {
+        await syncMeetingToFireberry({
           meetingId: selectedMeeting.id
         });
         console.log('✅ Meeting updated in Fireberry successfully');
@@ -398,13 +400,13 @@ export default function MeetingsTab({ customer, currentUser }) {
 
     try {
       // עדכון סטטוס לפני מחיקה כדי לסנכרן לפיירברי
-      await base44.entities.Meeting.update(meetingId, { 
+      await Meeting.update(meetingId, { 
         status: 'cancelled'
       });
 
       // סנכרון לפיירברי (עדכון סטטוס ל-cancelled)
       try {
-        await base44.functions.invoke('syncMeetingToFireberry', {
+        await syncMeetingToFireberry({
           meetingId: meetingId
         });
         console.log('✅ Meeting cancellation synced to Fireberry successfully');
@@ -414,7 +416,7 @@ export default function MeetingsTab({ customer, currentUser }) {
       }
 
       // מחיקה פיזית (או רק עדכון סטטוס - תלוי במדיניות)
-      // await base44.entities.Meeting.delete(meetingId); // אם רוצים מחיקה פיזית
+      // await Meeting.delete(meetingId); // אם רוצים מחיקה פיזית
 
       queryClient.invalidateQueries(['customerMeetings', customer.email]);
       setShowMeetingDetailsModal(false);
@@ -433,7 +435,7 @@ export default function MeetingsTab({ customer, currentUser }) {
     }
 
     try {
-      await base44.functions.invoke('sendWhatsAppMessage', {
+      await sendWhatsAppMessage({
         phoneNumber: customer.phone,
         customerEmail: customer.email,
         message: selectedMeeting.whatsapp_summary,

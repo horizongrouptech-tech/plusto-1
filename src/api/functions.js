@@ -67,6 +67,40 @@ export const exportBusinessPlanToPdf      = (p) => invoke('exportBusinessPlanToP
 export const exportManualForecastToExcel  = (p) => invoke('exportManualForecastToExcel', p);
 
 // ── AI / insights ─────────────────────────────────────────────────────────────
-export const generateDeeperInsights       = (p) => invoke('generateDeeperInsights', p);
-export const invokeClaude                 = (p) => invoke('invokeClaude', p);
-export const deepWebCrawler               = (p) => invoke('deepWebCrawler', p);
+export const generateDeeperInsights           = (p) => invoke('generateDeeperInsights', p);
+export const invokeClaude                     = (p) => invoke('invokeClaude', p);
+export const deepWebCrawler                   = (p) => invoke('deepWebCrawler', p);
+export const generateStrategicRecommendations = (p) => invoke('generateStrategicRecommendations', p);
+export const generateRecurringTasks           = (p) => invoke('generateRecurringTasks', p);
+export const generateFinancialManagerPreparation = (p) => invoke('generateFinancialManagerPreparation', p);
+
+// ── File parsing (additional) ─────────────────────────────────────────────────
+export const analyzeGenericFile           = (p) => invoke('analyzeGenericFile', p);
+export const parseBizIboxFile             = (p) => invoke('parseBizIboxFile', p);
+export const parseFileHeaders             = (p) => invoke('parseFileHeaders', p);
+export const parseZReport                 = (p) => invoke('parseZReport', p);
+export const processCreditReport          = (p) => invoke('processCreditReport', p);
+export const processSmartDocument         = (p) => invoke('processSmartDocument', p);
+
+// ── Catalog (additional) ──────────────────────────────────────────────────────
+export const processCatalogWithMapping    = (p) => invoke('processCatalogWithMapping', p);
+export const getCatalogStats              = (p) => invoke('getCatalogStats', p);
+
+// ── Cashflow ──────────────────────────────────────────────────────────────────
+export const deleteCashFlowPermanently    = (p) => invoke('deleteCashFlowPermanently', p);
+export const exportCashFlowToExcel        = (p) => invoke('exportCashFlowToExcel', p);
+
+// ── Forecasting (additional) ──────────────────────────────────────────────────
+export const exportForecastToPdf          = (p) => invoke('exportForecastToPdf', p);
+export const orchestrateBusinessForecast  = (p) => invoke('orchestrateBusinessForecast', p);
+
+// ── Suppliers ─────────────────────────────────────────────────────────────────
+export const findAlternativeSuppliersOnline = (p) => invoke('findAlternativeSuppliersOnline', p);
+
+// ── Meetings ──────────────────────────────────────────────────────────────────
+export const scheduleMeeting              = (p) => invoke('scheduleMeeting', p);
+export const syncMeetingToFireberry       = (p) => invoke('syncMeetingToFireberry', p);
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+export const toggleClientStatus           = (p) => invoke('toggleClientStatus', p);
+export const manualBackupTrigger          = (p) => invoke('manualBackupTrigger', p);

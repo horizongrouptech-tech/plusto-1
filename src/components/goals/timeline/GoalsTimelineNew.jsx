@@ -11,7 +11,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { base44 } from '@/api/base44Client';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Target, Loader2, Trash2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -21,6 +21,7 @@ import TimelineToolbar from './TimelineToolbar';
 import EnhancedGoalNode from './EnhancedGoalNode';
 import { applyLayout } from './LayoutEngine';
 import { toast } from "sonner";
+import { CustomerGoal } from '@/api/entities';
 
 const nodeTypes = {
   enhancedGoal: EnhancedGoalNode
@@ -55,7 +56,7 @@ export default function GoalsTimelineNew({ customer }) {
   const { data: rawGoals = [], isLoading } = useQuery({
     queryKey: ['customerGoals', customer?.email],
     queryFn: async () => {
-      const allGoals = await base44.entities.CustomerGoal.filter({
+      const allGoals = await CustomerGoal.filter({
         customer_email: customer.email,
         is_active: true
       });
@@ -207,7 +208,7 @@ export default function GoalsTimelineNew({ customer }) {
   const handleNodeDuplicate = async (goal) => {
     try {
       const { id, created_date, updated_date, ...goalData } = goal;
-      await base44.entities.CustomerGoal.create({
+      await CustomerGoal.create({
         ...goalData,
         name: `${goal.name} (עותק)`,
         visual_position: {
@@ -225,7 +226,7 @@ export default function GoalsTimelineNew({ customer }) {
     if (!confirm(`האם למחוק את היעד "${goal.name}"?`)) return;
     
     try {
-      await base44.entities.CustomerGoal.update(goal.id, { is_active: false });
+      await CustomerGoal.update(goal.id, { is_active: false });
       queryClient.invalidateQueries(['customerGoals', customer.email]);
     } catch (error) {
       console.error('Error deleting goal:', error);
@@ -259,7 +260,7 @@ export default function GoalsTimelineNew({ customer }) {
         // הוספת התלות החדשה
         const updatedDependencies = [...currentDependencies, params.source].filter((v, i, a) => a.indexOf(v) === i);
         
-        await base44.entities.CustomerGoal.update(params.target, {
+        await CustomerGoal.update(params.target, {
           depends_on_goal_ids: updatedDependencies
         });
         queryClient.invalidateQueries(['customerGoals', customer.email]);
@@ -282,7 +283,7 @@ export default function GoalsTimelineNew({ customer }) {
       const currentDependencies = targetGoal.depends_on_goal_ids || [];
       const updatedDependencies = currentDependencies.filter(id => id !== sourceId);
       
-      await base44.entities.CustomerGoal.update(targetId, {
+      await CustomerGoal.update(targetId, {
         depends_on_goal_ids: updatedDependencies
       });
       
@@ -311,7 +312,7 @@ export default function GoalsTimelineNew({ customer }) {
           const currentDependencies = targetGoal.depends_on_goal_ids || [];
           const updatedDependencies = currentDependencies.filter(id => id !== edge.source);
           
-          await base44.entities.CustomerGoal.update(edge.target, {
+          await CustomerGoal.update(edge.target, {
             depends_on_goal_ids: updatedDependencies
           });
         }
@@ -329,7 +330,7 @@ export default function GoalsTimelineNew({ customer }) {
   const handleNodeDragStop = useCallback(
     async (event, node) => {
       try {
-        await base44.entities.CustomerGoal.update(node.id, {
+        await CustomerGoal.update(node.id, {
           visual_position: node.position
         });
       } catch (error) {
@@ -351,7 +352,7 @@ export default function GoalsTimelineNew({ customer }) {
     // שמירה לדאטאבייס
     layoutedNodes.forEach(async (node) => {
       try {
-        await base44.entities.CustomerGoal.update(node.id, {
+        await CustomerGoal.update(node.id, {
           visual_position: node.position
         });
       } catch (error) {

@@ -4,11 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Upload, Loader2, CheckCircle, FileSpreadsheet, Calendar, AlertTriangle, Download, Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+
 import { formatCurrency } from './utils/numberFormatter';
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { FileUpload } from '@/api/entities';
+import { UploadFile } from '@/api/integrations';
+import { parseZReport } from '@/api/functions';
 
 // מערכות קופה נתמכות
 const POS_SYSTEMS = [
@@ -61,7 +64,7 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
     setParsingProgress(10);
 
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await UploadFile({ file });
       
       if (!file_url) {
         throw new Error('העלאת הקובץ נכשלה');
@@ -70,7 +73,7 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
       setUploadStatus('מפענח דוח Z...');
       setParsingProgress(30);
 
-      const response = await base44.functions.invoke('parseZReport', {
+      const response = await parseZReport({
         fileUrl: file_url,
         fileName: file.name,
         posSystem: selectedPosSystem
@@ -117,7 +120,7 @@ export default function ZReportUploader({ isOpen, onClose, forecastData, onDataI
       // שמירת הקובץ כנכשל במערכת
       try {
         if (file_url) {
-          await base44.entities.FileUpload.create({
+          await FileUpload.create({
             filename: file.name,
             file_url: file_url,
             file_type: file.name.split('.').pop()?.toLowerCase(),

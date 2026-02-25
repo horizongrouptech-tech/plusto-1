@@ -23,9 +23,10 @@ import {
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { formatCurrency } from './utils/numberFormatter';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { base44 } from '@/api/base44Client';
+
 import SaveProgressIndicator from './SaveProgressIndicator';
 import { toast } from "sonner";
+import { ManualForecast } from '@/api/entities';
 
 const MONTHS = [
   'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
@@ -48,9 +49,9 @@ export default function Step2SalaryCosts({ forecastData, onUpdateForecast, onNex
 
     try {
       if (forecastData.id) {
-        await base44.entities.ManualForecast.update(forecastData.id, forecastData);
+        await ManualForecast.update(forecastData.id, forecastData);
       } else {
-        const created = await base44.entities.ManualForecast.create(forecastData);
+        const created = await ManualForecast.create(forecastData);
         if (onUpdateForecast) {
           onUpdateForecast({ id: created.id });
         }

@@ -8,10 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Globe, Search, AlertCircle, CheckCircle, Package, Briefcase } from "lucide-react";
 import { performAdvancedWebsiteScan } from "@/components/logic/advancedWebsiteScraper";
-import { base44 } from "@/api/base44Client";
+
 import { useAuth } from '@/lib/AuthContext';
 import ScanProductTable from "./ScanProductTable";
 import ScanInsightsDisplay from "./ScanInsightsDisplay";
+import { WebsiteScanResult } from '@/api/entities';
 
 export default function WebsiteScanner({ customer }) {
   const { user: currentUser } = useAuth();
@@ -33,7 +34,7 @@ export default function WebsiteScanner({ customer }) {
           return;
         }
         
-        const latestScans = await base44.entities.WebsiteScanResult.filter(
+        const latestScans = await WebsiteScanResult.filter(
           { customer_email: customerEmail },
           '-created_date',
           1
@@ -70,7 +71,7 @@ export default function WebsiteScanner({ customer }) {
       // שמירה עם האימייל של הלקוח או המשתמש המחובר
       const customerEmail = customer?.email || currentUser?.email;
 
-      const savedResult = await base44.entities.WebsiteScanResult.create({
+      const savedResult = await WebsiteScanResult.create({
         customer_email: customerEmail,
         website_url: websiteUrl,
         ...scanResult

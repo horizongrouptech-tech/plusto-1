@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import LeadCard from '@/components/admin/LeadCard';
 import LeadDetailModal from '@/components/admin/LeadDetailModal';
 import LoadingScreen from '@/components/shared/LoadingScreen';
 import { toast } from "sonner";
+import { Lead, User } from '@/api/entities';
 
 const LEAD_STAGES = [
   { value: 'new', label: 'חדש', color: 'bg-blue-500' },
@@ -74,7 +75,7 @@ export default function LeadIntakeManagement() {
   const { data: leads = [], isLoading: isLoadingLeads, refetch: refetchLeads } = useQuery({
     queryKey: ['leads'],
     queryFn: async () => {
-      const allLeads = await base44.entities.Lead.filter({}, '-created_date');
+      const allLeads = await Lead.filter({}, '-created_date');
       
       // Filter by manager if not admin
       if (isFinancialManager && currentUser?.email) {
@@ -94,7 +95,7 @@ export default function LeadIntakeManagement() {
     queryKey: ['financialManagers'],
     queryFn: async () => {
       if (!isAdmin) return [];
-      const users = await base44.entities.User.filter({ 
+      const users = await User.filter({ 
         user_type: 'financial_manager',
         is_active: true
       });
@@ -143,7 +144,7 @@ export default function LeadIntakeManagement() {
 
   const handleUpdateLeadStage = async (leadId, newStage) => {
     try {
-      await base44.entities.Lead.update(leadId, { 
+      await Lead.update(leadId, { 
         stage: newStage,
         ...(newStage === 'contacted' && { first_contact_date: new Date().toISOString() }),
         last_contact_date: new Date().toISOString()
@@ -157,7 +158,7 @@ export default function LeadIntakeManagement() {
 
   const handleAssignManager = async (leadId, managerEmail) => {
     try {
-      await base44.entities.Lead.update(leadId, { assigned_manager_email: managerEmail });
+      await Lead.update(leadId, { assigned_manager_email: managerEmail });
       queryClient.invalidateQueries(['leads']);
     } catch (error) {
       console.error('Error assigning manager:', error);

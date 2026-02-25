@@ -13,13 +13,14 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Edit, Trash2, Users } from "lucide-react";
-import { Supplier } from "@/entities/Supplier";
-import { Lead } from "@/entities/Lead";
-import { LeadCommission } from "@/entities/LeadCommission";
+
+
+
 import AddSupplierModal from "../shared/AddSupplierModal";
 import EditSupplierModal from '../shared/EditSupplierModal';
 import AssignSupplierUserModal from './AssignSupplierUserModal';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Lead, LeadCommission, Supplier } from '@/api/entities';
 
 const formatCurrency = (value) => new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS' }).format(value || 0);
 

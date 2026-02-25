@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Recommendation } from "@/entities/Recommendation";
-import { User } from "@/entities/User";
-import { Product } from "@/entities/Product"; // Assuming Product entity exists for fetching
+
+
+ // Assuming Product entity exists for fetching
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import { generateInventoryBasedRecommendations } from '../components/logic/inven
 import { motion, AnimatePresence } from "framer-motion";
 
 import RecommendationCard from "@/components/shared/RecommendationCard";
+import { Product, Recommendation, User } from '@/api/entities';
 
 export default function RecommendationsPage() {
   const [recommendations, setRecommendations] = useState([]);

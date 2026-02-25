@@ -1,15 +1,17 @@
 
-import { InvokeLLM } from "@/integrations/Core";
-import { Recommendation } from "@/entities/Recommendation";
-import { Product } from "@/entities/Product";
-import { Supplier } from "@/entities/Supplier";
-import { ProductCatalog } from "@/entities/ProductCatalog";
+
+
+
+
+
 
 /**
  * מנוע בינה מלאכותית מתקדם - עודכן לשימוש עם מנגנון התזמור החדש
  */
 
 import { generateUnifiedRecommendations } from "./unifiedRecommendationOrchestrator";
+import { Product, ProductCatalog, Recommendation, Supplier } from '@/api/entities';
+import { InvokeLLM } from '@/api/integrations';
 
 export const generateBusinessIntelligence = async (customer, options = {}, progressCallback = null) => {
     if (!customer) {

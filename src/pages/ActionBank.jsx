@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect } from "react";
-import { BusinessMove } from "@/entities/BusinessMove";
-import { User } from "@/entities/User";
+
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Target } from "lucide-react";
 
 import BusinessMoveCard from "@/components/shared/BusinessMoveCard";
 import BusinessMoveDetailsModal from "@/components/admin/BusinessMoveDetailsModal";
+import { BusinessMove, User } from '@/api/entities';
 
 export default function ActionBankPage() {
   const [businessMoves, setBusinessMoves] = useState([]);

@@ -1,7 +1,8 @@
 import React, { createContext, useContext } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
+import { OnboardingRequest, User } from '@/api/entities';
 
 const UsersContext = createContext(null);
 
@@ -28,11 +29,11 @@ export const UsersProvider = ({ children }) => {
       try {
         if (isAdmin) {
           // אדמין - טוען את כולם מ-User entity
-          const users = await base44.entities.User.list();
+          const users = await User.list();
           return users.filter((u) => u.email && u.full_name);
         } else if (isFinancialManager) {
           // מנהל כספים - טוען דרך OnboardingRequest בלבד
-          const allOnboardings = await base44.entities.OnboardingRequest.filter({ is_active: true });
+          const allOnboardings = await OnboardingRequest.filter({ is_active: true });
           const myOnboardings = allOnboardings.filter(o => 
             o.assigned_financial_manager_email === currentUser.email ||
             o.additional_assigned_financial_manager_emails?.includes(currentUser.email)
@@ -72,7 +73,7 @@ export const UsersProvider = ({ children }) => {
     queryKey: ['financialManagers'],
     queryFn: async () => {
       try {
-        const managers = await base44.entities.User.filter({
+        const managers = await User.filter({
           role: 'user',
           user_type: 'financial_manager'
         });

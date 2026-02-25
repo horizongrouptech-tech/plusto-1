@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { AlertTriangle, Trash2, X, CheckCircle, Loader2 } from "lucide-react";
-import { deleteEntireCatalog } from "@/functions/deleteEntireCatalog";
+import { deleteEntireCatalog } from '@/api/functions';
+
 
 export default function CatalogDeletionModal({
   isOpen,

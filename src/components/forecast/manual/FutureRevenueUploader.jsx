@@ -7,10 +7,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, Loader2, CheckCircle2, AlertCircle, FileSpreadsheet, Calendar, TrendingUp } from "lucide-react";
-import { base44 } from '@/api/base44Client';
-import { parseFutureRevenueFile } from '@/functions/parseFutureRevenueFile';
+
+
 import { formatCurrency } from './utils/numberFormatter';
 import { toast } from "sonner";
+import { UploadFile } from '@/api/integrations';
+import { parseFutureRevenueFile } from '@/api/functions';
 
 export default function FutureRevenueUploader({ forecastData, onUpdateForecast, salesForecast, onSalesForecastUpdate }) {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -41,7 +43,7 @@ export default function FutureRevenueUploader({ forecastData, onUpdateForecast, 
 
     try {
       // העלה את הקובץ
-      const { file_url } = await base44.integrations.Core.UploadFile({
+      const { file_url } = await UploadFile({
         file: selectedFile
       });
 

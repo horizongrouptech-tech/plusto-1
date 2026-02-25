@@ -14,11 +14,12 @@ import 'reactflow/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { base44 } from '@/api/base44Client';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Calendar, Target, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { CustomerGoal } from '@/api/entities';
 
 // Custom Node Component - עיצוב משופר וברור
 const GoalNode = ({ data }) => {
@@ -131,7 +132,7 @@ export default function GoalsTimeline({ customer }) {
   const { data: goals = [], isLoading } = useQuery({
     queryKey: ['customerGoals', customer?.email],
     queryFn: async () => {
-      const allGoals = await base44.entities.CustomerGoal.filter({
+      const allGoals = await CustomerGoal.filter({
       customer_email: customer.email,
       is_active: true
       });
@@ -234,7 +235,7 @@ export default function GoalsTimeline({ customer }) {
       
       // שמירה בדאטאבייס
       try {
-        await base44.entities.CustomerGoal.update(params.target, {
+        await CustomerGoal.update(params.target, {
           depends_on_goal_id: params.source
         });
         queryClient.invalidateQueries(['customerGoals', customer.email]);
@@ -249,7 +250,7 @@ export default function GoalsTimeline({ customer }) {
   const handleNodeDragStop = useCallback(
     async (event, node) => {
       try {
-        await base44.entities.CustomerGoal.update(node.id, {
+        await CustomerGoal.update(node.id, {
           visual_position: node.position
         });
       } catch (error) {

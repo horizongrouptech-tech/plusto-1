@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChevronDown, ChevronUp, Search, Package } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { ProductCatalog } from '@/api/entities';
+
 
 export default function ProductCatalogSection({ customer }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -16,7 +17,7 @@ export default function ProductCatalogSection({ customer }) {
     queryKey: ['productCatalog', customer?.email],
     queryFn: async () => {
       if (!customer?.email) return [];
-      const items = await base44.entities.ProductCatalog.filter({
+      const items = await ProductCatalog.filter({
         customer_email: customer.email,
         is_active: true
       }, '-created_date');

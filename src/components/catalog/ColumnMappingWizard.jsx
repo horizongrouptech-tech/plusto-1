@@ -20,7 +20,8 @@ import {
   AlertTriangle,
   Loader2
 } from "lucide-react";
-import { base44 } from '@/api/base44Client';
+import { CatalogMappingProfile } from '@/api/entities';
+
 
 // שדות המערכת הנדרשים - מורחב לתמיכה בקטלוגים מגוונים
 const SYSTEM_FIELDS = [
@@ -316,7 +317,7 @@ export default function ColumnMappingWizard({
     try {
       // עמודה מזהה – ברקוד או שם מוצר (לזיהוי כפילויות)
       const identifierColumn = mapping['barcode'] || mapping['product_name'] || null;
-      await base44.entities.CatalogMappingProfile.create({
+      await CatalogMappingProfile.create({
         customer_email: customer.email,
         profile_name: profileName,
         mapping_configuration: mapping,
@@ -340,7 +341,7 @@ export default function ColumnMappingWizard({
       
       // עדכון פרופיל קיים אם נבחר
       if (selectedProfile) {
-        await base44.entities.CatalogMappingProfile.update(selectedProfile.id, {
+        await CatalogMappingProfile.update(selectedProfile.id, {
           last_used: new Date().toISOString()
         });
       }

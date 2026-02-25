@@ -12,12 +12,14 @@ import { formatCurrency, formatNumber } from './utils/numberFormatter';
 import ZReportUploader from './ZReportUploader';
 import ZReportProductMapper from './ZReportProductMapper';
 import ZReportMonthSummary from './ZReportMonthSummary';
-import { base44 } from "@/api/base44Client";
+
 import ServiceCategoryGroup from './ServiceCategoryGroup';
 import AggregatePlanning from './AggregatePlanning';
 import { Progress } from "@/components/ui/progress";
 import SaveProgressIndicator from './SaveProgressIndicator';
 import { toast } from "sonner";
+import { ManualForecast, ZReportDetails } from '@/api/entities';
+import { UploadFile } from '@/api/integrations';
 
 export default function Step3SalesForecast({ forecastData, onUpdateForecast, onNext, onBack, customer, sanitizeAllForecastData, setForecastData }) {
   const [isImportingZReport, setIsImportingZReport] = useState(false);
@@ -205,7 +207,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
         
         // Timeout protection
         const createdForecast = await Promise.race([
-          base44.entities.ManualForecast.create(sanitizedData),
+          ManualForecast.create(sanitizedData),
           new Promise((_, reject) => 
             setTimeout(() => reject(new Error('יצירת תחזית לקחה יותר מדי זמן')), 30000)
           )
@@ -291,7 +293,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       );
       
       const { file_url: productsFileUrl } = await Promise.race([
-        base44.integrations.Core.UploadFile({ file: productsFile }),
+        UploadFile({ file: productsFile }),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('העלאת קובץ מוצרים לקחה יותר מדי זמן')), 45000)
         )
@@ -304,7 +306,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       setImportStatusText('בודק דוחות קיימים...');
       console.log('🔍 Checking for existing Z reports for month:', pendingZData.month);
       
-      const existingReports = await base44.entities.ZReportDetails.filter({
+      const existingReports = await ZReportDetails.filter({
         forecast_id: forecastId,
         month_assigned: pendingZData.month,
         customer_email: customer?.email || forecastData.customer_email
@@ -390,14 +392,14 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
           { type: 'application/json' }
         );
         
-        const { file_url: mergedFileUrl } = await base44.integrations.Core.UploadFile({ file: mergedProductsFile });
+        const { file_url: mergedFileUrl } = await UploadFile({ file: mergedProductsFile });
         mergedProductsFileUrl = mergedFileUrl;
         
         // עדכן את הדוח הקיים הראשון (או צור חדש אם אין)
         const existingReport = existingReports[0];
         const totalRevenue = mergedProducts.reduce((sum, p) => sum + (p.revenue_with_vat || 0), 0);
         
-        zReportDetail = await base44.entities.ZReportDetails.update(existingReport.id, {
+        zReportDetail = await ZReportDetails.update(existingReport.id, {
           file_name: `${existingReport.file_name} + ${pendingZData.file_name}`,
           file_url: pendingZData.file_url, // שמור את הקובץ החדש
           upload_date: new Date().toISOString(),
@@ -410,7 +412,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
         if (existingReports.length > 1) {
           for (let i = 1; i < existingReports.length; i++) {
             try {
-              await base44.entities.ZReportDetails.delete(existingReports[i].id);
+              await ZReportDetails.delete(existingReports[i].id);
             } catch (error) {
               console.error('Error deleting duplicate report:', error);
             }
@@ -424,7 +426,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
         console.log('💾 Creating new ZReportDetails entity...');
       
         zReportDetail = await Promise.race([
-        base44.entities.ZReportDetails.create({
+        ZReportDetails.create({
           forecast_id: forecastId,
           customer_email: customer?.email || forecastData.customer_email,
           month_assigned: pendingZData.month,
@@ -444,7 +446,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
 
       // ✅ שלב 5: עדכון ה-entity עם קישור לקובץ המוצרים
       setImportProgress(70);
-      await base44.entities.ZReportDetails.update(zReportDetail.id, {
+      await ZReportDetails.update(zReportDetail.id, {
         detailed_products_file_url: productsFileUrl
       });
       
@@ -493,7 +495,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
 
       // שמירה ל-DB עם timeout protection
       await Promise.race([
-        base44.entities.ManualForecast.update(forecastId, completeUpdates),
+        ManualForecast.update(forecastId, completeUpdates),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('שמירת תחזית לקחה יותר מדי זמן')), 45000)
         )
@@ -520,7 +522,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       // שמירת נתונים חלקיים במקרה של כשלון
       if (forecastData.id) {
         try {
-          await base44.entities.ManualForecast.update(forecastData.id, {
+          await ManualForecast.update(forecastData.id, {
             z_import_failed: true,
             z_import_error: error.message,
             z_import_timestamp: new Date().toISOString()
@@ -567,9 +569,9 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       };
 
       if (forecastData.id) {
-        await base44.entities.ManualForecast.update(forecastData.id, dataToSave);
+        await ManualForecast.update(forecastData.id, dataToSave);
       } else {
-        const created = await base44.entities.ManualForecast.create(dataToSave);
+        const created = await ManualForecast.create(dataToSave);
         if (onUpdateForecast) {
           onUpdateForecast({ id: created.id });
         }
@@ -639,7 +641,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       }
 
       if (forecastData.id) {
-        await base44.entities.ManualForecast.update(forecastData.id, completeUpdates);
+        await ManualForecast.update(forecastData.id, completeUpdates);
         console.log('✅ Z-report updated successfully');
       }
     } catch (error) {
@@ -668,7 +670,7 @@ export default function Step3SalesForecast({ forecastData, onUpdateForecast, onN
       setIsSavingBeforeContinue(true);
       try {
         console.log('💾 Explicitly saving to DB before moving to next step...');
-        await base44.entities.ManualForecast.update(forecastData.id, updates);
+        await ManualForecast.update(forecastData.id, updates);
         console.log('✅ Save completed successfully');
       } catch (error) {
         console.error('❌ Error saving before continue:', error);

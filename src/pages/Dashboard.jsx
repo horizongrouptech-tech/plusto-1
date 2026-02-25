@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WelcomeSection from '../components/dashboard/WelcomeSection';
 import ClientList from '../components/dashboard/ClientList';
 import DailyTasks from '../components/dashboard/DailyTasks';
+import { OnboardingRequest, User } from '@/api/entities';
 
 export default function Dashboard() {
     const { user, isLoadingAuth: isUserLoading } = useAuth();
@@ -19,7 +20,7 @@ export default function Dashboard() {
             
             if (user.role !== 'admin') {
                 // מנהל כספים - טוען מ-OnboardingRequest (כולל מנהלים משניים!)
-                const allOnboarding = await base44.entities.OnboardingRequest.list();
+                const allOnboarding = await OnboardingRequest.list();
                 return allOnboarding
                     .filter(req => 
                         req.assigned_financial_manager_email === user.email ||
@@ -37,7 +38,7 @@ export default function Dashboard() {
             }
             
             // אדמין - טוען מ-User entity
-            const users = await base44.entities.User.filter({ 
+            const users = await User.filter({ 
                 role: 'user', 
                 user_type: 'regular' 
             });

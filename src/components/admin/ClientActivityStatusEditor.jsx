@@ -7,9 +7,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarIcon, Save, CheckCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
-import { base44 } from "@/api/base44Client";
+
 
 import { toast } from "sonner";
+import { OnboardingRequest } from '@/api/entities';
 export default function ClientActivityStatusEditor({ customer, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -22,7 +23,7 @@ export default function ClientActivityStatusEditor({ customer, onUpdate }) {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await base44.entities.OnboardingRequest.update(customer.id, {
+      await OnboardingRequest.update(customer.id, {
         is_active: editData.is_active,
         activity_start_date: editData.activity_start_date || null,
         activity_end_date: editData.activity_end_date || null

@@ -15,7 +15,8 @@ import {
   File as FileIcon
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { InvokeLLM, ExtractDataFromUploadedFile } from "@/integrations/Core";
+import { ExtractDataFromUploadedFile, InvokeLLM } from '@/api/integrations';
+
 
 // רשימת סוגי קבצים נתמכים
 const SUPPORTED_FILE_TYPES = {

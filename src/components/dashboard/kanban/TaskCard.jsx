@@ -6,8 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar, User, Target, Clock, CheckCircle2, RefreshCw, UserPlus, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { base44 } from '@/api/base44Client';
+
 import { useUsers } from '../../shared/UsersContext';
+import { CustomerGoal } from '@/api/entities';
 
 export default function TaskCard({ task, customer, parentGoal, onTaskClick, onMarkAsDone, isDragging }) {
   const [isUpdatingAssignees, setIsUpdatingAssignees] = useState(false);
@@ -34,7 +35,7 @@ export default function TaskCard({ task, customer, parentGoal, onTaskClick, onMa
     try {
       const currentAssignees = task.assigned_users || [];
       if (!currentAssignees.includes(email)) {
-        await base44.entities.CustomerGoal.update(task.id, {
+        await CustomerGoal.update(task.id, {
           assigned_users: [...currentAssignees, email],
           is_active: task.is_active !== false
         });
@@ -51,7 +52,7 @@ export default function TaskCard({ task, customer, parentGoal, onTaskClick, onMa
     setIsUpdatingAssignees(true);
     try {
       const currentAssignees = task.assigned_users || [];
-      await base44.entities.CustomerGoal.update(task.id, {
+      await CustomerGoal.update(task.id, {
         assigned_users: currentAssignees.filter(e => e !== email),
         is_active: task.is_active !== false
       });
@@ -67,7 +68,7 @@ export default function TaskCard({ task, customer, parentGoal, onTaskClick, onMa
     if (isUpdatingAssignees) return;
     setIsUpdatingAssignees(true);
     try {
-      await base44.entities.CustomerGoal.update(task.id, {
+      await CustomerGoal.update(task.id, {
         assignee_email: null,
         is_active: task.is_active !== false
       });

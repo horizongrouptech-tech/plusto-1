@@ -17,7 +17,7 @@ import {
   Filter,
   Package
 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+
 import SmartFileUploader from "../upload/SmartFileUploader";
 import FileDataViewer from "./FileDataViewer";
 import { FinancialReportViewer } from "../shared/FinancialReportViewer";
@@ -34,6 +34,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 import { toast } from "sonner";
+import { FileUpload } from '@/api/entities';
+import { parseZReport } from '@/api/functions';
 export default function CustomerFileUploadManager({ customer, isAdmin = false }) {
   const [files, setFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -64,7 +66,7 @@ export default function CustomerFileUploadManager({ customer, isAdmin = false })
   const loadFiles = useCallback(async () => {
     setIsLoading(true);
     try {
-      const fetchedFiles = await base44.entities.FileUpload.filter({
+      const fetchedFiles = await FileUpload.filter({
         customer_email: customer.email
       }, '-created_date');
       setFiles(fetchedFiles);
@@ -95,7 +97,7 @@ export default function CustomerFileUploadManager({ customer, isAdmin = false })
   const handleDeleteFile = async (fileId) => {
     if (!confirm('האם אתה בטוח שברצונך למחוק את הקובץ?')) return;
     try {
-      await base44.entities.FileUpload.delete(fileId);
+      await FileUpload.delete(fileId);
       await loadFiles();
     } catch (error) {
       console.error("Error deleting file:", error);
@@ -420,7 +422,7 @@ export default function CustomerFileUploadManager({ customer, isAdmin = false })
                         size="sm"
                         onClick={async () => {
                           try {
-                            const response = await base44.functions.invoke('parseZReport', {
+                            const response = await parseZReport({
                               fileUrl: file.file_url,
                               customerEmail: customer.email,
                               importToCatalog: true

@@ -1,4 +1,5 @@
-import { InvokeLLM } from "@/integrations/Core";
+import { InvokeLLM } from '@/api/integrations';
+
 
 export const scrapeWebsiteAndGenerateInsights = async (websiteUrl, userEmail) => {
   try {

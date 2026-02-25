@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { base44 } from '@/api/base44Client';
+
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   Save,
@@ -26,6 +26,7 @@ import GoalCommentsModal from '@/components/admin/goals/GoalCommentsModal';
 import MentionInput from '@/components/shared/MentionInput';
 import GoalDependenciesSelector from './GoalDependenciesSelector';
 import { toast } from "sonner";
+import { CustomerGoal } from '@/api/entities';
 
 export default function TaskDetailsModal({ 
   task, 
@@ -49,7 +50,7 @@ export default function TaskDetailsModal({
   // טעינת כל היעדים עבור selector התלויות
   const { data: allGoals = [] } = useQuery({
     queryKey: ['customerGoals', customer?.email],
-    queryFn: () => base44.entities.CustomerGoal.filter({
+    queryFn: () => CustomerGoal.filter({
       customer_email: customer?.email,
       is_active: true
     }),
@@ -103,7 +104,7 @@ export default function TaskDetailsModal({
         is_active: task.is_active !== false
       };
 
-      await base44.entities.CustomerGoal.update(task.id, dataToSave);
+      await CustomerGoal.update(task.id, dataToSave);
 
       queryClient.invalidateQueries(['customerGoals', customer?.email]);
       if (onSave) onSave();
@@ -120,7 +121,7 @@ export default function TaskDetailsModal({
     if (!confirm('האם אתה בטוח שברצונך למחוק את המשימה?')) return;
 
     try {
-      await base44.entities.CustomerGoal.delete(task.id);
+      await CustomerGoal.delete(task.id);
       queryClient.invalidateQueries(['customerGoals', customer?.email]);
       if (onDelete) onDelete();
       onClose();

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ProcessStatus } from '@/entities/ProcessStatus';
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { ProcessStatus } from '@/api/entities';
 
 export default function OnboardingStatusTracker({ customerEmail }) {
     const [process, setProcess] = useState(null);

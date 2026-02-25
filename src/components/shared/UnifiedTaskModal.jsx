@@ -9,12 +9,15 @@ import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ListTodo, Loader2, Save, UserPlus, Mail, X, CalendarIcon } from "lucide-react";
-import { base44 } from '@/api/base44Client';
+
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { useUsers } from './UsersContext';
-import { syncTaskToFireberry } from '@/functions/syncTaskToFireberry';
+
 import { toast } from 'sonner';
+import { CustomerGoal, Notification } from '@/api/entities';
+import { SendEmail } from '@/api/integrations';
+import { syncTaskToFireberry } from '@/api/functions';
 
 export default function UnifiedTaskModal({ 
   isOpen, 
@@ -117,20 +120,20 @@ export default function UnifiedTaskModal({
 
       let savedTask;
       if (mode === 'edit' && existingTask) {
-        await base44.entities.CustomerGoal.update(existingTask.id, {
+        await CustomerGoal.update(existingTask.id, {
           ...taskData,
           is_active: existingTask.is_active !== false
         });
         savedTask = { ...existingTask, ...taskData };
         toast.success('המשימה עודכנה בהצלחה');
       } else {
-        savedTask = await base44.entities.CustomerGoal.create(taskData);
+        savedTask = await CustomerGoal.create(taskData);
         toast.success('המשימה נוצרה בהצלחה');
         
         // נוטיפיקציות רק ביצירה
         Promise.all(taggedUsers.map(async (taggedEmail) => {
           try {
-            await base44.entities.Notification.create({
+            await Notification.create({
               recipient_email: taggedEmail,
               sender_email: currentUser?.email,
               type: 'tagged_in_task',
@@ -141,7 +144,7 @@ export default function UnifiedTaskModal({
               priority: 'high'
             });
 
-            await base44.integrations.Core.SendEmail({
+            await SendEmail({
               to: taggedEmail,
               subject: `תויגת במשימה חדשה - ${name.trim()}`,
               body: `שלום,\n\n${currentUser?.full_name || currentUser?.email} תייג/תייגה אותך במשימה חדשה:\n\nשם המשימה: ${name.trim()}\nתאריך יעד: ${endDate}\n\n${notes ? `פרטים: ${notes}\n\n` : ''}היכנס למערכת לצפייה ועדכון.`

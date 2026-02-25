@@ -16,6 +16,9 @@ import {
 import UniversalFileProcessor from './UniversalFileProcessor';
 import ColumnMappingModal from './ColumnMappingModal';
 import DynamicFileDisplay from './DynamicFileDisplay';
+import { UploadFile } from '@/api/integrations';
+import { parseBizIboxFile } from '@/api/functions';
+import { FileUpload } from '@/api/entities';
 
 export default function EnhancedFileUpload({ 
   customer, 
@@ -94,17 +97,17 @@ export default function EnhancedFileUpload({
         setProcessingFiles(prev => new Map(prev).set(file.name, { status: 'processing', progress: 50 }));
         
         // העלאת הקובץ
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
-        
+        const { file_url } = await UploadFile({ file });
+
         // קריאה לפונקציה המתמחה של BiziBox
-        const response = await base44.functions.invoke('parseBizIboxFile', {
+        const response = await parseBizIboxFile({
           fileUrl: file_url,
           customerEmail: customer.email
         });
 
         if (response.data.success) {
           // שמירת הקובץ ל-FileUpload entity
-          await base44.entities.FileUpload.create({
+          await FileUpload.create({
             customer_email: customer.email,
             filename: file.name,
             file_url: file_url,

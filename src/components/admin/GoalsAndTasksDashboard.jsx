@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,12 +39,15 @@ import { he } from 'date-fns/locale';
 import CustomerGoalsGantt from './CustomerGoalsGantt';
 import { generateGoalsHTML } from '../shared/generateGoalsHTML';
 import { openPrintWindow } from '../shared/printUtils';
-import { syncTaskToFireberry } from '@/functions/syncTaskToFireberry';
+
 import { useUsers } from '../shared/UsersContext';
 import CreateTaskModalShared from '../shared/CreateTaskModal';
 import { useAuth } from '@/lib/AuthContext';
 
 import { toast } from "sonner";
+import { CustomerGoal, Notification, OnboardingRequest } from '@/api/entities';
+import { SendEmail } from '@/api/integrations';
+import { syncTaskToFireberry } from '@/api/functions';
 export default function GoalsAndTasksDashboard({ customer }) {
   const { user: currentUser } = useAuth();
   const [showGanttView, setShowGanttView] = useState(false);
@@ -60,7 +63,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
   // טעינת יעדים ומשימות מ-CustomerGoal
   const { data: rawGoals = [], isLoading: isLoadingGoals } = useQuery({
     queryKey: ['customerGoals', customer?.email],
-    queryFn: () => base44.entities.CustomerGoal.filter({
+    queryFn: () => CustomerGoal.filter({
       customer_email: customer.email,
       is_active: true
     }, 'order_index'),
@@ -183,7 +186,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
 
   const handleMarkAsDone = async (taskId) => {
     try {
-      await base44.entities.CustomerGoal.update(taskId, { status: 'done', is_active: true });
+      await CustomerGoal.update(taskId, { status: 'done', is_active: true });
 
       // רענון מיידי
       queryClient.invalidateQueries(['customerGoals', customer.email]);
@@ -211,10 +214,10 @@ export default function GoalsAndTasksDashboard({ customer }) {
           // מחק את כל התת-משימות ואז את היעד
           for (const subtask of subtasks) {
             try {
-              await base44.entities.CustomerGoal.delete(subtask.id);
+              await CustomerGoal.delete(subtask.id);
             } catch (delErr) {
               // נסה service role
-              await base44.asServiceRole.entities.CustomerGoal.delete(subtask.id);
+              await CustomerGoal.delete(subtask.id);
             }
           }
         } else {
@@ -228,16 +231,16 @@ export default function GoalsAndTasksDashboard({ customer }) {
             if (!subtask.end_date || subtask.end_date === null) {
               updateData.end_date = task.end_date || new Date().toISOString().split('T')[0];
             }
-            await base44.entities.CustomerGoal.update(subtask.id, updateData);
+            await CustomerGoal.update(subtask.id, updateData);
           }
         }
         
         // מחק את היעד עצמו
         try {
-          await base44.entities.CustomerGoal.delete(taskId);
+          await CustomerGoal.delete(taskId);
         } catch (delErr) {
           // נסה service role
-          await base44.asServiceRole.entities.CustomerGoal.delete(taskId);
+          await CustomerGoal.delete(taskId);
         }
         
         await queryClient.invalidateQueries(['customerGoals', customer.email]);
@@ -254,10 +257,10 @@ export default function GoalsAndTasksDashboard({ customer }) {
               if (!subtask.end_date) {
                 updateData.end_date = new Date().toISOString().split('T')[0];
               }
-              await base44.entities.CustomerGoal.update(subtask.id, updateData);
+              await CustomerGoal.update(subtask.id, updateData);
             }
           }
-          await base44.entities.CustomerGoal.update(taskId, { is_active: false });
+          await CustomerGoal.update(taskId, { is_active: false });
           await queryClient.invalidateQueries(['customerGoals', customer.email]);
           toast.success('היעד הוסתר (לא נמחק לחלוטין)');
         } catch (updateError) {
@@ -276,14 +279,14 @@ export default function GoalsAndTasksDashboard({ customer }) {
 
       try {
         // נסה מחיקה רגילה
-        await base44.entities.CustomerGoal.delete(taskId);
+        await CustomerGoal.delete(taskId);
 
         // הגנה: אם למשימה שנמחקה יש יעד-אב, וודא שהוא מסומן task_type: 'goal'
         if (parentId) {
           try {
             const parentGoal = allGoals.find(g => g.id === parentId);
             if (parentGoal && parentGoal.task_type !== 'goal') {
-              await base44.entities.CustomerGoal.update(parentId, { task_type: 'goal' });
+              await CustomerGoal.update(parentId, { task_type: 'goal' });
             }
           } catch (parentErr) {
             console.error('Error ensuring parent goal type:', parentErr);
@@ -298,14 +301,14 @@ export default function GoalsAndTasksDashboard({ customer }) {
         // אם נכשל בגלל RLS - נסה עם service role
         try {
           if (taskToDelete) {
-            await base44.asServiceRole.entities.CustomerGoal.delete(taskId);
+            await CustomerGoal.delete(taskId);
 
             // הגנה: אם למשימה שנמחקה יש יעד-אב, וודא שהוא מסומן task_type: 'goal'
             if (parentId) {
               try {
                 const parentGoal = allGoals.find(g => g.id === parentId);
                 if (parentGoal && parentGoal.task_type !== 'goal') {
-                  await base44.entities.CustomerGoal.update(parentId, { task_type: 'goal' });
+                  await CustomerGoal.update(parentId, { task_type: 'goal' });
                 }
               } catch (parentErr) {
                 console.error('Error ensuring parent goal type:', parentErr);
@@ -319,7 +322,7 @@ export default function GoalsAndTasksDashboard({ customer }) {
           console.error('Service role deletion also failed:', serviceRoleError);
           // כמוצא אחרון - הסתרה
           try {
-            await base44.entities.CustomerGoal.update(taskId, { is_active: false });
+            await CustomerGoal.update(taskId, { is_active: false });
             await queryClient.invalidateQueries(['customerGoals', customer.email]);
             toast.success('המשימה הוסתרה (לא נמחקה לחלוטין)');
           } catch (updateError) {
@@ -876,7 +879,7 @@ function CreateTaskModal_OLD({ isOpen, onClose, customer, currentUser, allGoals,
       // שילוב תאריך ושעה ל-reminder_date
       const reminderDateTime = reminderDate && reminderTime ? `${reminderDate}T${reminderTime}:00` : null;
 
-      const newTask = await base44.entities.CustomerGoal.create({
+      const newTask = await CustomerGoal.create({
         customer_email: customer.email,
         name: name.trim(),
         notes,
@@ -896,7 +899,7 @@ function CreateTaskModal_OLD({ isOpen, onClose, customer, currentUser, allGoals,
       // שליחת נוטיפיקציות ומיילים ברקע - לא חוסם
       Promise.all(taggedUsers.map(async (taggedEmail) => {
         try {
-          await base44.entities.Notification.create({
+          await Notification.create({
             recipient_email: taggedEmail,
             sender_email: currentUser?.email,
             type: 'tagged_in_task',
@@ -907,7 +910,7 @@ function CreateTaskModal_OLD({ isOpen, onClose, customer, currentUser, allGoals,
             priority: 'high'
           });
 
-          await base44.integrations.Core.SendEmail({
+          await SendEmail({
             to: taggedEmail,
             subject: `תויגת במשימה חדשה - ${name.trim()}`,
             body: `שלום,\n\n${currentUser?.full_name || currentUser?.email} תייג/תייגה אותך במשימה חדשה:\n\nשם המשימה: ${name.trim()}\nתאריך יעד: ${endDate}\n\n${notes ? `פרטים: ${notes}\n\n` : ''}היכנס למערכת לצפייה ועדכון.`
@@ -1200,7 +1203,7 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
     queryKey: ['customerForEdit', task?.customer_email],
     queryFn: async () => {
       if (!task?.customer_email) return null;
-      const customers = await base44.entities.OnboardingRequest.filter({ email: task.customer_email });
+      const customers = await OnboardingRequest.filter({ email: task.customer_email });
       return customers[0] || null;
     },
     enabled: isOpen && !!task?.customer_email
@@ -1295,14 +1298,14 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
       const oldTaggedUsers = task.tagged_users || [];
       const newlyTagged = taggedUsers.filter((email) => !oldTaggedUsers.includes(email));
 
-      await base44.entities.CustomerGoal.update(id, dataToUpdate);
+      await CustomerGoal.update(id, dataToUpdate);
 
       // הגנה: אם המשימה שויכה ליעד חדש, וודא שהיעד-אב מסומן task_type: 'goal'
       if (dataToUpdate.parent_id) {
         try {
           const parentGoal = allGoals.find(g => g.id === dataToUpdate.parent_id);
           if (parentGoal && parentGoal.task_type !== 'goal') {
-            await base44.entities.CustomerGoal.update(dataToUpdate.parent_id, { task_type: 'goal' });
+            await CustomerGoal.update(dataToUpdate.parent_id, { task_type: 'goal' });
           }
         } catch (parentErr) {
           console.error('Error ensuring parent goal type:', parentErr);
@@ -1315,7 +1318,7 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
       // שליחת נוטיפיקציות ומיילים ברקע - לא חוסם
       Promise.all(newlyTagged.map(async (taggedEmail) => {
         try {
-          await base44.entities.Notification.create({
+          await Notification.create({
             recipient_email: taggedEmail,
             sender_email: currentUser?.email,
             type: 'tagged_in_task',
@@ -1326,7 +1329,7 @@ function EditTaskModal({ isOpen, onClose, task, currentUser, allGoals, onSuccess
             priority: 'high'
           });
 
-          await base44.integrations.Core.SendEmail({
+          await SendEmail({
             to: taggedEmail,
             subject: `תויגת במשימה - ${dataToUpdate.name}`,
             body: `שלום,\n\n${currentUser?.full_name || currentUser?.email} תייג/תייגה אותך במשימה:\n\nשם המשימה: ${dataToUpdate.name}\nתאריך יעד: ${dataToUpdate.end_date}\n\n${dataToUpdate.notes ? `פרטים: ${dataToUpdate.notes}\n\n` : ''}היכנס למערכת לצפייה ועדכון.`
@@ -1597,7 +1600,7 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
       // שילוב תאריך ושעה ל-reminder_date
       const reminderDateTime = reminderDate && reminderTime ? `${reminderDate}T${reminderTime}:00` : null;
 
-      const newGoal = await base44.entities.CustomerGoal.create({
+      const newGoal = await CustomerGoal.create({
         customer_email: customer.email,
         name: name.trim(),
         notes,
@@ -1622,7 +1625,7 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
       if (customer.assigned_financial_manager_email && customer.assigned_financial_manager_email !== currentUser?.email) {
         Promise.resolve().then(async () => {
           try {
-            await base44.entities.Notification.create({
+            await Notification.create({
               recipient_email: customer.assigned_financial_manager_email,
               sender_email: currentUser?.email,
               type: 'new_goal_created',
@@ -1633,7 +1636,7 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
               priority: 'high'
             });
 
-            await base44.integrations.Core.SendEmail({
+            await SendEmail({
               to: customer.assigned_financial_manager_email,
               subject: `יעד חדש נוצר - ${name.trim()}`,
               body: `שלום,\n\n${currentUser?.full_name || currentUser?.email} יצר/יצרה יעד חדש:\n\nשם היעד: ${name.trim()}\nלקוח: ${customer.business_name || customer.full_name}\nתאריך יעד: ${endDate || 'לא הוגדר'}\n\n${notes ? `פרטים: ${notes}\n\n` : ''}היכנס למערכת לצפייה ועדכון.`
@@ -1648,7 +1651,7 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
       if (assigneeEmail && assigneeEmail !== currentUser?.email && assigneeEmail !== customer.assigned_financial_manager_email) {
         Promise.resolve().then(async () => {
           try {
-            await base44.entities.Notification.create({
+            await Notification.create({
               recipient_email: assigneeEmail,
               sender_email: currentUser?.email,
               type: 'assigned_to_goal',
@@ -1659,7 +1662,7 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
               priority: 'high'
             });
 
-            await base44.integrations.Core.SendEmail({
+            await SendEmail({
               to: assigneeEmail,
               subject: `שויכת ליעד חדש - ${name.trim()}`,
               body: `שלום,\n\n${currentUser?.full_name || currentUser?.email} שייך/שייכה אותך כאחראי/ת על היעד:\n\nשם היעד: ${name.trim()}\nלקוח: ${customer.business_name || customer.full_name}\nתאריך יעד: ${endDate || 'לא הוגדר'}\n\n${notes ? `פרטים: ${notes}\n\n` : ''}היכנס למערכת לצפייה ועדכון.`
@@ -1673,7 +1676,7 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
       // שליחת נוטיפיקציות ומיילים ברקע - לא חוסם
       Promise.all(taggedUsers.map(async (taggedEmail) => {
         try {
-          await base44.entities.Notification.create({
+          await Notification.create({
             recipient_email: taggedEmail,
             sender_email: currentUser?.email,
             type: 'tagged_in_goal',
@@ -1684,7 +1687,7 @@ function CreateGoalModal({ isOpen, onClose, customer, currentUser, existingGoals
             priority: 'high'
           });
 
-          await base44.integrations.Core.SendEmail({
+          await SendEmail({
             to: taggedEmail,
             subject: `תויגת ביעד חדש - ${name.trim()}`,
             body: `שלום,\n\n${currentUser?.full_name || currentUser?.email} תייג/תייגה אותך ביעד חדש:\n\nשם היעד: ${name.trim()}\nתאריך יעד: ${endDate}\n\n${notes ? `פרטים: ${notes}\n\n` : ''}היכנס למערכת לצפייה ועדכון.`

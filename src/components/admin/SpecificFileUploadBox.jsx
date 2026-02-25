@@ -2,12 +2,15 @@ import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload, RefreshCw, CheckCircle, XCircle } from "lucide-react";
-import { FileUpload } from "@/entities/FileUpload";
-import { UploadFile, InvokeLLM } from "@/integrations/Core";
-import { parseXlsx } from "@/functions/parseXlsx";
-import { processESNAReport } from '@/functions/processESNAReport';
+
+
+
+
 import { toast } from "sonner";
-import { processPurchaseDocument } from '@/functions/processPurchaseDocument'; // ADDED: New function import
+import { FileUpload } from '@/api/entities';
+import { parseXlsx, processESNAReport, processPurchaseDocument } from '@/api/functions';
+import { InvokeLLM, UploadFile } from '@/api/integrations';
+ // ADDED: New function import
 
 // JSON Schemas for PDF analysis - ENHANCED FOR INSIGHTS
 const bankStatementSchema = {

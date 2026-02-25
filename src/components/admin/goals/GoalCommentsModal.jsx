@@ -2,11 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { GoalComment } from '@/entities/GoalComment';
-import { User } from '@/entities/User';
+
+
 import { Loader2, Send, MessageSquare } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { GoalComment, User } from '@/api/entities';
 
 const Comment = ({ comment, author }) => {
     return (

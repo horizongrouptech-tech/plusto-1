@@ -15,11 +15,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { base44 } from '@/api/base44Client';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, Plus, Save, Trash2, Edit3, Loader2, User } from 'lucide-react';
 import EnhancedOrgNode from './EnhancedOrgNode';
 import { toast } from "sonner";
+import { OrganizationChart } from '@/api/entities';
 
 // Custom Organization Node with Handles (Fallback - kept for compatibility)
 const OrgNode = ({ data }) => {
@@ -93,7 +94,7 @@ export default function OrganizationChartBuilder({ customer }) {
   const { data: orgChart, isLoading } = useQuery({
     queryKey: ['orgChart', customer?.email],
     queryFn: async () => {
-      const charts = await base44.entities.OrganizationChart.filter({
+      const charts = await OrganizationChart.filter({
         customer_email: customer.email,
         is_active: true
       });
@@ -103,7 +104,7 @@ export default function OrganizationChartBuilder({ customer }) {
       }
       
       // יצירת עץ ברירת מחדל
-      const newChart = await base44.entities.OrganizationChart.create({
+      const newChart = await OrganizationChart.create({
         customer_email: customer.email,
         chart_name: 'עץ ארגוני ראשי',
         nodes: [{
@@ -231,7 +232,7 @@ export default function OrganizationChartBuilder({ customer }) {
             : n
         );
         
-        await base44.entities.OrganizationChart.update(orgChart.id, {
+        await OrganizationChart.update(orgChart.id, {
           nodes: updatedNodes
         });
         
@@ -261,7 +262,7 @@ export default function OrganizationChartBuilder({ customer }) {
               : n
           );
           
-          await base44.entities.OrganizationChart.update(orgChart.id, {
+          await OrganizationChart.update(orgChart.id, {
             nodes: updatedNodes
           });
         }
@@ -344,7 +345,7 @@ export default function OrganizationChartBuilder({ customer }) {
         updatedNodes.push(newNode);
       }
 
-      await base44.entities.OrganizationChart.update(orgChart.id, {
+      await OrganizationChart.update(orgChart.id, {
         nodes: updatedNodes
       });
 
@@ -367,7 +368,7 @@ export default function OrganizationChartBuilder({ customer }) {
         .filter(n => n.id !== nodeId)
         .map(n => n.parent_id === nodeId ? { ...n, parent_id: null } : n);
       
-      await base44.entities.OrganizationChart.update(orgChart.id, {
+      await OrganizationChart.update(orgChart.id, {
         nodes: updatedNodes
       });
 
@@ -401,7 +402,7 @@ export default function OrganizationChartBuilder({ customer }) {
           position: currentPositions[n.id] || n.position
         }));
         
-        await base44.entities.OrganizationChart.update(orgChart.id, {
+        await OrganizationChart.update(orgChart.id, {
           nodes: updatedNodes
         });
       } catch (error) {

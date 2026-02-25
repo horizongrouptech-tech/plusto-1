@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 
 import { toast } from "sonner";
+import { AgentSupportTicket } from '@/api/entities';
 export default function AgentSupportTicketsManager() {
   const queryClient = useQueryClient();
   const [editingTicket, setEditingTicket] = useState(null);
@@ -24,11 +25,11 @@ export default function AgentSupportTicketsManager() {
 
   const { data: tickets, isLoading, error } = useQuery({
     queryKey: ['agentSupportTickets'],
-    queryFn: () => base44.entities.AgentSupportTicket.list('-created_date'),
+    queryFn: () => AgentSupportTicket.list('-created_date'),
   });
 
   const updateTicketMutation = useMutation({
-    mutationFn: (updatedTicketData) => base44.entities.AgentSupportTicket.update(editingTicket.id, updatedTicketData),
+    mutationFn: (updatedTicketData) => AgentSupportTicket.update(editingTicket.id, updatedTicketData),
     onSuccess: () => {
       queryClient.invalidateQueries(['agentSupportTickets']);
       setIsEditModalOpen(false);

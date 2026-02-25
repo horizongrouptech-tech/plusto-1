@@ -1,11 +1,12 @@
 
 // Integrated from the 'Core' package
-import { Product } from "@/entities/Product";
-import { ProductCatalog } from "@/entities/ProductCatalog";
-import { BusinessForecast } from "@/entities/BusinessForecast";
-import { FileUpload } from "@/entities/FileUpload";
-import { Supplier } from "@/entities/Supplier";
+
+
+
+
+
 import { generateUnifiedRecommendations } from "./unifiedRecommendationOrchestrator";
+import { BusinessForecast, FileUpload, Product, ProductCatalog, Supplier } from '@/api/entities';
 
 /**
  * סכימות JSON לשימוש עם InvokeLLM

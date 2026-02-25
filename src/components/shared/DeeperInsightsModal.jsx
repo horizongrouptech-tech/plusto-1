@@ -4,8 +4,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, Loader2, History } from "lucide-react";
-import { generateDeeperInsights } from "@/functions/generateDeeperInsights";
-import { FileUpload } from '@/entities/FileUpload';
+import { FileUpload } from '@/api/entities';
+import { generateDeeperInsights } from '@/api/functions';
+
+
 
 export default function DeeperInsightsModal({ isOpen, onClose, fileData, onInsightsUpdated }) {
   const [specificQuery, setSpecificQuery] = useState('');

@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, FileSpreadsheet, Loader2, Copy } from "lucide-react";
-import { exportManualForecastToExcel } from "@/functions/exportManualForecastToExcel";
+
 import { toast } from "sonner";
+import { exportManualForecastToExcel } from '@/api/functions';
 
 export default function ForecastExporter({ forecast, sheets, selectedSheet }) {
     const [isExporting, setIsExporting] = useState(false);

@@ -20,7 +20,7 @@ import {
   Edit3,
   Star
 } from "lucide-react";
-import { ProductCatalog } from "@/entities/ProductCatalog";
+
 import ProductCatalogUpload from "./ProductCatalogUpload";
 import ProductCatalogTable from "./ProductCatalogTable";
 import ProductCatalogAutoGenerator from "./ProductCatalogAutoGenerator";
@@ -29,19 +29,19 @@ import ProductEditModal from "./ProductEditModal";
 import CatalogDeletionModal from "./CatalogDeletionModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { base44 } from '@/api/base44Client';
-import { cleanCatalogSmartly } from "@/functions/cleanCatalogSmartly";
+
+
 import { toast } from 'sonner';
-import { processCatalogUpload } from "@/functions/processCatalogUpload";
-import { cancelCatalogGeneration } from "@/functions/cancelCatalogGeneration";
-import { UploadFile } from "@/integrations/Core";
-import { ProcessStatus } from '@/entities/ProcessStatus';
+
+
+
+
 import CatalogProgressTracker from "./CatalogProgressTracker";
 import CatalogGenerationProgressBar from "./CatalogGenerationProgressBar";
 import CatalogUploadProgressCard from "./CatalogUploadProgressCard";
 import SetDefaultCatalogButton from "../admin/SetDefaultCatalogButton";
 
-import { Catalog } from "@/entities/Catalog";
+
 import {
   Select,
   SelectContent,
@@ -51,6 +51,9 @@ import {
 } from "@/components/ui/select";
 import ProductAddForm from "./ProductAddForm";
 import CatalogAnalyticsDashboard from "../analytics/CatalogAnalyticsDashboard";
+import { Catalog, FileUpload, ProcessStatus, ProductCatalog } from '@/api/entities';
+import { cancelCatalogGeneration, cleanCatalogSmartly, exportCatalogToExcel, getCatalogStats, processCatalogUpload } from '@/api/functions';
+import { UploadFile } from '@/api/integrations';
 
 const CatalogCreationFormModal = ({ isOpen, onClose, onSubmit }) => {
   const [catalogName, setCatalogName] = useState('');
@@ -164,7 +167,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
     const total = catalogs.find(c => c.id === selectedCatalogId)?.product_count ?? 0;
 
     try {
-      const { data, error } = await base44.functions.invoke('getCatalogStats', { catalog_id: selectedCatalogId });
+      const { data, error } = await getCatalogStats({ catalog_id: selectedCatalogId });
       if (error) {
         console.error('Error updating catalog stats:', error);
         return;
@@ -853,7 +856,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
         // שמירת הקובץ כנכשל במערכת
         try {
             if (file_url) {
-                await base44.entities.FileUpload.create({
+                await FileUpload.create({
                     filename: file?.name || 'קובץ קטלוג',
                     file_url: file_url,
                     file_type: file?.name?.split('.').pop()?.toLowerCase() || 'unknown',
@@ -1121,7 +1124,7 @@ export default function ProductCatalogManager({ customer, isAdmin = false }) {
               <Button
                 onClick={async () => {
                   try {
-                    const response = await base44.functions.invoke('exportCatalogToExcel', {
+                    const response = await exportCatalogToExcel({
                       customer_email: customer.email,
                       catalog_id: selectedCatalogId
                     });

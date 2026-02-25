@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { UserX, Search, ArrowRight, UserPlus } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+
 
 import { toast } from "sonner";
+import { OnboardingRequest, User } from '@/api/entities';
 export default function ManagerAssignmentBoard({ clients, financialManagers, onAssignmentChange }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedManager, setSelectedManager] = useState(null);
@@ -31,11 +32,11 @@ export default function ManagerAssignmentBoard({ clients, financialManagers, onA
     const handleAssignClient = async (client, managerEmail) => {
         try {
             if (client.source === 'onboarding') {
-                await base44.entities.OnboardingRequest.update(client.id, { 
+                await OnboardingRequest.update(client.id, { 
                     assigned_financial_manager_email: managerEmail 
                 });
             } else {
-                await base44.entities.User.update(client.id, { 
+                await User.update(client.id, { 
                     assigned_financial_manager_email: managerEmail 
                 });
             }
@@ -49,11 +50,11 @@ export default function ManagerAssignmentBoard({ clients, financialManagers, onA
     const handleUnassignClient = async (client) => {
         try {
             if (client.source === 'onboarding') {
-                await base44.entities.OnboardingRequest.update(client.id, { 
+                await OnboardingRequest.update(client.id, { 
                     assigned_financial_manager_email: null 
                 });
             } else {
-                await base44.entities.User.update(client.id, { 
+                await User.update(client.id, { 
                     assigned_financial_manager_email: null 
                 });
             }
@@ -75,11 +76,11 @@ export default function ManagerAssignmentBoard({ clients, financialManagers, onA
             const updatedAdditional = [...currentAdditional, managerEmail];
             
             if (client.source === 'onboarding') {
-                await base44.entities.OnboardingRequest.update(client.id, { 
+                await OnboardingRequest.update(client.id, { 
                     additional_assigned_financial_manager_emails: updatedAdditional 
                 });
             } else {
-                await base44.entities.User.update(client.id, { 
+                await User.update(client.id, { 
                     additional_assigned_financial_manager_emails: updatedAdditional 
                 });
             }
@@ -96,11 +97,11 @@ export default function ManagerAssignmentBoard({ clients, financialManagers, onA
             const updatedAdditional = currentAdditional.filter(email => email !== managerEmail);
             
             if (client.source === 'onboarding') {
-                await base44.entities.OnboardingRequest.update(client.id, { 
+                await OnboardingRequest.update(client.id, { 
                     additional_assigned_financial_manager_emails: updatedAdditional 
                 });
             } else {
-                await base44.entities.User.update(client.id, { 
+                await User.update(client.id, { 
                     additional_assigned_financial_manager_emails: updatedAdditional 
                 });
             }

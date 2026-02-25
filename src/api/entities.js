@@ -132,7 +132,22 @@ function createEntity(tableName) {
 // ---------------------------------------------------------------------------
 
 // Core / Auth
-export const User                          = createEntity('user');          // reserved keyword — supabase-js quotes it automatically
+// User.me() — returns the currently logged-in user's profile row
+const _UserBase = createEntity('profiles');
+export const User = {
+  ..._UserBase,
+  me: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return null;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+    if (error) throw error;
+    return data;
+  },
+};
 
 // Customers & Onboarding
 export const OnboardingRequest             = createEntity('onboarding_request');

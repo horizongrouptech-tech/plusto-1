@@ -10,11 +10,12 @@ import {
   X,
   Plus
 } from "lucide-react";
-import { ManagerConversation } from "@/entities/ManagerConversation";
-import { ManagerMessage } from "@/entities/ManagerMessage";
-import { User } from "@/entities/User";
+
+
+
 import { toast } from "sonner";
-import { Notification } from "@/entities/Notification"; // Added import for Notification
+import { ManagerConversation, ManagerMessage, Notification, User } from '@/api/entities';
+ // Added import for Notification
 
 export default function ManagerChatSystem({ 
   currentManagerEmail, 

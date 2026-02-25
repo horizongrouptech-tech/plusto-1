@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { RecommendationSuggestion } from "@/entities/RecommendationSuggestion";
-import { Recommendation } from "@/entities/Recommendation";
-import { User } from "@/entities/User";
+
+
+
 import { Lightbulb, Users, TrendingUp, MessageSquare, Eye, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Recommendation, RecommendationSuggestion, User } from '@/api/entities';
 
 export default function RecommendationSuggestionSystem({ managerEmail }) {
     const [suggestions, setSuggestions] = useState([]);

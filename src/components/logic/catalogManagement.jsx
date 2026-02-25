@@ -1,6 +1,8 @@
+import { ProductCatalog } from '@/api/entities';
+import { InvokeLLM } from '@/api/integrations';
 
-import { ProductCatalog } from "@/entities/ProductCatalog";
-import { InvokeLLM } from "@/integrations/Core";
+
+
 
 /**
  * מנהל קטלוג חכם - תחזוקה ושדרוג של קטלוג המוצרים

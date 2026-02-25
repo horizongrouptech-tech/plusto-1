@@ -14,10 +14,11 @@ import {
     Search,
     Filter
 } from "lucide-react";
-import { ManualForecastRow } from "@/entities/ManualForecastRow";
-import { ManualForecastVersion } from "@/entities/ManualForecastVersion";
-import { User } from "@/entities/User";
+
+
+
 import { toast } from "sonner";
+import { ManualForecastRow, ManualForecastVersion, User } from '@/api/entities';
 
 export default function EditableForecastGrid({ forecast, sheets, selectedSheet, onSheetChange, rows, onDataChange }) {
     const [editingRowId, setEditingRowId] = useState(null);

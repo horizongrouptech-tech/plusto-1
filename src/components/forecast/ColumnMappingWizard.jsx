@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, CheckCircle } from "lucide-react";
-import { ManualForecastMappingProfile } from "@/entities/ManualForecastMappingProfile";
-import { normalizeAndLoadForecast } from "@/functions/normalizeAndLoadForecast";
+
+
 import { toast } from "sonner";
+import { ManualForecastMappingProfile } from '@/api/entities';
+import { normalizeAndLoadForecast } from '@/api/functions';
 
 export default function ColumnMappingWizard({ isOpen, onClose, parsedData, customer, onComplete }) {
     const [currentSheetIndex, setCurrentSheetIndex] = useState(0);

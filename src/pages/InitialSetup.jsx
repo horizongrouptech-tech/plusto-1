@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User } from '@/entities/User';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { User as UserIcon, Building, ArrowRight, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "sonner";
+import { User } from '@/api/entities';
 
 export default function InitialSetup() {
   const [step, setStep] = useState(1);

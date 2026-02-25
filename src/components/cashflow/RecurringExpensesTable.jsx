@@ -8,12 +8,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { base44 } from '@/api/base44Client';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Link as LinkIcon, Save, Check, RefreshCw, Calendar, FileText, Tag, CheckCircle2, AlertCircle } from 'lucide-react';
 import { format, subMonths } from 'date-fns';
 
 import { toast } from "sonner";
+import { CashFlow, ManualForecast, RecurringExpense } from '@/api/entities';
 const MONTH_NAMES = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 
 const ITEMS_PER_PAGE = 15;
@@ -63,7 +64,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
   // טעינת הוצאות קבועות
   const { data: recurringExpenses = [], isLoading } = useQuery({
     queryKey: ['recurringExpenses', customer?.email],
-    queryFn: () => base44.entities.RecurringExpense.filter({
+    queryFn: () => RecurringExpense.filter({
       customer_email: customer.email
     }),
     enabled: !!customer?.email
@@ -73,7 +74,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
   const { data: availableForecasts = [] } = useQuery({
     queryKey: ['forecasts', customer?.email],
     queryFn: async () => {
-      const forecasts = await base44.entities.ManualForecast.filter({
+      const forecasts = await ManualForecast.filter({
         customer_email: customer.email
       });
       return forecasts.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
@@ -111,7 +112,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
     setIsRecalculating(true);
     try {
       // טען תנועות מהטווח הנבחר
-      const cashFlowEntries = await base44.entities.CashFlow.filter({
+      const cashFlowEntries = await CashFlow.filter({
         customer_email: customer.email,
         date: { $gte: calcDateRange.start, $lte: calcDateRange.end }
       });
@@ -143,7 +144,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
       }
 
       // יצירת/עדכון הוצאות קבועות
-      const existingExpenses = await base44.entities.RecurringExpense.filter({
+      const existingExpenses = await RecurringExpense.filter({
         customer_email: customer.email
       });
 
@@ -188,7 +189,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
             return newMonth;
           });
           
-          await base44.entities.RecurringExpense.update(existingExpense.id, {
+          await RecurringExpense.update(existingExpense.id, {
             ...expenseData,
             monthly_amounts: updatedMonthlyAmounts,
             // שמור על שיוכים ברמת ההוצאה אם יש
@@ -196,7 +197,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
             linked_expense_category: existingExpense.linked_expense_category || expenseData.linked_expense_category
           });
         } else {
-          await base44.entities.RecurringExpense.create(expenseData);
+          await RecurringExpense.create(expenseData);
         }
       }
 
@@ -211,11 +212,11 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
           if (!hasForecastLinks) {
             // אין שיוכים - בטוח למחוק
             console.log(`Deleting recurring expense category "${existingExpense.category}" - not found in cash flow entries`);
-            await base44.entities.RecurringExpense.delete(existingExpense.id);
+            await RecurringExpense.delete(existingExpense.id);
           } else {
             // יש שיוכים - עדכן את הסכומים ל-0 במקום למחוק
             console.log(`Updating recurring expense category "${existingExpense.category}" to zero - has forecast links`);
-            await base44.entities.RecurringExpense.update(existingExpense.id, {
+            await RecurringExpense.update(existingExpense.id, {
               monthly_amounts: existingExpense.monthly_amounts?.map(m => ({
                 ...m,
                 amount: 0
@@ -247,7 +248,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
       }
       
       try {
-        const forecasts = await base44.entities.ManualForecast.filter({ id: selectedForecastId });
+        const forecasts = await ManualForecast.filter({ id: selectedForecastId });
         const forecast = forecasts?.[0];
         
         if (forecast && forecast.detailed_expenses) {
@@ -325,7 +326,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
     setIsLinking(true);
     try {
       // טען את התחזית הנבחרת
-      const forecasts = await base44.entities.ManualForecast.filter({ id: selectedForecastId });
+      const forecasts = await ManualForecast.filter({ id: selectedForecastId });
       const forecast = forecasts?.[0];
       
       if (!forecast) {
@@ -363,7 +364,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
           newExpenseItem
         ];
         
-        await base44.entities.ManualForecast.update(selectedForecastId, {
+        await ManualForecast.update(selectedForecastId, {
           detailed_expenses: detailedExpenses
         });
       } else {
@@ -401,7 +402,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
           
           detailedExpenses[targetArray] = existingItems;
           
-          await base44.entities.ManualForecast.update(selectedForecastId, {
+          await ManualForecast.update(selectedForecastId, {
             detailed_expenses: detailedExpenses
           });
         }
@@ -416,7 +417,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
         linked_expense_category: finalLinkInfo
       }));
 
-      await base44.entities.RecurringExpense.update(selectedExpenseForLink.id, {
+      await RecurringExpense.update(selectedExpenseForLink.id, {
         monthly_amounts: updatedMonthlyAmounts,
         linked_forecast_id: selectedForecastId,
         linked_expense_category: finalLinkInfo
@@ -535,7 +536,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
         toast.info(`אין נתונים לחודש ${MONTH_NAMES[month - 1]} ${year}`);
         return;
       }
-      const forecasts = await base44.entities.ManualForecast.filter({
+      const forecasts = await ManualForecast.filter({
         id: forecastId
       });
       const forecast = forecasts?.[0];
@@ -589,7 +590,7 @@ export default function RecurringExpensesTable({ customer, dateRange }) {
           admin.push(newItem);
         }
       }
-      await base44.entities.ManualForecast.update(forecastId, {
+      await ManualForecast.update(forecastId, {
         detailed_expenses: {
           ...detailed,
           marketing_sales: marketing,

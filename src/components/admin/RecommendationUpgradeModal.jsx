@@ -11,10 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Wand2, MessageCircle, CheckCircle } from "lucide-react";
 import { enhanceRecommendationWithPrompt } from "@/components/logic/targetedRecommendationEngine";
-import { Recommendation } from "@/entities/Recommendation";
-import { sendWhatsAppMessage } from "@/functions/sendWhatsAppMessage";
+
+
 
 import { toast } from "sonner";
+import { Recommendation } from '@/api/entities';
+import { sendWhatsAppMessage } from '@/api/functions';
 export default function RecommendationUpgradeModal({ 
   isOpen, 
   recommendation, 

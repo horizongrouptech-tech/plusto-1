@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Loader2, ArrowRight } from 'lucide-react';
@@ -24,6 +24,8 @@ import RecommendationViewModal from '@/components/admin/RecommendationViewModal'
 import RecommendationEditModal from '@/components/admin/RecommendationEditModal';
 import RecommendationUpgradeModal from '@/components/admin/RecommendationUpgradeModal';
 import { toast } from "sonner";
+import { CustomerGoal, OnboardingRequest, Recommendation, User } from '@/api/entities';
+import { generateStrategicRecommendations } from '@/api/functions';
 
 export default function CustomerManagementNew() {
   const navigate = useNavigate();
@@ -72,7 +74,7 @@ export default function CustomerManagementNew() {
   const { data: customers = [], isLoading: isLoadingCustomers } = useQuery({
     queryKey: ['activeCustomers'],
     queryFn: async () => {
-      const onboardingRequests = await base44.entities.OnboardingRequest.list();
+      const onboardingRequests = await OnboardingRequest.list();
       
       // סינון לפי הרשאות
       let filtered = onboardingRequests;
@@ -94,7 +96,7 @@ export default function CustomerManagementNew() {
   // טעינת משימות ללקוח הנבחר (משותף עם גאנט - is_active: true לסנכרון)
   const { data: tasks = [], isLoading: isLoadingTasks } = useQuery({
     queryKey: ['customerGoals', selectedCustomer?.email],
-    queryFn: () => base44.entities.CustomerGoal.filter({
+    queryFn: () => CustomerGoal.filter({
       customer_email: selectedCustomer.email,
       is_active: true
     }, 'order_index'),
@@ -104,7 +106,7 @@ export default function CustomerManagementNew() {
   // טעינת המלצות ללקוח הנבחר
   const { data: recommendations = [], isLoading: isLoadingRecs } = useQuery({
     queryKey: ['customerRecommendations', selectedCustomer?.email],
-    queryFn: () => base44.entities.Recommendation.filter({
+    queryFn: () => Recommendation.filter({
       customer_email: selectedCustomer.email,
       status: { $ne: 'archived' }
     }, '-created_date'),
@@ -114,7 +116,7 @@ export default function CustomerManagementNew() {
   // טעינת כל המשתמשים לשיוך במשימות
   const { data: allUsers = [] } = useQuery({
     queryKey: ['allUsers'],
-    queryFn: () => base44.entities.User.list()
+    queryFn: () => User.list()
   });
 
   // סינון לקוחות לפי קבוצה או ארכיון
@@ -191,7 +193,7 @@ export default function CustomerManagementNew() {
     if (!confirm('האם למחוק את ההמלצה?')) return;
     
     try {
-      await base44.entities.Recommendation.delete(recId);
+      await Recommendation.delete(recId);
       queryClient.invalidateQueries(['customerRecommendations', selectedCustomer.email]);
       toast.success('ההמלצה נמחקה');
     } catch (error) {
@@ -203,7 +205,7 @@ export default function CustomerManagementNew() {
     if (!confirm('האם להעביר לארכיון?')) return;
     
     try {
-      await base44.entities.Recommendation.update(recId, { status: 'archived' });
+      await Recommendation.update(recId, { status: 'archived' });
       queryClient.invalidateQueries(['customerRecommendations', selectedCustomer.email]);
       toast.success('ההמלצה הועברה לארכיון');
     } catch (error) {
@@ -354,7 +356,7 @@ export default function CustomerManagementNew() {
         }}
         onArchive={async (customer) => {
           try {
-            await base44.entities.OnboardingRequest.update(customer.id, {
+            await OnboardingRequest.update(customer.id, {
               is_archived: true,
               archived_date: new Date().toISOString(),
               archived_by: user?.email,
@@ -371,7 +373,7 @@ export default function CustomerManagementNew() {
         }}
         onUnarchive={async (customer) => {
           try {
-            await base44.entities.OnboardingRequest.update(customer.id, {
+            await OnboardingRequest.update(customer.id, {
               is_archived: false,
               archived_date: null,
               archived_by: null,
@@ -394,7 +396,7 @@ export default function CustomerManagementNew() {
         onClose={() => setSettingsDrawerOpen(false)}
         onSave={async (updatedData) => {
           try {
-            await base44.entities.OnboardingRequest.update(selectedCustomer.id, updatedData);
+            await OnboardingRequest.update(selectedCustomer.id, updatedData);
             queryClient.invalidateQueries(['activeCustomers']);
             setSettingsDrawerOpen(false);
             toast.success('הנתונים נשמרו בהצלחה');
@@ -413,7 +415,7 @@ export default function CustomerManagementNew() {
         }}
         onSave={async (updatedTask) => {
           try {
-            await base44.entities.CustomerGoal.update(updatedTask.id, {
+            await CustomerGoal.update(updatedTask.id, {
               ...updatedTask,
               is_active: updatedTask.is_active !== false
             });
@@ -438,7 +440,7 @@ export default function CustomerManagementNew() {
           
           setIsGeneratingRecs(true);
           try {
-            const response = await base44.functions.invoke('generateStrategicRecommendations', {
+            const response = await generateStrategicRecommendations({
               customer_email: selectedCustomer.email,
               business_type: selectedCustomer.business_type,
               business_goals: selectedCustomer.business_goals,
@@ -520,7 +522,7 @@ export default function CustomerManagementNew() {
           }}
           onSave={async (updatedRec) => {
             try {
-              await base44.entities.Recommendation.update(updatedRec.id, updatedRec);
+              await Recommendation.update(updatedRec.id, updatedRec);
               queryClient.invalidateQueries(['customerRecommendations', selectedCustomer.email]);
               setEditRecModalOpen(false);
               toast.success('ההמלצה עודכנה');

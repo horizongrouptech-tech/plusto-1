@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ import BusinessForecastManager from './BusinessForecastManager';
 import ManualForecastManager from './ManualForecastManager';
 import ProjectForecastManager from './ProjectForecastManager';
 import DuplicateForecastModal from './DuplicateForecastModal';
+import { BusinessForecast, ManualForecast, ProjectForecast } from '@/api/entities';
 
 export default function UnifiedForecastManager({ customer }) {
   const [showTypeSelectionModal, setShowTypeSelectionModal] = useState(false);
@@ -36,21 +37,21 @@ export default function UnifiedForecastManager({ customer }) {
   // טעינת תחזיות אוטומטיות
   const { data: automaticForecasts = [], isLoading: isLoadingAutomatic } = useQuery({
     queryKey: ['businessForecasts', customer.email],
-    queryFn: () => base44.entities.BusinessForecast.filter({ customer_email: customer.email }, '-created_date'),
+    queryFn: () => BusinessForecast.filter({ customer_email: customer.email }, '-created_date'),
     enabled: !!customer?.email
   });
 
   // טעינת תחזיות ידניות
   const { data: manualForecasts = [], isLoading: isLoadingManual } = useQuery({
     queryKey: ['manualForecasts', customer.email],
-    queryFn: () => base44.entities.ManualForecast.filter({ customer_email: customer.email }, '-created_date'),
+    queryFn: () => ManualForecast.filter({ customer_email: customer.email }, '-created_date'),
     enabled: !!customer?.email
   });
 
   // טעינת תחזיות פרויקטים
   const { data: projectForecasts = [], isLoading: isLoadingProject } = useQuery({
     queryKey: ['projectForecasts', customer.email],
-    queryFn: () => base44.entities.ProjectForecast.filter({ customer_email: customer.email }, '-created_date'),
+    queryFn: () => ProjectForecast.filter({ customer_email: customer.email }, '-created_date'),
     enabled: !!customer?.email
   });
 
@@ -99,11 +100,11 @@ export default function UnifiedForecastManager({ customer }) {
 
     try {
     if (forecast.type === 'automatic') {
-      await base44.entities.BusinessForecast.delete(forecast.id);
+      await BusinessForecast.delete(forecast.id);
     } else if (forecast.type === 'manual') {
-      await base44.entities.ManualForecast.delete(forecast.id);
+      await ManualForecast.delete(forecast.id);
     } else if (forecast.type === 'project') {
-      await base44.entities.ProjectForecast.delete(forecast.id);
+      await ProjectForecast.delete(forecast.id);
     }
 
     // רענון הנתונים
@@ -132,11 +133,11 @@ export default function UnifiedForecastManager({ customer }) {
 
     try {
       if (forecast.type === 'automatic') {
-        await base44.entities.BusinessForecast.update(forecast.id, { forecast_name: newForecastName });
+        await BusinessForecast.update(forecast.id, { forecast_name: newForecastName });
       } else if (forecast.type === 'manual') {
-        await base44.entities.ManualForecast.update(forecast.id, { forecast_name: newForecastName });
+        await ManualForecast.update(forecast.id, { forecast_name: newForecastName });
       } else if (forecast.type === 'project') {
-        await base44.entities.ProjectForecast.update(forecast.id, { forecast_name: newForecastName });
+        await ProjectForecast.update(forecast.id, { forecast_name: newForecastName });
       }
 
       // רענון הנתונים

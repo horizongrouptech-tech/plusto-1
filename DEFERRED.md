@@ -83,9 +83,16 @@ The following variables must be added in the **Vercel project settings**
 | `OPENROUTER_API_KEY` | Same value as `VITE_OPENROUTER_API_KEY` (for serverless routes) |
 | `SUPABASE_URL` | Same as `VITE_SUPABASE_URL` (for serverless routes) |
 | `SUPABASE_ANON_KEY` | Same as `VITE_SUPABASE_ANON_KEY` (for serverless routes) |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Critical for Step 6 functions** — find in Supabase Dashboard → Settings → API → `service_role` key |
 | `SITE_URL` | `https://plusto-1.vercel.app` |
 | `OPENROUTER_DEFAULT_MODEL` | (optional) default: `openai/gpt-4o-mini` |
 | `OPENROUTER_IMAGE_MODEL` | (optional) default: `openai/dall-e-3` |
+| `WOZTELL_CHANNEL_ID` | Woztell channel ID (for sendWhatsAppMessage) |
+| `WOZTELL_AP_KEY` | Woztell API key (for sendWhatsAppMessage) |
+| `WOZTELL_REDIRECT_TOKEN` | Woztell redirect access token (for initiateWhatsAppConversation) |
+| `FIREBERRY_WEBHOOK_SECRET` | Secret token for importFireberryTasks webhook |
+| `FIREBERRY_WEBHOOK_URL` | Fireberry webhook URL (for syncTaskToFireberry) |
+| `FIREBERRY_CREATE_ACCOUNT_URL` | (optional) Fireberry create account URL |
 
 Go to: Vercel Dashboard → Your Project → Settings → Environment Variables
 
@@ -110,12 +117,17 @@ actually writes to.
 
 ---
 
-## ⏸️ Auth migration (Step 3)
+## ✅ Auth migration (Step 3) — COMPLETED
 
-Supabase Auth (login, session, `useCurrentUser`) is not yet wired up.
-The app still uses Base44 Auth for login/logout/session.
+Supabase Auth is wired up. `AuthContext.jsx` uses `supabase.auth` and loads from `profiles` table.
 
-See `MIGRATION.md` → Step 3 for the full plan.
-Until Step 3 is done, the `Authorization` header sent by `src/api/integrations.js`
-will be empty, and `api/integrations/_auth.js` returns an `anonymous` user
-(permissive mode) so that LLM/upload calls still work.
+---
+
+## ✅ Step 6 — Serverless Functions Migration — COMPLETED
+
+All 40 Deno functions have been migrated to Vercel Node.js API routes under `api/`.
+
+**Before deployment works fully, add these to Vercel Environment Variables:**
+- `SUPABASE_SERVICE_ROLE_KEY` — find in Supabase Dashboard → Settings → API
+- `WOZTELL_CHANNEL_ID`, `WOZTELL_AP_KEY`, `WOZTELL_REDIRECT_TOKEN` — for WhatsApp
+- `FIREBERRY_WEBHOOK_SECRET`, `FIREBERRY_WEBHOOK_URL` — for Fireberry sync

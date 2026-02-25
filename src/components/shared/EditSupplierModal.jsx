@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
-import { Supplier } from "@/entities/Supplier";
+
 import { toast } from "sonner";
+import { Supplier } from '@/api/entities';
 
 const SUPPLIER_CATEGORIES = [
   'מזון',

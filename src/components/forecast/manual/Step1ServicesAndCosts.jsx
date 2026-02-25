@@ -27,10 +27,11 @@ import {
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { formatCurrency } from './utils/numberFormatter';
-import { base44 } from '@/api/base44Client';
+
 import SaveProgressIndicator from './SaveProgressIndicator';
 import Pagination from '@/components/shared/Pagination';
 import { toast } from "sonner";
+import { Catalog, ManualForecast, ProductCatalog } from '@/api/entities';
 
 const CATALOG_PICKER_PAGE_SIZE = 100;
 
@@ -277,7 +278,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
     setIsLoadingCatalogs(true);
     
     try {
-      const fetchedCatalogs = await base44.entities.Catalog.filter({ 
+      const fetchedCatalogs = await Catalog.filter({ 
         customer_email: forecastData.customer_email 
       }, '-created_date');
       
@@ -323,7 +324,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
           const batchSize = 5000;
           
           while (hasMore) {
-            const batch = await base44.entities.ProductCatalog.filter(
+            const batch = await ProductCatalog.filter(
               { catalog_id: catalog.id, is_active: true },
               '-created_date',
               batchSize,
@@ -393,7 +394,7 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
       const batchSize = 5000;
       
       while (hasMore) {
-        const batch = await base44.entities.ProductCatalog.filter(
+        const batch = await ProductCatalog.filter(
           { catalog_id: selectedCatalogForLoad.id, is_active: true },
           '-created_date',
           batchSize,
@@ -668,9 +669,9 @@ export default function Step1ServicesAndCosts({ forecastData, onUpdateForecast, 
       };
 
       if (forecastData.id) {
-        await base44.entities.ManualForecast.update(forecastData.id, dataToSave);
+        await ManualForecast.update(forecastData.id, dataToSave);
       } else {
-        const created = await base44.entities.ManualForecast.create(dataToSave);
+        const created = await ManualForecast.create(dataToSave);
         if (onUpdateForecast) {
           onUpdateForecast({ id: created.id });
         }

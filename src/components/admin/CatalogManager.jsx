@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Catalog } from '@/entities/Catalog';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Trash2, Eye, PlusCircle, AlertTriangle } from 'lucide-react';
-import { deleteEntireCatalog } from '@/functions/deleteEntireCatalog';
+
 import { Progress } from '@/components/ui/progress';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format } from 'date-fns';
 
 import { toast } from "sonner";
+import { Catalog } from '@/api/entities';
+import { deleteEntireCatalog } from '@/api/functions';
 export default function CatalogManager({ customerId }) {
     const [catalogs, setCatalogs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);

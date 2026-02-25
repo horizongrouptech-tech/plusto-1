@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Bot, User, Send, Loader2, ShieldAlert, CalendarPlus, Maximize2, Minimize2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import ReactMarkdown from 'react-markdown';
+import { Product, Sale } from '@/api/entities';
+import { InvokeLLM, SendEmail } from '@/api/integrations';
 
 
 
@@ -29,8 +31,8 @@ const EmergencyChat = ({ isOpen, onClose }) => {
         if (!userData) return;
         
         const [products, sales] = await Promise.all([
-          base44.entities.Product.filter({ created_by: userData.email }),
-          base44.entities.Sale.filter({ created_by: userData.email })
+          Product.filter({ created_by: userData.email }),
+          Sale.filter({ created_by: userData.email })
         ]);
 
         setUserContext({
@@ -93,7 +95,7 @@ const EmergencyChat = ({ isOpen, onClose }) => {
     try {
         const fullPrompt = `${systemPrompt}\n\n**הקשר על המשתמש:**\n- סוג עסק: ${userContext?.businessType}\n- קטלוג מוצרים הועלה: ${userContext?.hasProducts ? 'כן' : 'לא'}\n- דוחות מכירה הועלו: ${userContext?.hasSales ? 'כן' : 'לא'}\n\n**היסטוריית שיחה:**\n${JSON.stringify(messages.slice(-5))}\n\n**הודעת המשתמש:** "${messageText}"`;
 
-        const response = await base44.integrations.Core.InvokeLLM({ prompt: fullPrompt });
+        const response = await InvokeLLM({ prompt: fullPrompt });
         setMessages(prev => [...prev, { sender: 'ai', text: response }]);
     } catch (error) {
         console.error("Error calling LLM:", error);
@@ -159,7 +161,7 @@ const EmergencyChat = ({ isOpen, onClose }) => {
             </html>
         `;
 
-        await base44.integrations.Core.SendEmail({
+        await SendEmail({
             to: adminEmail,
             from_name: "Plusto - מערכת חכמה",
             subject: emailSubject,

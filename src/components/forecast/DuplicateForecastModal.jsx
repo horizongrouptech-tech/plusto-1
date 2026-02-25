@@ -5,8 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Copy, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+
 import { toast } from "sonner";
+import { BusinessForecast, ManualForecast } from '@/api/entities';
 
 export default function DuplicateForecastModal({ isOpen, onClose, sourceForecast, customer, onSuccess }) {
   const currentYear = new Date().getFullYear();
@@ -90,9 +91,9 @@ export default function DuplicateForecastModal({ isOpen, onClose, sourceForecast
       let newForecast;
       
       if (sourceForecast.type === 'manual' || !sourceForecast.is_system_generated) {
-        newForecast = await base44.entities.ManualForecast.create(duplicatedForecast);
+        newForecast = await ManualForecast.create(duplicatedForecast);
       } else {
-        newForecast = await base44.entities.BusinessForecast.create({
+        newForecast = await BusinessForecast.create({
           ...duplicatedForecast,
           is_system_generated: false, // סמן כלא אוטומטי
           is_editable: true

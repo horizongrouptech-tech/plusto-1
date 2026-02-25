@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, MessageCircle, Calendar, Target, TrendingUp } from 'lucide-react';
-import { Recommendation } from '@/entities/Recommendation';
+import { Recommendation } from '@/api/entities';
+
 
 export default function CustomerInitiatedRecommendationsModal({ isOpen, onClose, customerEmail }) {
   const [customerInitiatedRecs, setCustomerInitiatedRecs] = useState([]);

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { base44 } from '@/api/base44Client';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   Upload, 
@@ -17,6 +17,9 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { CashFlow, FileUpload } from '@/api/entities';
+import { UploadFile } from '@/api/integrations';
+import { parseBizIboxFile } from '@/api/functions';
 
 export default function CreditCardsTab({ customer, dateRange }) {
   const [isUploading, setIsUploading] = useState(false);
@@ -28,7 +31,7 @@ export default function CreditCardsTab({ customer, dateRange }) {
   // טעינת תנועות כרטיסי אשראי
   const { data: creditCardTransactions = [], isLoading } = useQuery({
     queryKey: ['creditCardTransactions', customer?.email, dateRange],
-    queryFn: () => base44.entities.CashFlow.filter({
+    queryFn: () => CashFlow.filter({
       customer_email: customer.email,
       is_credit_card: true,
       date: { 
@@ -43,7 +46,7 @@ export default function CreditCardsTab({ customer, dateRange }) {
   const { data: allCategories = [] } = useQuery({
     queryKey: ['cashFlowCategories', customer?.email],
     queryFn: async () => {
-      const entries = await base44.entities.CashFlow.filter({
+      const entries = await CashFlow.filter({
         customer_email: customer.email
       });
       const categories = [...new Set(entries.map(e => e.category).filter(Boolean))];
@@ -99,10 +102,10 @@ export default function CreditCardsTab({ customer, dateRange }) {
 
     setIsUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await UploadFile({ file });
       
       // שמירה ל-FileUpload entity
-      await base44.entities.FileUpload.create({
+      await FileUpload.create({
         customer_email: customer.email,
         filename: file.name,
         file_url: file_url,
@@ -112,7 +115,7 @@ export default function CreditCardsTab({ customer, dateRange }) {
       });
 
       // ניתוח הקובץ
-      const response = await base44.functions.invoke('parseBizIboxFile', {
+      const response = await parseBizIboxFile({
         fileUrl: file_url,
         customerEmail: customer.email,
         fileType: 'credit_card'
@@ -149,7 +152,7 @@ export default function CreditCardsTab({ customer, dateRange }) {
         return;
       }
 
-      await base44.entities.CashFlow.update(transactionId, { 
+      await CashFlow.update(transactionId, { 
         category: newCategory,
         category_assignment_date: new Date().toISOString()
       });

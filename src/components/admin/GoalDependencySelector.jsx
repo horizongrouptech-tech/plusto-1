@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Link2, X } from 'lucide-react';
 
 import { toast } from "sonner";
+import { CustomerGoal } from '@/api/entities';
 export default function GoalDependencySelector({ goal, allGoals, refreshData }) {
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -25,7 +26,7 @@ export default function GoalDependencySelector({ goal, allGoals, refreshData }) 
 
     try {
       const newDeps = [...currentDependencies, goalId];
-      await base44.entities.CustomerGoal.update(goal.id, {
+      await CustomerGoal.update(goal.id, {
         depends_on_goal_ids: newDeps
       });
       await refreshData();
@@ -43,7 +44,7 @@ export default function GoalDependencySelector({ goal, allGoals, refreshData }) 
 
     try {
       const newDeps = currentDependencies.filter(id => id !== goalId);
-      await base44.entities.CustomerGoal.update(goal.id, {
+      await CustomerGoal.update(goal.id, {
         depends_on_goal_ids: newDeps
       });
       await refreshData();

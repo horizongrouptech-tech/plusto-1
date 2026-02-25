@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+
 import { toast } from "sonner";
 
 import Step1ProjectDetails from './project/Step1ProjectDetails';
@@ -12,6 +12,7 @@ import Step2SelectProducts from './project/Step2SelectProducts';
 import Step3LaborCosts from './project/Step3LaborCosts';
 import Step4DesiredMargin from './project/Step4DesiredMargin';
 import Step5Summary from './project/Step5Summary';
+import { ProjectForecast } from '@/api/entities';
 
 export default function ProjectForecastWizard({ 
   customer, 
@@ -48,7 +49,7 @@ export default function ProjectForecastWizard({
   useEffect(() => {
     if (forecast && forecast.id) {
       setIsLoading(true);
-      base44.entities.ProjectForecast.get(forecast.id)
+      ProjectForecast.get(forecast.id)
         .then(data => {
           setProjectData(data);
           setIsLoading(false);
@@ -70,9 +71,9 @@ export default function ProjectForecastWizard({
     
     try {
       if (projectData.id) {
-        await base44.entities.ProjectForecast.update(projectData.id, projectData);
+        await ProjectForecast.update(projectData.id, projectData);
       } else {
-        await base44.entities.ProjectForecast.create(projectData);
+        await ProjectForecast.create(projectData);
       }
       
       setLastSaved(new Date());

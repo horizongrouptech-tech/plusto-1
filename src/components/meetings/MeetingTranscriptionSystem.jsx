@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import {
   Mic, MicOff, Play, Pause, Square, Loader2, FileText,
   Clock, Save, Wand2, CheckCircle, AlertCircle, Download,
@@ -15,6 +15,8 @@ import {
 import { format } from 'date-fns';
 import { toast } from "sonner";
 import { he } from 'date-fns/locale';
+import { CustomerGoal, MeetingSummary } from '@/api/entities';
+import { invokeClaude } from '@/api/functions';
 
 export default function MeetingTranscriptionSystem({ customer, currentUser, onSummaryCreated }) {
   const queryClient = useQueryClient();
@@ -143,7 +145,7 @@ export default function MeetingTranscriptionSystem({ customer, currentUser, onSu
     
     try {
       // קריאה ל-AI ליצירת סיכום (יש לחבר ל-invokeClaude או API דומה)
-      const response = await base44.functions.invoke('invokeClaude', {
+      const response = await invokeClaude({
         prompt: `אתה מנהל כספים מקצועי. קראת את התמלול הבא של פגישה עם לקוח. 
 צור סיכום תמציתי שכולל:
 1. נקודות עיקריות שעלו
@@ -248,11 +250,11 @@ ${transcription}
         created_by: currentUser?.email
       };
 
-      if (base44.entities.MeetingSummary) {
-        await base44.entities.MeetingSummary.create(meetingData);
+      if (MeetingSummary) {
+        await MeetingSummary.create(meetingData);
       } else {
         // fallback
-        await base44.entities.CustomerGoal.create({
+        await CustomerGoal.create({
           customer_email: customer.email,
           name: `סיכום פגישה - ${format(new Date(), 'dd/MM/yyyy')}`,
           task_type: 'meeting_summary',

@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Bell, Check, Circle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { Notification } from '@/api/entities';
 
 export default function NotificationCenter({ user }) {
     const queryClient = useQueryClient();
@@ -14,14 +15,14 @@ export default function NotificationCenter({ user }) {
 
     const { data: notifications } = useQuery({
         queryKey: ['notifications', user?.email], // שימוש ב-optional chaining
-        queryFn: () => base44.entities.Notification.filter({ recipient_email: user.email }, '-created_date', 20),
+        queryFn: () => Notification.filter({ recipient_email: user.email }, '-created_date', 20),
         enabled: isOpen && !!user?.email, // הוספת בדיקה כפולה למניעת שגיאה
     });
 
     const unreadCount = notifications?.filter(n => !n.is_read).length || 0;
 
     const markAsReadMutation = useMutation({
-        mutationFn: (notificationId) => base44.entities.Notification.update(notificationId, { is_read: true }),
+        mutationFn: (notificationId) => Notification.update(notificationId, { is_read: true }),
         onSuccess: () => {
             queryClient.invalidateQueries(['notifications', user?.email]);
         },
@@ -33,7 +34,7 @@ export default function NotificationCenter({ user }) {
             if (unreadIds.length === 0) return Promise.resolve();
             // This assumes a bulk update capability. If not available, loop through markAsReadMutation.
             // For now, let's simulate it with multiple promises.
-            return Promise.all(unreadIds.map(id => base44.entities.Notification.update(id, { is_read: true })));
+            return Promise.all(unreadIds.map(id => Notification.update(id, { is_read: true })));
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['notifications', user?.email]);

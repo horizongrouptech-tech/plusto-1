@@ -7,24 +7,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Save, RefreshCw, Plus, Trash2, TrendingUp, DollarSign, BarChart3, Download, Package, AlertCircle, Star, FileText, Wand2, Edit, UserPlus, Users, StarOff, Rocket, ArrowLeft, CheckCircle } from "lucide-react";
-import { BusinessForecast } from "@/entities/BusinessForecast";
-import { ProductCatalog } from "@/entities/ProductCatalog";
+
+
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart as RechartsPieChart, Cell, Pie, Legend } from 'recharts';
 import Pagination from '@/components/shared/Pagination';
 import ReactMarkdown from 'react-markdown';
 import { Textarea } from "@/components/ui/textarea";
 import StrategicPlanInputForm from './StrategicPlanInputForm';
-import { StrategicPlanInput } from '@/entities/StrategicPlanInput';
-import { generateBusinessPlanText } from "@/functions/generateBusinessPlanText";
-import { exportBusinessPlanToPdf } from "@/functions/exportBusinessPlanToPdf";
+
+
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ProcessStatus } from '@/entities/ProcessStatus';
+
 import ProcessStatusDisplay from '@/components/forecast/ProcessStatusDisplay';
-import { Catalog } from "@/entities/Catalog";
-import { FileUpload } from "@/entities/FileUpload";
+
+
 import { Checkbox } from "@/components/ui/checkbox";
-import { base44 } from "@/api/base44Client";
+
 import { toast } from "sonner";
 import {
   Accordion,
@@ -42,6 +42,8 @@ import {
 } from "@/components/ui/dialog";
 import { Tooltip as ShadcnTooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { calculateTax } from './manual/utils/taxCalculator';
+import { BusinessForecast, Catalog, FileUpload, ProcessStatus, ProductCatalog, StrategicPlanInput } from '@/api/entities';
+import { exportBusinessPlanToPdf, generateBusinessPlanText, orchestrateBusinessForecast } from '@/api/functions';
 
 const MONTHS = [
   { key: 'jan', label: 'ינו' },
@@ -518,7 +520,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
       // ✅ התראה אם יש יותר מוצרים
       if (catalogProducts.length === MAX_PRODUCTS_TO_SYNC) {
-        const totalCount = await base44.entities.ProductCatalog.count({
+        const totalCount = await ProductCatalog.count({
           customer_email: customer.email,
           is_active: true
         });
@@ -626,7 +628,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
 
         // ✅ התראה אם יש יותר מוצרים
         if (productsToSync.length === MAX_PRODUCTS_TO_SYNC) {
-          const totalCount = await base44.entities.ProductCatalog.count({
+          const totalCount = await ProductCatalog.count({
             catalog_id: selectedCatalogToSync.id,
             is_active: true
           });
@@ -953,7 +955,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
     try {
       const latestStrategicInput = await getLatestStrategicInput();
 
-      const { data: response } = await base44.functions.invoke('orchestrateBusinessForecast', {
+      const { data: response } = await orchestrateBusinessForecast({
           customer_email: customer.email,
           forecast_name: `${forecast.forecast_name} - ${forecastType === 'optimistic' ? 'אופטימית' : 'שמרנית'}`,
           forecast_year: forecast.forecast_year,
@@ -1402,7 +1404,7 @@ export default function BusinessForecastManager({ customer,selectedForecastId,in
         selected_historical_file_ids: selectedHistoricalFiles,
       };
 
-      const { data: response } = await base44.functions.invoke('orchestrateBusinessForecast', forecastPayload); 
+      const { data: response } = await orchestrateBusinessForecast(forecastPayload); 
 
       console.log('orchestrateBusinessForecast response:', response);
 

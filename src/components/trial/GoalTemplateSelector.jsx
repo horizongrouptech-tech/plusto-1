@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Target, Loader2, Search, Plus, CheckCircle, Clock, ListChecks } from 'l
 import { CategoryBadge, PopularBadge } from '@/components/goals/GoalTemplateBadges';
 import GoalTemplatePreview from '@/components/goals/GoalTemplatePreview';
 import { toast } from "sonner";
+import { CustomerGoal, GoalTemplate } from '@/api/entities';
 
 export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoalCreated }) {
     const queryClient = useQueryClient();
@@ -26,7 +27,7 @@ export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoal
 
     const { data: templates = [], isLoading } = useQuery({
         queryKey: ['goalTemplates'],
-        queryFn: () => base44.entities.GoalTemplate.filter({ is_active: true }, '-usage_count'),
+        queryFn: () => GoalTemplate.filter({ is_active: true }, '-usage_count'),
         enabled: isOpen
     });
 
@@ -73,12 +74,12 @@ export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoal
 
         setIsCreating(true);
         try {
-            const existingGoals = await base44.entities.CustomerGoal.filter({
+            const existingGoals = await CustomerGoal.filter({
                 customer_email: customer.email
             });
             const newOrderIndex = existingGoals.filter(g => !g.parent_id).length;
 
-            const newGoal = await base44.entities.CustomerGoal.create({
+            const newGoal = await CustomerGoal.create({
                 customer_email: customer.email,
                 name: customization.name.trim(),
                 notes: customization.notes,
@@ -97,7 +98,7 @@ export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoal
                     const taskDate = new Date(startDate);
                     taskDate.setDate(taskDate.getDate() + Math.floor((customization.duration_days / selectedTemplate.action_steps.length) * idx));
                     
-                    return base44.entities.CustomerGoal.create({
+                    return CustomerGoal.create({
                         customer_email: customer.email,
                         parent_id: newGoal.id,
                         name: step,
@@ -112,7 +113,7 @@ export default function GoalTemplateSelector({ customer, isOpen, onClose, onGoal
             }
 
             // עדכון מונה השימוש בתבנית
-            await base44.entities.GoalTemplate.update(selectedTemplate.id, {
+            await GoalTemplate.update(selectedTemplate.id, {
                 usage_count: (selectedTemplate.usage_count || 0) + 1
             });
 

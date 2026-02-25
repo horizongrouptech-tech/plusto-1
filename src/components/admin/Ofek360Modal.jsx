@@ -14,13 +14,14 @@ import {
   AccordionItem,
   AccordionTrigger } from
 "@/components/ui/accordion";
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Target, CheckCircle, Circle, AlertCircle, MessageSquare, Send } from 'lucide-react';
 import MentionInput from '@/components/shared/MentionInput';
 
 import { toast } from "sonner";
+import { Ofek360Model } from '@/api/entities';
 // נתוני השלבים מתוך ה-PDF - עדכון מדויק למלל המקורי
 const OFEK_360_STEPS = [
 {
@@ -252,7 +253,7 @@ export default function Ofek360Modal({ customer, isOpen, onClose }) {
   const { data: modelData, isLoading } = useQuery({
     queryKey: ['ofek360Model', customer.email],
     queryFn: async () => {
-      const models = await base44.entities.Ofek360Model.filter({ customer_email: customer.email });
+      const models = await Ofek360Model.filter({ customer_email: customer.email });
 
       if (models && models.length > 0) {
         return models[0];
@@ -269,7 +270,7 @@ export default function Ofek360Modal({ customer, isOpen, onClose }) {
         }))
       }));
 
-      const newModel = await base44.entities.Ofek360Model.create({
+      const newModel = await Ofek360Model.create({
         customer_email: customer.email,
         customer_source: customer.source || 'user',
         current_year: selectedYear,
@@ -332,7 +333,7 @@ export default function Ofek360Modal({ customer, isOpen, onClose }) {
     step.monthly_status = updatedMonthlyStatus;
 
     try {
-      await base44.entities.Ofek360Model.update(modelData.id, {
+      await Ofek360Model.update(modelData.id, {
         steps_data: updatedStepsData,
         last_updated_by: currentUser.email
       });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2, Target, Download, BookOpen } from 'lucide-react';
@@ -13,6 +13,7 @@ import GoalTemplateSelector from '../trial/GoalTemplateSelector';
 import { useUsers } from '../shared/UsersContext';
 
 import { toast } from "sonner";
+import { CustomerGoal } from '@/api/entities';
 export default function CustomerGoalsGantt({ customer }) {
     const queryClient = useQueryClient();
     const { user: currentUser } = useAuth();
@@ -25,7 +26,7 @@ export default function CustomerGoalsGantt({ customer }) {
     const { data: rawGoals = [], isLoading } = useQuery({
         queryKey: ['customerGoals', customer?.email],
         queryFn: async () => {
-            const goalsData = await base44.entities.CustomerGoal.filter({ customer_email: customer.email, is_active: true }, 'order_index');
+            const goalsData = await CustomerGoal.filter({ customer_email: customer.email, is_active: true }, 'order_index');
             return goalsData;
         },
         enabled: !!customer?.email
@@ -118,7 +119,7 @@ export default function CustomerGoalsGantt({ customer }) {
             const defaultEndDate = new Date();
             defaultEndDate.setDate(defaultEndDate.getDate() + 30); // 30 ימים מהיום
             
-            await base44.entities.CustomerGoal.create({
+            await CustomerGoal.create({
                 customer_email: customer.email,
                 name: "יעד חדש (לחץ לעריכה)",
                 status: 'open',
@@ -200,7 +201,7 @@ export default function CustomerGoalsGantt({ customer }) {
             reorderedGoals.splice(destination.index, 0, movedGoal);
 
             const updatePromises = reorderedGoals.map((goal, index) => 
-                base44.entities.CustomerGoal.update(goal.id, { order_index: index })
+                CustomerGoal.update(goal.id, { order_index: index })
             );
             
             await Promise.all(updatePromises);

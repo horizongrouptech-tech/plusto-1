@@ -18,10 +18,11 @@ import {
 } from "lucide-react";
 import { generateTargetedRecommendation } from "@/components/logic/targetedRecommendationEngine";
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
-import { ProductCatalog } from '@/entities/ProductCatalog';
+
+
 
 import { toast } from "sonner";
+import { Catalog, ProductCatalog } from '@/api/entities';
 export default function TargetedRecommendationModal({ customer, isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     productName: '',
@@ -41,7 +42,7 @@ export default function TargetedRecommendationModal({ customer, isOpen, onClose,
     queryKey: ['catalogProducts', customer?.email],
     queryFn: async () => {
       // טען את הקטלוג הפעיל
-      const catalogs = await base44.entities.Catalog.filter({
+      const catalogs = await Catalog.filter({
         created_by: customer.email,
         is_active: true
       }, '-created_date');
