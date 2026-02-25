@@ -1,26 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import React from 'react';
+import { useAuth } from '@/lib/AuthContext';
 import UnifiedForecastManager from '@/components/forecast/UnifiedForecastManager';
 import LoadingScreen from '@/components/shared/LoadingScreen';
 
 export default function BusinessForecast() {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const user = await base44.auth.me();
-        setCurrentUser(user);
-      } catch (error) {
-        console.error('Error loading user:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadUser();
-  }, []);
+  const { user: currentUser, isLoadingAuth: isLoading } = useAuth();
 
   if (isLoading) {
     return <LoadingScreen message="טוען נתוני משתמש..." />;

@@ -15,6 +15,7 @@ import {
   AccordionTrigger } from
 "@/components/ui/accordion";
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Target, CheckCircle, Circle, AlertCircle, MessageSquare, Send } from 'lucide-react';
 import MentionInput from '@/components/shared/MentionInput';
@@ -244,6 +245,7 @@ function MonthlyStatusCell({ step, stepIndex, month, year, currentUser, onUpdate
 
 export default function Ofek360Modal({ customer, isOpen, onClose }) {
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   // טעינת נתוני המודל
@@ -267,7 +269,6 @@ export default function Ofek360Modal({ customer, isOpen, onClose }) {
         }))
       }));
 
-      const currentUser = await base44.auth.me();
       const newModel = await base44.entities.Ofek360Model.create({
         customer_email: customer.email,
         customer_source: customer.source || 'user',
@@ -281,12 +282,6 @@ export default function Ofek360Modal({ customer, isOpen, onClose }) {
     enabled: isOpen && !!customer?.email
   });
 
-  // טעינת המשתמש הנוכחי
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-    staleTime: Infinity
-  });
 
   // עדכון סטטוס חודש והוספת הערה
   const handleUpdateMonthlyStatus = async (stepIndex, month, year, newStatus, commentText = null) => {

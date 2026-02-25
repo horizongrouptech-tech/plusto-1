@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import {
   FileText,
   Lightbulb,
@@ -47,19 +48,8 @@ export default function CustomerOverviewModal({
 }) {
   const [ofek360Open, setOfek360Open] = useState(false);
   const [goalBankOpen, setGoalBankOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
-
-  // טעינת המשתמש הנוכחי
-  useQuery({
-    queryKey: ['currentUser'],
-    queryFn: async () => {
-      const user = await base44.auth.me();
-      setCurrentUser(user);
-      return user;
-    },
-    enabled: isOpen,
-  });
   // טעינת המלצות
   const { data: recommendations = [] } = useQuery({
     queryKey: ['customerRecommendations', customer?.email],

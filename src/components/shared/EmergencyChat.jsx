@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Bot, User, Send, Loader2, ShieldAlert, CalendarPlus, Maximize2, Minimize2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import ReactMarkdown from 'react-markdown';
 
 
@@ -13,7 +14,7 @@ const EmergencyChat = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [userContext, setUserContext] = useState(null);
   const [meetingRequested, setMeetingRequested] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -24,8 +25,8 @@ const EmergencyChat = ({ isOpen, onClose }) => {
   useEffect(() => {
     const fetchUserAndContext = async () => {
       try {
-        const userData = await base44.auth.me();
-        setUser(userData);
+        const userData = user;
+        if (!userData) return;
         
         const [products, sales] = await Promise.all([
           base44.entities.Product.filter({ created_by: userData.email }),

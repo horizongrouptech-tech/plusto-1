@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WelcomeSection from '../components/dashboard/WelcomeSection';
@@ -8,10 +9,7 @@ import ClientList from '../components/dashboard/ClientList';
 import DailyTasks from '../components/dashboard/DailyTasks';
 
 export default function Dashboard() {
-    const { data: user, isLoading: isUserLoading } = useQuery({
-        queryKey: ['currentUser'],
-        queryFn: () => base44.auth.me(),
-    });
+    const { user, isLoadingAuth: isUserLoading } = useAuth();
 
     // ⭐ הוסף query ללקוחות
     const { data: clients = [], isLoading: isClientsLoading } = useQuery({

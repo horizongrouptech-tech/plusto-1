@@ -9,10 +9,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Globe, Search, AlertCircle, CheckCircle, Package, Briefcase } from "lucide-react";
 import { performAdvancedWebsiteScan } from "@/components/logic/advancedWebsiteScraper";
 import { base44 } from "@/api/base44Client";
+import { useAuth } from '@/lib/AuthContext';
 import ScanProductTable from "./ScanProductTable";
 import ScanInsightsDisplay from "./ScanInsightsDisplay";
 
 export default function WebsiteScanner({ customer }) {
+  const { user: currentUser } = useAuth();
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [scanType, setScanType] = useState('comprehensive');
   const [isScanning, setIsScanning] = useState(false);
@@ -24,7 +26,7 @@ export default function WebsiteScanner({ customer }) {
     const loadLatestScan = async () => {
       try {
         // אם יש customer - טוען את הסריקות שלו, אחרת - של המשתמש המחובר
-        const customerEmail = customer?.email || (await base44.auth.me())?.email;
+        const customerEmail = customer?.email || currentUser?.email;
         
         if (!customerEmail) {
           setIsLoading(false);
@@ -66,7 +68,7 @@ export default function WebsiteScanner({ customer }) {
       const scanResult = await performAdvancedWebsiteScan(websiteUrl, scanType);
 
       // שמירה עם האימייל של הלקוח או המשתמש המחובר
-      const customerEmail = customer?.email || (await base44.auth.me())?.email;
+      const customerEmail = customer?.email || currentUser?.email;
 
       const savedResult = await base44.entities.WebsiteScanResult.create({
         customer_email: customerEmail,

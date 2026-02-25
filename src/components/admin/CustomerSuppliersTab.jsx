@@ -18,6 +18,7 @@ import {
   Filter } from
 "lucide-react";
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import {
   Table,
   TableBody,
@@ -46,25 +47,8 @@ const getCategoryBadgeStyle = (category) => {
 };
 
 export default function CustomerSuppliersTab({ customer, currentUser: propCurrentUser }) {
-  const [localCurrentUser, setLocalCurrentUser] = React.useState(propCurrentUser);
-
-  React.useEffect(() => {
-    const loadUser = async () => {
-      if (!propCurrentUser) {
-        try {
-          const user = await base44.auth.me();
-          setLocalCurrentUser(user);
-        } catch (error) {
-          console.error('Error loading user:', error);
-        }
-      } else {
-        setLocalCurrentUser(propCurrentUser);
-      }
-    };
-    loadUser();
-  }, [propCurrentUser]);
-
-  const currentUser = localCurrentUser;
+  const { user: authUser } = useAuth();
+  const currentUser = propCurrentUser || authUser;
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("customer-suppliers");
   const [searchTerm, setSearchTerm] = useState("");

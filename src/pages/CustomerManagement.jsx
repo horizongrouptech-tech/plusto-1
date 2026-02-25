@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import LoadingScreen from "@/components/shared/LoadingScreen";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -72,20 +73,7 @@ export default function CustomerManagement() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [isOfekModalOpen, setIsOfekModalOpen] = useState(false);
 
-  // currentUser - get from auth
-  const [currentUser, setCurrentUser] = useState(null);
-
-  useEffect(() => {
-    const loadCurrentUser = async () => {
-      try {
-        const user = await base44.auth.me();
-        setCurrentUser(user);
-      } catch (error) {
-        console.error('Error loading current user:', error);
-      }
-    };
-    loadCurrentUser();
-  }, []);
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     if (activeTab === 'forecast' || activeTab === 'manualForecast' || activeTab === 'systemForecast') {
@@ -104,7 +92,7 @@ export default function CustomerManagement() {
       id && id.startsWith(prefix) ? id.substring(prefix.length) : id;
 
 
-      const currentUserInQuery = await base44.auth.me();
+      const currentUserInQuery = currentUser;
       const isFinancialManager = currentUserInQuery?.role === 'user' && currentUserInQuery?.user_type === 'financial_manager';
 
       const fetchAsUser = async (id) => {
@@ -249,7 +237,6 @@ export default function CustomerManagement() {
   const { data: allCustomers = [] } = useQuery({
     queryKey: ['allCustomersForNav'],
     queryFn: async () => {
-      const currentUser = await base44.auth.me();
       const isFinancialManager = currentUser?.role === 'user' && currentUser?.user_type === 'financial_manager';
 
       let users = [];
