@@ -133,9 +133,12 @@ function createEntity(tableName) {
 
 // Core / Auth
 // User.me() — returns the currently logged-in user's profile row
+// profiles table uses created_at (Supabase convention), not created_date (Base44 convention)
 const _UserBase = createEntity('profiles');
 export const User = {
   ..._UserBase,
+  list: (sortBy = '-created_at', limit = null, offset = null) =>
+    _UserBase.list(sortBy === '-created_date' ? '-created_at' : sortBy, limit, offset),
   me: async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return null;
