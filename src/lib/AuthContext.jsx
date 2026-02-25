@@ -9,14 +9,8 @@ export const AuthProvider = ({ children }) => {
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        loadUserProfile(session.user.id);
-      } else {
-        setIsLoadingAuth(false);
-      }
-    });
-
+    // Use onAuthStateChange as the single source of truth.
+    // It fires INITIAL_SESSION immediately, so no need for a separate getSession() call.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         await loadUserProfile(session.user.id);
@@ -27,24 +21,36 @@ export const AuthProvider = ({ children }) => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Safety net: if onAuthStateChange never fires (edge case), unblock after 8s
+    const safetyTimer = setTimeout(() => setIsLoadingAuth(false), 8000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(safetyTimer);
+    };
   }, []);
 
   const loadUserProfile = async (userId) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-    if (data) {
-      setUser(data);
-      setIsAuthenticated(true);
-    } else {
-      console.error('Error loading profile:', error);
+      if (data) {
+        setUser(data);
+        setIsAuthenticated(true);
+      } else {
+        console.error('Error loading profile:', error);
+        setIsAuthenticated(false);
+      }
+    } catch (err) {
+      console.error('Unexpected error loading profile:', err);
       setIsAuthenticated(false);
+    } finally {
+      setIsLoadingAuth(false);
     }
-    setIsLoadingAuth(false);
   };
 
   const logout = async (shouldRedirect = true) => {
