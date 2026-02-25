@@ -621,7 +621,10 @@ function LayoutContent({ children, currentPageName }) {
   const loadUser = async () => {
     setIsLoading(true);
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      // getSession() reads from localStorage cache (fast).
+      // getUser() makes a server round-trip on every navigation — too slow.
+      const { data: { session } } = await supabase.auth.getSession();
+      const authUser = session?.user ?? null;
       if (!authUser) {
         setUser(null);
         setIsLoading(false);
