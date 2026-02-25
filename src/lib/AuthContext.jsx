@@ -11,9 +11,11 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // Use onAuthStateChange as the single source of truth.
     // It fires INITIAL_SESSION immediately, so no need for a separate getSession() call.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // NOTE: Supabase v2 awaits this callback — do NOT await loadUserProfile here.
+      // Awaiting would block signInWithPassword from resolving (deadlock).
       if (session?.user) {
-        await loadUserProfile(session.user.id);
+        loadUserProfile(session.user.id); // fire-and-forget; has its own try-catch-finally
       } else {
         setUser(null);
         setIsAuthenticated(false);
