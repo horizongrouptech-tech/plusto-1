@@ -18,44 +18,62 @@ export default function WelcomePage() {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
-    if (authError) {
-      setError(authError.message === 'Invalid login credentials' ? 'אימייל או סיסמה שגויים' : authError.message);
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError) {
+        setError(authError.message === 'Invalid login credentials' ? 'אימייל או סיסמה שגויים' : authError.message);
+      } else {
+        // Success — redirect to main app (AuthContext will pick up the session)
+        window.location.href = '/';
+        return; // keep spinner while redirecting
+      }
+    } catch (err) {
+      setError('שגיאת חיבור. בדוק את החיבור לאינטרנט ונסה שוב.');
+    } finally {
+      setIsLoading(false);
     }
-    // On success AuthContext listener redirects automatically
-    setIsLoading(false);
   };
 
   const handleSignup = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-    const { error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    });
-    if (authError) {
-      setError(authError.message);
-    } else {
-      setSuccessMsg('נשלח אימייל אימות לכתובת שלך. אנא אמת את החשבון לפני הכניסה.');
+    try {
+      const { error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName } },
+      });
+      if (authError) {
+        setError(authError.message);
+      } else {
+        setSuccessMsg('נשלח אימייל אימות לכתובת שלך. אנא אמת את החשבון לפני הכניסה.');
+      }
+    } catch (err) {
+      setError('שגיאת חיבור. בדוק את החיבור לאינטרנט ונסה שוב.');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-    const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/Welcome`,
-    });
-    if (authError) {
-      setError(authError.message);
-    } else {
-      setSuccessMsg('נשלח אימייל לאיפוס סיסמה לכתובת שלך.');
+    try {
+      const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/Welcome`,
+      });
+      if (authError) {
+        setError(authError.message);
+      } else {
+        setSuccessMsg('נשלח אימייל לאיפוס סיסמה לכתובת שלך.');
+      }
+    } catch (err) {
+      setError('שגיאת חיבור. בדוק את החיבור לאינטרנט ונסה שוב.');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const fontStyle = { fontFamily: "'Heebo', 'Rubik', sans-serif" };
