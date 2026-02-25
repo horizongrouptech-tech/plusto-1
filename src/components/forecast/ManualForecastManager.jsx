@@ -3,11 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, FileSpreadsheet, Edit, Trash2, Star, ArrowRight, Download } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+
 import ManualForecastWizard from "./manual/ManualForecastWizard";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
 import { toast } from "sonner";
+import { ManualForecast } from '@/api/entities';
+import { exportForecastToPdf } from '@/api/functions';
 
 export default function ManualForecastManager({ 
   customer,
@@ -21,7 +23,7 @@ export default function ManualForecastManager({
 
   const { data: manualForecasts = [], isLoading } = useQuery({
     queryKey: ['manualForecasts', customer.email],
-    queryFn: () => base44.entities.ManualForecast.filter({ customer_email: customer.email }, '-created_date')
+    queryFn: () => ManualForecast.filter({ customer_email: customer.email }, '-created_date')
   });
 
   // טיפול בתחזית שנבחרה מהרשימה המאוחדת
@@ -42,7 +44,7 @@ export default function ManualForecastManager({
   }, [initialForecastData, preSelectedForecastId]);
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.ManualForecast.delete(id),
+    mutationFn: (id) => ManualForecast.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['manualForecasts']);
       toast.success('התחזית נמחקה בהצלחה');
@@ -78,7 +80,7 @@ export default function ManualForecastManager({
 
   const handleExportPDF = async (forecastId) => {
     try {
-      const response = await base44.functions.invoke('exportForecastToPdf', {
+      const response = await exportForecastToPdf({
         forecast_id: forecastId,
         forecast_type: 'manual'
       });

@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Send, Building, Star } from "lucide-react";
-import { requestSupplierQuote } from "@/functions/requestSupplierQuote";
+
 import { toast } from "sonner";
+import { requestSupplierQuote } from '@/api/functions';
 
 export default function SupplierQuoteRequestModal({ isOpen, onClose, supplier, onQuoteRequested }) {
   const [formData, setFormData] = useState({

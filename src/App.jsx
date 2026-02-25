@@ -1,7 +1,6 @@
 import './App.css'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import VisualEditAgent from '@/lib/VisualEditAgent'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
@@ -76,7 +75,6 @@ function App() {
           <NavigationTracker />
           <AuthenticatedApp />
         </Router>
-        <VisualEditAgent />
         <Analytics />
         <SpeedInsights />
       </QueryClientProvider>

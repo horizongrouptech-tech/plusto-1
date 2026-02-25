@@ -339,7 +339,7 @@ Do these in batches by feature area (forecasting, onboarding, catalog, CRM, What
 
 ---
 
-## Step 7 — Update all components and pages
+## ~~Step 7 — Update all components and pages~~ ✅ Done
 
 After Steps 3–5 are done, most call sites already work. Find what's left:
 
@@ -365,7 +365,7 @@ const channel = supabase.channel(`conv:${id}`)
 
 ---
 
-## Step 8 — Clean up
+## ~~Step 8 — Clean up~~ ✅ Done
 
 Once the grep returns zero results:
 

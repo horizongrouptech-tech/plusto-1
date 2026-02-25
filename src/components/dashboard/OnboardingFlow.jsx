@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, ArrowRight, Building2, Target, MapPin, CheckCircle, Plus, X, AlertTriangle, Loader2, Users, CheckCircle2 } from "lucide-react"; // Updated lucide-react imports, added CheckCircle2
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { User } from "@/entities/User";
+import { User } from '@/api/entities';
+
 
 const steps = [
   {

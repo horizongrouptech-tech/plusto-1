@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, ArrowRight, Package, Trash2, Plus, Search, DollarSign, Calculator } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+
 import { useQuery } from '@tanstack/react-query';
 import { formatCurrency } from '../manual/utils/numberFormatter';
 import { toast } from "sonner";
+import { Catalog, ProductCatalog } from '@/api/entities';
 
 export default function Step2SelectProducts({ projectData, onUpdate, onNext, onBack, customer }) {
   const [selectedProducts, setSelectedProducts] = useState(projectData.products || []);
@@ -22,7 +23,7 @@ export default function Step2SelectProducts({ projectData, onUpdate, onNext, onB
 
   const { data: catalogs = [] } = useQuery({
     queryKey: ['catalogs', customer.email],
-    queryFn: () => base44.entities.Catalog.filter({ customer_email: customer.email })
+    queryFn: () => Catalog.filter({ customer_email: customer.email })
   });
 
   const { data: allProducts = [] } = useQuery({
@@ -31,7 +32,7 @@ export default function Step2SelectProducts({ projectData, onUpdate, onNext, onB
       if (catalogs.length === 0) return [];
       const catalogIds = catalogs.map(c => c.id);
       const products = await Promise.all(
-        catalogIds.map(id => base44.entities.ProductCatalog.filter({ catalog_id: id }))
+        catalogIds.map(id => ProductCatalog.filter({ catalog_id: id }))
       );
       return products.flat();
     },

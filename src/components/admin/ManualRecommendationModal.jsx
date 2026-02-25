@@ -7,9 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Loader2, Plus, X } from "lucide-react"; // Corrected import: Added 'X'
-import { base44 } from "@/api/base44Client";
+
 
 import { toast } from "sonner";
+import { Recommendation } from '@/api/entities';
 export default function ManualRecommendationModal({ customer, isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     title: '',
@@ -55,7 +56,7 @@ export default function ManualRecommendationModal({ customer, isOpen, onClose, o
 
     setIsSaving(true);
     try {
-      await base44.entities.Recommendation.create({
+      await Recommendation.create({
         customer_email: customer.email,
         title: formData.title,
         description: formData.description,

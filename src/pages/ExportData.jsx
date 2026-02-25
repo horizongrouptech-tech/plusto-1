@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Download, Loader2, CheckCircle2, XCircle, Database, AlertTriangle } from "lucide-react";
+import * as AllEntities from '@/api/entities';
 
 const ALL_ENTITIES = [
   "User",
@@ -104,7 +105,7 @@ export default function ExportData() {
     let hasMore = true;
 
     while (hasMore) {
-      const batch = await base44.entities[entityName].list("-created_date", pageSize, allRecords.length);
+      const batch = await AllEntities[entityName].list("-created_date", pageSize, allRecords.length);
       if (batch.length === 0) {
         hasMore = false;
       } else {

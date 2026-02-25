@@ -8,9 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, ChevronDown, ChevronUp, DollarSign, Check, ArrowRight, ArrowLeft, TrendingUp, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "./utils/numberFormatter";
 import LoanManagerSection from "./LoanManagerSection";
-import { base44 } from '@/api/base44Client';
+
 import SaveProgressIndicator from './SaveProgressIndicator';
 import { toast } from "sonner";
+import { ManualForecast } from '@/api/entities';
 
 // מע״מ קבוע
 const VAT_RATE = 0.18;
@@ -265,9 +266,9 @@ export default function Step4Expenses({ forecastData, onUpdateForecast, onNext, 
       };
 
       if (forecastData.id) {
-        await base44.entities.ManualForecast.update(forecastData.id, dataToSave);
+        await ManualForecast.update(forecastData.id, dataToSave);
       } else {
-        const created = await base44.entities.ManualForecast.create(dataToSave);
+        const created = await ManualForecast.create(dataToSave);
         if (onUpdateForecast) {
           onUpdateForecast({ id: created.id });
         }

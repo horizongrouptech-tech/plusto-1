@@ -1,14 +1,15 @@
-import { base44 } from '@/api/base44Client';
+
 import { supabase } from '@/api/supabaseClient';
+import { BusinessForecast, BusinessMove, FileUpload, ManualForecast, OnboardingRequest, ProductCatalog, ProjectForecast, Recommendation, User, UserActivity, UserEngagement } from '@/api/entities';
 
 export const trackActivity = async (actionType, details = {}) => {
   try {
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) return;
-    const user = await base44.entities.User.get(authUser.id).catch(() => ({ email: authUser.email, id: authUser.id }));
+    const user = await User.get(authUser.id).catch(() => ({ email: authUser.email, id: authUser.id }));
     if (!user?.email) return;
 
-    let [activity] = await base44.entities.UserActivity.filter({ user_email: user.email });
+    let [activity] = await UserActivity.filter({ user_email: user.email });
 
     const now = new Date().toISOString();
 
@@ -47,9 +48,9 @@ export const trackActivity = async (actionType, details = {}) => {
         break;
     }
 
-    const recs = await base44.entities.Recommendation.filter({ customer_email: user.email });
-    const moves = await base44.entities.BusinessMove.filter({ customer_email: user.email });
-    const uploads = await base44.entities.FileUpload.filter({ created_by: user.email });
+    const recs = await Recommendation.filter({ customer_email: user.email });
+    const moves = await BusinessMove.filter({ customer_email: user.email });
+    const uploads = await FileUpload.filter({ created_by: user.email });
     
     activity.recommendations_implemented = recs.filter(r => r.status === 'executed').length;
     activity.business_moves_implemented = moves.filter(m => m.status === 'in_progress' || m.status === 'completed').length;
@@ -63,9 +64,9 @@ export const trackActivity = async (actionType, details = {}) => {
     activity.quality_score = Math.min(score, 100);
 
     if (activity.id) {
-      await base44.entities.UserActivity.update(activity.id, activity);
+      await UserActivity.update(activity.id, activity);
     } else {
-      await base44.entities.UserActivity.create(activity);
+      await UserActivity.create(activity);
     }
   } catch (error) {
     console.error("Failed to track activity:", error);
@@ -74,20 +75,20 @@ export const trackActivity = async (actionType, details = {}) => {
 
 export const calculateEngagementForAllUsers = async () => {
   try {
-    const allUsers = await base44.entities.User.filter({});
+    const allUsers = await User.filter({});
     const regularUsers = allUsers.filter(u => u.role === 'user' && u.user_type === 'regular');
     
-    const allOnboardingRequests = await base44.entities.OnboardingRequest.filter({ 
+    const allOnboardingRequests = await OnboardingRequest.filter({ 
       status: 'approved',
       is_active: true 
     });
 
-    const allRecommendations = await base44.entities.Recommendation.filter({});
-    const allFiles = await base44.entities.FileUpload.filter({});
-    const allCatalogs = await base44.entities.ProductCatalog.filter({ is_active: true });
-    const allForecasts = await base44.entities.BusinessForecast.filter({});
-    const allManualForecasts = await base44.entities.ManualForecast.filter({});
-    const allProjectForecasts = await base44.entities.ProjectForecast.filter({});
+    const allRecommendations = await Recommendation.filter({});
+    const allFiles = await FileUpload.filter({});
+    const allCatalogs = await ProductCatalog.filter({ is_active: true });
+    const allForecasts = await BusinessForecast.filter({});
+    const allManualForecasts = await ManualForecast.filter({});
+    const allProjectForecasts = await ProjectForecast.filter({});
 
     const customersToProcess = [
       ...regularUsers.map(u => ({
@@ -216,14 +217,14 @@ const calculateEngagementForCustomer = async (
       has_forecast: hasForecast
     };
 
-    const existingEngagements = await base44.entities.UserEngagement.filter({
+    const existingEngagements = await UserEngagement.filter({
       customer_email: customerEmail
     });
 
     if (existingEngagements && existingEngagements.length > 0) {
-      await base44.entities.UserEngagement.update(existingEngagements[0].id, engagementData);
+      await UserEngagement.update(existingEngagements[0].id, engagementData);
     } else {
-      await base44.entities.UserEngagement.create(engagementData);
+      await UserEngagement.create(engagementData);
     }
 
     console.log(`Engagement calculated for ${customerEmail}: ${engagementLevel}, ${totalRecommendations} recommendations`);

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FinancialManagerPerformance } from '@/entities/FinancialManagerPerformance';
+
 import { Loader2, Trophy, Award, Star, Medal, Crown } from 'lucide-react';
+import { FinancialManagerPerformance } from '@/api/entities';
 
 export default function FinanceManagerLeaderboard({ refreshTrigger, financialManagers }) {
     const [leaderboardData, setLeaderboardData] = useState([]);

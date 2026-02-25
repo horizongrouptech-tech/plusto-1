@@ -30,7 +30,7 @@ import {
   AlertTriangle,
   Filter
 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
 import FileDataViewer from "@/components/shared/FileDataViewer";
@@ -42,6 +42,9 @@ import PromotionsReportViewer from "@/components/shared/PromotionsReportViewer";
 import ESNAReportViewer from "@/components/shared/ESNAReportViewer";
 import DeeperInsightsModal from "@/components/shared/DeeperInsightsModal";
 import { toast } from "sonner";
+import { FileUpload } from '@/api/entities';
+import { InvokeLLM, UploadFile } from '@/api/integrations';
+import { analyzeGenericFile, parseXlsx, processCreditReport, processESNAReport, processPurchaseDocument } from '@/api/functions';
 
 const FILE_CATEGORIES = [
   { value: 'inventory_report', label: 'דוח מלאי', icon: Package },
@@ -97,7 +100,7 @@ export default function UnifiedFileUploader({ customerEmail, onUploadComplete })
 
   const loadFiles = async () => {
     setIsLoading(true);
-    const uploadedFiles = await base44.entities.FileUpload.filter(
+    const uploadedFiles = await FileUpload.filter(
       { customer_email: customerEmail },
       '-created_date',
       100
@@ -157,7 +160,7 @@ export default function UnifiedFileUploader({ customerEmail, onUploadComplete })
 
   const handleDeleteFile = async (fileId) => {
     if (!confirm('האם אתה בטוח שברצונך למחוק קובץ זה?')) return;
-    await base44.entities.FileUpload.delete(fileId);
+    await FileUpload.delete(fileId);
     await loadFiles();
   };
 
@@ -203,14 +206,14 @@ export default function UnifiedFileUploader({ customerEmail, onUploadComplete })
     try {
       // Upload file
       setProcessingStatus('מעלה קובץ...');
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await UploadFile({ file });
 
       setUploadProgress(30);
       setProcessingStatus('יוצר רשומת קובץ...');
 
       // Create file record
       const fileType = file.name.split('.').pop().toLowerCase();
-      const initialRecord = await base44.entities.FileUpload.create({
+      const initialRecord = await FileUpload.create({
         customer_email: customerEmail,
         filename: file.name,
         file_url: file_url,
@@ -226,7 +229,7 @@ export default function UnifiedFileUploader({ customerEmail, onUploadComplete })
         // Generic file analysis with internet search
         setProcessingStatus('מנתח מסמך באמצעות בינה מלאכותית וחיפוש באינטרנט...');
         
-        await base44.functions.invoke('analyzeGenericFile', {
+        await analyzeGenericFile({
           file_url,
           file_name: customFileName,
           customer_email: customerEmail,
@@ -245,7 +248,7 @@ export default function UnifiedFileUploader({ customerEmail, onUploadComplete })
 
         if (['xls', 'xlsx', 'csv'].includes(fileType)) {
           if (category === 'inventory_report') {
-            const { data: parsedXlsxResponse } = await base44.functions.invoke('parseXlsx', { fileUrl: file_url });
+            const { data: parsedXlsxResponse } = await parseXlsx({ fileUrl: file_url });
             const raw_data = parsedXlsxResponse?.data?.raw_data;
 
             if (!raw_data || raw_data.length === 0) {
@@ -304,7 +307,7 @@ ${rawDataForPrompt}
 חלץ את כל המוצרים, חשב סיכומים, והפק תובנות בעברית.
             `;
 
-            parseResult = await base44.integrations.Core.InvokeLLM({
+            parseResult = await InvokeLLM({
               prompt: inventoryPrompt,
               response_json_schema: inventoryAnalysisSchema
             });
@@ -315,7 +318,7 @@ ${rawDataForPrompt}
               summary: parseResult.summary,
             };
 
-            await base44.entities.FileUpload.update(fileRecordId, {
+            await FileUpload.update(fileRecordId, {
               status: 'analyzed',
               parsed_data: dataToSave,
               ai_insights: parseResult,
@@ -324,7 +327,7 @@ ${rawDataForPrompt}
             });
 
           } else if (category === 'sales_report') {
-            const { data: parsedResult } = await base44.functions.invoke('parseXlsx', { fileUrl: file_url });
+            const { data: parsedResult } = await parseXlsx({ fileUrl: file_url });
             const raw_data = parsedResult?.data?.raw_data;
 
             if (!raw_data || raw_data.length === 0) {
@@ -369,7 +372,7 @@ ${rawDataForPrompt}
             };
 
             const rawDataForPrompt = JSON.stringify(raw_data.slice(0, 1000), null, 2);
-            parseResult = await base44.integrations.Core.InvokeLLM({
+            parseResult = await InvokeLLM({
               prompt: `נתח דוח מכירות: ${rawDataForPrompt}`,
               response_json_schema: salesReportSchema
             });
@@ -383,7 +386,7 @@ ${rawDataForPrompt}
               sales_by_category: parseResult.sales_by_category
             };
 
-            await base44.entities.FileUpload.update(fileRecordId, {
+            await FileUpload.update(fileRecordId, {
               status: 'analyzed',
               parsed_data: dataToSave,
               ai_insights: parseResult,
@@ -392,7 +395,7 @@ ${rawDataForPrompt}
             });
 
           } else if (category === 'promotions_report') {
-            const { data: parsedResult } = await base44.functions.invoke('parseXlsx', { fileUrl: file_url });
+            const { data: parsedResult } = await parseXlsx({ fileUrl: file_url });
             const raw_data = parsedResult?.data?.raw_data;
 
             if (!raw_data || raw_data.length === 0) {
@@ -410,7 +413,7 @@ ${rawDataForPrompt}
             };
 
             const rawDataForPrompt = JSON.stringify(raw_data.slice(0, 1000), null, 2);
-            parseResult = await base44.integrations.Core.InvokeLLM({
+            parseResult = await InvokeLLM({
               prompt: `נתח דוח מבצעים: ${rawDataForPrompt}`,
               response_json_schema: promotionsReportSchema
             });
@@ -423,7 +426,7 @@ ${rawDataForPrompt}
               seasonal_analysis: parseResult.seasonal_analysis
             };
 
-            await base44.entities.FileUpload.update(fileRecordId, {
+            await FileUpload.update(fileRecordId, {
               status: 'analyzed',
               parsed_data: dataToSave,
               ai_insights: parseResult,
@@ -434,7 +437,7 @@ ${rawDataForPrompt}
           } else if (category === 'esna_report') {
             setProcessingStatus('מעבד דוח מע"מ (ESNA)...');
             
-            await base44.functions.invoke('processESNAReport', {
+            await processESNAReport({
               file_url: file_url,
               customer_email: customerEmail,
               file_id: fileRecordId
@@ -443,7 +446,7 @@ ${rawDataForPrompt}
           } else if (category === 'purchase_document') {
             setProcessingStatus('מעבד מסמך רכש...');
             
-            await base44.functions.invoke('processPurchaseDocument', {
+            await processPurchaseDocument({
               file_url: file_url,
               customer_email: customerEmail,
               file_id: fileRecordId,
@@ -452,13 +455,13 @@ ${rawDataForPrompt}
 
           } else {
             // For other categories, use parseXlsx
-            const { data } = await base44.functions.invoke('parseXlsx', {
+            const { data } = await parseXlsx({
               fileUrl: file_url,
               category: category,
               filename: file.name
             });
 
-            await base44.entities.FileUpload.update(fileRecordId, {
+            await FileUpload.update(fileRecordId, {
               status: 'analyzed',
               parsed_data: data,
               parsing_metadata: { analysis_status: 'full' },
@@ -470,13 +473,13 @@ ${rawDataForPrompt}
           setProcessingStatus(fileType === 'pdf' ? 'מנתח מסמך PDF באמצעות AI...' : 'מנתח תמונה באמצעות AI...');
           
           if (category === 'esna_report') {
-            await base44.functions.invoke('processESNAReport', {
+            await processESNAReport({
               file_url: file_url,
               customer_email: customerEmail,
               file_id: fileRecordId
             });
           } else if (category === 'purchase_document') {
-            await base44.functions.invoke('processPurchaseDocument', {
+            await processPurchaseDocument({
               file_url: file_url,
               customer_email: customerEmail,
               file_id: fileRecordId,
@@ -486,7 +489,7 @@ ${rawDataForPrompt}
             // Credit Report - use dedicated function
             setProcessingStatus('מנתח דוח ריכוז נתונים...');
             
-            await base44.functions.invoke('processCreditReport', {
+            await processCreditReport({
               file_url: file_url,
               customer_email: customerEmail,
               file_id: fileRecordId
@@ -550,13 +553,13 @@ ${rawDataForPrompt}
               prompt = `נתח ${category === 'balance_sheet' ? 'מאזן' : 'דוח רווח והפסד'} PDF`;
             }
 
-            parseResult = await base44.integrations.Core.InvokeLLM({
+            parseResult = await InvokeLLM({
               prompt: prompt,
               file_urls: [file_url],
               response_json_schema: targetSchema
             });
 
-            await base44.entities.FileUpload.update(fileRecordId, {
+            await FileUpload.update(fileRecordId, {
               status: 'analyzed',
               parsed_data: parseResult,
               ai_insights: parseResult,
@@ -590,7 +593,7 @@ ${rawDataForPrompt}
       // עדכון רשומת הקובץ עם פרטי השגיאה
       if (fileRecordId) {
         try {
-          await base44.entities.FileUpload.update(fileRecordId, { 
+          await FileUpload.update(fileRecordId, { 
             status: 'failed', 
             analysis_notes: displayMessage,
             error_message: err.message || displayMessage
@@ -601,7 +604,7 @@ ${rawDataForPrompt}
       } else {
         // אם אין fileRecordId, ניצור רשומה חדשה
         try {
-          await base44.entities.FileUpload.create({
+          await FileUpload.create({
             filename: file?.name || 'קובץ לא מזוהה',
             file_url: file_url || '',
             file_type: file?.name?.split('.').pop()?.toLowerCase() || 'unknown',

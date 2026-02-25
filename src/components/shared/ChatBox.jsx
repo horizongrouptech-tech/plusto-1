@@ -5,11 +5,12 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Send, Users, Clock, Loader2 } from "lucide-react";
-import { CommunicationThread } from "@/entities/CommunicationThread";
-import { ChatMessage } from "@/entities/ChatMessage";
-import { Notification } from "@/entities/Notification";
-import { User } from "@/entities/User";
+
+
+
+
 import { toast } from "sonner";
+import { ChatMessage, CommunicationThread, Notification, User } from '@/api/entities';
 
 export default function ChatBox({ 
   relatedEntityId, 

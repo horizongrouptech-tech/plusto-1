@@ -4,9 +4,10 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { format, parseISO, isToday, isPast } from 'date-fns';
 import { Plus, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
+import { CustomerGoal } from '@/api/entities';
 
 export default function TaskBoardByCustomer({ customers = [], onTaskClick, currentUser, onAddTask }) {
   // טעינת כל המשימות של כל הלקוחות
@@ -16,7 +17,7 @@ export default function TaskBoardByCustomer({ customers = [], onTaskClick, curre
       if (customers.length === 0) return [];
       
       const tasksPromises = customers.map(customer =>
-        base44.entities.CustomerGoal.filter({
+        CustomerGoal.filter({
           customer_email: customer.email
         }, '-created_date')
       );

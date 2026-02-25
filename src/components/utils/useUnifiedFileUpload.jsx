@@ -4,7 +4,9 @@
  */
 
 import { useState, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import { FileUpload } from '@/api/entities';
+import { UploadFile } from '@/api/integrations';
+
 
 // קטגוריות קבצים
 export const FILE_CATEGORIES = {
@@ -66,7 +68,7 @@ export function useUnifiedFileUpload(customerEmail) {
 
     try {
       setUploadProgress(30);
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await UploadFile({ file });
 
       setUploadProgress(60);
 
@@ -74,7 +76,7 @@ export function useUnifiedFileUpload(customerEmail) {
       const fileName = customName || file.name;
 
       if (!skipFileUploadRecord) {
-        const fileRecord = await base44.entities.FileUpload.create({
+        const fileRecord = await FileUpload.create({
           customer_email: customerEmail,
           filename: fileName,
           file_url: file_url,
@@ -105,7 +107,7 @@ export function useUnifiedFileUpload(customerEmail) {
 
       if (!skipFileUploadRecord) {
         try {
-          await base44.entities.FileUpload.create({
+          await FileUpload.create({
             customer_email: customerEmail,
             filename: file?.name || 'קובץ לא מזוהה',
             file_url: '',
@@ -139,7 +141,7 @@ export function useUnifiedFileUpload(customerEmail) {
    */
   const updateFileStatus = useCallback(async (fileId, status, additionalData = {}) => {
     try {
-      await base44.entities.FileUpload.update(fileId, {
+      await FileUpload.update(fileId, {
         status,
         ...additionalData
       });
@@ -168,7 +170,7 @@ export function useUnifiedFileUpload(customerEmail) {
     }
 
     try {
-      const existing = await base44.entities.FileUpload.filter({
+      const existing = await FileUpload.filter({
         customer_email: customerEmail,
         file_url: file_url
       });
@@ -177,7 +179,7 @@ export function useUnifiedFileUpload(customerEmail) {
         return existing[0];
       }
 
-      const fileRecord = await base44.entities.FileUpload.create({
+      const fileRecord = await FileUpload.create({
         customer_email: customerEmail,
         filename: filename || 'קובץ מערכת',
         file_url,

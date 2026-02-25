@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import GoalTemplatePreview from '@/components/goals/GoalTemplatePreview';
 import DefaultTasksManager from './DefaultTasksManager';
 
 import { toast } from "sonner";
+import { CustomerGoal, GoalTemplate } from '@/api/entities';
 export default function GoalBankManager({ currentUser }) {
   const [showDefaultTasks, setShowDefaultTasks] = useState(false);
   const queryClient = useQueryClient();
@@ -33,7 +34,7 @@ export default function GoalBankManager({ currentUser }) {
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ['goalTemplates'],
-    queryFn: () => base44.entities.GoalTemplate.filter({ is_active: true }, '-usage_count')
+    queryFn: () => GoalTemplate.filter({ is_active: true }, '-usage_count')
   });
 
   const canEdit = canEditGoalTemplates(currentUser);
@@ -90,9 +91,9 @@ export default function GoalBankManager({ currentUser }) {
       };
 
       if (editingTemplate) {
-        await base44.entities.GoalTemplate.update(editingTemplate.id, data);
+        await GoalTemplate.update(editingTemplate.id, data);
       } else {
-        await base44.entities.GoalTemplate.create(data);
+        await GoalTemplate.create(data);
       }
 
       queryClient.invalidateQueries(['goalTemplates']);
@@ -118,7 +119,7 @@ export default function GoalBankManager({ currentUser }) {
     }
 
     try {
-      await base44.entities.GoalTemplate.update(templateId, { is_active: false });
+      await GoalTemplate.update(templateId, { is_active: false });
       queryClient.invalidateQueries(['goalTemplates']);
     } catch (error) {
       toast.error('שגיאה במחיקה: ' + error.message);
@@ -132,7 +133,7 @@ export default function GoalBankManager({ currentUser }) {
     }
 
     try {
-      await base44.entities.GoalTemplate.create({
+      await GoalTemplate.create({
         name: `העתק של ${template.name}`,
         description: template.description,
         category: template.category,
@@ -157,7 +158,7 @@ export default function GoalBankManager({ currentUser }) {
       const endDate = new Date();
       endDate.setDate(endDate.getDate() + (template.estimated_duration_days || 30));
 
-      await base44.entities.CustomerGoal.create({
+      await CustomerGoal.create({
         customer_email: customerEmail,
         name: template.name,
         notes: template.description,
@@ -166,7 +167,7 @@ export default function GoalBankManager({ currentUser }) {
         success_metrics: template.success_metrics
       });
 
-      await base44.entities.GoalTemplate.update(template.id, {
+      await GoalTemplate.update(template.id, {
         usage_count: (template.usage_count || 0) + 1
       });
 

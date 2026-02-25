@@ -5,9 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, FileText, CheckCircle2, AlertCircle, X, Wand2, Loader2 } from "lucide-react";
-import { base44 } from '@/api/base44Client';
+
 
 import ColumnMappingWizard from './ColumnMappingWizard';
+import { CatalogMappingProfile } from '@/api/entities';
+import { UploadFile } from '@/api/integrations';
+import { parseFileHeaders, processCatalogWithMapping } from '@/api/functions';
 
 const HEADER_MAPPING = {
   // Product Name
@@ -195,7 +198,7 @@ export default function ProductCatalogUpload({
     const loadProfiles = async () => {
       if (!customer?.email) return;
       try {
-        const profiles = await base44.entities.CatalogMappingProfile.filter({
+        const profiles = await CatalogMappingProfile.filter({
           customer_email: customer.email,
           is_active: true
         });
@@ -234,7 +237,7 @@ export default function ProductCatalogUpload({
 
     try {
       // העלאת הקובץ לשרת
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await UploadFile({ file });
       
       if (!file_url) {
         throw new Error('העלאת הקובץ נכשלה');
@@ -245,7 +248,7 @@ export default function ProductCatalogUpload({
       setLocalStatus('מנתח כותרות קובץ...');
 
       // קריאת כותרות הקובץ דרך ה-SDK
-      const { data: parseResult } = await base44.functions.invoke('parseFileHeaders', { file_url });
+      const { data: parseResult } = await parseFileHeaders({ file_url });
       
       if (!parseResult?.success) {
         throw new Error(parseResult?.error || 'שגיאה בניתוח הקובץ');
@@ -303,7 +306,7 @@ export default function ProductCatalogUpload({
       if (rawData?.length > 0 && totalRowsFromParse <= 500) {
         payload.raw_data = rawData;
       }
-      const { data: result } = await base44.functions.invoke('processCatalogWithMapping', payload);
+      const { data: result } = await processCatalogWithMapping(payload);
 
       if (!result?.success) {
         throw new Error(result?.error || 'עיבוד הקובץ נכשל');

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import {
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { format, formatDistanceToNow, isToday, isTomorrow, parseISO, differenceInDays, startOfMonth, endOfMonth } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { CustomerGoal, OnboardingRequest, DailyChecklist360, CashFlow } from '@/api/entities';
 
 // ניווט תחתון
 const NAV_ITEMS = [
@@ -39,19 +40,19 @@ export default function MobileDashboard({ currentUser, onLogout }) {
     queryFn: async () => {
       if (isAdmin) {
         // אדמין רואה את כל הלקוחות
-        return await base44.entities.OnboardingRequest.filter({ 
+        return await OnboardingRequest.filter({ 
           status: 'approved',
           is_active: true 
         });
       } else {
         // מנהל כספים רואה רק את הלקוחות שלו
         const [primary, additional] = await Promise.all([
-          base44.entities.OnboardingRequest.filter({ 
+          OnboardingRequest.filter({ 
             assigned_financial_manager_email: currentUser.email,
             status: 'approved',
             is_active: true 
           }),
-          base44.entities.OnboardingRequest.filter({ 
+          OnboardingRequest.filter({ 
             additional_financial_managers: { $contains: currentUser.email },
             status: 'approved',
             is_active: true 
@@ -78,13 +79,13 @@ export default function MobileDashboard({ currentUser, onLogout }) {
       const customerEmails = myCustomers.map(c => c.email);
       
       if (isAdmin) {
-        const tasks = await base44.entities.CustomerGoal.filter({ 
+        const tasks = await CustomerGoal.filter({ 
           is_active: true 
         }, '-end_date');
         return tasks.filter(t => t.task_type !== 'daily_checklist_360');
       }
       
-      const tasks = await base44.entities.CustomerGoal.filter({ 
+      const tasks = await CustomerGoal.filter({ 
         is_active: true 
       }, '-end_date');
       
@@ -164,14 +165,14 @@ export default function MobileDashboard({ currentUser, onLogout }) {
       
       try {
         // נסה לטעון מ-DailyChecklist360
-        const checklists = await base44.entities.DailyChecklist360?.filter({
+        const checklists = await DailyChecklist360?.filter({
           customer_email: { $in: customerEmails },
           date: today
         }) || [];
         
         // Fallback ל-CustomerGoal
         if (checklists.length === 0) {
-          const goals = await base44.entities.CustomerGoal.filter({
+          const goals = await CustomerGoal.filter({
             customer_email: { $in: customerEmails },
             task_type: 'daily_checklist_360',
             due_date: today
@@ -190,7 +191,7 @@ export default function MobileDashboard({ currentUser, onLogout }) {
         return checklists;
       } catch (e) {
         // Fallback ל-CustomerGoal
-        const goals = await base44.entities.CustomerGoal.filter({
+        const goals = await CustomerGoal.filter({
           customer_email: { $in: customerEmails },
           task_type: 'daily_checklist_360',
           due_date: today
@@ -246,7 +247,7 @@ export default function MobileDashboard({ currentUser, onLogout }) {
       
       try {
         // ✅ FIX: טען את כל הרשומות בבת אחת במקום קריאה לכל לקוח בנפרד
-        const allCashflow = await base44.entities.CashFlow?.filter({
+        const allCashflow = await CashFlow?.filter({
           customer_email: { $in: customerEmails }
         }, '-date') || [];
         

@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { Loader2, Save, UserCog, User, Users } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from "sonner";
+import { OnboardingRequest, User as UserEntity } from '@/api/entities';
 
 export default function EditCustomerModal({ isOpen, onClose, customer, onCustomerUpdated }) {
     const [formData, setFormData] = useState({
@@ -49,7 +50,7 @@ export default function EditCustomerModal({ isOpen, onClose, customer, onCustome
         queryFn: async () => {
             if (currentUser?.role !== 'admin') return [];
             
-            const allUsers = await base44.entities.User.filter({
+            const allUsers = await UserEntity.filter({
                 user_type: 'financial_manager',
                 is_approved_by_admin: true
             });
@@ -152,7 +153,7 @@ export default function EditCustomerModal({ isOpen, onClose, customer, onCustome
                     additional_assigned_financial_manager_emails: dataToUpdate.additional_assigned_financial_manager_emails || [],
                     general_notes: dataToUpdate.general_notes || null
                 };
-                const updated = await base44.entities.OnboardingRequest.update(recordId, onboardingUpdateData);
+                const updated = await OnboardingRequest.update(recordId, onboardingUpdateData);
                 
                 // החזר את האובייקט המעודכן עם הנתונים החדשים
                 return {
@@ -191,7 +192,7 @@ export default function EditCustomerModal({ isOpen, onClose, customer, onCustome
                         zip: dataToUpdate.address_zip || null
                     }
                 };
-                const updated = await base44.entities.User.update(recordId, userUpdateData);
+                const updated = await UserEntity.update(recordId, userUpdateData);
                 
                 // החזר את האובייקט המעודכן
                 return {

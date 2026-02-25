@@ -6,10 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Loader2, Calendar, Circle, Clock, CheckCircle2, AlertCircle, Bell, RefreshCw, Repeat } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+
 import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 
 import { toast } from "sonner";
+import { CustomerGoal, User } from '@/api/entities';
 export default function TaskCreationModal({ isOpen, onClose, currentUser, isAdmin, customers, taskToEdit }) {
   const queryClient = useQueryClient();
 
@@ -34,7 +35,7 @@ export default function TaskCreationModal({ isOpen, onClose, currentUser, isAdmi
   // טעינת כל המשתמשים (עבור בחירת גורם מבצע)
   const { data: allUsers = [] } = useQuery({
     queryKey: ['allUsers'],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: () => User.list(),
     enabled: isOpen // Load only when modal is open
   });
 
@@ -86,7 +87,7 @@ export default function TaskCreationModal({ isOpen, onClose, currentUser, isAdmi
 
   // Mutation for creating a task
   const createTaskMutation = useMutation({
-    mutationFn: (newTaskData) => base44.entities.CustomerGoal.create(newTaskData),
+    mutationFn: (newTaskData) => CustomerGoal.create(newTaskData),
     onSuccess: () => {
       queryClient.invalidateQueries(['dailyTasks']); // Invalidate relevant queries
       onClose(); // Close modal on success
@@ -99,7 +100,7 @@ export default function TaskCreationModal({ isOpen, onClose, currentUser, isAdmi
 
   // Mutation for updating a task
   const updateTaskMutation = useMutation({
-    mutationFn: ({ id, updatedTaskData }) => base44.entities.CustomerGoal.update(id, {
+    mutationFn: ({ id, updatedTaskData }) => CustomerGoal.update(id, {
       ...updatedTaskData,
       is_active: updatedTaskData.is_active !== false
     }),

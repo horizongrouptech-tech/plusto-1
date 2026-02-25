@@ -17,10 +17,11 @@ import {
     MessageSquare
 } from "lucide-react";
 import PeriodRangePicker from './PeriodRangePicker';
-import { ManualForecast } from "@/entities/ManualForecast";
-import { ManualForecastSheet } from "@/entities/ManualForecastSheet";
-import { ManualForecastRow } from "@/entities/ManualForecastRow";
+
+
+
 import { toast } from "sonner";
+import { ManualForecast, ManualForecastRow, ManualForecastSheet } from '@/api/entities';
 
 export default function ManualDataEntry({ customer, onComplete }) {
     const createDefaultRow = () => ({

@@ -5,13 +5,15 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Send, Bot, User, CheckCircle, X, Sparkles, Target, MessageSquare } from "lucide-react";
-import { base44 } from '@/api/base44Client';
+
 import { useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
 import { toast } from "sonner";
+import { Recommendation } from '@/api/entities';
+import { InvokeLLM } from '@/api/integrations';
 export default function AIChatAssistant({ customer, currentUser, onRecommendationApproved }) {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
@@ -80,7 +82,7 @@ export default function AIChatAssistant({ customer, currentUser, onRecommendatio
       `;
 
       // קריאה ל-AI
-      const response = await base44.integrations.Core.InvokeLLM({
+      const response = await InvokeLLM({
         prompt: prompt,
         response_json_schema: {
           type: "object",
@@ -148,7 +150,7 @@ export default function AIChatAssistant({ customer, currentUser, onRecommendatio
       };
 
       // שמירה ב-Recommendation entity או ב-Recommendations Bank
-      await base44.entities.Recommendation.create(approvedRec);
+      await Recommendation.create(approvedRec);
 
       setApprovedRecommendations(prev => [...prev, approvedRec]);
       setShowApprovalModal(false);

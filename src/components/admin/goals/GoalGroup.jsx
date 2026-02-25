@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import GoalRow from './GoalRow';
-import { base44 } from '@/api/base44Client';
+
 
 import { toast } from "sonner";
+import { CustomerGoal } from '@/api/entities';
 export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals, isDragging, isCollapsed, onToggleCollapse, onExpandAfterAdd }) {
     const [isExpanded, setIsExpanded] = useState(!isCollapsed);
 
@@ -26,7 +27,7 @@ export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals
             const defaultEndDate = new Date();
             defaultEndDate.setDate(defaultEndDate.getDate() + 30);
             
-            const newSubtask = await base44.entities.CustomerGoal.create({
+            const newSubtask = await CustomerGoal.create({
                 customer_email: goal.customer_email,
                 parent_id: goal.id,
                 name: "משימה חדשה (לחץ לעריכה)",
@@ -60,7 +61,7 @@ export default function GoalGroup({ goal, subtasks, users, refreshData, allGoals
             reorderedSubtasks.splice(destination.index, 0, movedSubtask);
 
             const updatePromises = reorderedSubtasks.map((subtask, index) => 
-                base44.entities.CustomerGoal.update(subtask.id, { order_index: index })
+                CustomerGoal.update(subtask.id, { order_index: index })
             );
             
             await Promise.all(updatePromises);

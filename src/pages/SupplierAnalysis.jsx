@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from "react";
-import { Product } from "@/entities/Product";
-import { Supplier } from "@/entities/Supplier";
-import { SupplierQuote } from "@/entities/SupplierQuote";
-import { User } from "@/entities/User";
+
+
+
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,11 +14,13 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { ArrowLeft, TrendingDown, DollarSign, Users, AlertTriangle, Search, Plus, RefreshCw, Package, Send, Star } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { InvokeLLM } from "@/integrations/Core";
+
 
 import AddSupplierModal from '../components/shared/AddSupplierModal';
 import { toast } from "sonner";
 import SupplierQuoteRequestModal from '../components/shared/SupplierQuoteRequestModal';
+import { Product, Supplier, SupplierQuote, User } from '@/api/entities';
+import { InvokeLLM } from '@/api/integrations';
 
 export default function SupplierAnalysisPage() {
   const [products, setProducts] = useState([]);

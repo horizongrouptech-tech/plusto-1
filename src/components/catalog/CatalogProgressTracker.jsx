@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ProcessStatus } from "@/entities/ProcessStatus";
+
 import { Loader2, CheckCircle, AlertTriangle, RefreshCw, Eye, X } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { ProcessStatus } from '@/api/entities';
 
 export default function CatalogProgressTracker({ processId, onComplete }) {
     const [process, setProcess] = useState(null);

@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowRight, ArrowLeft, Save, Loader2, CheckCircle2, AlertCircle, Package, Download, FileText, BarChart3, PieChart, Table, TrendingUp, ShoppingBag } from "lucide-react";
-import { base44 } from '@/api/base44Client';
+
 import { toast } from "sonner";
 
 import Step1ServicesAndCosts from './Step1ServicesAndCosts';
@@ -18,6 +18,7 @@ import Step4Expenses from './Step4Expenses';
 import Step5ProfitLoss from './Step5ProfitLoss';
 import { generateForecastHTML } from '../../shared/generateForecastHTML';
 import { openPrintWindow } from '../../shared/printUtils';
+import { ManualForecast } from '@/api/entities';
 
 export default function ManualForecastWizard({ 
   customer, 
@@ -234,7 +235,7 @@ export default function ManualForecastWizard({
       if (forecast && forecast.id) {
         setIsLoading(true);
         try {
-          const existingForecast = await base44.entities.ManualForecast.get(forecast.id);
+          const existingForecast = await ManualForecast.get(forecast.id);
           console.log('📥 Loaded forecast from DB:', {
             id: existingForecast.id,
             z_reports_count: existingForecast.z_reports_uploaded?.length || 0,
@@ -290,7 +291,7 @@ export default function ManualForecastWizard({
     
     try {
       const sanitizedData = sanitizeAllForecastData(forecastData);
-      const newForecast = await base44.entities.ManualForecast.create(sanitizedData);
+      const newForecast = await ManualForecast.create(sanitizedData);
       
       console.log('✅ Forecast created successfully:', newForecast.id);
       
@@ -329,11 +330,11 @@ export default function ManualForecastWizard({
       let savedForecast;
       
       if (sanitizedData.id) {
-        await base44.entities.ManualForecast.update(sanitizedData.id, sanitizedData);
+        await ManualForecast.update(sanitizedData.id, sanitizedData);
         savedForecast = sanitizedData;
         console.log('✅ Forecast updated:', sanitizedData.id);
       } else {
-        savedForecast = await base44.entities.ManualForecast.create(sanitizedData);
+        savedForecast = await ManualForecast.create(sanitizedData);
         setForecastData(prev => ({ ...prev, id: savedForecast.id }));
         console.log('✅ Forecast created:', savedForecast.id);
       }
@@ -393,9 +394,9 @@ export default function ManualForecastWizard({
       const sanitizedData = sanitizeAllForecastData(forecastData);
 
       if (sanitizedData.id) {
-        await base44.entities.ManualForecast.update(sanitizedData.id, sanitizedData);
+        await ManualForecast.update(sanitizedData.id, sanitizedData);
       } else {
-        await base44.entities.ManualForecast.create(sanitizedData);
+        await ManualForecast.create(sanitizedData);
       }
       
       setLastSaved(new Date());
@@ -436,7 +437,7 @@ export default function ManualForecastWizard({
     setIsExporting(true);
     
     try {
-      const fullForecast = await base44.entities.ManualForecast.get(forecastData.id);
+      const fullForecast = await ManualForecast.get(forecastData.id);
       const htmlContent = generateForecastHTML(
         fullForecast, 
         'manual', 

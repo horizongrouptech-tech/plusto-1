@@ -9,7 +9,8 @@ import { Slider } from "@/components/ui/slider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, Lightbulb, RefreshCw, AlertTriangle, Sparkles, Target, Package } from "lucide-react";
-import { generateCatalog } from "@/functions/generateCatalog";
+import { generateCatalog } from '@/api/functions';
+
 
 export default function ProductCatalogAutoGenerator({
   customer,

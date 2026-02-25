@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { Package, Plus, Trash2, Edit, Loader2 } from 'lucide-react';
 import { formatCurrency } from './manual/utils/numberFormatter';
 import ProjectForecastWizard from './ProjectForecastWizard';
 import { toast } from "sonner";
+import { ProjectForecast } from '@/api/entities';
 
 export default function ProjectForecastManager({ customer }) {
   const [selectedForecast, setSelectedForecast] = useState(null);
@@ -16,11 +17,11 @@ export default function ProjectForecastManager({ customer }) {
 
   const { data: forecasts = [], isLoading } = useQuery({
     queryKey: ['projectForecasts', customer.email],
-    queryFn: () => base44.entities.ProjectForecast.filter({ customer_email: customer.email }, '-created_date')
+    queryFn: () => ProjectForecast.filter({ customer_email: customer.email }, '-created_date')
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.ProjectForecast.delete(id),
+    mutationFn: (id) => ProjectForecast.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['projectForecasts']);
       toast.success('תחזית הפרויקט נמחקה בהצלחה');

@@ -10,41 +10,9 @@ import { Loader2, UserPlus } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge"; // Assuming ui/badge component exists
+import { Badge } from "@/components/ui/badge";
+import { OnboardingRequest, User } from '@/api/entities';
 
-// Placeholder for base44 API client. In a real application, this would be imported
-// from a specific file, e.g., `import * as base44 from '@/lib/base44';`
-// For the purpose of this example, a mock implementation is provided.
-const base44 = {
-    entities: {
-        User: {
-            filter: async (criteria) => {
-                console.log("Mock base44.entities.User.filter called with:", criteria);
-                // Simulate an API call to fetch financial managers
-                // Replace with actual API call to your backend
-                await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-                const mockManagers = [
-                    { email: 'manager1@example.com', full_name: 'יוסי כהן', user_type: 'financial_manager', is_approved_by_admin: true },
-                    { email: 'manager2@example.com', full_name: 'שרה לוי', user_type: 'financial_manager', is_approved_by_admin: true },
-                    { email: 'manager3@example.com', full_name: 'דוד ישראל', user_type: 'financial_manager', is_approved_by_admin: true },
-                    { email: 'otheruser@example.com', full_name: 'משתמש אחר', user_type: 'user', is_approved_by_admin: true },
-                ];
-                return mockManagers.filter(manager => 
-                    manager.user_type === criteria.user_type && manager.is_approved_by_admin === criteria.is_approved_by_admin
-                );
-            }
-        },
-        OnboardingRequest: {
-            create: async (data) => {
-                console.log("Mock base44.entities.OnboardingRequest.create called with:", data);
-                // Simulate an API call to create the onboarding request
-                // Replace with actual API call to your backend
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-                return { id: `req-${Date.now()}`, ...data };
-            }
-        }
-    }
-};
 
 const BUSINESS_TYPES = [
   { value: 'retail', label: 'קמעונאות' },
@@ -96,7 +64,7 @@ export default function CreateOnboardingRequestForm({ isOpen, onClose, onSuccess
   const { data: allFinancialManagers } = useQuery({
     queryKey: ['allFinancialManagers'],
     queryFn: async () => {
-      const managers = await base44.entities.User.filter({ 
+      const managers = await User.filter({ 
         user_type: 'financial_manager',
         is_approved_by_admin: true 
       });
@@ -119,7 +87,7 @@ export default function CreateOnboardingRequestForm({ isOpen, onClose, onSuccess
         additional_assigned_financial_manager_emails: data.additional_assigned_financial_manager_emails || [],
         status: 'pending'
       };
-      return await base44.entities.OnboardingRequest.create(payload);
+      return await OnboardingRequest.create(payload);
     },
     onSuccess: (newRequest) => {
       toast.success('בקשת אונבורדינג נוצרה בהצלחה');

@@ -1,6 +1,7 @@
+import { deepWebCrawler, invokeClaude } from '@/api/functions';
 
-import { invokeClaude } from '@/functions/invokeClaude';
-import { deepWebCrawler } from '@/functions/deepWebCrawler';
+
+
 
 // סכימה לחילוץ מוצרים מדפי מוצר
 const productExtractionSchema = {

@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MessageSquare, Send, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
-import { sendWhatsAppMessage } from "@/functions/sendWhatsAppMessage";
+import { sendWhatsAppMessage } from '@/api/functions';
+
 
 export default function WhatsAppTestSender() {
     const [recipientPhone, setRecipientPhone] = useState('');

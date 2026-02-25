@@ -1,19 +1,19 @@
 
 import { useQuery } from '@tanstack/react-query';
 import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from "react";
-import { User } from "@/entities/User";
-import { FileUpload } from "@/entities/FileUpload";
-import { Recommendation } from "@/entities/Recommendation";
+
+
+
 // import { Product } from "@/entities/Product"; // Removed unused import
-import { Supplier } from "@/entities/Supplier";
-import { CustomerNotification } from "@/entities/CustomerNotification";
-import { SupportTicket } from "@/entities/SupportTicket";
-import { UserActivity } from "@/entities/UserActivity";
-import { ProductCatalog } from "@/entities/ProductCatalog";
-import { BusinessForecast } from "@/entities/BusinessForecast";
-import { RecommendationFeedback } from '@/entities/RecommendationFeedback';
-import { OnboardingRequest } from '@/entities/OnboardingRequest';
-import { BusinessMove } from '@/entities/BusinessMove';
+
+
+
+
+
+
+
+
+
 import { trackActivity } from "@/components/logic/activityTracker";
 // import ProductCatalogManager from "../components/catalog/ProductCatalogManager"; // Removed unused import
 // import EngagementDashboard from "../components/admin/EngagementDashboard"; // Removed direct import, lazy loaded
@@ -21,16 +21,16 @@ import { trackActivity } from "@/components/logic/activityTracker";
 // import BusinessForecastManager from "@/components/forecast/BusinessForecastManager"; // Removed unused import
 // import CustomerFileUploadManager from "@/components/admin/CustomerFileUploadManager"; // Removed unused import
 import { enhanceRecommendationWithPrompt } from "@/components/logic/targetedRecommendationEngine";
-import { autoOnboardingOrchestrator } from "@/functions/autoOnboardingOrchestrator";
-import { generateBusinessPlanText } from "@/functions/generateBusinessPlanText";
-import { exportBusinessPlanToPdf } from "@/functions/exportBusinessPlanToPdf";
+
+
+
 // import SpecificFileUploadBox from "../components/admin/SpecificFileUploadBox"; // Removed unused import
-import { StrategicPlanInput } from '@/entities/StrategicPlanInput';
+
 import StrategicPlanInputForm from "../components/forecast/StrategicPlanInputForm";
-import { initiateWhatsAppConversation } from "@/functions/initiateWhatsAppConversation";
+
 import EnhancedRecommendationOptionsModal from "@/components/admin/EnhancedRecommendationOptionsModal";
-import { CustomerContact } from '@/entities/CustomerContact';
-import { sendWhatsAppMessage } from "@/functions/sendWhatsAppMessage";
+
+
 // import { Supplier } from "@/entities/Supplier"; // Removed duplicate import
 import AddSupplierModal from "@/components/shared/AddSupplierModal";
 import AssignSupplierUserModal from "@/components/admin/AssignSupplierUserModal";
@@ -53,7 +53,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Progress } from "@/components/ui/progress";
-import { Lead } from "@/entities/Lead";
+
 // import WebsiteScanner from "@/components/admin/WebsiteScanner"; // Removed unused import
 import TargetedRecommendationModal from "../components/admin/TargetedRecommendationModal";
 import AdminRatingWidget from "@/components/admin/AdminRatingWidget";
@@ -62,15 +62,15 @@ import ArchivedRecommendationsModal from '@/components/admin/ArchivedRecommendat
 import MissingDocumentsModal from "@/components/admin/MissingDocumentsModal";
 import OnboardingRequestsModal from "@/components/admin/OnboardingRequestsModal";
 import RecommendationUpgradeModal from "@/components/admin/RecommendationUpgradeModal";
-import { FinancialManagerPerformance } from "@/entities/FinancialManagerPerformance";
-import { CommunicationThread } from "@/entities/CommunicationThread";
-import { ChatMessage } from "@/entities/ChatMessage";
-import { Notification } from "@/entities/Notification";
+
+
+
+
 // import FinanceManagerPerformanceTable from "@/components/admin/FinanceManagerPerformanceTable"; // Removed direct import, lazy loaded
 // import FinanceManagerLeaderboard from "@/components/admin/FinanceManagerLeaderboard"; // Removed direct import, lazy loaded
 // import NotificationCenter from "@/components/shared/NotificationCenter"; // Removed direct import, lazy loaded
 // import ChatBox from "@/components/shared/ChatBox"; // Removed direct import, lazy loaded
-import { calculateManagerPerformance } from "@/functions/calculateManagerPerformance";
+
 // import RecommendationSuggestionSystem from "@/components/admin/RecommendationSuggestionSystem"; // Removed unused import
 import ManagerChatSystem from "@/components/admin/ManagerChatSystem";
 // import AdvancedCatalogManager from "@/components/admin/AdvancedCatalogManager"; // Removed unused import
@@ -96,6 +96,8 @@ import LoadingScreen from '@/components/shared/LoadingScreen';
 import TaskManagement from './TaskManagement';
 import FailedFileUploadsManager from '../components/admin/FailedFileUploadsManager';
 import { toast } from "sonner";
+import { BusinessForecast, BusinessMove, ChatMessage, CommunicationThread, CustomerContact, CustomerNotification, FileUpload, FinancialManagerPerformance, Lead, Notification, OnboardingRequest, ProductCatalog, Recommendation, RecommendationFeedback, StrategicPlanInput, Supplier, SupportTicket, User, UserActivity } from '@/api/entities';
+import { autoOnboardingOrchestrator, calculateManagerPerformance, exportBusinessPlanToPdf, generateBusinessPlanText, initiateWhatsAppConversation, sendWhatsAppMessage } from '@/api/functions';
 
 // Lazy loading של קומפוננטים כבדים
 const ClientManagementDashboard = lazy(() => import('../components/admin/ClientManagementDashboard'));
@@ -2606,7 +2608,7 @@ export default function AdminPage() {
               method: 'POST',
               headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${localStorage.getItem('base44-user-token')}` // ודא שיש לך טוקן אימות
+                  'Authorization': `Bearer ${localStorage.getItem('supabase-auth-token')}` // ודא שיש לך טוקן אימות
              },
               body: JSON.stringify({
                   business_plan_text: isEditingPlan ? editedPlanText : currentPlanText, // ייצא את הטקסט הערוך אם במצב עריכה, אחרת את המוצג

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { User } from "@/entities/User";
-import { Product } from "@/entities/Product";
+
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { Product, User } from '@/api/entities';
 
 export default function FinancialFlowPage() {
   const [user, setUser] = useState(null);

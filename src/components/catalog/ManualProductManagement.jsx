@@ -2,11 +2,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Loader2, Trash2, Edit, Edit3, Plus } from "lucide-react";
-import { ProductCatalog } from "@/entities/ProductCatalog";
+
 import ProductAddForm from './ProductAddForm';
 import ProductEditModal from './ProductEditModal';
 import { toast } from "sonner";
 import { cn } from "@/lib/utils"; // Assuming cn utility is available for styling
+import { ProductCatalog } from '@/api/entities';
 
 export default function ManualProductManagement({ customer, selectedCatalogId, disabled }) {
   const [products, setProducts] = useState([]);

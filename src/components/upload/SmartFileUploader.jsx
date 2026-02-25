@@ -18,13 +18,16 @@ import {
   ReceiptText,
   FileQuestion
 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
-import { FileUpload } from "@/entities/FileUpload";
-import { UploadFile, InvokeLLM } from "@/integrations/Core";
-import { parseXlsx } from "@/functions/parseXlsx";
-import { processESNAReport } from '@/functions/processESNAReport';
-import { processPurchaseDocument } from '@/functions/processPurchaseDocument';
+
+
+
+
+
+
 import { toast } from "sonner";
+import { parseXlsx, processESNAReport, processPurchaseDocument, processSmartDocument } from '@/api/functions';
+import { FileUpload } from '@/api/entities';
+import { InvokeLLM, UploadFile } from '@/api/integrations';
 
 const FILE_CATEGORIES = [
   { value: 'inventory_report', label: 'דוח מלאי', icon: Package },
@@ -846,7 +849,7 @@ export default function SmartFileUploader({ customerEmail, onUploadComplete }) {
         setProcessingStatus('מנתח את סוג המסמך ומפענח נתונים באמצעות AI...');
         
         // Call the new smart router function
-        const { data: smartResult, error: smartError } = await base44.functions.invoke('processSmartDocument', {
+        const { data: smartResult, error: smartError } = await processSmartDocument({
           file_url,
           file_name: customFileName,
           customer_email: customerEmail,

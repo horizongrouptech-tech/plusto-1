@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit3, Trash2, Loader2, Lock, Eye, EyeOff, Monitor, User, Globe, Copy, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { ServiceContact } from '@/api/entities';
 
 export default function SystemCredentialsManager({ customer }) {
   const queryClient = useQueryClient();
@@ -29,7 +30,7 @@ export default function SystemCredentialsManager({ customer }) {
 
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ['serviceContacts', customer?.email],
-    queryFn: () => base44.entities.ServiceContact.filter({ 
+    queryFn: () => ServiceContact.filter({ 
       customer_email: customer.email,
       is_active: true 
     }),
@@ -100,10 +101,10 @@ export default function SystemCredentialsManager({ customer }) {
       };
 
       if (editingSystem) {
-        await base44.entities.ServiceContact.update(editingSystem.id, data);
+        await ServiceContact.update(editingSystem.id, data);
         toast.success('מערכת עודכנה בהצלחה!');
       } else {
-        await base44.entities.ServiceContact.create(data);
+        await ServiceContact.create(data);
         toast.success('מערכת נוספה בהצלחה!');
       }
 
@@ -121,7 +122,7 @@ export default function SystemCredentialsManager({ customer }) {
     if (!confirm('האם למחוק?')) return;
 
     try {
-      await base44.entities.ServiceContact.update(systemId, { is_active: false });
+      await ServiceContact.update(systemId, { is_active: false });
       queryClient.invalidateQueries({ queryKey: ['serviceContacts', customer.email] });
       toast.success('נמחק בהצלחה');
     } catch (error) {

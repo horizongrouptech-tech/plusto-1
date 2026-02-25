@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,8 @@ import { calculateEngagementForAllUsers } from '@/components/logic/userEngagemen
 import UnknownFileQueueManager from './UnknownFileQueueManager';
 
 import { toast } from "sonner";
+import { AgentSupportTicket, BusinessForecast, FileUpload, OnboardingRequest, ProductCatalog, Recommendation, RecommendationFeedback, User, UserEngagement } from '@/api/entities';
+import { manualBackupTrigger } from '@/api/functions';
 export default function EngagementDashboard() {
   const [timeFilter, setTimeFilter] = useState('all');
   const [engagementFilter, setEngagementFilter] = useState('all');
@@ -41,7 +43,7 @@ export default function EngagementDashboard() {
 
   const { data: allEngagements = [], isLoading: isLoadingEngagements, refetch: refetchEngagements } = useQuery({
     queryKey: ['userEngagements'],
-    queryFn: () => base44.entities.UserEngagement.filter({}, '-engagement_date'),
+    queryFn: () => UserEngagement.filter({}, '-engagement_date'),
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -63,56 +65,56 @@ export default function EngagementDashboard() {
 
   const { data: feedbacks = [], isLoading: isLoadingFeedback, refetch: refetchFeedback } = useQuery({
     queryKey: ['recommendationFeedbacks'],
-    queryFn: () => base44.entities.RecommendationFeedback.filter({}, '-created_date'),
+    queryFn: () => RecommendationFeedback.filter({}, '-created_date'),
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
   const { data: supportTickets = [], isLoading: isLoadingTickets, refetch: refetchTickets } = useQuery({
     queryKey: ['agentSupportTickets'],
-    queryFn: () => base44.entities.AgentSupportTicket.filter({}, '-created_date'),
+    queryFn: () => AgentSupportTicket.filter({}, '-created_date'),
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
   const { data: allUsers = [] } = useQuery({
     queryKey: ['allUsers'],
-    queryFn: () => base44.entities.User.filter({}),
+    queryFn: () => User.filter({}),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
   const { data: allOnboardingRequests = [] } = useQuery({
     queryKey: ['approvedOnboardingRequests'],
-    queryFn: () => base44.entities.OnboardingRequest.filter({ status: 'approved', is_active: true }),
+    queryFn: () => OnboardingRequest.filter({ status: 'approved', is_active: true }),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
   const { data: allRecommendations = [] } = useQuery({
     queryKey: ['allRecommendations'],
-    queryFn: () => base44.entities.Recommendation.filter({}),
+    queryFn: () => Recommendation.filter({}),
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
   const { data: allFiles = [] } = useQuery({
     queryKey: ['allFileUploads'],
-    queryFn: () => base44.entities.FileUpload.filter({}),
+    queryFn: () => FileUpload.filter({}),
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
   const { data: allCatalogs = [] } = useQuery({
     queryKey: ['allProductCatalogs'],
-    queryFn: () => base44.entities.ProductCatalog.filter({ is_active: true }),
+    queryFn: () => ProductCatalog.filter({ is_active: true }),
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
   const { data: allForecasts = [] } = useQuery({
     queryKey: ['allBusinessForecasts'],
-    queryFn: () => base44.entities.BusinessForecast.filter({}),
+    queryFn: () => BusinessForecast.filter({}),
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -134,7 +136,7 @@ export default function EngagementDashboard() {
     setIsBackingUp(true);
     setBackupResult(null);
     try {
-      const response = await base44.functions.invoke('manualBackupTrigger', {
+      const response = await manualBackupTrigger({
         backup_type: 'data'
       });
       

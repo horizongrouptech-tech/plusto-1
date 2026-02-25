@@ -38,7 +38,7 @@ import {
   RefreshCw,
   Filter
 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+
 import ReactMarkdown from 'react-markdown';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUsers } from '../shared/UsersContext';
@@ -49,6 +49,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import * as agents from '@/api/agents';
 
 // תצוגת Tool Call
 const ToolCallDisplay = ({ toolCall }) => {
@@ -288,7 +289,7 @@ export default function FloatingAgentChat({
         try {
           setIsLoading(true);
           
-          const existingConversations = await base44.agents.listConversations({
+          const existingConversations = await agents.listConversations({
             agent_name: agentName,
           });
 
@@ -319,7 +320,7 @@ export default function FloatingAgentChat({
               entity_instructions: "כשאתה יוצר יעד (goal) ב-CustomerGoal.create, חובה לשלוח task_type: 'goal'. כשאתה יוצר משימה (task) שמשויכת ליעד, שלח task_type: 'one_time' ו-parent_id של היעד. אל תיצור יעד בלי task_type: 'goal'."
             };
 
-            activeConversation = await base44.agents.createConversation({
+            activeConversation = await agents.createConversation({
               agent_name: agentName,
               metadata: conversationMetadata
             });
@@ -330,7 +331,7 @@ export default function FloatingAgentChat({
           setCurrentConversation(activeConversation);
           setMessages(activeConversation.messages || []);
 
-          const unsubscribeFunc = base44.agents.subscribeToConversation(
+          const unsubscribeFunc = agents.subscribeToConversation(
             activeConversation.id,
             (data) => {
               setMessages(data.messages || []);
@@ -377,7 +378,7 @@ export default function FloatingAgentChat({
     setIsTyping(true);
 
     try {
-      await base44.agents.addMessage(currentConversation, {
+      await agents.addMessage(currentConversation, {
         role: "user",
         content: messageText
       });
@@ -430,7 +431,7 @@ export default function FloatingAgentChat({
         entity_instructions: "כשאתה יוצר יעד (goal) ב-CustomerGoal.create, חובה לשלוח task_type: 'goal'. כשאתה יוצר משימה (task) שמשויכת ליעד, שלח task_type: 'one_time' ו-parent_id של היעד. אל תיצור יעד בלי task_type: 'goal'."
       };
 
-      const newConversation = await base44.agents.createConversation({
+      const newConversation = await agents.createConversation({
         agent_name: agentName,
         metadata: conversationMetadata
       });
@@ -444,7 +445,7 @@ export default function FloatingAgentChat({
         unsubscribe();
       }
       
-      const unsubscribeFunc = base44.agents.subscribeToConversation(
+      const unsubscribeFunc = agents.subscribeToConversation(
         newConversation.id,
         (data) => {
           setMessages(data.messages || []);
@@ -471,7 +472,7 @@ export default function FloatingAgentChat({
       setMessages(conversation.messages || []);
       setShowHistory(false);
 
-      const unsubscribeFunc = base44.agents.subscribeToConversation(
+      const unsubscribeFunc = agents.subscribeToConversation(
         conversation.id,
         (data) => {
           setMessages(data.messages || []);

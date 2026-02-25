@@ -5,9 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User, Mail, Phone, Building, Calendar, FileText, Lightbulb, Users } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 
 import { toast } from "sonner";
+import { FileUpload, Recommendation, OnboardingRequest, CustomerContact, User as UserEntity } from '@/api/entities';
 export default function ClientDetailSidebar({ client, allUsers }) {
     const [isUpdatingGroup, setIsUpdatingGroup] = useState(false);
     const [customerGroup, setCustomerGroup] = useState(''); // New state to manage the selected group locally
@@ -25,7 +26,7 @@ export default function ClientDetailSidebar({ client, allUsers }) {
         queryKey: ['clientFiles', client?.email],
         queryFn: async () => {
             if (!client?.email) return 0;
-            const files = await base44.entities.FileUpload.filter({ customer_email: client.email });
+            const files = await FileUpload.filter({ customer_email: client.email });
             return files.length;
         },
         enabled: !!client?.email
@@ -36,7 +37,7 @@ export default function ClientDetailSidebar({ client, allUsers }) {
         queryKey: ['clientRecs', client?.email],
         queryFn: async () => {
             if (!client?.email) return 0;
-            const recs = await base44.entities.Recommendation.filter({ customer_email: client.email });
+            const recs = await Recommendation.filter({ customer_email: client.email });
             return recs.length;
         },
         enabled: !!client?.email
@@ -72,12 +73,12 @@ export default function ClientDetailSidebar({ client, allUsers }) {
                 if (recordId && recordId.startsWith('onboarding_')) {
                     recordId = recordId.replace('onboarding_', '');
                 }
-                entityToUpdate = base44.entities.OnboardingRequest;
+                entityToUpdate = OnboardingRequest;
             } else if (client.source === 'customer_contact') {
-                entityToUpdate = base44.entities.CustomerContact;
+                entityToUpdate = CustomerContact;
             } else {
                 // ברירת מחדל - User entity
-                entityToUpdate = base44.entities.User;
+                entityToUpdate = UserEntity;
             }
 
             // ביצוע העדכון

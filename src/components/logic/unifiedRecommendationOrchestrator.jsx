@@ -1,6 +1,8 @@
+import { Recommendation } from '@/api/entities';
+import { InvokeLLM } from '@/api/integrations';
 
-import { InvokeLLM } from "@/integrations/Core";
-import { Recommendation } from "@/entities/Recommendation";
+
+
 
 /**
  * תזמורת המלצות מאוחדת - מקבלת נתונים מוכנים ומפיקה המלצות

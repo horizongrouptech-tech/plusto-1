@@ -1,4 +1,6 @@
-import { base44 } from "@/api/base44Client";
+import { Recommendation } from '@/api/entities';
+import { InvokeLLM } from '@/api/integrations';
+
 
 /**
  * מנוע יצירת המלצות כלליות לפי תיאור מהמשתמש
@@ -42,7 +44,7 @@ ${description}
 צור המלצה אחת מפורטת ואיכותית.
 `;
 
-    const response = await base44.integrations.Core.InvokeLLM({
+    const response = await InvokeLLM({
       prompt: generalRecommendationPrompt,
       add_context_from_internet: true,
       response_json_schema: {
@@ -73,7 +75,7 @@ ${description}
     if (progressCallback) progressCallback(90, 'שומר את ההמלצה במערכת...');
 
     // שמירת ההמלצה
-    const savedRecommendation = await base44.entities.Recommendation.create({
+    const savedRecommendation = await Recommendation.create({
       ...response,
       customer_email: customer.email,
       status: 'pending',

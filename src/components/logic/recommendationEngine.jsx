@@ -1,8 +1,10 @@
 
 import { generateInventoryBasedRecommendations } from './inventoryBasedRecommendationEngine';
-import { InvokeLLM } from "@/integrations/Core";
-import { Product } from "@/entities/Product";
-import { Recommendation } from "@/entities/Recommendation";
+import { Product, Recommendation } from '@/api/entities';
+import { InvokeLLM } from '@/api/integrations';
+
+
+
 
 const calculateRealFinancialImpact = (product, improvementPercent = 5) => {
     const currentMonthlySales = product.monthly_sales || 0;

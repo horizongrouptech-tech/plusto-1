@@ -6,8 +6,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Save, X, Trash2, Plus, AlertCircle, Calculator, Search, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { formatCurrency } from './utils/numberFormatter';
-import { base44 } from "@/api/base44Client";
+
 import { toast } from "sonner";
+import { ZReportDetails } from '@/api/entities';
 
 export default function ZReportEditor({ 
   isOpen, 
@@ -168,7 +169,7 @@ export default function ZReportEditor({
       if (zReport.z_report_detail_id) {
         console.log('📝 Updating ZReportDetails entity:', zReport.z_report_detail_id);
         
-        await base44.entities.ZReportDetails.update(zReport.z_report_detail_id, {
+        await ZReportDetails.update(zReport.z_report_detail_id, {
           detailed_products: productsToSave,
           products_count: productsToSave.length,
           total_revenue: summary.total_revenue_with_vat

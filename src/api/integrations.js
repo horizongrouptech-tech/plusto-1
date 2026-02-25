@@ -110,7 +110,7 @@ export const SendEmail = (params) => apiCall('/api/integrations/send-email', par
 export const SendSMS = (params) => apiCall('/api/integrations/send-sms', params);
 
 // ---------------------------------------------------------------------------
-// Core namespace — mirrors Base44's base44.integrations.Core shape
+// Core namespace — Core integration namespace
 // ---------------------------------------------------------------------------
 
 export const Core = {

@@ -1,9 +1,10 @@
-import { Recommendation } from "@/entities/Recommendation";
-import { Product } from "@/entities/Product";
-import { Supplier } from "@/entities/Supplier";
-import { Promotion } from "@/entities/Promotion";
-import { Sale } from "@/entities/Sale";
-import { ProductCatalog } from "@/entities/ProductCatalog"; // Added import for ProductCatalog
+import { Product, ProductCatalog, Promotion, Recommendation, Sale, Supplier } from '@/api/entities';
+
+
+
+
+
+ // Added import for ProductCatalog
 
 // מנוע המלצות עם חישובי רווח מדויקים
 export const generateInventoryBasedRecommendations = async (customer, options = {}) => {

@@ -1,8 +1,10 @@
+import { Product, ProductCatalog, Recommendation } from '@/api/entities';
+import { InvokeLLM } from '@/api/integrations';
 
-import { InvokeLLM } from "@/integrations/Core";
-import { Recommendation } from "@/entities/Recommendation";
-import { ProductCatalog } from "@/entities/ProductCatalog";
-import { Product } from "@/entities/Product";
+
+
+
+
 
 /**
  * מנוע יצירת המלצות ממוקדות למוצר ספציפי

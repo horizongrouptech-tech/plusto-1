@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Star, Loader2 } from "lucide-react";
-import { base44 } from '@/api/base44Client';
+
 import { toast } from 'sonner';
+import { Catalog } from '@/api/entities';
 
 export default function SetDefaultCatalogButton({ catalog, customerEmail, onSuccess }) {
   const [isUpdating, setIsUpdating] = useState(false);
@@ -15,19 +16,19 @@ export default function SetDefaultCatalogButton({ catalog, customerEmail, onSucc
     setIsUpdating(true);
     try {
       // טען את כל הקטלוגים של הלקוח
-      const allCustomerCatalogs = await base44.entities.Catalog.filter({
+      const allCustomerCatalogs = await Catalog.filter({
         customer_email: customerEmail
       });
 
       // עדכן את כולם ל-false
       for (const cat of allCustomerCatalogs) {
         if (cat.id !== catalog.id) {
-          await base44.entities.Catalog.update(cat.id, { is_default: false });
+          await Catalog.update(cat.id, { is_default: false });
         }
       }
 
       // עדכן את הקטלוג הנוכחי ל-true ושנה את השם
-      await base44.entities.Catalog.update(catalog.id, {
+      await Catalog.update(catalog.id, {
         is_default: true,
         catalog_name: `קטלוג רשמי - ${catalog.catalog_name}`.replace('קטלוג רשמי - קטלוג רשמי', 'קטלוג רשמי')
       });

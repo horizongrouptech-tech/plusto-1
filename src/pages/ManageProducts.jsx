@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
-import { Product } from "@/entities/Product";
-import { User } from "@/entities/User";
+
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { createPageUrl } from "@/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { Product, User } from '@/api/entities';
 
 export default function ManageProductsPage() {
   const [products, setProducts] = useState([]);

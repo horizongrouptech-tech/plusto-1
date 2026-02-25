@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, UserPlus, Link, CheckCircle, AlertCircle } from "lucide-react";
-import { User } from "@/entities/User";
-import { Supplier } from "@/entities/Supplier";
+import { Supplier, User } from '@/api/entities';
+
+
 
 export default function AssignSupplierUserModal({ isOpen, onClose, supplier, onAssigned, allUsers }) {
   const [selectedUserEmail, setSelectedUserEmail] = useState('');

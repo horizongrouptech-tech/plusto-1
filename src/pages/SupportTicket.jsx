@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { SupportTicket } from "@/entities/SupportTicket";
-import { User } from "@/entities/User";
+
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { MessageSquare, Send, CheckCircle, Clock, AlertTriangle, Eye } from "luc
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
 import { toast } from "sonner";
+import { SupportTicket, User } from '@/api/entities';
 
 export default function SupportTicketPage() {
   const [tickets, setTickets] = useState([]);

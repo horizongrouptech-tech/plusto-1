@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import {
   DollarSign, Plus, Calendar, Truck, Edit3, Trash2, Loader2,
   CreditCard, AlertCircle, Clock, CheckCircle, TrendingUp,
@@ -17,6 +17,7 @@ import { format, addDays, differenceInDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 
 import { toast } from "sonner";
+import { CustomerGoal, SupplierOrder, SupplierPayment } from '@/api/entities';
 // תנאי תשלום נפוצים
 const PAYMENT_TERMS = [
   { value: 'immediate', label: 'מזומן', days: 0 },
@@ -55,15 +56,15 @@ export default function SupplierPaymentsManager({ supplier, customer, isOpen, on
   const { data: payments = [], isLoading: isLoadingPayments } = useQuery({
     queryKey: ['supplierPayments', supplier?.id, customer?.email],
     queryFn: async () => {
-      if (base44.entities.SupplierPayment) {
-        return await base44.entities.SupplierPayment.filter({
+      if (SupplierPayment) {
+        return await SupplierPayment.filter({
           supplier_id: supplier.id,
           customer_email: customer.email
         }, 'due_date');
       }
       
       // fallback
-      const goals = await base44.entities.CustomerGoal.filter({
+      const goals = await CustomerGoal.filter({
         customer_email: customer.email,
         task_type: 'supplier_payment',
         notes: { $contains: supplier.id }
@@ -85,15 +86,15 @@ export default function SupplierPaymentsManager({ supplier, customer, isOpen, on
   const { data: orders = [], isLoading: isLoadingOrders } = useQuery({
     queryKey: ['supplierOrders', supplier?.id, customer?.email],
     queryFn: async () => {
-      if (base44.entities.SupplierOrder) {
-        return await base44.entities.SupplierOrder.filter({
+      if (SupplierOrder) {
+        return await SupplierOrder.filter({
           supplier_id: supplier.id,
           customer_email: customer.email
         }, '-order_date');
       }
       
       // fallback
-      const goals = await base44.entities.CustomerGoal.filter({
+      const goals = await CustomerGoal.filter({
         customer_email: customer.email,
         task_type: 'supplier_order',
         notes: { $contains: supplier.id }
@@ -147,8 +148,8 @@ export default function SupplierPaymentsManager({ supplier, customer, isOpen, on
 
     setIsCreating(true);
     try {
-      if (base44.entities.SupplierPayment) {
-        await base44.entities.SupplierPayment.create({
+      if (SupplierPayment) {
+        await SupplierPayment.create({
           supplier_id: supplier.id,
           customer_email: customer.email,
           ...paymentForm,
@@ -156,7 +157,7 @@ export default function SupplierPaymentsManager({ supplier, customer, isOpen, on
         });
       } else {
         // fallback
-        await base44.entities.CustomerGoal.create({
+        await CustomerGoal.create({
           customer_email: customer.email,
           name: `תשלום לספק - ${supplier.name}`,
           task_type: 'supplier_payment',
@@ -192,8 +193,8 @@ export default function SupplierPaymentsManager({ supplier, customer, isOpen, on
       // חישוב תאריך תשלום לפי תנאי ספק
       const dueDate = calculateDueDate(orderForm.order_date, supplier.payment_terms || 'eom_30');
       
-      if (base44.entities.SupplierOrder) {
-        await base44.entities.SupplierOrder.create({
+      if (SupplierOrder) {
+        await SupplierOrder.create({
           supplier_id: supplier.id,
           customer_email: customer.email,
           ...orderForm,
@@ -202,7 +203,7 @@ export default function SupplierPaymentsManager({ supplier, customer, isOpen, on
         });
       } else {
         // fallback
-        await base44.entities.CustomerGoal.create({
+        await CustomerGoal.create({
           customer_email: customer.email,
           name: orderForm.description,
           task_type: 'supplier_order',
@@ -217,8 +218,8 @@ export default function SupplierPaymentsManager({ supplier, customer, isOpen, on
       
       // יצירת תשלום אוטומטית אם יש תאריך
       if (dueDate) {
-        if (base44.entities.SupplierPayment) {
-          await base44.entities.SupplierPayment.create({
+        if (SupplierPayment) {
+          await SupplierPayment.create({
             supplier_id: supplier.id,
             customer_email: customer.email,
             amount: parseFloat(orderForm.amount),
@@ -244,13 +245,13 @@ export default function SupplierPaymentsManager({ supplier, customer, isOpen, on
   // עדכון סטטוס תשלום
   const handleMarkAsPaid = async (payment) => {
     try {
-      if (base44.entities.SupplierPayment) {
-        await base44.entities.SupplierPayment.update(payment.id, { 
+      if (SupplierPayment) {
+        await SupplierPayment.update(payment.id, { 
           status: 'paid',
           paid_date: new Date().toISOString().split('T')[0]
         });
       } else {
-        await base44.entities.CustomerGoal.update(payment.id, { status: 'done', is_active: true });
+        await CustomerGoal.update(payment.id, { status: 'done', is_active: true });
       }
       queryClient.invalidateQueries(['supplierPayments', supplier.id, customer.email]);
     } catch (error) {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from "sonner";
+import { CustomerGoal, OnboardingRequest, User } from '@/api/entities';
+import { importFireberryTasks } from '@/api/functions';
 
 export default function TaskManagement() {
   const queryClient = useQueryClient();
@@ -50,23 +52,23 @@ export default function TaskManagement() {
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
     queryFn: async () => {
-      const allCustomers = await base44.entities.OnboardingRequest.list();
+      const allCustomers = await OnboardingRequest.list();
       return allCustomers.filter(c => c.is_active);
     }
   });
 
   const { data: allUsers = [] } = useQuery({
     queryKey: ['allUsers'],
-    queryFn: () => base44.entities.User.list()
+    queryFn: () => User.list()
   });
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['tasks'],
-    queryFn: () => base44.entities.CustomerGoal.filter({ is_active: true }, '-created_date')
+    queryFn: () => CustomerGoal.filter({ is_active: true }, '-created_date')
   });
 
   const createTaskMutation = useMutation({
-    mutationFn: (taskData) => base44.entities.CustomerGoal.create(taskData),
+    mutationFn: (taskData) => CustomerGoal.create(taskData),
     onSuccess: () => {
       queryClient.invalidateQueries(['tasks']);
       setShowCreateModal(false);
@@ -84,7 +86,7 @@ export default function TaskManagement() {
 
   const updateTaskMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      await base44.entities.CustomerGoal.update(id, {
+      await CustomerGoal.update(id, {
         ...data,
         is_active: data.is_active !== false
       });
@@ -106,7 +108,7 @@ export default function TaskManagement() {
       setIsImporting(true);
       const tasksArray = JSON.parse(importData);
       
-      const response = await base44.functions.invoke('importFireberryTasks', {
+      const response = await importFireberryTasks({
         tasks: Array.isArray(tasksArray) ? tasksArray : [tasksArray]
       });
 

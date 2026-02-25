@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { base44 } from '@/api/base44Client';
+
 import { 
   Phone, Mail, Building2, Calendar, User, Save, 
   Loader2, Clock, MessageSquare, FileText, History
@@ -15,6 +15,7 @@ import {
 import { format } from 'date-fns';
 
 import { toast } from "sonner";
+import { Lead } from '@/api/entities';
 const STAGES = [
   { value: 'new', label: 'חדש' },
   { value: 'contacted', label: 'נוצר קשר' },
@@ -90,7 +91,7 @@ export default function LeadDetailModal({
       
       updateData.last_contact_date = new Date().toISOString();
       
-      await base44.entities.Lead.update(lead.id, updateData);
+      await Lead.update(lead.id, updateData);
       onUpdate();
     } catch (error) {
       console.error('Error updating lead:', error);

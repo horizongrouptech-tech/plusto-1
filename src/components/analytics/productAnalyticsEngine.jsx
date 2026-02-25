@@ -1,5 +1,5 @@
 // מנוע ניתוח נתונים לקטלוג ודוחות Z
-import { base44 } from '@/api/base44Client';
+
 
 // קבועים להגדרת רווח תקין
 export const PROFIT_MARGINS = {

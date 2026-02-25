@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import {
   FileText,
@@ -35,6 +35,7 @@ import InlineEditableCustomerDetails from '@/components/admin/InlineEditableCust
 import InlineEditableField from '@/components/admin/goals/InlineEditableField';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from "sonner";
+import { FileUpload, OnboardingRequest, Recommendation } from '@/api/entities';
 
 export default function CustomerOverviewModal({ 
   customer, 
@@ -53,7 +54,7 @@ export default function CustomerOverviewModal({
   // טעינת המלצות
   const { data: recommendations = [] } = useQuery({
     queryKey: ['customerRecommendations', customer?.email],
-    queryFn: () => base44.entities.Recommendation.filter({
+    queryFn: () => Recommendation.filter({
       customer_email: customer.email,
       status: { $ne: 'archived' }
     }),
@@ -63,7 +64,7 @@ export default function CustomerOverviewModal({
   // טעינת קבצים
   const { data: files = [] } = useQuery({
     queryKey: ['customerFiles', customer?.email],
-    queryFn: () => base44.entities.FileUpload.filter({
+    queryFn: () => FileUpload.filter({
       customer_email: customer.email
     }),
     enabled: !!customer?.email && isOpen,
@@ -95,7 +96,7 @@ export default function CustomerOverviewModal({
 
   const handleFieldUpdate = async (field, value) => {
     try {
-      await base44.entities.OnboardingRequest.update(customer.id, {
+      await OnboardingRequest.update(customer.id, {
         [field]: value
       });
       queryClient.invalidateQueries(['activeCustomers']);

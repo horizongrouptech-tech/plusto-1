@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { base44 } from '@/api/base44Client';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   Upload, 
@@ -34,6 +34,9 @@ import FailedRowsEditor from './FailedRowsEditor';
 import RecurringTransactionsTab from './RecurringTransactionsTab';
 import CreditCardsTab from './CreditCardsTab';
 import { toast } from 'sonner';
+import { CashFlow, FileUpload, OnboardingRequest, RecurringExpense } from '@/api/entities';
+import { UploadFile } from '@/api/integrations';
+import { deleteCashFlowPermanently, exportCashFlowToExcel, parseBizIboxFile } from '@/api/functions';
 
 const ITEMS_PER_PAGE = 25;
 
@@ -75,7 +78,7 @@ export default function CashFlowManager({ customer }) {
   const { data: allCategories = [] } = useQuery({
     queryKey: ['cashFlowCategories', customer?.email],
     queryFn: async () => {
-      const entries = await base44.entities.CashFlow.filter({
+      const entries = await CashFlow.filter({
         customer_email: customer.email
       });
       const categories = [...new Set(entries.map(e => e.category).filter(Boolean))];
@@ -87,7 +90,7 @@ export default function CashFlowManager({ customer }) {
   // טעינת תנועות תזרים
   const { data: rawCashFlowData = [], isLoading } = useQuery({
     queryKey: ['cashFlow', customer?.email, dateRange],
-    queryFn: () => base44.entities.CashFlow.filter({
+    queryFn: () => CashFlow.filter({
       customer_email: customer.email,
       date: { 
         $gte: dateRange.start, 
@@ -103,7 +106,7 @@ export default function CashFlowManager({ customer }) {
       if (!customer?.email) return;
       try {
         // נסה לטעון מ-OnboardingRequest entity
-        const customerData = await base44.entities.OnboardingRequest.filter({
+        const customerData = await OnboardingRequest.filter({
           email: customer.email
         });
         if (customerData && customerData.length > 0 && customerData[0].opening_balance !== undefined) {
@@ -145,7 +148,7 @@ export default function CashFlowManager({ customer }) {
   // טעינת הוצאות קבועות
   const { data: recurringExpenses = [] } = useQuery({
     queryKey: ['recurringExpenses', customer?.email],
-    queryFn: () => base44.entities.RecurringExpense.filter({
+    queryFn: () => RecurringExpense.filter({
       customer_email: customer.email
     }),
     enabled: !!customer?.email
@@ -158,10 +161,10 @@ export default function CashFlowManager({ customer }) {
     setIsUploading(true);
     try {
       // העלאת הקובץ
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await UploadFile({ file });
       
       // קריאה לפונקציה שמנתחת את הקובץ - ללא טווח תאריכים (ייבוא הכל)
-      const response = await base44.functions.invoke('parseBizIboxFile', {
+      const response = await parseBizIboxFile({
         fileUrl: file_url,
         customerEmail: customer.email
         // dateRangeStart and dateRangeEnd removed - import all dates
@@ -179,7 +182,7 @@ export default function CashFlowManager({ customer }) {
             dataCategory = 'bank_statement';
           }
           
-          await base44.entities.FileUpload.create({
+          await FileUpload.create({
             customer_email: customer.email,
             filename: file.name,
             file_url: file_url,
@@ -264,7 +267,7 @@ export default function CashFlowManager({ customer }) {
       // שמירת הקובץ כנכשל במערכת
       try {
         if (file_url) {
-          await base44.entities.FileUpload.create({
+          await FileUpload.create({
             filename: file?.name || 'קובץ תזרים',
             file_url: file_url,
             file_type: file?.name?.split('.').pop()?.toLowerCase() || 'unknown',
@@ -293,7 +296,7 @@ export default function CashFlowManager({ customer }) {
 
   const handleExportToExcel = async () => {
     try {
-      const response = await base44.functions.invoke('exportCashFlowToExcel', {
+      const response = await exportCashFlowToExcel({
         customerEmail: customer.email,
         dateRangeStart: dateRange.start,
         dateRangeEnd: dateRange.end
@@ -358,7 +361,7 @@ export default function CashFlowManager({ customer }) {
     if (!editingItem) return;
     setIsSaving(true);
     try {
-      await base44.entities.CashFlow.update(editingItem.id, {
+      await CashFlow.update(editingItem.id, {
         date: editingItem.date,
         description: editingItem.description,
         category: editingItem.category,
@@ -382,7 +385,7 @@ export default function CashFlowManager({ customer }) {
   const handleDelete = async (id) => {
     setIsDeleting(true);
     try {
-      await base44.entities.CashFlow.delete(id);
+      await CashFlow.delete(id);
       queryClient.invalidateQueries(['cashFlow', customer.email]);
       queryClient.invalidateQueries(['recurringTransactions', customer.email]);
       setDeleteConfirmId(null);
@@ -401,18 +404,18 @@ export default function CashFlowManager({ customer }) {
     setIsDeleting(true);
     try {
       // מצא את כל תנועות ה-CashFlow המשויכות לקובץ
-      const relatedEntries = await base44.entities.CashFlow.filter({
+      const relatedEntries = await CashFlow.filter({
         customer_email: customer.email,
         file_upload_id: fileUploadId
       });
 
       // מחק את כל התנועות המשויכות
       for (const entry of relatedEntries) {
-        await base44.entities.CashFlow.delete(entry.id);
+        await CashFlow.delete(entry.id);
       }
 
       // מחק את רשומת הקובץ
-      await base44.entities.FileUpload.delete(fileUploadId);
+      await FileUpload.delete(fileUploadId);
 
       // רענן את כל ה-caches הרלוונטיים
       queryClient.invalidateQueries(['cashFlow', customer.email]);
@@ -499,7 +502,7 @@ export default function CashFlowManager({ customer }) {
                       batchCount++;
                       console.log(`מריץ מחיקה - מנה #${batchCount}`);
                       
-                      const { data, error } = await base44.functions.invoke('deleteCashFlowPermanently', {
+                      const { data, error } = await deleteCashFlowPermanently({
                         customer_email: customer.email
                       });
                       
@@ -725,7 +728,7 @@ export default function CashFlowManager({ customer }) {
                                       }
                                     }
                                     
-                                    await base44.entities.CashFlow.update(item.id, { 
+                                    await CashFlow.update(item.id, { 
                                       category: value,
                                       category_assignment_date: new Date().toISOString()
                                     });
@@ -989,7 +992,7 @@ export default function CashFlowManager({ customer }) {
             <Button
               onClick={async () => {
                 try {
-                  await base44.entities.CashFlow.create({
+                  await CashFlow.create({
                     customer_email: customer.email,
                     date: expectedTransaction.date,
                     description: expectedTransaction.description,
@@ -1209,11 +1212,11 @@ export default function CashFlowManager({ customer }) {
               onClick={async () => {
                 try {
                   // עדכון יתרת פתיחה ב-OnboardingRequest entity
-                  const customers = await base44.entities.OnboardingRequest.filter({
+                  const customers = await OnboardingRequest.filter({
                     email: customer.email
                   });
                   if (customers && customers.length > 0) {
-                    await base44.entities.OnboardingRequest.update(customers[0].id, {
+                    await OnboardingRequest.update(customers[0].id, {
                       opening_balance: openingBalance
                     });
                   }

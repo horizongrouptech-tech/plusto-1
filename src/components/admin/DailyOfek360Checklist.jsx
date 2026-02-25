@@ -10,13 +10,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { toast } from 'sonner';
 import { 
   Target, Loader2, CheckCircle, Circle, MessageSquare, Edit2, 
   Plus, Trash2, Save, X, Calendar, TrendingUp, BarChart3,
   ChevronDown, ChevronUp, AlertCircle, Info
 } from 'lucide-react';
+import { DailyChecklist360 } from '@/api/entities';
 
 // הגדרת סעיפי הצ'קליסט היומי - מבוסס על מודל אופק 360
 const DAILY_CHECKLIST_CATEGORIES = [
@@ -373,7 +374,7 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
   const { data: todayChecklist, isLoading: isLoadingToday } = useQuery({
     queryKey: ['dailyChecklist360', customer?.email, today],
     queryFn: async () => {
-      const checklists = await base44.entities.DailyChecklist360.filter({
+      const checklists = await DailyChecklist360.filter({
         customer_email: customer.email,
         date: today
       });
@@ -395,7 +396,7 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
         created_by: currentUser?.email
       };
 
-      const created = await base44.entities.DailyChecklist360.create(newChecklist);
+      const created = await DailyChecklist360.create(newChecklist);
       return created;
     },
     enabled: isOpen && !!customer?.email
@@ -408,7 +409,7 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
       const startDate = new Date(selectedYear, selectedMonth, 1).toISOString().split('T')[0];
       const endDate = new Date(selectedYear, selectedMonth + 1, 0).toISOString().split('T')[0];
       
-      return await base44.entities.DailyChecklist360.filter({
+      return await DailyChecklist360.filter({
         customer_email: customer.email,
         date: { $gte: startDate, $lte: endDate }
       });
@@ -428,7 +429,7 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
         return item;
       });
 
-      await base44.entities.DailyChecklist360.update(todayChecklist.id, {
+      await DailyChecklist360.update(todayChecklist.id, {
         items: updatedItems,
         last_updated_by: currentUser?.email
       });
@@ -497,7 +498,7 @@ export default function DailyOfek360Checklist({ customer, isOpen, onClose, curre
     mutationFn: async (notes) => {
       if (!todayChecklist) return;
 
-      await base44.entities.DailyChecklist360.update(todayChecklist.id, {
+      await DailyChecklist360.update(todayChecklist.id, {
         general_notes: notes,
         last_updated_by: currentUser?.email
       });

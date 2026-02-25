@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import {
   AlertCircle, FileX, Download, Eye, RefreshCw, Loader2,
   Calendar, User, FileText, XCircle, CheckCircle, Clock, Database
@@ -15,6 +15,7 @@ import { he } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 import { toast } from "sonner";
+import { FileUpload } from '@/api/entities';
 export default function FailedFileUploadsManager() {
   const queryClient = useQueryClient();
   const [selectedFile, setSelectedFile] = useState(null);
@@ -24,7 +25,7 @@ export default function FailedFileUploadsManager() {
   const { data: failedFiles = [], isLoading, refetch } = useQuery({
     queryKey: ['failedFileUploads'],
     queryFn: async () => {
-      const files = await base44.entities.FileUpload.filter({
+      const files = await FileUpload.filter({
         status: 'failed'
       }, '-created_date');
       
@@ -38,7 +39,7 @@ export default function FailedFileUploadsManager() {
     if (!confirm('האם לסמן את הקובץ כטופל?')) return;
     
     try {
-      await base44.entities.FileUpload.update(fileId, {
+      await FileUpload.update(fileId, {
         status: 'resolved',
         resolved_at: new Date().toISOString()
       });
@@ -55,7 +56,7 @@ export default function FailedFileUploadsManager() {
     if (!confirm('האם למחוק את הקובץ?')) return;
     
     try {
-      await base44.entities.FileUpload.update(fileId, {
+      await FileUpload.update(fileId, {
         status: 'deleted'
       });
       

@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { base44 } from '@/api/base44Client';
+
 import { useQuery } from '@tanstack/react-query';
 import { AtSign, X } from 'lucide-react';
+import { User } from '@/api/entities';
 
 export default function MentionInput({ 
   value = '', 
@@ -24,7 +25,7 @@ export default function MentionInput({
       if (!customerEmail) return [];
       
       // טעינת כל המשתמשים
-      const allUsers = await base44.entities.User.list();
+      const allUsers = await User.list();
       
       // פילטור משתמשים רלוונטיים: מנהלי כספים ואדמינים
       return allUsers.filter(u => 

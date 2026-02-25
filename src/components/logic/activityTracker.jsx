@@ -1,8 +1,9 @@
-import { User } from '@/entities/User';
-import { UserActivity } from '@/entities/UserActivity';
-import { Recommendation } from '@/entities/Recommendation';
-import { BusinessMove } from '@/entities/BusinessMove';
-import { FileUpload } from '@/entities/FileUpload';
+import { BusinessMove, FileUpload, Recommendation, User, UserActivity } from '@/api/entities';
+
+
+
+
+
 
 export const trackActivity = async (actionType, details = {}) => {
   try {

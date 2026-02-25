@@ -19,7 +19,8 @@ import {
   MapPin,
   Clock
 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { Supplier } from '@/api/entities';
+
 
 export default function SupplierRecommendationEngine({ customer, onSupplierSelect, className = "" }) {
   const [allSuppliers, setAllSuppliers] = useState([]);
@@ -171,7 +172,7 @@ export default function SupplierRecommendationEngine({ customer, onSupplierSelec
     setIsLoading(true);
     try {
       // טען רק ספקים שלא משויכים ללקוח הנוכחי
-      const allActiveSuppliers = await base44.entities.Supplier.filter({ is_active: true });
+      const allActiveSuppliers = await Supplier.filter({ is_active: true });
       const availableSuppliers = allActiveSuppliers.filter(s => 
         !s.customer_emails?.includes(customer.email)
       );

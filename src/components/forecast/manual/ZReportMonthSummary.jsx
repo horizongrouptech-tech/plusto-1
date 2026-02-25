@@ -7,8 +7,10 @@ import { formatCurrency } from './utils/numberFormatter';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import ZReportEditor from './ZReportEditor';
-import { base44 } from "@/api/base44Client";
+
 import { toast } from "sonner";
+import { ManualForecast, ZReportDetails } from '@/api/entities';
+import { parseZReport } from '@/api/functions';
 
 export default function ZReportMonthSummary({ forecastData, salesForecast, services, onUpdateZReport, customer }) {
   const [editingMonth, setEditingMonth] = useState(null);
@@ -117,7 +119,7 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
       if (zReport.z_report_detail_id) {
         console.log('🔄 Loading from ZReportDetails entity:', zReport.z_report_detail_id);
         
-        const zReportDetail = await base44.entities.ZReportDetails.get(zReport.z_report_detail_id);
+        const zReportDetail = await ZReportDetails.get(zReport.z_report_detail_id);
         
         // ✅ טעינה מקובץ נפרד אם קיים
         if (zReportDetail && zReportDetail.detailed_products_file_url) {
@@ -174,7 +176,7 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
 
       console.log('🔄 Reconstructing from original file:', zReport.file_url);
 
-      const response = await base44.functions.invoke('parseZReport', {
+      const response = await parseZReport({
         fileUrl: zReport.file_url,
         fileName: zReport.file_name
       });
@@ -249,7 +251,7 @@ export default function ZReportMonthSummary({ forecastData, salesForecast, servi
       );
 
       if (forecastData.id) {
-        await base44.entities.ManualForecast.update(forecastData.id, {
+        await ManualForecast.update(forecastData.id, {
           z_reports_uploaded: updatedReports
         });
       }

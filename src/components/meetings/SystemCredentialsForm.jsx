@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { ChevronDown, ChevronUp, Plus, X, Loader2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "sonner";
-import { base44 } from '@/api/base44Client';
+import { SystemCredential } from '@/api/entities';
+
 
 export default function SystemCredentialsForm({ customer, onClose }) {
   const queryClient = useQueryClient();
@@ -26,7 +27,7 @@ export default function SystemCredentialsForm({ customer, onClose }) {
     queryKey: ['systemCredentials', customer?.email],
     queryFn: async () => {
       if (!customer?.email) return [];
-      const creds = await base44.entities.SystemCredential.filter({
+      const creds = await SystemCredential.filter({
         customer_email: customer.email
       }, '-created_date');
       return creds;
@@ -37,7 +38,7 @@ export default function SystemCredentialsForm({ customer, onClose }) {
   // Add credential mutation
   const addMutation = useMutation({
     mutationFn: async (data) => {
-      return base44.entities.SystemCredential.create({
+      return SystemCredential.create({
         customer_email: customer.email,
         ...data,
         last_updated_by: customer.email
@@ -59,7 +60,7 @@ export default function SystemCredentialsForm({ customer, onClose }) {
   // Delete credential mutation
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      return base44.entities.SystemCredential.delete(id);
+      return SystemCredential.delete(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['systemCredentials', customer?.email]);

@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Target, CheckCircle2, TrendingUp, Building2, DollarSign, Lightbulb 
 } from "lucide-react";
-import { InvokeLLM } from "@/integrations/Core";
+import { InvokeLLM } from '@/api/integrations';
+
 
 const BusinessMoveDetailsModal = ({ move, isOpen, onClose, customer, moveComplexityTranslations, moveTimeframeTranslations }) => {
   const [realWorldExamples, setRealWorldExamples] = useState([]);

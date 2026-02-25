@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { Plus, Edit3, Trash2, Copy, Lightbulb, Loader2, ShieldAlert } from 'luci
 import { canEditGoalTemplates } from '../utils/goalTemplatePermissions';
 
 import { toast } from "sonner";
+import { GoalTemplate } from '@/api/entities';
 export default function GoalTemplateManager() {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
@@ -32,7 +33,7 @@ export default function GoalTemplateManager() {
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ['goalTemplates'],
-    queryFn: () => base44.entities.GoalTemplate.filter({ is_active: true }, '-usage_count')
+    queryFn: () => GoalTemplate.filter({ is_active: true }, '-usage_count')
   });
 
   const { user: currentUser } = useAuth();
@@ -86,9 +87,9 @@ export default function GoalTemplateManager() {
       };
 
       if (editingTemplate) {
-        await base44.entities.GoalTemplate.update(editingTemplate.id, dataToSave);
+        await GoalTemplate.update(editingTemplate.id, dataToSave);
       } else {
-        await base44.entities.GoalTemplate.create(dataToSave);
+        await GoalTemplate.create(dataToSave);
       }
       
       queryClient.invalidateQueries(['goalTemplates']);
@@ -109,7 +110,7 @@ export default function GoalTemplateManager() {
     if (!confirm('האם למחוק את התבנית?')) return;
 
     try {
-      await base44.entities.GoalTemplate.update(templateId, { is_active: false });
+      await GoalTemplate.update(templateId, { is_active: false });
       queryClient.invalidateQueries(['goalTemplates']);
     } catch (error) {
       toast.error('שגיאה במחיקה: ' + error.message);

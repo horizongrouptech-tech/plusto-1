@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { base44 } from '@/api/base44Client';
+
 import { Loader2, Save, Users, Calendar, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 import { toast } from "sonner";
+import { OnboardingRequest } from '@/api/entities';
 export default function CustomerGroupSelector({ customer, onUpdate }) {
     const [selectedGroup, setSelectedGroup] = useState(customer?.customer_group || '');
     const [isSaving, setIsSaving] = useState(false);
@@ -35,7 +36,7 @@ export default function CustomerGroupSelector({ customer, onUpdate }) {
             }
 
             // עדכון ישות OnboardingRequest בלבד
-            await base44.entities.OnboardingRequest.update(onboardingId, {
+            await OnboardingRequest.update(onboardingId, {
                 customer_group: selectedGroup
             });
 

@@ -8,8 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
-import { Lead } from '@/entities/Lead';
+
+
 import {
   Users, Plus, Search, Filter, Phone, Mail, Calendar, Building2,
   User, Clock, TrendingUp, DollarSign, ChevronRight, Loader2,
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { format, formatDistanceToNow, parseISO, differenceInDays } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { Lead } from '@/api/entities';
 
 // שלבי תהליך ליד - מותאם למבנה מהוובהוק
 const LEAD_STAGES = [

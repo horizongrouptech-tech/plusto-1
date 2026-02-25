@@ -22,13 +22,15 @@ import {
 'lucide-react';
 import { format, parse, isValid } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { base44 } from '@/api/base44Client';
+
 import GoalCommentsModal from './GoalCommentsModal';
-import { syncTaskToFireberry } from '@/functions/syncTaskToFireberry';
+
 import InlineEditableField from './InlineEditableField';
 import GoalDependencySelector from '../GoalDependencySelector';
 
 import { toast } from "sonner";
+import { CustomerGoal } from '@/api/entities';
+import { syncTaskToFireberry } from '@/api/functions';
 export default function GoalRow({ goal, users, refreshData, allGoals, isParent = false, isDragging = false, actionsSlot = null }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedGoal, setEditedGoal] = useState(goal);
@@ -143,7 +145,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
   };
   const handleQuickStatusChange = async (newStatus) => {
     try {
-      await base44.entities.CustomerGoal.update(goal.id, {
+      await CustomerGoal.update(goal.id, {
         status: newStatus,
         is_active: goal.is_active !== false
       });
@@ -177,7 +179,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
 
     setIsSaving(true);
     try {
-      await base44.entities.CustomerGoal.update(goal.id, {
+      await CustomerGoal.update(goal.id, {
         name: editedGoal.name,
         status: editedGoal.status,
         start_date: normalizeDate(editedGoal.start_date),
@@ -226,7 +228,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
           console.log('⚠️ Missing end_date, using fallback:', deletePayload.end_date);
         }
 
-        await base44.entities.CustomerGoal.update(goal.id, deletePayload);
+        await CustomerGoal.update(goal.id, deletePayload);
         await refreshData();
         console.log('✅ Subtask deleted successfully');
       } catch (error) {
@@ -256,7 +258,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
             subtaskPayload.end_date = subtask.start_date || new Date().toISOString().split('T')[0];
             console.log('  ⚠️ Subtask missing end_date, using fallback:', subtaskPayload.end_date);
           }
-          await base44.entities.CustomerGoal.update(subtask.id, subtaskPayload);
+          await CustomerGoal.update(subtask.id, subtaskPayload);
           console.log('  ↳ Deleted subtask:', subtask.id, subtask.name);
         }
 
@@ -266,7 +268,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
           goalPayload.end_date = goal.start_date || new Date().toISOString().split('T')[0];
           console.log('⚠️ Goal missing end_date, using fallback:', goalPayload.end_date);
         }
-        await base44.entities.CustomerGoal.update(goal.id, goalPayload);
+        await CustomerGoal.update(goal.id, goalPayload);
         console.log('✅ Goal and all subtasks deleted successfully');
 
         await refreshData();
@@ -291,7 +293,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
           console.log('⚠️ Missing end_date, using fallback:', deletePayload.end_date);
         }
 
-        await base44.entities.CustomerGoal.update(goal.id, deletePayload);
+        await CustomerGoal.update(goal.id, deletePayload);
         await refreshData();
         console.log('✅ Goal deleted successfully');
       } catch (error) {
@@ -307,7 +309,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     try {
       const currentAssignees = goal.assigned_users || [];
       if (!currentAssignees.includes(email)) {
-        await base44.entities.CustomerGoal.update(goal.id, {
+        await CustomerGoal.update(goal.id, {
           assigned_users: [...currentAssignees, email]
         });
         await refreshData();
@@ -324,7 +326,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     setIsUpdatingAssignees(true);
     try {
       const currentAssignees = goal.assigned_users || [];
-      await base44.entities.CustomerGoal.update(goal.id, {
+      await CustomerGoal.update(goal.id, {
         assigned_users: currentAssignees.filter((e) => e !== email)
       });
       await refreshData();
@@ -340,7 +342,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     if (isUpdatingAssignees) return;
     setIsUpdatingAssignees(true);
     try {
-      await base44.entities.CustomerGoal.update(goal.id, {
+      await CustomerGoal.update(goal.id, {
         assignee_email: null,
         is_active: goal.is_active !== false
       });
@@ -358,7 +360,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     setIsUpdatingAssignees(true);
     try {
       const currentExternal = getExternalResponsible(goal.external_responsible);
-      await base44.entities.CustomerGoal.update(goal.id, {
+      await CustomerGoal.update(goal.id, {
         external_responsible: [...currentExternal, newExternalAssignee.trim()]
       });
       setNewExternalAssignee('');
@@ -376,7 +378,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
     setIsUpdatingAssignees(true);
     try {
       const currentExternal = getExternalResponsible(goal.external_responsible);
-      await base44.entities.CustomerGoal.update(goal.id, {
+      await CustomerGoal.update(goal.id, {
         external_responsible: currentExternal.filter((_, idx) => idx !== indexToRemove)
       });
       await refreshData();
@@ -422,7 +424,7 @@ export default function GoalRow({ goal, users, refreshData, allGoals, isParent =
         [field]: finalValue,
         task_type: goal.task_type || 'goal' // 🔒 שמירת task_type
       };
-      await base44.entities.CustomerGoal.update(goal.id, updateData);
+      await CustomerGoal.update(goal.id, updateData);
       refreshData();
 
       // סנכרון לפיירברי ברקע

@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { base44 } from '@/api/base44Client';
+
 import {
   Building2,
   User,
@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from "sonner";
+import { OnboardingRequest } from '@/api/entities';
 
 export default function CustomerSettingsDrawer({ customer, isOpen, onClose }) {
   const [formData, setFormData] = useState({});
@@ -46,7 +47,7 @@ export default function CustomerSettingsDrawer({ customer, isOpen, onClose }) {
     
     setIsSaving(true);
     try {
-      await base44.entities.OnboardingRequest.update(customer.id, formData);
+      await OnboardingRequest.update(customer.id, formData);
       onClose();
     } catch (error) {
       console.error("Error saving customer:", error);

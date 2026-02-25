@@ -17,7 +17,7 @@ import {
   ChevronRight,
   Filter } from
 "lucide-react";
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import {
   Table,
@@ -32,6 +32,7 @@ import AddSupplierModal from "../shared/AddSupplierModal";
 import SupplierDetailsModal from "./SupplierDetailsModal";
 import SupplierPreviewModal from "./SupplierPreviewModal";
 import FindAlternativeSupplierModal from "./FindAlternativeSupplierModal";
+import { CustomerContact, Supplier } from '@/api/entities';
 
 const getCategoryBadgeStyle = (category) => {
   const styles = {
@@ -63,7 +64,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
   const [customerPage, setCustomerPage] = useState(1);
   const PAGE_SIZE = 20;
 
-  // ✅ פונקציית עזר: טעינת כל הרשומות עם pagination בצד השרת (עוקף מגבלת 50 של base44)
+  // ✅ פונקציית עזר: טעינת כל הרשומות עם pagination בצד השרת (עוקף מגבלת 50 רשומות)
   const fetchAllWithPagination = useCallback(async (filterQuery, fields = null) => {
     let allResults = [];
     let hasMore = true;
@@ -73,7 +74,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
     while (hasMore) {
       const args = [filterQuery, '-created_date', batchSize, skip];
       if (fields) args.push(fields);
-      const batch = await base44.entities.Supplier.filter(...args);
+      const batch = await Supplier.filter(...args);
       allResults = [...allResults, ...batch];
       skip += batch.length;
       if (batch.length < batchSize) {
@@ -142,7 +143,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
     queryKey: ['customerSuppliers', customer?.email, customerPage],
     queryFn: async () => {
       if (!customer?.email) return [];
-      return await base44.entities.Supplier.filter(
+      return await Supplier.filter(
         { customer_emails: [customer.email], is_active: true },
         '-created_date',
         PAGE_SIZE,
@@ -224,7 +225,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
       [...supplier.customer_emails, customer.email] :
       [customer.email];
 
-      await base44.entities.Supplier.update(supplier.id, {
+      await Supplier.update(supplier.id, {
         customer_emails: updatedEmails
       });
 
@@ -242,7 +243,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
     try {
       const updatedEmails = supplier.customer_emails?.filter((email) => email !== customer.email) || [];
 
-      await base44.entities.Supplier.update(supplier.id, {
+      await Supplier.update(supplier.id, {
         customer_emails: updatedEmails
       });
 
@@ -267,7 +268,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
         // הספק משויך גם ללקוחות אחרים - נשלוף את שמותיהם
         let customerNames = [];
         try {
-          const customerContacts = await base44.entities.CustomerContact.filter({});
+          const customerContacts = await CustomerContact.filter({});
           customerNames = otherCustomerEmails.map((email) => {
             const contact = customerContacts.find((c) => c.customer_email === email);
             return contact?.business_name || contact?.full_name || email;
@@ -290,7 +291,7 @@ export default function CustomerSuppliersTab({ customer, currentUser: propCurren
         if (!confirmed) return;
       }
 
-      await base44.entities.Supplier.delete(supplier.id);
+      await Supplier.delete(supplier.id);
 
       // ✅ רענון כל השאילתות
       queryClient.invalidateQueries({ queryKey: ['customerSuppliers'] });

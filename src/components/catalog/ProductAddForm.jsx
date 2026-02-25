@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Package, Barcode, DollarSign, TrendingUp, Calculator } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+
 
 import { toast } from "sonner";
+import { ProductCatalog } from '@/api/entities';
 export default function ProductAddForm({ 
   customer, 
   selectedCatalogId, 
@@ -89,7 +90,7 @@ export default function ProductAddForm({
         is_active: true
       };
 
-      const newProduct = await base44.entities.ProductCatalog.create(productData);
+      const newProduct = await ProductCatalog.create(productData);
 
       if (newProduct && typeof onProductAdded === 'function') {
         onProductAdded(newProduct);

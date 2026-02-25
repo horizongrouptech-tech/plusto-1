@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import {
 import { format } from 'date-fns';
 
 import { toast } from "sonner";
+import { UnknownFileQueue } from '@/api/entities';
 const STATUS_CONFIG = {
   pending: { label: 'ממתין', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', icon: AlertTriangle },
   reviewed: { label: 'נבדק', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: Eye },
@@ -56,7 +57,7 @@ export default function UnknownFileQueueManager() {
     queryKey: ['unknownFileQueue', statusFilter],
     queryFn: async () => {
       const filter = statusFilter === 'all' ? {} : { status: statusFilter };
-      return base44.entities.UnknownFileQueue.filter(filter, '-created_date');
+      return UnknownFileQueue.filter(filter, '-created_date');
     }
   });
 
@@ -83,7 +84,7 @@ export default function UnknownFileQueueManager() {
         updateData.resolved_date = new Date().toISOString();
       }
       
-      await base44.entities.UnknownFileQueue.update(selectedFile.id, updateData);
+      await UnknownFileQueue.update(selectedFile.id, updateData);
       queryClient.invalidateQueries(['unknownFileQueue']);
       setIsDetailOpen(false);
       setSelectedFile(null);
@@ -98,7 +99,7 @@ export default function UnknownFileQueueManager() {
   const handleDelete = async (fileId) => {
     if (!confirm('האם למחוק את הרשומה?')) return;
     try {
-      await base44.entities.UnknownFileQueue.delete(fileId);
+      await UnknownFileQueue.delete(fileId);
       queryClient.invalidateQueries(['unknownFileQueue']);
     } catch (error) {
       console.error('Error deleting:', error);

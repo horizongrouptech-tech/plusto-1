@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import LoadingScreen from "@/components/shared/LoadingScreen";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -20,7 +20,7 @@ import { createPageUrl } from '@/utils';
 import RecommendationUpgradeModal from '@/components/admin/RecommendationUpgradeModal';
 import RecommendationEditModal from '@/components/admin/RecommendationEditModal';
 import RecommendationViewModal from '@/components/admin/RecommendationViewModal';
-import { sendWhatsAppMessage } from "@/functions/sendWhatsAppMessage";
+
 
 import CustomerNavigator from '@/components/admin/CustomerNavigator';
 import RecommendationFilters from '@/components/admin/RecommendationFilters';
@@ -40,6 +40,8 @@ import DailyOfek360Checklist from '@/components/admin/DailyOfek360Checklist';
 import SystemRecommendationsModal from '@/components/admin/SystemRecommendationsModal';
 import GoalOrientedRecommendationModal from '@/components/admin/GoalOrientedRecommendationModal';
 import ClientActivityStatusEditor from '@/components/admin/ClientActivityStatusEditor';
+import { CustomerContact, OnboardingRequest, Recommendation, User } from '@/api/entities';
+import { generateStrategicRecommendations, sendWhatsAppMessage } from '@/api/functions';
 
 export default function CustomerManagement() {
   const navigate = useNavigate();
@@ -102,7 +104,7 @@ export default function CustomerManagement() {
             return null;
           }
 
-          const u = await base44.entities.User.get(id);
+          const u = await User.get(id);
           return { ...u, source: 'user' };
         } catch (e) {
           if (e?.status === 404 || e?.response?.status === 404) return null;
@@ -117,7 +119,7 @@ export default function CustomerManagement() {
       const fetchAsOnboarding = async (id) => {
         try {
           const rawId = stripPrefix(id, 'onboarding_');
-          const o = await base44.entities.OnboardingRequest.get(rawId);
+          const o = await OnboardingRequest.get(rawId);
           return { ...o, is_onboarding_record_only: true, source: 'onboarding' };
         } catch (e) {
           if (e?.status === 404 || e?.response?.status === 404) return null;
@@ -132,7 +134,7 @@ export default function CustomerManagement() {
       const fetchAsContact = async (id) => {
         try {
           const rawId = stripPrefix(id, 'contact_');
-          const c = await base44.entities.CustomerContact.get(rawId);
+          const c = await CustomerContact.get(rawId);
           return {
             id: c.id,
             email: c.customer_email,
@@ -244,7 +246,7 @@ export default function CustomerManagement() {
 
       if (isFinancialManager) {
         // מנהל כספים - טוען דרך OnboardingRequest בלבד ומסנן בצד לקוח
-        const allOnboardingRequests = await base44.entities.OnboardingRequest.filter({ is_active: true });
+        const allOnboardingRequests = await OnboardingRequest.filter({ is_active: true });
         onboardingRequests = allOnboardingRequests.filter((req) =>
           req.assigned_financial_manager_email === currentUser.email ||
           req.additional_assigned_financial_manager_emails?.includes(currentUser.email)
@@ -264,8 +266,8 @@ export default function CustomerManagement() {
       } else {
         // אדמין - טוען מ-User וגם OnboardingRequest
         [users, onboardingRequests] = await Promise.all([
-          base44.entities.User.filter({ role: { $ne: 'admin' }, user_type: { $ne: 'financial_manager' } }),
-          base44.entities.OnboardingRequest.filter({ is_active: true })
+          User.filter({ role: { $ne: 'admin' }, user_type: { $ne: 'financial_manager' } }),
+          OnboardingRequest.filter({ is_active: true })
         ]);
 
         users = users.map((u) => ({
@@ -315,7 +317,7 @@ export default function CustomerManagement() {
 
   const { data: recommendations = [], isLoading: isLoadingRecommendations } = useQuery({
     queryKey: ['customerRecommendations', customer?.email],
-    queryFn: () => base44.entities.Recommendation.filter({
+    queryFn: () => Recommendation.filter({
       customer_email: customer.email,
       status: { $ne: 'archived' }
     }, '-created_date'),
@@ -352,7 +354,7 @@ export default function CustomerManagement() {
     if (!confirm('האם אתה בטוח שברצונך למחוק את ההמלצה?')) return;
 
     try {
-      await base44.entities.Recommendation.delete(recommendationId);
+      await Recommendation.delete(recommendationId);
       queryClient.invalidateQueries({ queryKey: ['customerRecommendations', customer.email] });
     } catch (error) {
       console.error('Error deleting recommendation:', error);
@@ -362,7 +364,7 @@ export default function CustomerManagement() {
 
   const handleArchiveRecommendation = async (recommendationId) => {
     try {
-      await base44.entities.Recommendation.update(recommendationId, { status: 'archived' });
+      await Recommendation.update(recommendationId, { status: 'archived' });
       queryClient.invalidateQueries({ queryKey: ['customerRecommendations', customer.email] });
     } catch (error) {
       console.error('Error archiving recommendation:', error);
@@ -378,7 +380,7 @@ export default function CustomerManagement() {
     }
 
     try {
-      const { data, error } = await base44.functions.invoke('sendWhatsAppMessage', {
+      const { data, error } = await sendWhatsAppMessage({
         phoneNumber: customer.phone,
         customerEmail: customer.email,
         recommendation: recommendation,
@@ -400,7 +402,7 @@ export default function CustomerManagement() {
   const handleGenerateRecommendations = async (selectedCategories) => {
     setIsGeneratingRecommendations(true);
     try {
-      await base44.functions.invoke('generateStrategicRecommendations', {
+      await generateStrategicRecommendations({
         customer_email: customer.email,
         focus_categories: selectedCategories
       });

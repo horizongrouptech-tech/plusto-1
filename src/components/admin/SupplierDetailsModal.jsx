@@ -32,12 +32,13 @@ import {
   X
 } from "lucide-react";
 import SpecificFileUploadBox from "./SpecificFileUploadBox";
-import { PurchaseRecord } from "@/entities/PurchaseRecord";
+
 import { formatCurrency } from "../utils/currencyFormatter";
-import { base44 } from '@/api/base44Client';
+
 import EditSupplierModal from "../shared/EditSupplierModal";
 
 import { toast } from "sonner";
+import { PurchaseRecord } from '@/api/entities';
 // פונקציית עזר לעיבוד נתוני הגרף לפי חודשים
 const processExpenseDataByMonth = (purchaseRecords) => {
   const monthlyData = {};

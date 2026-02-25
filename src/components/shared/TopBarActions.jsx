@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import NotificationCenter from './NotificationCenter';
 import { useTheme } from './ThemeContext';
+import { CustomerGoal } from '@/api/entities';
 
 export default function TopBarActions({ user }) {
     // Safe theme hook usage
@@ -28,7 +29,7 @@ export default function TopBarActions({ user }) {
     
     const { data: delayedTasks } = useQuery({
         queryKey: ['delayedTasksCount', user?.email],
-        queryFn: () => base44.entities.CustomerGoal.filter({
+        queryFn: () => CustomerGoal.filter({
             assignee_email: user.email,
             status: 'delayed',
             is_active: true

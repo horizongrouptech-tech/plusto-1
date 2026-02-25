@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+
 import { Loader2, Edit2, Save, X } from 'lucide-react';
 import InlineEditableField from '@/components/admin/goals/InlineEditableField';
 
 import { toast } from "sonner";
+import { OnboardingRequest } from '@/api/entities';
 export default function InlineEditableCustomerDetails({ customer, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -16,7 +17,7 @@ export default function InlineEditableCustomerDetails({ customer, onUpdate }) {
     setIsSaving(true);
     try {
       // עדכון OnboardingRequest
-      await base44.entities.OnboardingRequest.update(customer.id, {
+      await OnboardingRequest.update(customer.id, {
         [field]: value
       });
 

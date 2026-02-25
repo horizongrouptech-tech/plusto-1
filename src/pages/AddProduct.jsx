@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Product } from "@/entities/Product";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { ArrowLeft, PlusCircle, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
-import { User } from "@/entities/User";
+import { Product, User } from '@/api/entities';
+
 
 export default function AddProduct() {
   const navigate = useNavigate();

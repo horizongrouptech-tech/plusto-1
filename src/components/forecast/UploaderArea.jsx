@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, FileSpreadsheet, Info } from "lucide-react";
-import { UploadFile } from "@/integrations/Core";
-import { uploadManualForecastXlsx } from "@/functions/uploadManualForecastXlsx";
+
+
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
-import { base44 } from '@/api/base44Client';
+import { FileUpload } from '@/api/entities';
+import { uploadManualForecastXlsx } from '@/api/functions';
+import { UploadFile } from '@/api/integrations';
+
 
 export default function UploaderArea({ customer, onUploadComplete }) {
     const [isDragging, setIsDragging] = useState(false);
@@ -109,7 +112,7 @@ export default function UploaderArea({ customer, onUploadComplete }) {
             // שמירת הקובץ כנכשל במערכת
             try {
                 if (file_url) {
-                    await base44.entities.FileUpload.create({
+                    await FileUpload.create({
                         filename: file?.name || 'קובץ תחזית',
                         file_url: file_url,
                         file_type: file?.name?.split('.').pop()?.toLowerCase() || 'unknown',

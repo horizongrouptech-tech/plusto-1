@@ -12,7 +12,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Trophy, AlertCircle } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { FileUpload, ProductCatalog, Recommendation } from '@/api/entities';
+import { InvokeLLM } from '@/api/integrations';
+
 
 export default function GoalOrientedRecommendationModal({ customer, isOpen, onClose, onSuccess }) {
   const [goalDescription, setGoalDescription] = useState('');
@@ -42,9 +44,9 @@ export default function GoalOrientedRecommendationModal({ customer, isOpen, onCl
     try {
       // שליפת נתוני לקוח רלוונטיים
       const [catalogItems, files, existingRecommendations] = await Promise.all([
-        base44.entities.ProductCatalog.filter({ customer_email: customer.email, is_active: true }).catch(() => []),
-        base44.entities.FileUpload.filter({ customer_email: customer.email, status: 'analyzed' }, '-created_date', 5).catch(() => []),
-        base44.entities.Recommendation.filter({ customer_email: customer.email }, '-created_date', 10).catch(() => [])
+        ProductCatalog.filter({ customer_email: customer.email, is_active: true }).catch(() => []),
+        FileUpload.filter({ customer_email: customer.email, status: 'analyzed' }, '-created_date', 5).catch(() => []),
+        Recommendation.filter({ customer_email: customer.email }, '-created_date', 10).catch(() => [])
       ]);
 
       const contextData = {
@@ -112,13 +114,13 @@ export default function GoalOrientedRecommendationModal({ customer, isOpen, onCl
         required: ["title", "description", "action_steps", "expected_profit", "implementation_effort", "timeframe"]
       };
 
-      const aiResponse = await base44.integrations.Core.InvokeLLM({
+      const aiResponse = await InvokeLLM({
         prompt: prompt,
         response_json_schema: recommendationSchema
       });
 
       // יצירת ההמלצה במערכת
-      await base44.entities.Recommendation.create({
+      await Recommendation.create({
         customer_email: customer.email,
         title: aiResponse.title,
         description: aiResponse.description,

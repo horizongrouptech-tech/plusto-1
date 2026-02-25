@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { User } from "@/entities/User";
+
 import { ArrowLeft, ScanLine } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import WebsiteScanner from "@/components/admin/WebsiteScanner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { User } from '@/api/entities';
 
 export default function WebsiteScanPage() {
   const [user, setUser] = useState(null);

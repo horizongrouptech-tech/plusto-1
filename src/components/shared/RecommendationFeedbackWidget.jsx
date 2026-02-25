@@ -10,9 +10,10 @@ import {
   CheckCircle2,
   Clock
 } from "lucide-react";
-import { RecommendationFeedback } from "@/entities/RecommendationFeedback";
-import { User } from "@/entities/User";
+
+
 import { toast } from "sonner";
+import { RecommendationFeedback, User } from '@/api/entities';
 
 export default function RecommendationFeedbackWidget({ recommendation, onFeedbackSubmitted }) {
   const [selectedRating, setSelectedRating] = useState(null);

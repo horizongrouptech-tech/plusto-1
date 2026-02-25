@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { User } from "@/entities/User";
+
 import { Loader2, CheckCircle, Clock, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createPageUrl } from "@/utils";
 import { Link, useNavigate } from "react-router-dom";
+import { User } from '@/api/entities';
 
 export default function PendingApprovalPage() {
   const [user, setUser] = useState(null);

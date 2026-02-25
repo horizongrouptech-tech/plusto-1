@@ -24,8 +24,9 @@ import ProfitabilityAnalysis from './ProfitabilityAnalysis';
 import TrendsAnalysis from './TrendsAnalysis';
 import InventoryRecommendationsWidget from './InventoryRecommendationsWidget';
 import { calculateProductPopularity, categorizeByProfitability } from './productAnalyticsEngine';
-import { base44 } from '@/api/base44Client';
+
 import { formatCurrencyHebrew } from '@/components/utils/chartConfig';
+import { ManualForecast, ZReportDetails } from '@/api/entities';
 
 export default function CatalogAnalyticsDashboard({ products, customer, selectedCatalogId }) {
   const [zReports, setZReports] = useState([]);
@@ -45,12 +46,12 @@ export default function CatalogAnalyticsDashboard({ products, customer, selected
 
     setIsLoading(true);
     try {
-      const zReportsData = await base44.entities.ZReportDetails.filter({
+      const zReportsData = await ZReportDetails.filter({
         customer_email: customer.email
       });
       setZReports(zReportsData);
 
-      const forecasts = await base44.entities.ManualForecast.filter({
+      const forecasts = await ManualForecast.filter({
         customer_email: customer.email
       });
       

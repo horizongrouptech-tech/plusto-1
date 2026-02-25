@@ -5,11 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { base44 } from '@/api/base44Client';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Search, Save, UserPlus, Users, X, Plus } from 'lucide-react';
-import { getFinancialManagers } from '@/functions/getFinancialManagers';
+
 import { toast } from "sonner";
+import { OnboardingRequest } from '@/api/entities';
+import { getFinancialManagers } from '@/api/functions';
 
 export default function ManagerAssignmentTab({ customer, currentUser }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,7 +29,7 @@ export default function ManagerAssignmentTab({ customer, currentUser }) {
   const { data: onboardingRequests = [], isLoading: isLoadingRequests } = useQuery({
     queryKey: ['onboardingRequests'],
     queryFn: async () => {
-      const allRequests = await base44.entities.OnboardingRequest.list();
+      const allRequests = await OnboardingRequest.list();
       
       // אם מנהל מחלקה - הצג רק את הלקוחות שלו
       if (isDepartmentManager && !isAdmin) {
@@ -118,7 +120,7 @@ export default function ManagerAssignmentTab({ customer, currentUser }) {
           JSON.stringify(originalRequest?.additional_assigned_financial_manager_emails || []) !== JSON.stringify(additionalEmails);
         
         if (needsUpdate) {
-          return base44.entities.OnboardingRequest.update(requestId, {
+          return OnboardingRequest.update(requestId, {
             assigned_financial_manager_email: managerEmail,
             additional_assigned_financial_manager_emails: additionalEmails
           });
