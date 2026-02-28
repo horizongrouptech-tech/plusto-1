@@ -104,3 +104,58 @@ export const syncMeetingToFireberry       = (p) => invoke('syncMeetingToFireberr
 // ── Admin ─────────────────────────────────────────────────────────────────────
 export const toggleClientStatus           = (p) => invoke('toggleClientStatus', p);
 export const manualBackupTrigger          = (p) => invoke('manualBackupTrigger', p);
+export const updateUsersFireberryIds      = (p) => invoke('updateUsersFireberryIds', p);
+export const syncManagerFromFireberry     = (p) => invoke('syncManagerFromFireberry', p);
+export const archiveFireberryClient       = (p) => invoke('archiveFireberryClient', p);
+export const importFireberryMeetings      = (p) => invoke('importFireberryMeetings', p);
+export const deepSearchOro                = (p) => invoke('deepSearchOro', p);
+export const getAssignableUsers           = (p) => invoke('getAssignableUsers', p);
+export const searchCustomers              = (p) => invoke('searchCustomers', p);
+export const onboardNewCustomer           = (p) => invoke('onboardNewCustomer', p);
+
+// ── Forecast (AI) ─────────────────────────────────────────────────────────────
+export const generateEmployeeForecastAI   = (p) => invoke('generateEmployeeForecastAI', p);
+export const generateExpenseForecastAI    = (p) => invoke('generateExpenseForecastAI', p);
+export const generateSalesForecastAI      = (p) => invoke('generateSalesForecastAI', p);
+export const generateInitialCatalog       = (p) => invoke('generateInitialCatalog', p);
+export const generateCatalogBackground    = (p) => invoke('generateCatalogBackground', p);
+export const generateCatalogWorker        = (p) => invoke('generateCatalogWorker', p);
+export const cancelManualForecastProcess  = (p) => invoke('cancelManualForecastProcess', p);
+export const parseXlsxManualForecast      = (p) => invoke('parseXlsxManualForecast', p);
+export const processManualForecastSheet   = (p) => invoke('processManualForecastSheet', p);
+export const processTaxAssessment         = (p) => invoke('processTaxAssessment', p);
+export const analyzeFinancialReport       = (p) => invoke('analyzeFinancialReport', p);
+
+// ── Catalog (data ops) ────────────────────────────────────────────────────────
+export const deleteCustomerProducts       = (p) => invoke('deleteCustomerProducts', p);
+export const deleteOrphanProducts         = (p) => invoke('deleteOrphanProducts', p);
+export const fixCatalogProductCount       = (p) => invoke('fixCatalogProductCount', p);
+export const fixGoalsTaskType             = (p) => invoke('fixGoalsTaskType', p);
+export const processCatalogChunkWorker    = (p) => invoke('processCatalogChunkWorker', p);
+
+// ── Suppliers / Research ───────────────────────────────────────────────────────
+export const getSuggestedSuppliers        = (p) => invoke('getSuggestedSuppliers', p);
+export const getCompanies                 = (p) => invoke('getCompanies', p);
+export const getFirmographicData          = (p) => invoke('getFirmographicData', p);
+export const getFundingAndAcquisitionData = (p) => invoke('getFundingAndAcquisitionData', p);
+export const getTechnographicsData        = (p) => invoke('getTechnographicsData', p);
+
+// ── Web / Search ──────────────────────────────────────────────────────────────
+export const scrapeWebsite                = (p) => invoke('scrapeWebsite', p);
+
+// ── WhatsApp / Webhooks ───────────────────────────────────────────────────────
+export const sendWhatsAppTaskReminder     = (p) => invoke('sendWhatsAppTaskReminder', p);
+export const handleWhatsAppFeedback       = (p) => invoke('handleWhatsAppFeedback', p);
+export const handleFireberryAccountWebhook = (p) => invoke('handleFireberryAccountWebhook', p);
+export const receiveWhatsAppDataWebhook   = (p) => invoke('receiveWhatsAppDataWebhook', p);
+export const receiveLeadWebhook           = (p) => invoke('receiveLeadWebhook', p);
+
+// ── Scheduler / Cron ──────────────────────────────────────────────────────────
+export const checkDelayedGoals            = (p) => invoke('checkDelayedGoals', p);
+export const checkDelayedTasks            = (p) => invoke('checkDelayedTasks', p);
+
+// ── Backup (S3) ───────────────────────────────────────────────────────────────
+export const backupCodeToS3               = (p) => invoke('backupCodeToS3', p);
+export const backupDatabaseToS3           = (p) => invoke('backupDatabaseToS3', p);
+export const listBackups                  = (p) => invoke('listBackups', p);
+export const restoreBackupPreview         = (p) => invoke('restoreBackupPreview', p);
