@@ -11,7 +11,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
+import { OpenRouter } from '@openrouter/sdk';
 
 // ─── Supabase clients ────────────────────────────────────────────────────────
 
@@ -59,13 +59,10 @@ export async function requireAuth(req, res) {
 
 function getOpenRouterClient() {
   const apiKey = process.env.OPENROUTER_API_KEY || process.env.VITE_OPENROUTER_API_KEY;
-  return new OpenAI({
+  return new OpenRouter({
     apiKey,
-    baseURL: 'https://openrouter.ai/api/v1',
-    defaultHeaders: {
-      'HTTP-Referer': process.env.SITE_URL || process.env.VITE_SITE_URL || 'https://plusto-1.vercel.app',
-      'X-Title': process.env.SITE_NAME || process.env.VITE_SITE_NAME || 'Plusto',
-    },
+    httpReferer: process.env.SITE_URL || process.env.VITE_SITE_URL || 'https://plusto-1.vercel.app',
+    xTitle: process.env.SITE_NAME || process.env.VITE_SITE_NAME || 'Plusto',
   });
 }
 
@@ -105,10 +102,10 @@ export async function invokeLLM({ prompt, response_json_schema, model, file_urls
   }
   messages.push({ role: 'user', content: userContent });
 
-  const requestParams = { model: selectedModel, messages };
-  if (response_json_schema) requestParams.response_format = { type: 'json_object' };
+  const chatParams = { model: selectedModel, messages };
+  if (response_json_schema) chatParams.responseFormat = { type: 'json_object' };
 
-  const completion = await client.chat.completions.create(requestParams);
+  const completion = await client.chat.send({ chatGenerationParams: chatParams });
   const content = completion.choices[0].message.content;
 
   if (response_json_schema) {
