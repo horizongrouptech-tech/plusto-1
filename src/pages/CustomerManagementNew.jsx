@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Loader2, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -25,6 +25,7 @@ import RecommendationEditModal from '@/components/admin/RecommendationEditModal'
 import RecommendationUpgradeModal from '@/components/admin/RecommendationUpgradeModal';
 import { toast } from "sonner";
 import { CustomerGoal, OnboardingRequest, Recommendation, User } from '@/api/entities';
+import { supabase } from '@/api/supabaseClient';
 import { generateStrategicRecommendations } from '@/api/functions';
 
 export default function CustomerManagementNew() {
@@ -35,7 +36,13 @@ export default function CustomerManagementNew() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [customerListCollapsed, setCustomerListCollapsed] = useState(false);
   const [tasksCollapsed, setTasksCollapsed] = useState(false);
-  const [activeWorkboardTab, setActiveWorkboardTab] = useState('recommendations');
+  // Tab state נשמר ב-URL — ?customer=email&tab=files
+  const activeWorkboardTab = searchParams.get('tab') || 'recommendations';
+  const setActiveWorkboardTab = (tab) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('tab', tab);
+    setSearchParams(params);
+  };
   const [customerFilter, setCustomerFilter] = useState('all');
   
   // קריאת פרמטר clientId מה-URL
@@ -162,7 +169,9 @@ export default function CustomerManagementNew() {
   const handleSelectCustomer = (customer) => {
     setSelectedCustomer(customer);
     if (customer) {
-      setSearchParams({ customer: customer.email });
+      const params = new URLSearchParams(searchParams);
+      params.set('customer', customer.email);
+      setSearchParams(params);
     } else {
       setSearchParams({});
     }
@@ -220,18 +229,6 @@ export default function CustomerManagementNew() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-horizon-dark" dir="rtl">
-      {/* כפתור חזרה */}
-      <div className="bg-horizon-card border-b border-horizon px-4 py-3">
-        <Button
-          variant="ghost"
-          onClick={() => navigate(createPageUrl('Admin'))}
-          className="text-horizon-accent hover:text-horizon-primary hover:bg-horizon-primary/10"
-        >
-          <ArrowRight className="w-4 h-4 ml-2" />
-          חזרה לדשבורד ראשי
-        </Button>
-      </div>
-
       <div
         className="flex-1 grid overflow-hidden"
         style={{
@@ -386,6 +383,34 @@ export default function CustomerManagementNew() {
             toast.success('הלקוח הוצא מארכיון');
           } catch (error) {
             toast.error('שגיאה: ' + error.message);
+          }
+        }}
+        onDelete={async (customer) => {
+          try {
+            const email = customer.email;
+            // מחיקת כל הנתונים הקשורים ללקוח לפי customer_email
+            const relatedTables = [
+              'recommendation', 'recommendation_rating', 'recommendation_feedback',
+              'recommendation_suggestion', 'customer_goal', 'goal_comment',
+              'customer_action', 'customer_contact', 'file_upload',
+              'product_catalog', 'business_forecast', 'manual_forecast',
+              'cash_flow', 'recurring_expense', 'supplier', 'supplier_quote',
+              'meeting', 'website_scan_result', 'customer_notification',
+              'organization_chart', 'system_credential', 'daily_checklist360',
+              'strategic_plan_input', 'communication_thread',
+            ];
+            for (const table of relatedTables) {
+              await supabase.from(table).delete().eq('customer_email', email);
+            }
+            // מחיקת רשומת הלקוח עצמה
+            await OnboardingRequest.delete(customer.id);
+            queryClient.invalidateQueries(['activeCustomers']);
+            setOverviewModalOpen(false);
+            setSelectedCustomer(null);
+            toast.success('הלקוח וכל הנתונים שלו נמחקו לצמיתות');
+          } catch (error) {
+            console.error('[deleteCustomer]', error);
+            toast.error('שגיאה במחיקת הלקוח: ' + error.message);
           }
         }}
       />

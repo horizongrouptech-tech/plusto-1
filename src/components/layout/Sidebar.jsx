@@ -11,8 +11,12 @@ import {
   X,
   ShieldCheck,
   Activity,
-  FileX
+  FileX,
+  Moon,
+  Sun,
 } from "lucide-react";
+import { useTheme } from "@/components/shared/ThemeContext";
+import NotificationCenter from "@/components/shared/NotificationCenter";
 
 // 6 פריטי ניווט ראשיים — עם הרשאות לפי role
 // roles: 'all' = כולם, או רשימת roles ספציפיים
@@ -57,6 +61,7 @@ const SIDEBAR = {
 export default function Sidebar({ isOpen, onClose, user }) {
   const location = useLocation();
   const effectiveRole = getEffectiveRole(user);
+  const { isDark, toggleTheme } = useTheme();
 
   // פילטור פריטים לפי role
   const visibleItems = navigationItems.filter(
@@ -84,11 +89,11 @@ export default function Sidebar({ isOpen, onClose, user }) {
       {/* Sidebar — תמיד כהה, ערכים ישירים */}
       <aside
         className={`
-          fixed top-0 right-0 h-[100dvh] w-[280px] z-50 overflow-y-auto
+          fixed top-0 right-0 h-[100dvh] w-[280px] z-50
           transition-transform duration-300
           ${isOpen ? "translate-x-0" : "translate-x-full"}
-          lg:relative lg:translate-x-0 lg:shrink-0
-          flex flex-col
+          lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:shrink-0
+          flex flex-col overflow-hidden
         `}
         style={{
           background: SIDEBAR.bg,
@@ -184,18 +189,58 @@ export default function Sidebar({ isOpen, onClose, user }) {
           </div>
         </nav>
 
-        {/* Footer — Logout */}
-        <div className="p-3 mt-auto" style={{ borderTop: `1px solid ${SIDEBAR.border}` }}>
+        {/* Footer */}
+        <div className="mt-auto" style={{ borderTop: `1px solid ${SIDEBAR.border}` }}>
+          {/* User profile — לינק להגדרות */}
           {user && (
-            <button
-              onClick={handleLogout}
-              className="sidebar-nav-item flex items-center gap-3 w-full px-4 py-2.5 rounded-lg transition-all duration-200"
-              style={{ color: SIDEBAR.textMuted }}
+            <Link
+              to="/Settings"
+              onClick={onClose}
+              className="flex items-center gap-3 px-5 py-3 transition-colors duration-200 hover:bg-white/[0.04]"
+              style={{ color: SIDEBAR.text }}
             >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm">התנתק</span>
-            </button>
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                style={{ background: SIDEBAR.active }}
+              >
+                {(user.full_name || "?").charAt(0)}
+              </div>
+              <div className="min-w-0 flex-1 text-right">
+                <div className="text-sm font-medium truncate">{user.full_name}</div>
+                <div className="text-[11px] truncate" style={{ color: SIDEBAR.textDim }}>{user.email}</div>
+              </div>
+            </Link>
           )}
+
+          {/* Action bar — אייקונים בשורה אחת */}
+          <div
+            className="flex items-center justify-around px-4 py-2"
+            style={{ borderTop: `1px solid ${SIDEBAR.border}` }}
+          >
+            {user && <NotificationCenter user={user} />}
+
+            <button
+              onClick={toggleTheme}
+              className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors duration-200 hover:bg-white/[0.08] cursor-pointer"
+              style={{ color: SIDEBAR.textMuted }}
+              title={isDark ? "עבור למצב בהיר" : "עבור למצב כהה"}
+              aria-label={isDark ? "עבור למצב בהיר" : "עבור למצב כהה"}
+            >
+              {isDark ? <Sun className="w-[18px] h-[18px] text-yellow-400" /> : <Moon className="w-[18px] h-[18px]" />}
+            </button>
+
+            {user && (
+              <button
+                onClick={handleLogout}
+                className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors duration-200 hover:bg-red-500/15 cursor-pointer group"
+                style={{ color: SIDEBAR.textMuted }}
+                title="התנתק"
+                aria-label="התנתק"
+              >
+                <LogOut className="w-[18px] h-[18px] group-hover:text-red-400 transition-colors" />
+              </button>
+            )}
+          </div>
         </div>
       </aside>
     </>

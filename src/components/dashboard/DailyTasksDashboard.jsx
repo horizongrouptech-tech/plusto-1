@@ -1,13 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { DragDropContext, Droppable } from '@hello-pangea/dnd';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Calendar as CalendarLucide,
   Users,
   CheckCircle2,
-  AlertTriangle,
   Plus,
   ArrowLeft,
   Clock,
@@ -16,11 +14,14 @@ import {
   AlertCircle,
   Loader2,
   Filter,
-  XCircle,
   ChevronDown,
   ChevronUp,
   CalendarIcon,
-  User as UserIcon
+  User as UserIcon,
+  LayoutGrid,
+  Sparkles,
+  TrendingUp,
+  ListChecks
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -42,7 +43,6 @@ import { toast } from "sonner";
 import { CustomerGoal, OnboardingRequest, Recommendation, User } from '@/api/entities';
 import { generateRecurringTasks } from '@/api/functions';
 
-// פונקציה לקבלת קבוצת העבודה היומית
 const getTodayWorkGroup = () => {
   const dayOfWeek = new Date().getDay();
   switch (dayOfWeek) {
@@ -58,11 +58,15 @@ const getHebrewDayName = () => {
   return days[new Date().getDay()];
 };
 
-const getCustomerGroupBadgeColor = (group) => {
-  if (group === 'A') return 'bg-[#32acc1] text-white';
-  if (group === 'B') return 'bg-[#fc9f67] text-white';
-  return 'bg-gray-500 text-white';
-};
+// גרדיאנטים לעמודות לקוחות — מבוססי branding (teal + orange + variations)
+const CUSTOMER_GRADIENTS = [
+  'from-[#32acc1] to-[#1e90b0]',
+  'from-[#fc9f67] to-[#e67e3c]',
+  'from-[#38A169] to-[#2F855A]',
+  'from-[#4299e1] to-[#3182ce]',
+  'from-[#9F7AEA] to-[#805AD5]',
+  'from-[#ED64A6] to-[#D53F8C]',
+];
 
 export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const [selectedTask, setSelectedTask] = useState(null);
@@ -115,7 +119,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     retry: 1
   });
 
-  // סינון לקוחות לפי קבוצת העבודה של היום
   const todaysClients = useMemo(() => {
     if (!allCustomers.length) return [];
     if (isAdmin) return allCustomers;
@@ -125,7 +128,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     );
   }, [allCustomers, todayWorkGroup, isAdmin]);
 
-  // טעינת כל המשימות הפעילות
   const { data: goals = [], isLoading: tasksLoading } = useQuery({
     queryKey: ['allRelevantTasks', currentUser.email, isAdmin],
     queryFn: async () => {
@@ -158,7 +160,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     retry: 1
   });
 
-  // סינון משימות פעילות בלבד (start_date התחיל)
   const activeTasks = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -170,7 +171,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     });
   }, [goals]);
 
-  // טעינת מנהלי כספים (רק לאדמין)
   const { data: financialManagers = [] } = useQuery({
     queryKey: ['financialManagers'],
     queryFn: async () => {
@@ -182,7 +182,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     staleTime: 10 * 60 * 1000
   });
 
-  // סינון לפי קבוצת לקוחות, לקוח ספציפי ומנהל כספים
   const filteredTasksByGroup = useMemo(() => {
     let filtered = activeTasks;
     if (groupFilter !== 'all') {
@@ -201,7 +200,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     return filtered;
   }, [activeTasks, groupFilter, customerFilter, financialManagerFilter, allCustomers, isAdmin]);
 
-  // חלוקת משימות לפי סטטוס
   const tasksByStatus = useMemo(() => ({
     open: filteredTasksByGroup.filter((t) => t.status === 'open'),
     in_progress: filteredTasksByGroup.filter((t) => t.status === 'in_progress'),
@@ -210,7 +208,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     cancelled: filteredTasksByGroup.filter((t) => t.status === 'cancelled')
   }), [filteredTasksByGroup]);
 
-  // לקוחות לעמודות הלוח
   const filteredCustomersForColumns = useMemo(() => {
     let list = allCustomers.filter((c) => {
       if (groupFilter === 'all') return true;
@@ -236,14 +233,13 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     });
   }, [allCustomers, groupFilter, customerFilter, filteredTasksByGroup]);
 
-  // סדר סטטוסים בעמודה
+  // סטטוס sections
   const ACTIVE_STATUS_SECTIONS = [
-    { key: 'delayed', label: 'באיחור', colorClass: 'border-rose-200 bg-rose-50 text-rose-600' },
-    { key: 'in_progress', label: 'בביצוע', colorClass: 'border-amber-200 bg-amber-50 text-amber-600' },
-    { key: 'open', label: 'לביצוע', colorClass: 'border-slate-200 bg-slate-50 text-slate-500' }
+    { key: 'delayed', label: 'באיחור', dotColor: 'bg-rose-500', textColor: 'text-rose-600 dark:text-rose-400' },
+    { key: 'in_progress', label: 'בביצוע', dotColor: 'bg-amber-500', textColor: 'text-amber-600 dark:text-amber-400' },
+    { key: 'open', label: 'לביצוע', dotColor: 'bg-slate-400', textColor: 'text-slate-500 dark:text-slate-400' }
   ];
 
-  // קיבוץ משימות לפי לקוח ולפי סטטוס
   const tasksByCustomer = useMemo(() => {
     const byEmail = {};
     filteredCustomersForColumns.forEach((c) => {
@@ -271,7 +267,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     return (goals || []).filter((t) => t.status === 'done');
   }, [goals]);
 
-  // טעינת המלצות לסטטיסטיקות
   const { data: allRecommendations = [] } = useQuery({
     queryKey: ['allRecommendationsForStats', currentUser.email, isAdmin],
     queryFn: async () => {
@@ -286,7 +281,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     retry: 1
   });
 
-  // סטטיסטיקות — רק משימות פעילות (בלי done)
   const stats = useMemo(() => ({
     totalTasks: filteredTasksByGroup.filter(t => t.status !== 'done').length,
     open: tasksByStatus.open.length,
@@ -347,17 +341,14 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     }
   });
 
-  // === Drag-and-Drop Handler ===
   const handleDragEnd = async (result) => {
     const { draggableId, source, destination } = result;
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    // droppableId format: "customer@email.com__status"
     const newStatus = destination.droppableId.split('__').pop();
     const taskId = draggableId;
 
-    // Optimistic update — עדכון מיידי ב-UI
     queryClient.setQueryData(
       ['allRelevantTasks', currentUser.email, isAdmin],
       (old) => old?.map(t => t.id === taskId ? { ...t, status: newStatus } : t)
@@ -373,12 +364,9 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     } catch (error) {
       console.error('Error updating task status via drag:', error);
       toast.error('שגיאה בעדכון סטטוס');
-      // Revert on failure
       queryClient.invalidateQueries(['allRelevantTasks']);
     }
   };
-
-  // === Event Handlers ===
 
   const handleTaskClick = (task) => {
     setSelectedTask(task);
@@ -422,211 +410,223 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
 
   const getStatusDisplay = (status) => {
     const statusConfig = {
-      open: { label: 'פתוח', icon: Circle, color: 'text-slate-500', bgColor: 'bg-slate-50' },
-      in_progress: { label: 'בביצוע', icon: Clock, color: 'text-amber-500', bgColor: 'bg-amber-50' },
-      done: { label: 'הושלם', icon: CheckCircle2, color: 'text-emerald-500', bgColor: 'bg-emerald-50' },
-      delayed: { label: 'באיחור', icon: AlertCircle, color: 'text-rose-500', bgColor: 'bg-rose-50' }
+      open: { label: 'פתוח', icon: Circle, color: 'text-slate-500', bgColor: 'bg-slate-50 dark:bg-horizon-surface' },
+      in_progress: { label: 'בתהליך', icon: Clock, color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-50 dark:bg-amber-500/10' },
+      done: { label: 'הושלם', icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bgColor: 'bg-emerald-50 dark:bg-emerald-500/10' },
+      delayed: { label: 'ממתין', icon: AlertCircle, color: 'text-rose-600 dark:text-rose-400', bgColor: 'bg-rose-50 dark:bg-rose-500/10' }
     };
     return statusConfig[status] || statusConfig.open;
   };
 
   if (customersLoading || tasksLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-horizon-accent">טוען נתונים...</div>
+      <div className="flex flex-col justify-center items-center h-64 gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-[#32acc1]" />
+        <span className="text-gray-500 text-sm">טוען לוח משימות...</span>
       </div>
     );
   }
 
   return (
     <div className="space-y-6" dir="rtl">
-      {/* כותרת */}
-      <div className="flex justify-between items-center flex-wrap gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-horizon-text flex items-center gap-2">לוח משימות</h2>
-          <p className="text-horizon-accent mt-1">
-            גרור כרטיסים בין סטטוסים לעדכון מהיר
-          </p>
+
+      {/* ========== HERO HEADER — גרדיאנט סגול ========== */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-l from-[#32acc1] via-[#1e90b0] to-[#176e87] px-6 py-6 text-white">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <LayoutGrid className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold">ניהול משימות לקוחות</h2>
+              <p className="text-white/70 text-sm mt-0.5">לוח זמנים חכם וממוין לכל לקוח</p>
+            </div>
+          </div>
+          <Button
+            onClick={() => setCustomerForNewTask(filteredCustomersForColumns[0] || null)}
+            className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border-0 rounded-xl px-5 h-10"
+            disabled={filteredCustomersForColumns.length === 0}
+          >
+            <Plus className="w-4 h-4 ml-2" />
+            <Sparkles className="w-4 h-4 ml-1" />
+            משימה חדשה
+          </Button>
         </div>
+        {/* דקורציה */}
+        <div className="absolute -top-10 -left-10 w-40 h-40 bg-white/5 rounded-full blur-2xl" />
+        <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
       </div>
 
-      {/* הודעת יום העבודה */}
-      {!isAdmin && todayWorkGroup.groups.length > 0 && (
-        <Card className="card-horizon bg-white">
-          <CardContent className="p-4 flex items-center gap-3">
-            <CalendarLucide className="w-5 h-5 text-horizon-primary" />
-            <span className="text-horizon-text font-medium text-right">
-              היום יום עבודה על לקוחות מקבוצה: {todayWorkGroup.groups.join(' ו-')} - יום {getHebrewDayName()}
-            </span>
-          </CardContent>
-        </Card>
-      )}
+      {/* ========== KPI CARDS ========== */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { value: stats.totalTasks, label: 'סה"כ משימות', icon: ListChecks, iconBg: 'bg-[#32acc1]/10', iconColor: 'text-[#1e90b0] dark:text-[#32acc1]' },
+          { value: stats.in_progress, label: 'בתהליך', icon: Clock, iconBg: 'bg-[#fc9f67]/10', iconColor: 'text-[#e67e3c] dark:text-[#fc9f67]' },
+          { value: completedTasks.length, label: 'הושלמו', icon: CheckCircle2, iconBg: 'bg-emerald-100 dark:bg-emerald-500/20', iconColor: 'text-emerald-600 dark:text-emerald-400' },
+          { value: filteredCustomersForColumns.length, label: 'לקוחות פעילים', icon: Users, iconBg: 'bg-[#32acc1]/10', iconColor: 'text-[#1e90b0] dark:text-[#32acc1]' },
+        ].map(({ value, label, icon: Icon, iconBg, iconColor }) => (
+          <div key={label} className="bg-white dark:bg-horizon-card rounded-2xl border border-gray-100 dark:border-horizon p-5 flex items-center justify-between shadow-sm">
+            <div>
+              <div className="text-3xl font-bold text-gray-900 dark:text-horizon-text">{value}</div>
+              <div className="text-sm text-gray-500 dark:text-horizon-accent mt-1">{label}</div>
+            </div>
+            <div className={`w-12 h-12 rounded-xl ${iconBg} flex items-center justify-center`}>
+              <Icon className={`w-6 h-6 ${iconColor}`} />
+            </div>
+          </div>
+        ))}
+      </div>
 
-      {/* פילטרים — 2 שורות מסודרות */}
-      <Card className="card-horizon">
-        <CardContent className="p-4 space-y-3">
-          {/* שורה 1: כל הפילטרים */}
-          <div className="flex items-center gap-4 flex-wrap">
-            {/* סינון קבוצה */}
-            <div className="flex items-center gap-2">
-              <Filter className="w-5 h-5 text-horizon-primary" />
-              <span className="text-sm font-medium text-horizon-text">קבוצה:</span>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" variant={groupFilter === 'all' ? 'default' : 'outline'}
-                onClick={() => setGroupFilter('all')}
-                className={groupFilter === 'all' ? 'bg-horizon-primary text-white' : 'border-horizon text-horizon-accent'}>
-                הכל
-              </Button>
-              <Button size="sm" variant={groupFilter === 'A' ? 'default' : 'outline'}
-                onClick={() => setGroupFilter('A')}
-                className={groupFilter === 'A' ? 'bg-[#32acc1] text-white' : 'border-[#32acc1] text-[#32acc1]'}>
-                A
-              </Button>
-              <Button size="sm" variant={groupFilter === 'B' ? 'default' : 'outline'}
-                onClick={() => setGroupFilter('B')}
-                className={groupFilter === 'B' ? 'bg-[#fc9f67] text-white' : 'border-[#fc9f67] text-[#fc9f67]'}>
-                B
-              </Button>
-              <Button size="sm" variant={groupFilter === 'no_group' ? 'default' : 'outline'}
-                onClick={() => setGroupFilter('no_group')}
-                className={groupFilter === 'no_group' ? 'bg-gray-500 text-white' : 'border-gray-400 text-gray-400'}>
-                ללא
-              </Button>
-            </div>
+      {/* ========== FILTERS — compact ========== */}
+      <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-horizon-card border border-gray-100 dark:border-horizon rounded-2xl px-5 py-3 shadow-sm">
+        <Filter className="w-4 h-4 text-gray-400" />
 
-            {/* סינון לקוח */}
-            <div className="flex items-center gap-2 mr-4">
-              <Users className="w-4 h-4 text-horizon-primary" />
-              <span className="text-sm font-medium text-horizon-text">לקוח:</span>
-            </div>
-            <Select value={customerFilter} onValueChange={setCustomerFilter}>
-              <SelectTrigger className="w-[180px] bg-horizon-card border-horizon text-horizon-text">
-                <SelectValue placeholder="כל הלקוחות" />
+        <div className="flex gap-1.5">
+          {[
+            { key: 'all', label: 'הכל' },
+            { key: 'A', label: 'A' },
+            { key: 'B', label: 'B' },
+            { key: 'no_group', label: 'ללא' },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setGroupFilter(key)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
+                groupFilter === key
+                  ? 'bg-[#32acc1] text-white shadow-sm'
+                  : 'text-gray-500 dark:text-horizon-accent hover:bg-gray-100 dark:hover:bg-horizon-surface'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="w-px h-5 bg-gray-200 dark:bg-horizon hidden sm:block" />
+
+        <Select value={customerFilter} onValueChange={setCustomerFilter}>
+          <SelectTrigger className="w-[170px] h-8 bg-transparent border-gray-200 dark:border-horizon text-gray-700 dark:text-horizon-text text-xs rounded-lg">
+            <SelectValue placeholder="כל הלקוחות" />
+          </SelectTrigger>
+          <SelectContent className="bg-white dark:bg-horizon-dark border-gray-200 dark:border-horizon max-h-[300px]">
+            <SelectItem value="all">כל הלקוחות</SelectItem>
+            {allCustomers
+              .sort((a, b) => (a.business_name || a.full_name || '').localeCompare(b.business_name || b.full_name || ''))
+              .map((customer) => (
+                <SelectItem key={customer.email} value={customer.email}>
+                  {customer.business_name || customer.full_name}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+
+        {isAdmin && financialManagers.length > 0 && (
+          <>
+            <div className="w-px h-5 bg-gray-200 dark:bg-horizon hidden sm:block" />
+            <Select value={financialManagerFilter} onValueChange={setFinancialManagerFilter}>
+              <SelectTrigger className="w-[170px] h-8 bg-transparent border-gray-200 dark:border-horizon text-gray-700 dark:text-horizon-text text-xs rounded-lg">
+                <SelectValue placeholder="כל המנהלים" />
               </SelectTrigger>
-              <SelectContent className="bg-horizon-dark border-horizon max-h-[300px]">
-                <SelectItem value="all">כל הלקוחות</SelectItem>
-                {allCustomers
-                  .sort((a, b) => (a.business_name || a.full_name || '').localeCompare(b.business_name || b.full_name || ''))
-                  .map((customer) => (
-                    <SelectItem key={customer.email} value={customer.email}>
-                      {customer.business_name || customer.full_name}
-                    </SelectItem>
-                  ))}
+              <SelectContent className="bg-white dark:bg-horizon-dark border-gray-200 dark:border-horizon max-h-[300px]">
+                <SelectItem value="all">כל המנהלים</SelectItem>
+                {financialManagers.map((manager) => (
+                  <SelectItem key={manager.email} value={manager.email}>
+                    {manager.full_name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
+          </>
+        )}
+      </div>
 
-            {/* סינון מנהל כספים (אדמין בלבד) */}
-            {isAdmin && financialManagers.length > 0 && (
-              <>
-                <div className="flex items-center gap-2 mr-4">
-                  <UserIcon className="w-4 h-4 text-horizon-primary" />
-                  <span className="text-sm font-medium text-horizon-text">מנהל:</span>
-                </div>
-                <Select value={financialManagerFilter} onValueChange={setFinancialManagerFilter}>
-                  <SelectTrigger className="w-[180px] bg-horizon-card border-horizon text-horizon-text">
-                    <SelectValue placeholder="כל המנהלים" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-horizon-dark border-horizon max-h-[300px]">
-                    <SelectItem value="all">כל המנהלים</SelectItem>
-                    {financialManagers.map((manager) => (
-                      <SelectItem key={manager.email} value={manager.email}>
-                        {manager.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            )}
-          </div>
-
-          {/* שורה 2: סטטיסטיקות */}
-          <div className="flex gap-4 text-sm text-horizon-accent border-t border-horizon pt-3">
-            <span>משימות פעילות: <span className="font-bold text-horizon-primary">{stats.totalTasks}</span></span>
-            <span>לקוחות: <span className="font-bold text-horizon-primary">{filteredCustomersForColumns.length}</span></span>
-            <span>באיחור: <span className="font-bold text-rose-500">{stats.delayed}</span></span>
-            <span>בביצוע: <span className="font-bold text-amber-500">{stats.in_progress}</span></span>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* לוח משימות — Kanban עם drag-and-drop */}
-      {tasksLoading ? (
-        <div className="text-center py-12">
-          <Loader2 className="w-12 h-12 animate-spin mx-auto text-horizon-primary mb-4" />
-          <p className="text-horizon-accent">טוען לוח משימות...</p>
+      {/* ========== KANBAN BOARD ========== */}
+      {filteredCustomersForColumns.length === 0 ? (
+        <div className="bg-white dark:bg-horizon-card rounded-2xl border border-gray-100 dark:border-horizon py-20 text-center shadow-sm">
+          <Users className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-horizon-accent" />
+          <p className="font-medium text-gray-700 dark:text-horizon-text text-sm">אין לקוחות בהתאם לסינון</p>
+          <p className="text-xs mt-1 text-gray-400 dark:text-horizon-accent">נסה לשנות את סינון הקבוצה או הלקוח</p>
         </div>
-      ) : filteredCustomersForColumns.length === 0 ? (
-        <Card className="card-horizon">
-          <CardContent className="py-12 text-center text-horizon-accent">
-            <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p className="font-medium">אין לקוחות בהתאם לסינון</p>
-            <p className="text-sm mt-1">נסה לשנות את סינון הקבוצה או הלקוח</p>
-          </CardContent>
-        </Card>
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {filteredCustomersForColumns.map((customer) => {
+          <div className="flex gap-5 overflow-x-auto pb-4 -mx-2 px-2">
+            {filteredCustomersForColumns.map((customer, colIndex) => {
               const bucket = tasksByCustomer[customer.email] || {
                 delayed: [], in_progress: [], open: [], completed: []
               };
-              // Badge count — רק משימות פעילות (בלי done)
               const activeCount = bucket.delayed.length + bucket.in_progress.length + bucket.open.length;
-              const headerColor = customer.customer_group === 'A'
-                ? 'bg-gradient-to-l from-teal-500 to-teal-600 text-white'
-                : customer.customer_group === 'B'
-                  ? 'bg-gradient-to-l from-sky-500 to-indigo-500 text-white'
-                  : 'bg-gradient-to-l from-slate-400 to-slate-500 text-white';
+              const totalCount = activeCount + bucket.completed.length;
+              const completionPct = totalCount > 0 ? Math.round((bucket.completed.length / totalCount) * 100) : 0;
+              const gradient = CUSTOMER_GRADIENTS[colIndex % CUSTOMER_GRADIENTS.length];
 
               return (
-                <div key={customer.email} className="flex-shrink-0 w-80">
-                  <div className="bg-horizon-card/50 rounded-lg border border-horizon">
-                    {/* כותרת עמודת לקוח */}
-                    <div className={`p-4 border-b border-horizon rounded-t-lg flex items-center justify-between ${headerColor}`}>
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Users className="w-5 h-5 flex-shrink-0" />
-                        <h3 className="font-bold text-base truncate" title={customer.business_name || customer.full_name}>
-                          {customer.business_name || customer.full_name}
-                        </h3>
+                <div key={customer.email} className="flex-shrink-0 w-[320px]">
+
+                  {/* כותרת לקוח — כרטיס גרדיאנט */}
+                  <div className={`bg-gradient-to-l ${gradient} rounded-2xl p-4 text-white mb-3 shadow-lg`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-sm">
+                        <Users className="w-4 h-4" />
                       </div>
-                      <Badge className="bg-white/20 text-white flex-shrink-0">
-                        {activeCount}
-                      </Badge>
+                      <h3 className="font-bold text-base truncate flex-1" title={customer.business_name || customer.full_name}>
+                        {customer.business_name || customer.full_name}
+                      </h3>
                     </div>
-
-                    {/* כפתור הוספת משימה — צבע primary */}
-                    <div className="p-3 border-b border-horizon">
-                      <Button
-                        type="button"
-                        onClick={() => setCustomerForNewTask(customer)}
-                        className="w-full bg-horizon-primary hover:bg-horizon-primary/90 text-white"
-                      >
-                        <Plus className="w-4 h-4 ml-2" />
-                        הוסף משימה חדשה
-                      </Button>
+                    <div className="flex items-center justify-between text-sm text-white/80">
+                      <span className="flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        {activeCount} משימות
+                      </span>
+                      <span>{completionPct}% הושלם</span>
                     </div>
+                    {/* Progress bar */}
+                    {totalCount > 0 && (
+                      <div className="mt-2 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-white/80 rounded-full transition-all duration-500"
+                          style={{ width: `${completionPct}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
 
-                    {/* משימות — Droppable zones לכל סטטוס */}
-                    <div className="p-3 space-y-3 min-h-[200px] max-h-[calc(100vh-300px)] overflow-y-auto">
-                      {activeCount === 0 && bucket.completed.length === 0 ? (
-                        <p className="text-sm text-horizon-accent text-center py-8">אין משימות</p>
-                      ) : (
-                        <>
-                          {ACTIVE_STATUS_SECTIONS.map(({ key, label, colorClass }) => (
+                  {/* כפתור הוספת משימה */}
+                  <button
+                    type="button"
+                    onClick={() => setCustomerForNewTask(customer)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 mb-3 rounded-xl border-2 border-dashed border-gray-200 dark:border-horizon text-gray-400 dark:text-horizon-accent hover:text-[#32acc1] hover:border-[#32acc1]/40 dark:hover:border-[#32acc1]/50 hover:bg-[#32acc1]/5 transition-all duration-150 cursor-pointer text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    משימה חדשה
+                  </button>
+
+                  {/* אזור משימות */}
+                  <div className="space-y-1 min-h-[180px] max-h-[calc(100vh-500px)] overflow-y-auto pr-1">
+                    {activeCount === 0 && bucket.completed.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 opacity-40">
+                        <CheckCircle2 className="w-8 h-8 text-gray-300 dark:text-horizon-accent mb-2" />
+                        <p className="text-sm text-gray-400 dark:text-horizon-accent">אין משימות</p>
+                      </div>
+                    ) : (
+                      <>
+                        {ACTIVE_STATUS_SECTIONS.map(({ key, label, dotColor, textColor }) => {
+                          if (bucket[key].length === 0) return null;
+                          return (
                             <div key={key}>
-                              <div className={`border rounded px-2 py-1.5 text-center text-xs font-medium ${colorClass}`}>
-                                {label} ({bucket[key].length})
+                              <div className="flex items-center gap-2 py-2 px-1">
+                                <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+                                <span className={`text-xs font-semibold ${textColor}`}>{label}</span>
+                                <span className="text-[10px] text-gray-400 dark:text-horizon-accent">({bucket[key].length})</span>
                               </div>
                               <Droppable droppableId={`${customer.email}__${key}`}>
                                 {(provided, snapshot) => (
                                   <div
                                     ref={provided.innerRef}
                                     {...provided.droppableProps}
-                                    className={`space-y-2 mt-2 min-h-[40px] rounded-md transition-colors ${
+                                    className={`space-y-2 min-h-[36px] rounded-xl transition-all duration-200 ${
                                       snapshot.isDraggingOver
-                                        ? 'bg-teal-50 border-2 border-dashed border-teal-300 p-2'
-                                        : ''
+                                        ? 'bg-[#32acc1]/5 ring-2 ring-[#32acc1]/20 ring-inset p-2'
+                                        : 'p-0.5'
                                     }`}
                                   >
                                     {bucket[key].map((task, index) => {
@@ -648,48 +648,50 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                                 )}
                               </Droppable>
                             </div>
-                          ))}
+                          );
+                        })}
 
-                          {/* משימות שהושלמו */}
-                          {bucket.completed.length > 0 && (
-                            <>
-                              <div className="border-t-2 border-horizon mt-4 pt-3 bg-horizon-primary/5 rounded px-2 py-2 text-center">
-                                <p className="text-xs font-medium text-horizon-accent">משימות שהושלמו ({bucket.completed.length})</p>
-                              </div>
-                              <Droppable droppableId={`${customer.email}__done`}>
-                                {(provided, snapshot) => (
-                                  <div
-                                    ref={provided.innerRef}
-                                    {...provided.droppableProps}
-                                    className={`space-y-2 mt-2 min-h-[40px] rounded-md transition-colors ${
-                                      snapshot.isDraggingOver
-                                        ? 'bg-emerald-50 border-2 border-dashed border-emerald-300 p-2'
-                                        : ''
-                                    }`}
-                                  >
-                                    {bucket.completed.map((task, index) => {
-                                      const parentGoal = task.parent_id ? goals.find((g) => g.id === task.parent_id) : null;
-                                      return (
-                                        <TaskCard
-                                          key={task.id}
-                                          task={task}
-                                          customer={customer}
-                                          parentGoal={parentGoal}
-                                          onTaskClick={handleTaskClick}
-                                          onMarkAsDone={handleMarkAsDone}
-                                          index={index}
-                                        />
-                                      );
-                                    })}
-                                    {provided.placeholder}
-                                  </div>
-                                )}
-                              </Droppable>
-                            </>
-                          )}
-                        </>
-                      )}
-                    </div>
+                        {/* הושלמו */}
+                        {bucket.completed.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-gray-100 dark:border-horizon">
+                            <div className="flex items-center gap-2 py-1.5 px-1">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">הושלמו</span>
+                              <span className="text-[10px] text-gray-400 dark:text-horizon-accent">({bucket.completed.length})</span>
+                            </div>
+                            <Droppable droppableId={`${customer.email}__done`}>
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.droppableProps}
+                                  className={`space-y-2 min-h-[36px] rounded-xl transition-all duration-200 ${
+                                    snapshot.isDraggingOver
+                                      ? 'bg-emerald-50 dark:bg-emerald-500/5 ring-2 ring-emerald-300 dark:ring-emerald-500/20 ring-inset p-2'
+                                      : 'p-0.5'
+                                  }`}
+                                >
+                                  {bucket.completed.map((task, index) => {
+                                    const parentGoal = task.parent_id ? goals.find((g) => g.id === task.parent_id) : null;
+                                    return (
+                                      <TaskCard
+                                        key={task.id}
+                                        task={task}
+                                        customer={customer}
+                                        parentGoal={parentGoal}
+                                        onTaskClick={handleTaskClick}
+                                        onMarkAsDone={handleMarkAsDone}
+                                        index={index}
+                                      />
+                                    );
+                                  })}
+                                  {provided.placeholder}
+                                </div>
+                              )}
+                            </Droppable>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -698,76 +700,8 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         </DragDropContext>
       )}
 
-      {/* טבלת לקוחות לעבודה היום */}
-      {todaysClients.length > 0 && (
-        <Card className="card-horizon bg-white border-2 border-[#e1e8ed]">
-          <CardHeader className="border-b border-[#e1e8ed] bg-gradient-to-l from-[#32acc1]/5 to-[#fc9f67]/5">
-            <CardTitle className="text-horizon-text flex items-center justify-between text-right">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-horizon-primary" />
-                {isAdmin ? `כל הלקוחות (${todaysClients.length})` : `לקוחות לעבודה היום (${todaysClients.length})`}
-              </div>
-              <Button
-                variant="ghost" size="sm"
-                onClick={() => setIsClientsExpanded(!isClientsExpanded)}
-                className="text-horizon-accent hover:text-horizon-primary"
-              >
-                {isClientsExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          {isClientsExpanded && (
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {todaysClients.map((client) => (
-                  <div
-                    key={client.id}
-                    className="bg-white rounded-xl border-2 border-[#e1e8ed] p-4 hover:shadow-md hover:border-[#32acc1]/30 transition-all"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1 text-right">
-                        <h4 className="font-bold text-[#121725] text-base">
-                          {client.business_name || client.full_name}
-                        </h4>
-                      </div>
-                      <Badge className={`${getCustomerGroupBadgeColor(client.customer_group)} font-semibold text-sm px-3 py-1`}>
-                        קבוצה {client.customer_group}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-[#5a6c7d] mb-2 text-right">{client.email}</p>
-                    <div className="text-xs text-[#5a6c7d] mb-3 text-right">
-                      {client.business_type || 'other'}
-                    </div>
-                    <div className="space-y-2">
-                      <Link to={createPageUrl('CustomerManagementNew') + `?clientId=${client.id}`}>
-                        <Button size="sm" className="w-full bg-[#32acc1] hover:bg-[#32acc1]/90 text-white rounded-lg h-9">
-                          <ArrowLeft className="w-4 h-4 ml-2" />
-                          מעבר ללקוח
-                        </Button>
-                      </Link>
-                      {client.fireberry_account_id && (
-                        <a
-                          href={`https://plusto.fireberry.com/Account/Account/frm_account_information.aspx?id=${client.fireberry_account_id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ display: 'block', width: '100%' }}
-                        >
-                          <Button size="sm" variant="outline"
-                            className="w-full border-[#32acc1] text-[#32acc1] hover:bg-[#32acc1]/10 rounded-lg h-9">
-                            פתח בפיירברי
-                          </Button>
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          )}
-        </Card>
-      )}
+      {/* ========== MODALS ========== */}
 
-      {/* מודאל הוספת משימה חדשה */}
       <CreateTaskModal
         isOpen={!!customerForNewTask}
         onClose={() => setCustomerForNewTask(null)}
@@ -780,55 +714,51 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         }}
       />
 
-      {/* מודאל עריכת משימה */}
       {selectedTask && (
         <Dialog open={isTaskModalOpen} onOpenChange={setIsTaskModalOpen}>
-          <DialogContent className="sm:max-w-lg bg-horizon-dark text-horizon-text border-horizon" dir="rtl">
+          <DialogContent className="sm:max-w-lg bg-white dark:bg-horizon-dark text-gray-900 dark:text-horizon-text border-gray-200 dark:border-horizon rounded-2xl" dir="rtl">
             <DialogHeader>
-              <DialogTitle className="text-right text-xl">עריכת משימה</DialogTitle>
+              <DialogTitle className="text-right text-lg font-bold">עריכת משימה</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-2">
               <div>
-                <Label className="text-right block mb-2 text-horizon-text">שם המשימה</Label>
+                <Label className="text-right block mb-1.5 text-xs text-gray-500 dark:text-horizon-accent">שם המשימה</Label>
                 <input
                   type="text"
                   value={editedTaskData.name || ''}
                   onChange={(e) => setEditedTaskData({ ...editedTaskData, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text text-right"
+                  className="w-full px-3 py-2.5 bg-gray-50 dark:bg-horizon-card border border-gray-200 dark:border-horizon rounded-xl text-gray-900 dark:text-horizon-text text-right text-sm focus:border-[#32acc1] focus:ring-2 focus:ring-[#32acc1]/15 outline-none transition-all"
                 />
               </div>
 
               <div>
-                <Label className="text-right block mb-2 text-horizon-text">סטטוס</Label>
+                <Label className="text-right block mb-1.5 text-xs text-gray-500 dark:text-horizon-accent">סטטוס</Label>
                 <Select
                   value={editedTaskData.status}
                   onValueChange={(value) => setEditedTaskData({ ...editedTaskData, status: value })}>
-                  <SelectTrigger className="w-full bg-horizon-card border-horizon text-horizon-text text-right">
+                  <SelectTrigger className="w-full bg-gray-50 dark:bg-horizon-card border-gray-200 dark:border-horizon text-gray-900 dark:text-horizon-text text-right text-sm rounded-xl">
                     <SelectValue>
                       {(() => {
                         const display = getStatusDisplay(editedTaskData.status);
                         const StatusIcon = display.icon;
                         return (
                           <div className="flex items-center gap-2 justify-end">
-                            <span className="font-medium">{display.label}</span>
-                            <StatusIcon className={`w-5 h-5 ${display.color}`} />
+                            <span className="font-medium text-sm">{display.label}</span>
+                            <StatusIcon className={`w-4 h-4 ${display.color}`} />
                           </div>
                         );
                       })()}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent className="bg-horizon-dark border-horizon">
+                  <SelectContent className="bg-white dark:bg-horizon-dark border-gray-200 dark:border-horizon rounded-xl">
                     {['open', 'in_progress', 'done', 'delayed'].map((statusValue) => {
                       const display = getStatusDisplay(statusValue);
                       const StatusIcon = display.icon;
                       return (
-                        <SelectItem
-                          key={statusValue}
-                          value={statusValue}
-                          className={`text-right cursor-pointer ${display.bgColor} hover:opacity-80 transition-opacity`}>
-                          <div className="flex items-center gap-3 justify-end w-full py-1">
-                            <span className={`font-medium text-base ${display.color}`}>{display.label}</span>
-                            <StatusIcon className={`w-5 h-5 ${display.color}`} />
+                        <SelectItem key={statusValue} value={statusValue} className="text-right cursor-pointer rounded-lg">
+                          <div className="flex items-center gap-2 justify-end w-full py-0.5">
+                            <span className={`text-sm ${display.color}`}>{display.label}</span>
+                            <StatusIcon className={`w-4 h-4 ${display.color}`} />
                           </div>
                         </SelectItem>
                       );
@@ -837,74 +767,75 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                 </Select>
               </div>
 
-              <div>
-                <Label className="text-right block mb-2 text-horizon-text">תאריך יעד</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline"
-                      className="w-full justify-end text-right bg-horizon-card border-horizon text-horizon-text">
-                      {editedTaskData.end_date ? (
-                        format(new Date(editedTaskData.end_date), 'dd/MM/yyyy', { locale: he })
-                      ) : (
-                        <span className="text-horizon-accent">בחר תאריך</span>
-                      )}
-                      <CalendarIcon className="w-4 h-4 mr-2" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 bg-horizon-card border-horizon" align="end">
-                    <Calendar
-                      mode="single"
-                      selected={editedTaskData.end_date ? new Date(editedTaskData.end_date) : undefined}
-                      onSelect={(date) => {
-                        if (date) {
-                          const formatted = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                          setEditedTaskData({ ...editedTaskData, end_date: formatted });
-                        }
-                      }}
-                      locale={he}
-                      className="text-horizon-text"
-                    />
-                  </PopoverContent>
-                </Popover>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-right block mb-1.5 text-xs text-gray-500 dark:text-horizon-accent">תאריך יעד</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline"
+                        className="w-full justify-end text-right bg-gray-50 dark:bg-horizon-card border-gray-200 dark:border-horizon text-gray-900 dark:text-horizon-text text-sm rounded-xl">
+                        {editedTaskData.end_date ? (
+                          format(new Date(editedTaskData.end_date), 'dd/MM/yyyy', { locale: he })
+                        ) : (
+                          <span className="text-gray-400 dark:text-horizon-accent">בחר תאריך</span>
+                        )}
+                        <CalendarIcon className="w-3.5 h-3.5 mr-2 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-white dark:bg-horizon-card border-gray-200 dark:border-horizon rounded-xl" align="end">
+                      <Calendar
+                        mode="single"
+                        selected={editedTaskData.end_date ? new Date(editedTaskData.end_date) : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            const formatted = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                            setEditedTaskData({ ...editedTaskData, end_date: formatted });
+                          }
+                        }}
+                        locale={he}
+                        className="text-gray-900 dark:text-horizon-text"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div>
+                  <Label className="text-right block mb-1.5 text-xs text-gray-500 dark:text-horizon-accent">שעת יעד</Label>
+                  <input
+                    type="time"
+                    value={editedTaskData.due_time || ''}
+                    onChange={(e) => setEditedTaskData({ ...editedTaskData, due_time: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-gray-50 dark:bg-horizon-card border border-gray-200 dark:border-horizon rounded-xl text-gray-900 dark:text-horizon-text text-right text-sm focus:border-[#32acc1] focus:ring-2 focus:ring-[#32acc1]/15 outline-none transition-all"
+                  />
+                </div>
               </div>
 
               <div>
-                <Label className="text-right block mb-2 text-horizon-text">שעת יעד (אופציונלי)</Label>
-                <input
-                  type="time"
-                  value={editedTaskData.due_time || ''}
-                  onChange={(e) => setEditedTaskData({ ...editedTaskData, due_time: e.target.value })}
-                  className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text text-right"
-                />
-              </div>
-
-              <div>
-                <Label className="text-right block mb-2 text-horizon-text">הערות</Label>
+                <Label className="text-right block mb-1.5 text-xs text-gray-500 dark:text-horizon-accent">הערות</Label>
                 <Textarea
                   value={editedTaskData.notes || ''}
                   onChange={(e) => setEditedTaskData({ ...editedTaskData, notes: e.target.value })}
-                  className="w-full bg-horizon-card border-horizon text-horizon-text text-right min-h-[100px]"
+                  className="w-full bg-gray-50 dark:bg-horizon-card border-gray-200 dark:border-horizon text-gray-900 dark:text-horizon-text text-right text-sm min-h-[80px] rounded-xl focus:border-[#32acc1] focus:ring-2 focus:ring-[#32acc1]/15"
                   placeholder="הוסף הערות למשימה..."
                 />
               </div>
 
               {selectedTask && (
-                <div className="bg-horizon-card/30 p-3 rounded-lg text-sm text-horizon-accent">
-                  <p><strong>לקוח:</strong> {selectedTask.customer_email}</p>
-                  <p><strong>אחראי:</strong> {selectedTask.assignee_email || 'לא שויך'}</p>
-                  <p><strong>נוצר ב:</strong> {format(new Date(selectedTask.created_date), 'dd/MM/yyyy HH:mm', { locale: he })}</p>
+                <div className="bg-gray-50 dark:bg-horizon-surface/50 rounded-xl p-3 text-xs text-gray-500 dark:text-horizon-accent space-y-1">
+                  <p><span className="text-gray-700 dark:text-horizon-text font-medium">לקוח:</span> {selectedTask.customer_email}</p>
+                  <p><span className="text-gray-700 dark:text-horizon-text font-medium">אחראי:</span> {selectedTask.assignee_email || 'לא שויך'}</p>
+                  <p><span className="text-gray-700 dark:text-horizon-text font-medium">נוצר:</span> {format(new Date(selectedTask.created_date), 'dd/MM/yyyy HH:mm', { locale: he })}</p>
                 </div>
               )}
             </div>
             <DialogFooter className="flex gap-2 justify-end">
               <Button type="button" variant="outline"
                 onClick={() => setIsTaskModalOpen(false)}
-                className="border-horizon text-horizon-text">
+                className="border-gray-200 dark:border-horizon text-gray-500 dark:text-horizon-accent text-sm rounded-xl">
                 ביטול
               </Button>
               <Button type="button" onClick={handleSaveTask}
                 disabled={updateTaskMutation.isLoading}
-                className="btn-horizon-primary">
+                className="bg-[#1e90b0] hover:bg-[#176e87] text-white text-sm rounded-xl">
                 {updateTaskMutation.isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                 שמור שינויים
               </Button>
