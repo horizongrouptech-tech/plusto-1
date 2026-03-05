@@ -8,6 +8,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    proxy: {
+      // העבר קריאות API ל-vercel dev (port 3000) כשעובדים עם vite dev
+      '/api': 'http://localhost:3000',
+    },
+  },
   resolve: {
     alias: [
       // Must come BEFORE the '@' alias so @/entities/* and @/functions/* are matched first
