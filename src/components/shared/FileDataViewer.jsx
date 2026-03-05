@@ -29,8 +29,9 @@ export default function FileDataViewer({ isOpen, onClose, file }) {
       case 'esna_report':
         return <ESNAReportViewer fileData={localFile} reportData={localFile.esna_report_data} />;
       case 'profit_loss':
+      case 'profit_loss_statement':
       case 'balance_sheet':
-        return <FinancialReportViewer fileData={localFile} reportData={localFile.parsed_data?.summary || localFile.ai_insights} />;
+        return <FinancialReportViewer fileData={localFile} reportData={localFile.parsed_data || localFile.ai_insights} />;
       case 'sales_report':
         return <SalesReportViewer fileData={localFile} />;
       case 'inventory_report':
@@ -38,9 +39,9 @@ export default function FileDataViewer({ isOpen, onClose, file }) {
       case 'promotions_report':
         return <PromotionsReportViewer fileData={localFile} />;
       case 'bank_statement':
-         return <BankStatementViewer fileData={localFile} />;
+         return <BankStatementViewer fileData={localFile} reportData={localFile.parsed_data || localFile.ai_insights} />;
       case 'credit_card_report':
-         return <CreditCardReportViewer fileData={localFile} />;
+         return <CreditCardReportViewer fileData={localFile} reportData={localFile.parsed_data || localFile.ai_insights} />;
       default:
         return (
           <div>
