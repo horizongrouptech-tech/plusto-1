@@ -246,7 +246,7 @@ export default function UnifiedFileUploader({ customerEmail, onUploadComplete })
         
         let parseResult;
 
-        if (['xls', 'xlsx', 'csv'].includes(fileType)) {
+        if (['xls', 'xlsx'].includes(fileType)) {
           if (category === 'inventory_report') {
             const { data: parsedXlsxResponse } = await parseXlsx({ fileUrl: file_url });
             const raw_data = parsedXlsxResponse?.data?.raw_data;
@@ -668,9 +668,10 @@ ${rawDataForPrompt}
               });
             }
           }
-        } else if (fileType === 'pdf' || ['jpg', 'jpeg', 'png'].includes(fileType)) {
-          // PDF and Image processing
-          setProcessingStatus(fileType === 'pdf' ? 'מנתח מסמך PDF באמצעות AI...' : 'מנתח תמונה באמצעות AI...');
+        } else if (fileType === 'csv' || fileType === 'pdf' || ['jpg', 'jpeg', 'png'].includes(fileType)) {
+          // CSV, PDF and Image processing — send directly to AI via file URL
+          const typeLabel = fileType === 'pdf' ? 'PDF' : fileType === 'csv' ? 'CSV' : 'תמונה';
+          setProcessingStatus(`מנתח מסמך ${typeLabel} באמצעות AI...`);
           
           if (category === 'esna_report') {
             await processESNAReport({
@@ -750,7 +751,49 @@ ${rawDataForPrompt}
                   alerts_and_insights: { type: "object" }
                 }
               };
-              prompt = `נתח ${category === 'balance_sheet' ? 'מאזן' : 'דוח רווח והפסד'} PDF`;
+              prompt = `נתח ${category === 'balance_sheet' ? 'מאזן' : 'דוח רווח והפסד'} והחזר נתונים מובנים`;
+            } else if (category === 'inventory_report') {
+              targetSchema = {
+                type: "object",
+                properties: {
+                  extracted_products: { type: "array" },
+                  summary: { type: "object" },
+                  key_insights: { type: "array" }
+                }
+              };
+              prompt = 'נתח דוח מלאי וחלץ רשימת מוצרים, כמויות, ערכים וסיכומים בעברית';
+            } else if (category === 'sales_report') {
+              targetSchema = {
+                type: "object",
+                properties: {
+                  rows: { type: "array" },
+                  summary: { type: "object" },
+                  key_insights: { type: "array" }
+                }
+              };
+              prompt = 'נתח דוח מכירות וחלץ נתוני מכירות, סיכומים ותובנות בעברית';
+            } else if (category === 'promotions_report') {
+              targetSchema = {
+                type: "object",
+                properties: {
+                  promotions: { type: "array" },
+                  summary: { type: "object" },
+                  key_insights: { type: "array" }
+                }
+              };
+              prompt = 'נתח דוח מבצעים וחלץ פרטי מבצעים, סיכומים ותובנות בעברית';
+            } else {
+              // Generic fallback for any other category
+              targetSchema = {
+                type: "object",
+                properties: {
+                  summary: { type: "string" },
+                  key_figures: { type: "object" },
+                  data_extracted: { type: "array", items: { type: "object" } },
+                  insights: { type: "array", items: { type: "string" } }
+                }
+              };
+              prompt = 'נתח את הקובץ וחלץ מידע עסקי מובנה, סיכומים ותובנות בעברית';
             }
 
             parseResult = await openRouterAPI({
@@ -764,7 +807,7 @@ ${rawDataForPrompt}
               parsed_data: parseResult,
               ai_insights: parseResult,
               parsing_metadata: { analysis_status: 'full' },
-              analysis_notes: 'Successfully analyzed PDF file.'
+              analysis_notes: `Successfully analyzed ${typeLabel} file.`
             });
           }
         }
