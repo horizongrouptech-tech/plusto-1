@@ -32,3 +32,12 @@ dist-ssr
 # Base44
 base44/.app.jsonc
 .vercel
+
+# Claude / Skills / Tools
+.claude/
+get-shit-done/
+ui-ux-pro-max-skill/
+.playwright-mcp/
+current-chat.png
+scripts/run-fix.cjs
+.env*.local

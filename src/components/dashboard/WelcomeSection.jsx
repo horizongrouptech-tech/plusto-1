@@ -49,7 +49,7 @@ export default function WelcomeSection({ user, productCount }) {
           </div>
           
           <div className="hidden md:block">
-            <div className="text-left">
+            <div className="text-start">
               <Badge variant="outline" className="bg-horizon-card text-horizon-accent border-horizon-primary mb-2">
                 {user?.business_type === 'retail' ? 'קמעונאות' :
                  user?.business_type === 'wholesale' ? 'סיטונאות' :

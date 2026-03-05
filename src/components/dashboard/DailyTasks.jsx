@@ -138,7 +138,7 @@ export default function DailyTasks({ user }) {
                                 <AlertTriangle className="w-4 h-4" />
                                 משימות בדיליי ({overdueTasks.length})
                             </h3>
-                            <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                            <div className="space-y-2 max-h-40 overflow-y-auto pl-1">
                                 {overdueTasks.length > 0 ? (
                                     overdueTasks.map(task => <TaskItem key={task.id} task={task} onUpdateStatus={handleUpdateStatus} />)
                                 ) : (
@@ -152,7 +152,7 @@ export default function DailyTasks({ user }) {
                                 <Calendar className="w-4 h-4" />
                                 משימות להיום ({todayTasks.length})
                             </h3>
-                            <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                            <div className="space-y-2 max-h-40 overflow-y-auto pl-1">
                                 {todayTasks.length > 0 ? (
                                     todayTasks.map(task => <TaskItem key={task.id} task={task} onUpdateStatus={handleUpdateStatus} />)
                                 ) : (
@@ -166,7 +166,7 @@ export default function DailyTasks({ user }) {
                                 <RefreshCw className="w-4 h-4" />
                                 משימות קבועות ({recurringTasks.length})
                             </h3>
-                            <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                            <div className="space-y-2 max-h-40 overflow-y-auto pl-1">
                                 {recurringTasks.length > 0 ? (
                                     recurringTasks.map(task => <TaskItem key={task.id} task={task} onUpdateStatus={handleUpdateStatus} />)
                                 ) : (

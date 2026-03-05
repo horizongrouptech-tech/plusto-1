@@ -34,7 +34,7 @@ import EnhancedRecommendationOptionsModal from "@/components/admin/EnhancedRecom
 // import { Supplier } from "@/entities/Supplier"; // Removed duplicate import
 import AddSupplierModal from "@/components/shared/AddSupplierModal";
 import AssignSupplierUserModal from "@/components/admin/AssignSupplierUserModal";
-import { CircleDotDashed, Star, Edit, Trash2, ListChecks, FileSpreadsheet, LayoutDashboard, ArrowLeft, Users, FileArchive, Lightbulb, Send, Edit3, Eye, TrendingUp, DollarSign, Building2, Package, RefreshCw, User as UserIcon, CheckCircle, AlertCircle, BarChart2, Target, MessageSquare, Calendar, Activity, Clock, Award, Loader2, Upload, Banknote, FileText, Gift, BarChart3, ReceiptText, ScanLine, UserCheck, UserX, Filter, Search, Power, PowerOff, Info, Database, Globe, ArrowRight, Save, X, Plus, MessageCircle, AlertTriangle, ThumbsDown, XCircle, Archive, FileX, Bell, UserPlus, Download, Truck, Bot } from "lucide-react"; // Consolidated all Lucide icons
+import { CircleDotDashed, Star, Edit, Trash2, ListChecks, FileSpreadsheet, LayoutDashboard, ArrowLeft, Users, FileArchive, Lightbulb, Send, Edit3, Eye, TrendingUp, DollarSign, Building2, Package, RefreshCw, User as UserIcon, CheckCircle, AlertCircle, BarChart2, Target, MessageSquare, Calendar, Activity, Clock, Award, Loader2, Upload, Banknote, FileText, Gift, BarChart3, ReceiptText, ScanLine, UserCheck, UserX, Filter, Search, Power, PowerOff, Info, Database, Globe, ArrowRight, Save, X, Plus, MessageCircle, AlertTriangle, ThumbsDown, XCircle, Archive, FileX, Bell, UserPlus, Download, Truck, Bot, ShieldCheck } from "lucide-react"; // Consolidated all Lucide icons
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -61,6 +61,7 @@ import IrrelevantRecommendationsModal from '@/components/admin/IrrelevantRecomme
 import ArchivedRecommendationsModal from '@/components/admin/ArchivedRecommendationsModal';
 import MissingDocumentsModal from "@/components/admin/MissingDocumentsModal";
 import OnboardingRequestsModal from "@/components/admin/OnboardingRequestsModal";
+import UserApprovalModal from "@/components/admin/UserApprovalModal";
 import RecommendationUpgradeModal from "@/components/admin/RecommendationUpgradeModal";
 
 
@@ -1030,6 +1031,7 @@ export default function AdminPage() {
   const [businessMoves, setBusinessMoves] = useState([]); // State for BusinessMoves
 
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [showUserApprovalModal, setShowUserApprovalModal] = useState(false);
   const [selectedRecommendationForUpgrade, setSelectedRecommendationForUpgrade] = useState(null); 
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false); 
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
@@ -2859,7 +2861,16 @@ export default function AdminPage() {
         )}
 
         <div className="w-full">
-          
+          {/* כפתורי פעולה מהירים */}
+          <div className="flex gap-3 mb-4">
+            <Button
+              onClick={() => setShowUserApprovalModal(true)}
+              className="bg-gradient-to-r from-[#32acc1] to-[#83ddec] hover:from-[#2a95a8] hover:to-[#6dd0e0] text-white font-bold shadow-md"
+            >
+              <ShieldCheck className="w-4 h-4 ml-2" />
+              אישור משתמשים חדשים
+            </Button>
+          </div>
 
           {/* Main Content Area */}
           <div className="w-full">
@@ -2880,34 +2891,6 @@ export default function AdminPage() {
                   ניהול לקוחות
                 </TabsTrigger>
 
-                {isAdmin && (
-                  <TabsTrigger 
-                    value="engagement" 
-                    className="py-3 px-6 text-horizon-accent data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#32acc1] data-[state=active]:to-[#83ddec] data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg font-bold hover-lift"
-                  >
-                    <BarChart2 className="w-4 h-4 mr-2" />
-                    מעורבות ופידבק
-                  </TabsTrigger>
-                )}
-                {isAdmin && (
-                  <TabsTrigger 
-                    value="performance" 
-                    className="py-3 px-6 text-horizon-accent data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#32acc1] data-[state=active]:to-[#83ddec] data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg font-bold hover-lift"
-                  >
-                    <TrendingUp className="w-4 h-4 mr-2" />
-                    ביצועי מנהלי כספים
-                  </TabsTrigger>
-                )}
-                
-                {isAdmin && (
-                  <TabsTrigger 
-                    value="failed-uploads" 
-                    className="py-3 px-6 text-horizon-accent data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#32acc1] data-[state=active]:to-[#83ddec] data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg font-bold hover-lift"
-                  >
-                    <FileX className="w-4 h-4 mr-2" />
-                    קבצים שנכשלו
-                  </TabsTrigger>
-                )}
               </TabsList>
 
               <TabsContent value="overview">
@@ -2922,39 +2905,6 @@ export default function AdminPage() {
               <TabsContent value="tasks">
                 <TaskManagement />
               </TabsContent>
-              {/* ביצועי מנהלי כספים */}
-              {isAdmin && (
-                <TabsContent value="performance">
-                  <Suspense fallback={<div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>}>
-                    <div className="space-y-6">
-                      {/* טבלת ביצועים */}
-                      <FinanceManagerPerformanceTable />
-                    </div>
-                  </Suspense>
-                </TabsContent>
-              )}
-
-              
-
-              
-              
-              {/* New Engagement Dashboard tab */}
-              {isAdmin && (
-                <TabsContent value="engagement">
-                  <Suspense fallback={<div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>}>
-                    <EngagementDashboard />
-                  </Suspense>
-                </TabsContent>
-              )}
-
-              {/* Failed File Uploads tab */}
-              {isAdmin && (
-                <TabsContent value="failed-uploads">
-                  <Suspense fallback={<div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>}>
-                    <FailedFileUploadsManager />
-                  </Suspense>
-                </TabsContent>
-              )}
 
               {/* New System Management tab (combining old catalog and support) */}
               
@@ -3890,6 +3840,17 @@ export default function AdminPage() {
           onClose={() => setShowOnboardingModal(false)}
           requests={pendingRequests}
           onActionComplete={handleOnboardingApproved}
+        />
+      )}
+      {/* מודאל אישור משתמשים חדשים */}
+      {showUserApprovalModal && (
+        <UserApprovalModal
+          isOpen={showUserApprovalModal}
+          onClose={() => setShowUserApprovalModal(false)}
+          onActionComplete={() => {
+            setShowUserApprovalModal(false);
+            loadInitialData();
+          }}
         />
       )}
       {/* הוספה: מודאל הוספת ספק */}

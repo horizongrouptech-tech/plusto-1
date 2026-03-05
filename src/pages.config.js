@@ -73,9 +73,15 @@ import SupplierAnalysis from './pages/SupplierAnalysis';
 import SupportTicket from './pages/SupportTicket';
 import TaskManagement from './pages/TaskManagement';
 import WebsiteScan from './pages/WebsiteScan';
+import UserApproval from './pages/UserApproval';
 import Welcome from './pages/Welcome';
 import WhatsAppTest from './pages/WhatsAppTest';
 import ExportData from './pages/ExportData';
+import SettingsPage from './pages/Settings';
+import CalendarPage from './pages/CalendarPage';
+import FMPerformance from './pages/FMPerformance';
+import Engagement from './pages/Engagement';
+import FailedUploads from './pages/FailedUploads';
 import __Layout from './Layout.jsx';
 
 
@@ -106,9 +112,19 @@ export const PAGES = {
     "SupportTicket": SupportTicket,
     "TaskManagement": TaskManagement,
     "WebsiteScan": WebsiteScan,
+    "UserApproval": UserApproval,
     "Welcome": Welcome,
     "WhatsAppTest": WhatsAppTest,
     "ExportData": ExportData,
+    // Route aliases — ניווט חדש מפנה לדפים קיימים (יוחלף בהדרגה)
+    "Clients": CustomerManagementNew,
+    "Tasks": TaskManagement,
+    "Calendar": CalendarPage,
+    "Reports": ExportData,        // placeholder — Phase 6 יבנה דף Reports ייעודי
+    "Settings": SettingsPage,
+    "FMPerformance": FMPerformance,
+    "Engagement": Engagement,
+    "FailedUploads": FailedUploads,
 }
 
 export const pagesConfig = {

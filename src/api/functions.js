@@ -40,6 +40,7 @@ export const syncTaskToFireberry          = (p) => invoke('syncTaskToFireberry',
 export const importFireberryTasks         = (p) => invoke('importFireberryTasks', p);
 export const calculateManagerPerformance  = (p) => invoke('calculateManagerPerformance', p);
 export const getFinancialManagers         = (p) => invoke('getFinancialManagers', p);
+export const approveNewUser               = (p) => invoke('approveNewUser', p);
 export const approveOnboardingRequest     = (p) => invoke('approveOnboardingRequest', p);
 export const autoOnboardingOrchestrator   = (p) => invoke('autoOnboardingOrchestrator', p);
 

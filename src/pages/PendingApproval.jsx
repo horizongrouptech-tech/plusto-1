@@ -1,206 +1,93 @@
-import React, { useState, useEffect } from "react";
-
+import React, { useEffect, useRef } from "react";
 import { Loader2, CheckCircle, Clock, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { createPageUrl } from "@/utils";
-import { Link, useNavigate } from "react-router-dom";
-import { User } from '@/api/entities';
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function PendingApprovalPage() {
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [statusMessage, setStatusMessage] = useState("בודק את סטטוס האישור...");
+  const { user, isLoadingAuth, userRole, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const intervalRef = useRef(null);
 
+  // Auto-refresh כל 30 שניות לבדוק אם אושר
   useEffect(() => {
-    checkApprovalStatus();
-  }, []);
+    intervalRef.current = setInterval(() => {
+      refreshUser();
+    }, 30000);
+    return () => clearInterval(intervalRef.current);
+  }, [refreshUser]);
 
-  const checkApprovalStatus = async () => {
-    setIsLoading(true);
-    try {
-      const currentUser = await User.me();
-      setUser(currentUser);
-      
-      if (currentUser) {
-        if (currentUser.user_type === 'financial_manager') {
-          if (currentUser.is_approved_by_admin) {
-            setStatusMessage("האישור התקבל! מופנה לממשק הניהול...");
-            setTimeout(() => {
-              navigate(createPageUrl("Admin"));
-            }, 1500);
-          } else {
-            setStatusMessage("החשבון שלך ממתין לאישור מנהל המערכת.");
-          }
-        } else {
-          setStatusMessage("החשבון שלך כבר פעיל.");
-          setTimeout(() => {
-            navigate(createPageUrl("Dashboard"));
-          }, 1500);
-        }
-      } else {
-        navigate(createPageUrl("Welcome"));
-      }
-    } catch (error) {
-      console.error("Error checking user status:", error);
-      setStatusMessage("אירעה שגיאה בבדיקת הסטטוס. נסה שוב מאוחר יותר.");
-    } finally {
-      setIsLoading(false);
+  // Redirect אם כבר אושר
+  useEffect(() => {
+    if (!user || isLoadingAuth) return;
+
+    if (user.is_approved_by_admin) {
+      // אושר — redirect לפי role
+      const target = userRole === 'supplier_user' ? '/MyLeads' : '/Dashboard';
+      setTimeout(() => navigate(target, { replace: true }), 1500);
     }
-  };
+  }, [user, userRole, isLoadingAuth, navigate]);
 
-  if (isLoading) {
+  if (isLoadingAuth) {
     return (
-      <div className="min-h-screen bg-horizon-dark flex items-center justify-center" dir="rtl">
-        <style>
-        {`
-          :root {
-            --horizon-primary: #32acc1;
-            --horizon-secondary: #fc9f67;
-            --horizon-dark: #121725;
-            --horizon-text: #ffffff;
-            --horizon-accent: #83ddec;
-            --horizon-secondary-alt: #fc8a68;
-            --horizon-card-bg: rgba(255, 255, 255, 0.05);
-            --horizon-border: rgba(131, 221, 236, 0.2);
-            --shadow-horizon: 0 4px 20px rgba(50, 172, 193, 0.15);
-            --shadow-horizon-strong: 0 8px 40px rgba(50, 172, 193, 0.25);
-          }
-
-          .bg-horizon-primary { background-color: var(--horizon-primary); }
-          .bg-horizon-secondary { background-color: var(--horizon-secondary); }
-          .bg-horizon-dark { background-color: var(--horizon-dark); }
-          .bg-horizon-text { background-color: var(--horizon-text); }
-          .bg-horizon-accent { background-color: var(--horizon-accent); }
-          .bg-horizon-card { background-color: var(--horizon-card-bg); }
-
-          .text-horizon-primary { color: var(--horizon-primary); }
-          .text-horizon-secondary { color: var(--horizon-secondary); }
-          .text-horizon-dark { color: var(--horizon-dark); }
-          .text-horizon-text { color: var(--horizon-text); }
-          .text-horizon-accent { color: var(--horizon-accent); }
-
-          .border-horizon { border-color: var(--horizon-border); }
-          .border-horizon-primary { border-color: var(--horizon-primary); }
-
-          .card-horizon {
-            background: var(--horizon-card-bg);
-            border: 1px solid var(--horizon-border);
-            border-radius: 16px;
-            box-shadow: var(--shadow-horizon);
-            transition: all 0.3s ease;
-            color: var(--horizon-text);
-          }
-
-          .btn-horizon-primary {
-            background-color: var(--horizon-primary);
-            color: var(--horizon-text);
-            border: none;
-            transition: all 0.2s ease;
-          }
-
-          .btn-horizon-primary:hover {
-            background-color: #2a95a8;
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-horizon);
-          }
-        `}
-        </style>
+      <div className="min-h-screen bg-gradient-to-br from-[#0A192F] via-[#112240] to-[#0A192F] flex items-center justify-center" dir="rtl">
         <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 text-horizon-primary animate-spin mx-auto" />
-          <h1 className="text-xl font-bold text-horizon-text">{statusMessage}</h1>
-          <p className="text-horizon-accent">רק רגע, אנחנו בודקים את פרטי החשבון שלך.</p>
+          <Loader2 className="w-12 h-12 text-[#32acc1] animate-spin mx-auto" />
+          <h1 className="text-xl font-bold text-white">בודק את סטטוס האישור...</h1>
+          <p className="text-[#83ddec]">רק רגע, אנחנו בודקים את פרטי החשבון שלך.</p>
         </div>
       </div>
     );
   }
 
+  // ממתין לאישור — כל משתמש שלא אושר
+  const isPending = !user?.is_approved_by_admin;
+  // אושר (מראים הודעת הצלחה לפני redirect)
+  const isApproved = user?.is_approved_by_admin === true;
+
   return (
-    <div className="min-h-screen bg-horizon-dark flex items-center justify-center p-6" dir="rtl">
-      <style>
-      {`
-        :root {
-          --horizon-primary: #32acc1;
-          --horizon-secondary: #fc9f67;
-          --horizon-dark: #121725;
-          --horizon-text: #ffffff;
-          --horizon-accent: #83ddec;
-          --horizon-secondary-alt: #fc8a68;
-          --horizon-card-bg: rgba(255, 255, 255, 0.05);
-          --horizon-border: rgba(131, 221, 236, 0.2);
-          --shadow-horizon: 0 4px 20px rgba(50, 172, 193, 0.15);
-          --shadow-horizon-strong: 0 8px 40px rgba(50, 172, 193, 0.25);
-        }
-
-        .bg-horizon-primary { background-color: var(--horizon-primary); }
-        .bg-horizon-secondary { background-color: var(--horizon-secondary); }
-        .bg-horizon-dark { background-color: var(--horizon-dark); }
-        .bg-horizon-text { background-color: var(--horizon-text); }
-        .bg-horizon-accent { background-color: var(--horizon-accent); }
-        .bg-horizon-card { background-color: var(--horizon-card-bg); }
-
-        .text-horizon-primary { color: var(--horizon-primary); }
-        .text-horizon-secondary { color: var(--horizon-secondary); }
-        .text-horizon-dark { color: var(--horizon-dark); }
-        .text-horizon-text { color: var(--horizon-text); }
-        .text-horizon-accent { color: var(--horizon-accent); }
-
-        .border-horizon { border-color: var(--horizon-border); }
-        .border-horizon-primary { border-color: var(--horizon-primary); }
-
-        .card-horizon {
-          background: var(--horizon-card-bg);
-          border: 1px solid var(--horizon-border);
-          border-radius: 16px;
-          box-shadow: var(--shadow-horizon);
-          transition: all 0.3s ease;
-          color: var(--horizon-text);
-        }
-
-        .btn-horizon-primary {
-          background-color: var(--horizon-primary);
-          color: var(--horizon-text);
-          border: none;
-          transition: all 0.2s ease;
-        }
-
-        .btn-horizon-primary:hover {
-          background-color: #2a95a8;
-          transform: translateY(-1px);
-          box-shadow: var(--shadow-horizon);
-        }
-      `}
-      </style>
-      <div className="card-horizon max-w-lg w-full p-8 text-center space-y-6">
-        {user?.user_type === 'financial_manager' && !user?.is_approved_by_admin ? (
+    <div className="min-h-screen bg-gradient-to-br from-[#0A192F] via-[#112240] to-[#0A192F] flex items-center justify-center p-6" dir="rtl">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl max-w-lg w-full p-8 text-center space-y-6 shadow-2xl">
+        {isPending ? (
           <>
-            <Clock className="w-16 h-16 text-yellow-400 mx-auto" />
-            <h1 className="text-3xl font-bold text-horizon-text">
+            <Clock className="w-16 h-16 text-[#fc9f67] mx-auto" />
+            <h1 className="text-3xl font-bold text-white">
               החשבון שלך ממתין לאישור
             </h1>
-            <p className="text-horizon-accent text-lg">
-              מנהל הכספים שלך יבדוק את בקשתך. תהליך זה יכול לקחת עד 24 שעות.
+            <p className="text-[#83ddec] text-lg">
+              מנהל המערכת יבדוק את בקשתך. תהליך זה יכול לקחת עד 24 שעות.
               ברגע שהחשבון יאושר, תקבל גישה מלאה למערכת.
             </p>
-            <Button onClick={checkApprovalStatus} className="btn-horizon-primary">
+            <p className="text-gray-500 text-sm">
+              הדף מתרענן אוטומטית כל 30 שניות
+            </p>
+            <Button
+              onClick={refreshUser}
+              className="bg-[#32acc1] hover:bg-[#2a95a8] text-white"
+            >
               <RefreshCw className="w-4 h-4 ml-2" />
               בדוק סטטוס שוב
             </Button>
           </>
-        ) : (
+        ) : isApproved ? (
           <>
-            <CheckCircle className="w-16 h-16 text-green-400 mx-auto" />
-            <h1 className="text-3xl font-bold text-horizon-text">
+            <CheckCircle className="w-16 h-16 text-emerald-400 mx-auto" />
+            <h1 className="text-3xl font-bold text-white">
               האישור התקבל בהצלחה!
             </h1>
-            <p className="text-horizon-accent text-lg">
-              החשבון שלך אושר. אתה מופנה כעת לממשק המשתמש המתאים.
+            <p className="text-[#83ddec] text-lg">
+              החשבון שלך אושר. אתה מופנה כעת לדשבורד...
             </p>
-            <Button asChild className="btn-horizon-primary">
-              <Link to={user?.role === 'admin' || user?.user_type === 'financial_manager' ? createPageUrl("Admin") : createPageUrl("Dashboard")}>
-                המשך למערכת
-              </Link>
-            </Button>
+          </>
+        ) : (
+          <>
+            <CheckCircle className="w-16 h-16 text-emerald-400 mx-auto" />
+            <h1 className="text-3xl font-bold text-white">
+              החשבון שלך פעיל
+            </h1>
+            <p className="text-[#83ddec] text-lg">
+              מופנה לדשבורד...
+            </p>
           </>
         )}
       </div>

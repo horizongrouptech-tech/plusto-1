@@ -150,6 +150,19 @@ export const User = {
     if (error) throw error;
     return data;
   },
+  // עדכון פרופיל המשתמש המחובר (נקרא מ-InitialSetup ו-OnboardingFlow)
+  updateMyUserData: async (updateData) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error('Not authenticated');
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', session.user.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
 };
 
 // Customers & Onboarding
@@ -248,3 +261,8 @@ export const Ofek360Model                  = createEntity('ofek360_model');
 export const DailyChecklist360             = createEntity('daily_checklist360');
 export const BackupLog                     = createEntity('backup_log');
 export const GoalBankItem                  = createEntity('goal_bank_item');      // fallback for any GoalBank usage
+
+// Auth & Permissions (Phase 1)
+export const PendingApproval               = createEntity('pending_approvals');
+export const ClientAssignment              = createEntity('client_assignments');
+export const DepartmentAssignment          = createEntity('department_assignments');

@@ -14,18 +14,8 @@ import { useTheme } from './ThemeContext';
 import { CustomerGoal } from '@/api/entities';
 
 export default function TopBarActions({ user }) {
-    // Safe theme hook usage
-    let theme = 'light';
-    let toggleTheme = () => {};
-    let isDark = false;
-    try {
-        const themeContext = useTheme();
-        theme = themeContext.theme;
-        toggleTheme = themeContext.toggleTheme;
-        isDark = themeContext.isDark;
-    } catch (e) {
-        // Theme context not available
-    }
+    // Theme — תמיד זמין כי TopBarActions רץ בתוך ThemeProvider
+    const { theme, toggleTheme, isDark } = useTheme();
     
     const { data: delayedTasks } = useQuery({
         queryKey: ['delayedTasksCount', user?.email],
