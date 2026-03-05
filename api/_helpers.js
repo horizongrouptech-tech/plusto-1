@@ -11,7 +11,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import OpenAI from '@openrouter/sdk';
+import OpenAI from 'openai';
 
 // ─── Supabase clients ────────────────────────────────────────────────────────
 
