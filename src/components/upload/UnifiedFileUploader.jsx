@@ -745,13 +745,51 @@ ${rawDataForPrompt}
               targetSchema = {
                 type: "object",
                 properties: {
-                  report_metadata: { type: "object" },
-                  financial_summary: { type: "object" },
-                  key_insights: { type: "array" },
-                  alerts_and_insights: { type: "object" }
+                  report_metadata: {
+                    type: "object",
+                    properties: {
+                      report_type: { type: "string" },
+                      period: { type: "string" },
+                      currency: { type: "string" }
+                    }
+                  },
+                  line_items: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        category: { type: "string" },
+                        item_name: { type: "string" },
+                        amount: { type: "number" },
+                        percentage_of_total: { type: "number" }
+                      }
+                    }
+                  },
+                  financial_summary: {
+                    type: "object",
+                    properties: {
+                      total_revenue: { type: "number" },
+                      total_expenses: { type: "number" },
+                      net_profit: { type: "number" },
+                      profit_margin: { type: "number" },
+                      total_assets: { type: "number" },
+                      total_liabilities: { type: "number" },
+                      equity: { type: "number" }
+                    }
+                  },
+                  key_insights: { type: "array", items: { type: "string" } },
+                  alerts_and_insights: {
+                    type: "object",
+                    properties: {
+                      positive: { type: "array", items: { type: "string" } },
+                      warnings: { type: "array", items: { type: "string" } },
+                      recommendations: { type: "array", items: { type: "string" } }
+                    }
+                  }
                 }
               };
-              prompt = `נתח ${category === 'balance_sheet' ? 'מאזן' : 'דוח רווח והפסד'} והחזר נתונים מובנים`;
+              const reportLabel = category === 'balance_sheet' ? 'מאזן' : 'דוח רווח והפסד';
+              prompt = `אתה אנליסט פיננסי מומחה. נתח את ה${reportLabel} וחלץ נתונים מובנים, סיכומים ותובנות עסקיות בעברית.`;
             } else if (category === 'inventory_report') {
               targetSchema = {
                 type: "object",
