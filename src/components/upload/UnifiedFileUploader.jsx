@@ -453,20 +453,220 @@ ${rawDataForPrompt}
               supplier_id: null
             });
 
-          } else {
-            // For other categories, use parseXlsx
-            const { data } = await parseXlsx({
-              fileUrl: file_url,
-              category: category,
-              filename: file.name
+          } else if (category === 'profit_loss_statement' || category === 'balance_sheet') {
+            const { data: parsedResult } = await parseXlsx({ fileUrl: file_url });
+            const raw_data = parsedResult?.data?.raw_data;
+
+            if (!raw_data || raw_data.length === 0) {
+              throw new Error('לא הצלחנו לקרוא נתונים מהקובץ.');
+            }
+
+            const financialSchema = {
+              type: "object",
+              properties: {
+                report_metadata: {
+                  type: "object",
+                  properties: {
+                    report_type: { type: "string" },
+                    period: { type: "string" },
+                    currency: { type: "string" }
+                  }
+                },
+                line_items: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      category: { type: "string" },
+                      item_name: { type: "string" },
+                      amount: { type: "number" },
+                      percentage_of_total: { type: "number" }
+                    }
+                  }
+                },
+                financial_summary: {
+                  type: "object",
+                  properties: {
+                    total_revenue: { type: "number" },
+                    total_expenses: { type: "number" },
+                    net_profit: { type: "number" },
+                    profit_margin: { type: "number" },
+                    total_assets: { type: "number" },
+                    total_liabilities: { type: "number" },
+                    equity: { type: "number" }
+                  }
+                },
+                key_insights: { type: "array", items: { type: "string" } },
+                alerts_and_insights: {
+                  type: "object",
+                  properties: {
+                    positive: { type: "array", items: { type: "string" } },
+                    warnings: { type: "array", items: { type: "string" } },
+                    recommendations: { type: "array", items: { type: "string" } }
+                  }
+                }
+              }
+            };
+
+            const reportLabel = category === 'profit_loss_statement' ? 'רווח והפסד' : 'מאזן';
+            const rawDataForPrompt = JSON.stringify(raw_data.slice(0, 1000), null, 2);
+            parseResult = await openRouterAPI({
+              prompt: `אתה אנליסט פיננסי מומחה. נתח את דוח ה${reportLabel} הבא וחלץ ממנו נתונים מובנים, סיכומים ותובנות עסקיות בעברית.\n\nהנתונים:\n${rawDataForPrompt}`,
+              response_json_schema: financialSchema
             });
 
             await FileUpload.update(fileRecordId, {
               status: 'analyzed',
-              parsed_data: data,
-              parsing_metadata: { analysis_status: 'full' },
-              analysis_notes: "Successfully parsed file."
+              parsed_data: parseResult,
+              ai_insights: parseResult,
+              parsing_metadata: { analysis_status: 'full', enhanced_parsing: true },
+              analysis_notes: `Successfully analyzed ${reportLabel} using AI.`
             });
+
+          } else if (category === 'bank_statement') {
+            const { data: parsedResult } = await parseXlsx({ fileUrl: file_url });
+            const raw_data = parsedResult?.data?.raw_data;
+
+            if (!raw_data || raw_data.length === 0) {
+              throw new Error('לא הצלחנו לקרוא נתונים מתדפיס הבנק.');
+            }
+
+            const bankSchema = {
+              type: "object",
+              properties: {
+                account_summary: {
+                  type: "object",
+                  properties: {
+                    opening_balance: { type: "number" },
+                    closing_balance: { type: "number" },
+                    total_deposits: { type: "number" },
+                    total_withdrawals: { type: "number" },
+                    period: { type: "string" }
+                  }
+                },
+                transactions: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      date: { type: "string" },
+                      description: { type: "string" },
+                      amount: { type: "number" },
+                      balance: { type: "number" },
+                      type: { type: "string" }
+                    }
+                  }
+                },
+                spending_categories: { type: "array", items: { type: "object" } },
+                key_insights: { type: "array", items: { type: "string" } },
+                risk_flags: { type: "array", items: { type: "string" } },
+                top_expenses: { type: "array", items: { type: "object" } }
+              }
+            };
+
+            const rawDataForPrompt = JSON.stringify(raw_data.slice(0, 1000), null, 2);
+            parseResult = await openRouterAPI({
+              prompt: `אתה אנליסט פיננסי. נתח את תדפיס הבנק הבא וחלץ תנועות, סיכומים, קטגוריות הוצאה, ותובנות עסקיות בעברית.\n\nהנתונים:\n${rawDataForPrompt}`,
+              response_json_schema: bankSchema
+            });
+
+            await FileUpload.update(fileRecordId, {
+              status: 'analyzed',
+              parsed_data: parseResult,
+              ai_insights: parseResult,
+              parsing_metadata: { analysis_status: 'full', enhanced_parsing: true },
+              analysis_notes: "Successfully analyzed bank statement using AI."
+            });
+
+          } else if (category === 'credit_card_report') {
+            const { data: parsedResult } = await parseXlsx({ fileUrl: file_url });
+            const raw_data = parsedResult?.data?.raw_data;
+
+            if (!raw_data || raw_data.length === 0) {
+              throw new Error('לא הצלחנו לקרוא נתונים מדוח כרטיס האשראי.');
+            }
+
+            const creditCardSchema = {
+              type: "object",
+              properties: {
+                card_summary: {
+                  type: "object",
+                  properties: {
+                    total_charges: { type: "number" },
+                    total_payments: { type: "number" },
+                    outstanding_balance: { type: "number" },
+                    period: { type: "string" }
+                  }
+                },
+                transactions: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      date: { type: "string" },
+                      merchant: { type: "string" },
+                      amount: { type: "number" },
+                      category: { type: "string" },
+                      installments: { type: "string" }
+                    }
+                  }
+                },
+                top_spending_categories: { type: "array", items: { type: "object" } },
+                key_insights: { type: "array", items: { type: "string" } },
+                recommendations: { type: "array", items: { type: "string" } }
+              }
+            };
+
+            const rawDataForPrompt = JSON.stringify(raw_data.slice(0, 1000), null, 2);
+            parseResult = await openRouterAPI({
+              prompt: `אתה אנליסט פיננסי. נתח את דוח כרטיס האשראי הבא וחלץ עסקאות, קטגוריות הוצאה, סיכומים ותובנות עסקיות בעברית.\n\nהנתונים:\n${rawDataForPrompt}`,
+              response_json_schema: creditCardSchema
+            });
+
+            await FileUpload.update(fileRecordId, {
+              status: 'analyzed',
+              parsed_data: parseResult,
+              ai_insights: parseResult,
+              parsing_metadata: { analysis_status: 'full', enhanced_parsing: true },
+              analysis_notes: "Successfully analyzed credit card report using AI."
+            });
+
+          } else {
+            // קטגוריות שלא מוגדרות — parseXlsx בלבד + ניתוח AI כללי
+            const { data: parsedResult } = await parseXlsx({ fileUrl: file_url });
+            const raw_data = parsedResult?.data?.raw_data;
+
+            if (raw_data && raw_data.length > 0) {
+              const rawDataForPrompt = JSON.stringify(raw_data.slice(0, 1000), null, 2);
+              parseResult = await openRouterAPI({
+                prompt: `נתח את הנתונים הבאים וחלץ מהם מידע עסקי מובנה, סיכומים ותובנות בעברית.\n\nהנתונים:\n${rawDataForPrompt}`,
+                response_json_schema: {
+                  type: "object",
+                  properties: {
+                    summary: { type: "string" },
+                    key_figures: { type: "object" },
+                    data_extracted: { type: "array", items: { type: "object" } },
+                    insights: { type: "array", items: { type: "string" } },
+                    recommendations: { type: "array", items: { type: "string" } }
+                  }
+                }
+              });
+
+              await FileUpload.update(fileRecordId, {
+                status: 'analyzed',
+                parsed_data: parseResult,
+                ai_insights: parseResult,
+                parsing_metadata: { analysis_status: 'full', enhanced_parsing: true },
+                analysis_notes: "Successfully analyzed file using AI."
+              });
+            } else {
+              await FileUpload.update(fileRecordId, {
+                status: 'analyzed',
+                parsed_data: parsedResult?.data || {},
+                parsing_metadata: { analysis_status: 'basic' },
+                analysis_notes: "File parsed but no data rows found for AI analysis."
+              });
+            }
           }
         } else if (fileType === 'pdf' || ['jpg', 'jpeg', 'png'].includes(fileType)) {
           // PDF and Image processing
