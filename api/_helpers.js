@@ -77,7 +77,6 @@ function getOpenRouterClient() {
  */
 export async function invokeLLM({ prompt, response_json_schema, model, file_urls }) {
   const client = getOpenRouterClient();
-  const selectedModel = model || process.env.OPENROUTER_DEFAULT_MODEL || 'openai/gpt-4o-mini';
 
   const messages = [];
   if (response_json_schema) {
@@ -90,17 +89,49 @@ export async function invokeLLM({ prompt, response_json_schema, model, file_urls
     });
   }
 
-  // Build user content (text + optional file URLs for vision)
-  let userContent;
+  // Build user content — handle file_urls by detecting type (image vs text)
+  let userContent = prompt;
+  let useVisionModel = false;
+
   if (file_urls && file_urls.length > 0) {
-    userContent = [
-      { type: 'text', text: prompt },
-      ...file_urls.map((url) => ({ type: 'image_url', image_url: { url } })),
-    ];
-  } else {
-    userContent = prompt;
+    const parts = [{ type: 'text', text: prompt }];
+
+    for (const url of file_urls) {
+      try {
+        // HEAD request to detect content type without downloading
+        const head = await fetch(url, { method: 'HEAD' });
+        const contentType = head.headers.get('content-type') || '';
+        const isImage = contentType.startsWith('image/');
+
+        if (isImage) {
+          // תמונה — שלח כ-image_url (camelCase for SDK v0.8+)
+          parts.push({ type: 'image_url', imageUrl: { url } });
+          useVisionModel = true;
+        } else {
+          // קובץ טקסט/CSV/PDF — הורד את התוכן והוסף ל-prompt
+          const fileResponse = await fetch(url);
+          const fileText = await fileResponse.text();
+          const truncated = fileText.length > 15000
+            ? fileText.slice(0, 15000) + '\n...[truncated]'
+            : fileText;
+          parts.push({ type: 'text', text: `\n\nFile content from ${url}:\n\n${truncated}` });
+        }
+      } catch (fetchErr) {
+        // אם לא הצלחנו לגשת לקובץ, שלח את ה-URL כ-image_url ותן למודל לנסות
+        console.error(`[invokeLLM] Failed to fetch ${url}:`, fetchErr.message);
+        parts.push({ type: 'image_url', imageUrl: { url } });
+        useVisionModel = true;
+      }
+    }
+
+    userContent = parts;
   }
+
   messages.push({ role: 'user', content: userContent });
+
+  // אם יש תמונות, השתמש במודל vision (gpt-4o). אחרת — מודל ברירת מחדל
+  const defaultModel = useVisionModel ? 'openai/gpt-4o' : (process.env.OPENROUTER_DEFAULT_MODEL || 'openai/gpt-4o-mini');
+  const selectedModel = model || defaultModel;
 
   const chatParams = { model: selectedModel, messages };
   if (response_json_schema) chatParams.responseFormat = { type: 'json_object' };
