@@ -1,4 +1,4 @@
-import { requireAuth, invokeLLM } from '../_helpers.js';
+import { requireAuth, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     if (!file_url || !file_name) return res.status(400).json({ error: 'Missing required parameters: file_url, file_name' });
 
     // Step 1: Identify columns
-    const identificationResult = await invokeLLM({
+    const identificationResult = await openRouterAPI({
       prompt: `אתה מנתח קובץ הכנסות עתידיות (תחזית מכירות).
 הקובץ צריך לכלול: שם מוצר/שירות, חודש (מספר 1-12 או שם חודש), כמות מתוכננת, הכנסה מתוכננת (אופציונלי).
 נתח את הקובץ והחזר JSON עם detected_columns ו-sample_rows.`,
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
     });
 
     // Step 2: Extract all rows
-    const extractionResult = await invokeLLM({
+    const extractionResult = await openRouterAPI({
       prompt: `בהתבסס על העמודות שזוהו:
 - מוצר: ${identificationResult.detected_columns?.product_name_column}
 - חודש: ${identificationResult.detected_columns?.month_column}

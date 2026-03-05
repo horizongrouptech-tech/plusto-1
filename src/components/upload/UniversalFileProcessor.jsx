@@ -15,7 +15,7 @@ import {
   File as FileIcon
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { ExtractDataFromUploadedFile, InvokeLLM } from '@/api/integrations';
+import { ExtractDataFromUploadedFile, openRouterAPI } from '@/api/integrations';
 
 
 // רשימת סוגי קבצים נתמכים
@@ -205,7 +205,7 @@ export default function UniversalFileProcessor({
           };
       }
 
-      const analysisResult = await InvokeLLM({
+      const analysisResult = await openRouterAPI({
         prompt: analysisPrompt,
         response_json_schema: responseSchema,
         file_urls: [fileUrl]

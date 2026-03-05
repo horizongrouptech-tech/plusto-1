@@ -1,4 +1,4 @@
-import { requireAuth, invokeLLM } from '../_helpers.js';
+import { requireAuth, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     const { company_name, website } = req.body ?? {};
     if (!company_name) return res.status(400).json({ error: 'company_name is required' });
 
-    const fundingData = await invokeLLM({
+    const fundingData = await openRouterAPI({
       prompt: `Research funding and acquisition data for this company:
 Company: ${company_name}
 Website: ${website || 'Unknown'}

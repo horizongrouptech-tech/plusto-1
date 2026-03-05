@@ -1,7 +1,7 @@
 
 import { generateInventoryBasedRecommendations } from './inventoryBasedRecommendationEngine';
 import { Product, Recommendation } from '@/api/entities';
-import { InvokeLLM } from '@/api/integrations';
+import { openRouterAPI } from '@/api/integrations';
 
 
 
@@ -85,7 +85,7 @@ const generateFallbackRecommendations = async (user, options) => {
         - קריאה לפעולה
         `;
 
-        const response = await InvokeLLM({
+        const response = await openRouterAPI({
             prompt: fallbackPrompt,
             response_json_schema: {
                 type: "object",

@@ -1,4 +1,4 @@
-import { invokeLLM } from '../../_helpers.js';
+import { openRouterAPI } from '../../_helpers.js';
 
 /**
  * POST /api/integrations/invoke-llm
@@ -24,10 +24,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    // שימוש ב-invokeLLM המשותף מ-_helpers.js — תומך ב-file_urls, vision, JSON schema
-    const result = await invokeLLM({ prompt, response_json_schema, model, file_urls });
+    // שימוש ב-openRouterAPI המשותף מ-_helpers.js — תומך ב-file_urls, vision, JSON schema
+    const result = await openRouterAPI({ prompt, response_json_schema, model, file_urls });
 
-    // invokeLLM מחזיר object אם יש schema, או string אם אין
+    // openRouterAPI מחזיר object אם יש schema, או string אם אין
     if (typeof result === 'string') {
       return res.status(200).json({ result });
     }

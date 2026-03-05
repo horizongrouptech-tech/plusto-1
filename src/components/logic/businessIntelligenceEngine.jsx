@@ -11,7 +11,7 @@
 
 import { generateUnifiedRecommendations } from "./unifiedRecommendationOrchestrator";
 import { Product, ProductCatalog, Recommendation, Supplier } from '@/api/entities';
-import { InvokeLLM } from '@/api/integrations';
+import { openRouterAPI } from '@/api/integrations';
 
 export const generateBusinessIntelligence = async (customer, options = {}, progressCallback = null) => {
     if (!customer) {
@@ -110,7 +110,7 @@ const gatherCustomerData = async (customer) => {
 
 const analyzeWebsite = async (websiteUrl) => {
     try {
-        const response = await InvokeLLM({
+        const response = await openRouterAPI({
             prompt: `Analyze the website ${websiteUrl}. Extract key information about products, services, pricing, target audience, and overall business strategy. Provide a concise summary.`,
             add_context_from_internet: true
         });
@@ -125,7 +125,7 @@ const conductMarketAnalysis = async (customerData) => {
     const { customer } = customerData;
     try {
         const marketPrompt = `Provide a concise market analysis for a business named "${customer.business_name}" in the "${customer.business_type}" sector. Include: market size, main competitors, market trends, and key opportunities.`;
-        const marketResponse = await InvokeLLM({
+        const marketResponse = await openRouterAPI({
             prompt: marketPrompt,
             add_context_from_internet: true,
         });
@@ -226,7 +226,7 @@ const generateEnhancedRecommendations = async (customerData, marketInsights, cou
     `;
 
     try {
-        const response = await InvokeLLM({
+        const response = await openRouterAPI({
             prompt: recommendationPrompt,
             response_json_schema: {
               type: "object",

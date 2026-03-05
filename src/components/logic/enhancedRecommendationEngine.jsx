@@ -9,7 +9,7 @@ import { generateUnifiedRecommendations } from "./unifiedRecommendationOrchestra
 import { BusinessForecast, FileUpload, Product, ProductCatalog, Supplier } from '@/api/entities';
 
 /**
- * סכימות JSON לשימוש עם InvokeLLM
+ * סכימות JSON לשימוש עם openRouterAPI
  */
 
 // סכימת JSON מפורטת עבור עסקים עם נתונים פנימיים (הסכימה הקיימת)

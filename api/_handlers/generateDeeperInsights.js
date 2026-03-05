@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -35,7 +35,7 @@ Your task is to generate new, deeper, and more actionable insights based on this
 
     prompt += `\nRespond in HEBREW, professional tone. Return a JSON object where each key is a short title and value is a detailed explanation.`;
 
-    const deeperInsightsResult = await invokeLLM({
+    const deeperInsightsResult = await openRouterAPI({
       prompt,
       response_json_schema: { type: 'object', additionalProperties: { type: 'string' } },
     });

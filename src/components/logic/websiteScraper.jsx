@@ -1,4 +1,4 @@
-import { InvokeLLM } from '@/api/integrations';
+import { openRouterAPI } from '@/api/integrations';
 
 
 export const scrapeWebsiteAndGenerateInsights = async (websiteUrl, userEmail) => {
@@ -6,7 +6,7 @@ export const scrapeWebsiteAndGenerateInsights = async (websiteUrl, userEmail) =>
     console.log(`Starting comprehensive website analysis for: ${websiteUrl}`);
     
     // Step 1: Extract comprehensive data from website
-    const websiteData = await InvokeLLM({
+    const websiteData = await openRouterAPI({
       prompt: `
       אנא בצע ניתוח מקיף של האתר: ${websiteUrl}
       
@@ -133,7 +133,7 @@ export const scrapeWebsiteAndGenerateInsights = async (websiteUrl, userEmail) =>
 
 const generateWebsiteBasedRecommendations = async (websiteData, userEmail) => {
   try {
-    const recommendations = await InvokeLLM({
+    const recommendations = await openRouterAPI({
       prompt: `
       בהתבסס על הניתוח הבא של האתר:
       ${JSON.stringify(websiteData, null, 2)}
@@ -210,7 +210,7 @@ const generateWebsiteBasedRecommendations = async (websiteData, userEmail) => {
 
 const generateWebsiteBasedBusinessMoves = async (websiteData, userEmail) => {
   try {
-    const businessMoves = await InvokeLLM({
+    const businessMoves = await openRouterAPI({
       prompt: `
       בהתבסס על הניתוח של האתר:
       ${JSON.stringify(websiteData, null, 2)}
@@ -278,7 +278,7 @@ const generateWebsiteBasedBusinessMoves = async (websiteData, userEmail) => {
 
 const generateMarketInsights = async (websiteData, userEmail) => {
   try {
-    const insights = await InvokeLLM({
+    const insights = await openRouterAPI({
       prompt: `
       בהתבסס על הניתוח של האתר והשוק:
       ${JSON.stringify(websiteData, null, 2)}

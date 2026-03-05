@@ -43,7 +43,7 @@ import ESNAReportViewer from "@/components/shared/ESNAReportViewer";
 import DeeperInsightsModal from "@/components/shared/DeeperInsightsModal";
 import { toast } from "sonner";
 import { FileUpload } from '@/api/entities';
-import { InvokeLLM, UploadFile } from '@/api/integrations';
+import { openRouterAPI, UploadFile } from '@/api/integrations';
 import { analyzeGenericFile, parseXlsx, processCreditReport, processESNAReport, processPurchaseDocument } from '@/api/functions';
 
 const FILE_CATEGORIES = [
@@ -307,7 +307,7 @@ ${rawDataForPrompt}
 חלץ את כל המוצרים, חשב סיכומים, והפק תובנות בעברית.
             `;
 
-            parseResult = await InvokeLLM({
+            parseResult = await openRouterAPI({
               prompt: inventoryPrompt,
               response_json_schema: inventoryAnalysisSchema
             });
@@ -372,7 +372,7 @@ ${rawDataForPrompt}
             };
 
             const rawDataForPrompt = JSON.stringify(raw_data.slice(0, 1000), null, 2);
-            parseResult = await InvokeLLM({
+            parseResult = await openRouterAPI({
               prompt: `נתח דוח מכירות: ${rawDataForPrompt}`,
               response_json_schema: salesReportSchema
             });
@@ -413,7 +413,7 @@ ${rawDataForPrompt}
             };
 
             const rawDataForPrompt = JSON.stringify(raw_data.slice(0, 1000), null, 2);
-            parseResult = await InvokeLLM({
+            parseResult = await openRouterAPI({
               prompt: `נתח דוח מבצעים: ${rawDataForPrompt}`,
               response_json_schema: promotionsReportSchema
             });
@@ -513,7 +513,7 @@ ${rawDataForPrompt}
             return; // Exit early
             
           } else {
-            // Use InvokeLLM for PDF analysis based on category
+            // Use openRouterAPI for PDF analysis based on category
             let targetSchema = {};
             let prompt = '';
 
@@ -553,7 +553,7 @@ ${rawDataForPrompt}
               prompt = `נתח ${category === 'balance_sheet' ? 'מאזן' : 'דוח רווח והפסד'} PDF`;
             }
 
-            parseResult = await InvokeLLM({
+            parseResult = await openRouterAPI({
               prompt: prompt,
               file_urls: [file_url],
               response_json_schema: targetSchema

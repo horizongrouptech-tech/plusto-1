@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Sparkles, Loader2 } from "lucide-react";
 import { FileUpload } from '@/api/entities';
-import { InvokeLLM } from '@/api/integrations';
+import { openRouterAPI } from '@/api/integrations';
 
 
 
@@ -94,7 +94,7 @@ export default function FullAnalysisButton({ file, onAnalysisComplete }) {
         setError(null);
 
         try {
-            const newParsedData = await InvokeLLM({
+            const newParsedData = await openRouterAPI({
                 prompt: analysisConfig.prompt,
                 file_urls: [file.file_url],
                 response_json_schema: analysisConfig.schema

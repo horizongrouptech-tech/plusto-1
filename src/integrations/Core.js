@@ -2,7 +2,7 @@
  * Bridge file for legacy Base44-style imports.
  *
  * Many components import integrations as:
- *   import { InvokeLLM } from "@/integrations/Core";
+ *   import { openRouterAPI } from "@/integrations/Core";
  *
  * The Base44 Vite plugin (legacySDKImports: true) resolves any path containing
  * "/integrations" to its own compat layer UNLESS the file already exists on disk.
@@ -12,7 +12,7 @@
  * All actual logic lives in src/api/integrations.js.
  */
 export {
-  InvokeLLM,
+  openRouterAPI,
   UploadFile,
   ExtractDataFromUploadedFile,
   GenerateImage,

@@ -1,5 +1,5 @@
 import { Product, ProductCatalog, StrategicMove } from '@/api/entities';
-import { InvokeLLM } from '@/api/integrations';
+import { openRouterAPI } from '@/api/integrations';
 
 
 
@@ -233,7 +233,7 @@ const createCustomStrategicMoves = async (customer, businessData, triggers, coun
     const movePrompt = buildMovePrompt(customer, businessData, trigger);
     
     try {
-      const response = await InvokeLLM({
+      const response = await openRouterAPI({
         prompt: movePrompt,
         response_json_schema: {
           type: "object",

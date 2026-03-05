@@ -27,15 +27,15 @@ async function apiCall(path, params) {
 }
 
 // ---------------------------------------------------------------------------
-// LLM
+// OpenRouter AI
 // ---------------------------------------------------------------------------
 
 /**
- * InvokeLLM({ prompt, response_json_schema?, add_context_from_internet?, model? })
+ * openRouterAPI({ prompt, response_json_schema?, file_urls?, model? })
  * When response_json_schema is provided, returns the parsed JSON object directly.
  * Otherwise returns { result: string }.
  */
-export const InvokeLLM = (params) => apiCall('/api/integrations/invoke-llm', params);
+export const openRouterAPI = (params) => apiCall('/api/integrations/openrouter-api', params);
 
 // ---------------------------------------------------------------------------
 // File upload — handled client-side via Supabase Storage to avoid size limits
@@ -114,7 +114,7 @@ export const SendSMS = (params) => apiCall('/api/integrations/send-sms', params)
 // ---------------------------------------------------------------------------
 
 export const Core = {
-  InvokeLLM,
+  openRouterAPI,
   UploadFile,
   ExtractDataFromUploadedFile,
   GenerateImage,

@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 
 const BATCH_SIZE = 20;
 
@@ -24,7 +24,7 @@ export default async function handler(req, res) {
         await supabaseAdmin.from('process_status').update({ progress, current_step: `מייצר מוצרים... (${batch * BATCH_SIZE}/${Math.min(product_count, 200)})` }).eq('id', process_id);
       }
 
-      const productsData = await invokeLLM({
+      const productsData = await openRouterAPI({
         prompt: `אתה מומחה לניהול קטלוגים ישראלי. צור ${BATCH_SIZE} מוצרים מגוונים ואמיתיים עבור עסק מסוג: "${business_type || 'קמעונאות כללית'}".
 ${generation_metadata ? `פרטים נוספים: ${JSON.stringify(generation_metadata)}` : ''}
 עבור כל מוצר, ספק: שם מוצר (עברי), ברקוד (13 ספרות), מחיר עלות, מחיר מכירה, קטגוריה, ספק.

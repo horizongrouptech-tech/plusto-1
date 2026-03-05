@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -25,7 +25,7 @@ export default async function handler(req, res) {
       }],
     };
 
-    const result = await invokeLLM({
+    const result = await openRouterAPI({
       prompt: `צור רשימת 8-12 משימות חוזרות (recurring tasks) חשובות לעסק מסוג "${profile?.business_type || 'כללי'}".
 כלול משימות יומיות, שבועיות ותחזית חודשיות לניהול עסקי שוטף.
 השתמש בעברית.`,

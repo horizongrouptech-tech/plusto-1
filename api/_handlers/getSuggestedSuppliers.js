@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
       reasoning: 'string',
     };
 
-    const aiResult = await invokeLLM({
+    const aiResult = await openRouterAPI({
       prompt: `עסק מסוג "${profile?.business_type}" בשם "${profile?.business_name}".
 אילו קטגוריות ספקים הכי רלוונטיות לעסק זה? ציין עד 5 קטגוריות.`,
       response_json_schema: schema,

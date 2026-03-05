@@ -20,7 +20,7 @@ import AddSupplierModal from '../components/shared/AddSupplierModal';
 import { toast } from "sonner";
 import SupplierQuoteRequestModal from '../components/shared/SupplierQuoteRequestModal';
 import { Product, Supplier, SupplierQuote, User } from '@/api/entities';
-import { InvokeLLM } from '@/api/integrations';
+import { openRouterAPI } from '@/api/integrations';
 
 export default function SupplierAnalysisPage() {
   const [products, setProducts] = useState([]);
@@ -87,7 +87,7 @@ export default function SupplierAnalysisPage() {
       for (const product of products.slice(0, 5)) { // Limit to first 5 products for performance
         console.log(`מנתח ספקים עבור: ${product.name}`);
         
-        const analysis = await InvokeLLM({
+        const analysis = await openRouterAPI({
           prompt: `
           מוצר: "${product.name}"
           קטגוריה: ${product.category || 'לא צוינה'}
@@ -198,7 +198,7 @@ export default function SupplierAnalysisPage() {
     setIsAnalyzing(true);
     setError(null);
     try {
-      const newSupplierSuggestions = await InvokeLLM({
+      const newSupplierSuggestions = await openRouterAPI({
         prompt: `
           בהתבסס על פרופיל העסק הבא:
           - סוג עסק: ${user.business_type}

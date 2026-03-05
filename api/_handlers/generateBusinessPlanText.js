@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
@@ -56,7 +56,7 @@ ${strategicInput ? `מידע אסטרטגי:
 
 כתוב תוכנית עסקית הכוללת: תקציר מנהלים, ניתוח מצב נוכחי, יעדים, אסטרטגיית שיווק, תוכנית כוח אדם, תחזית פיננסית, ניתוח סיכונים, ולוח זמנים. Markdown בלבד.`;
 
-    const generatedText = await invokeLLM({ prompt });
+    const generatedText = await openRouterAPI({ prompt });
 
     await supabaseAdmin.from('business_forecast').update({ business_plan_text: generatedText }).eq('id', forecastId);
 

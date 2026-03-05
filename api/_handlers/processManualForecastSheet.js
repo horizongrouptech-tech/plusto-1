@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 import * as XLSX from 'xlsx';
 
 export default async function handler(req, res) {
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     let effectiveMapping = column_mapping;
     if (!effectiveMapping) {
       const sampleRows = dataRows.slice(0, 3);
-      const aiResult = await invokeLLM({
+      const aiResult = await openRouterAPI({
         prompt: `Given these Excel sheet headers and sample data, identify which columns map to: period_month, category, subcategory, revenue, expenses, profit, notes.
 Headers: ${JSON.stringify(headers)}
 Sample rows: ${JSON.stringify(sampleRows)}
