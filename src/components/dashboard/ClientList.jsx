@@ -79,7 +79,7 @@ export default function ClientList({ clients, onSelectClient, selectedClientId }
               return (
                 <button
                   key={client.id}
-                  onClick={() => onSelectClient(client)}
+                  onClick={() => onSelectClient?.(client)}
                   className={cn(
                     "w-full p-3 rounded-lg border transition-all text-right",
                     "hover:border-horizon-primary hover:bg-horizon-primary/5",

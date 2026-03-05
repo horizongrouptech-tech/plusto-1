@@ -10,8 +10,7 @@ import { Loader2, Search, Save, X, Plus, Users, Building2 } from 'lucide-react';
 
 
 import { toast } from "sonner";
-import { OnboardingRequest } from '@/api/entities';
-import { getFinancialManagers } from '@/api/functions';
+import { OnboardingRequest, User } from '@/api/entities';
 export default function ManagerAssignmentModal({ isOpen, onClose, currentUser }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [assignments, setAssignments] = useState({});
@@ -27,12 +26,12 @@ export default function ManagerAssignmentModal({ isOpen, onClose, currentUser })
     queryFn: () => OnboardingRequest.list()
   });
 
-  // טעינת מנהלי כספים דרך backend function
+  // טעינת מנהלי כספים — query ישיר (לא דרך API שלא עובד ב-dev)
   const { data: financialManagersData, isLoading: loadingManagers } = useQuery({
     queryKey: ['financialManagers'],
     queryFn: async () => {
-      const response = await getFinancialManagers({});
-      return response.data?.managers || [];
+      const allUsers = await User.list();
+      return allUsers.filter(u => u.user_type === 'financial_manager' && u.is_active !== false);
     },
     enabled: !!currentUser
   });

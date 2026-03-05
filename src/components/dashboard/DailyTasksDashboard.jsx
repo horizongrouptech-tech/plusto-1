@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import { DragDropContext, Droppable } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Input } from "@/components/ui/input";
 import {
   Calendar as CalendarLucide,
   Users,
@@ -11,23 +10,17 @@ import {
   AlertTriangle,
   Plus,
   ArrowLeft,
-  Lightbulb,
   Clock,
   Target,
-  ListTodo,
   Circle,
   AlertCircle,
   Loader2,
-  TrendingUp,
   Filter,
-  LayoutGrid,
-  CheckSquare,
   XCircle,
   ChevronDown,
   ChevronUp,
-  BookOpen,
   CalendarIcon,
-  User as UserIcon // Added User as UserIcon import
+  User as UserIcon
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -43,39 +36,28 @@ import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 
 import TaskCard from './kanban/TaskCard';
-import CompletedTasksModal from './kanban/CompletedTasksModal';
-import GoalBankManager from '../admin/GoalBankManager';
 import CreateTaskModal from '../shared/CreateTaskModal';
-
 
 import { toast } from "sonner";
 import { CustomerGoal, OnboardingRequest, Recommendation, User } from '@/api/entities';
 import { generateRecurringTasks } from '@/api/functions';
+
 // פונקציה לקבלת קבוצת העבודה היומית
 const getTodayWorkGroup = () => {
-  const dayOfWeek = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
-
+  const dayOfWeek = new Date().getDay();
   switch (dayOfWeek) {
-    case 0: // ראשון
-    case 3: // רביעי
-      return { groups: ['A'], message: 'היום יום עבודה על לקוחות מקבוצה A' };
-    case 1: // שני
-    case 4: // חמישי
-      return { groups: ['B'], message: 'היום יום עבודה על לקוחות מקבוצה B' };
-    case 2: // שלישי
-      return { groups: ['A', 'B'], message: 'היום יום שלישי - מומלץ לעבוד על לקוחות מקבוצה A ו-B' };
-    default: // שישי ושבת
-      return { groups: [], message: 'סוף שבוע - אין לקוחות מוגדרים לעבודה' };
+    case 0: case 3: return { groups: ['A'], message: 'היום יום עבודה על לקוחות מקבוצה A' };
+    case 1: case 4: return { groups: ['B'], message: 'היום יום עבודה על לקוחות מקבוצה B' };
+    case 2: return { groups: ['A', 'B'], message: 'היום יום שלישי - מומלץ לעבוד על לקוחות מקבוצה A ו-B' };
+    default: return { groups: [], message: 'סוף שבוע - אין לקוחות מוגדרים לעבודה' };
   }
 };
 
-// פונקציה לקבלת שם יום בעברית
 const getHebrewDayName = () => {
   const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
   return days[new Date().getDay()];
 };
 
-// פונקציה לקבלת צבע תגית קבוצת לקוח
 const getCustomerGroupBadgeColor = (group) => {
   if (group === 'A') return 'bg-[#32acc1] text-white';
   if (group === 'B') return 'bg-[#fc9f67] text-white';
@@ -88,10 +70,8 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const [editedTaskData, setEditedTaskData] = useState({});
   const [groupFilter, setGroupFilter] = useState('all');
   const [customerFilter, setCustomerFilter] = useState('all');
-  const [financialManagerFilter, setFinancialManagerFilter] = useState('all'); // Added new state for financial manager filter
-  const [showCompletedModal, setShowCompletedModal] = useState(false);
-  const [isClientsExpanded, setIsClientsExpanded] = useState(false); // Default: collapsed
-  const [showGoalBankModal, setShowGoalBankModal] = useState(false);
+  const [financialManagerFilter, setFinancialManagerFilter] = useState('all');
+  const [isClientsExpanded, setIsClientsExpanded] = useState(false);
   const [customerForNewTask, setCustomerForNewTask] = useState(null);
 
   const todayWorkGroup = getTodayWorkGroup();
@@ -102,24 +82,18 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     queryKey: ['allCustomers', currentUser.email, isAdmin],
     queryFn: async () => {
       if (isAdmin) {
-        // אדמין רואה את כל OnboardingRequests הפעילים ושלא בארכיון
-        const onboardingReqs = await OnboardingRequest.filter({ 
+        const onboardingReqs = await OnboardingRequest.filter({
           is_active: true,
           is_archived: { $ne: true }
         });
-        
         return onboardingReqs.map((req) => ({
-          id: req.id,
-          email: req.email,
-          full_name: req.full_name,
-          business_name: req.business_name,
-          customer_group: req.customer_group,
+          id: req.id, email: req.email, full_name: req.full_name,
+          business_name: req.business_name, customer_group: req.customer_group,
           assigned_financial_manager_email: req.assigned_financial_manager_email,
           business_type: req.business_type
         }));
       } else {
-        // ⭐ מנהל כספים - טוען כל OnboardingRequests ומסנן בצד הלקוח (כולל מנהלים משניים!)
-        const allOnboardingReqs = await OnboardingRequest.filter({ 
+        const allOnboardingReqs = await OnboardingRequest.filter({
           is_active: true,
           is_archived: { $ne: true }
         });
@@ -127,41 +101,28 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
           req.assigned_financial_manager_email === currentUser.email ||
           req.additional_assigned_financial_manager_emails?.includes(currentUser.email)
         );
-
         return onboardingReqs.map((req) => ({
-          id: req.id,
-          email: req.email,
-          full_name: req.full_name,
-          business_name: req.business_name,
-          customer_group: req.customer_group,
+          id: req.id, email: req.email, full_name: req.full_name,
+          business_name: req.business_name, customer_group: req.customer_group,
           assigned_financial_manager_email: req.assigned_financial_manager_email,
           business_type: req.business_type
         }));
       }
     },
-    staleTime: 5 * 60 * 1000, // 5 דקות cache
+    staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: 1
   });
 
-  // סינון לקוחות לפי קבוצת העבודה של היום ומנהל הכספים הנוכחי
+  // סינון לקוחות לפי קבוצת העבודה של היום
   const todaysClients = useMemo(() => {
     if (!allCustomers.length) return [];
-
-    // עבור אדמין - להציג את כל הלקוחות תמיד
-    if (isAdmin) {
-      return allCustomers;
-    }
-
-    // עבור מנהל כספים - לסנן לפי קבוצת העבודה של היום
+    if (isAdmin) return allCustomers;
     if (todayWorkGroup.groups.length === 0) return [];
-
-    return allCustomers.filter((customer) => {
-      // בדיקה אם הלקוח בקבוצת העבודה של היום
-      const isInTodaysGroup = todayWorkGroup.groups.includes(customer.customer_group);
-      return isInTodaysGroup;
-    });
+    return allCustomers.filter((customer) =>
+      todayWorkGroup.groups.includes(customer.customer_group)
+    );
   }, [allCustomers, todayWorkGroup, isAdmin]);
 
   // טעינת כל המשימות הפעילות
@@ -182,10 +143,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         return filterByParentGoals(allTasks);
       } else {
         const myCustomers = allCustomers.map((c) => c.email);
-        const customerTasks = await CustomerGoal.filter({
-          is_active: true
-        }, 'order_index');
-
+        const customerTasks = await CustomerGoal.filter({ is_active: true }, 'order_index');
         const tasksOnly = filterByParentGoals(customerTasks);
         return tasksOnly.filter((task) =>
           task.assignee_email === currentUser.email ||
@@ -194,7 +152,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
       }
     },
     enabled: !!allCustomers.length || isAdmin,
-    staleTime: 5 * 60 * 1000, // 5 דקות cache
+    staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: 1
@@ -204,7 +162,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const activeTasks = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
     return (goals || []).filter((task) => {
       const startDate = task.start_date ? new Date(task.start_date) : null;
       if (!startDate) return true;
@@ -228,43 +185,32 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   // סינון לפי קבוצת לקוחות, לקוח ספציפי ומנהל כספים
   const filteredTasksByGroup = useMemo(() => {
     let filtered = activeTasks;
-
-    // סינון לפי קבוצה
     if (groupFilter !== 'all') {
       filtered = filtered.filter((task) => {
         const customer = allCustomers.find((c) => c.email === task.customer_email);
-        if (groupFilter === 'no_group') {
-          return !customer?.customer_group || customer.customer_group === '';
-        }
+        if (groupFilter === 'no_group') return !customer?.customer_group || customer.customer_group === '';
         return customer?.customer_group === groupFilter;
       });
     }
-
-    // סינון לפי לקוח
     if (customerFilter !== 'all') {
       filtered = filtered.filter((task) => task.customer_email === customerFilter);
     }
-
-    // סינון לפי מנהל כספים (אדמין בלבד)
     if (isAdmin && financialManagerFilter !== 'all') {
       filtered = filtered.filter((task) => task.assignee_email === financialManagerFilter);
     }
-
     return filtered;
   }, [activeTasks, groupFilter, customerFilter, financialManagerFilter, allCustomers, isAdmin]);
 
-  // חלוקת משימות לפי סטטוס (לסטטיסטיקות)
-  const tasksByStatus = useMemo(() => {
-    return {
-      open: filteredTasksByGroup.filter((t) => t.status === 'open'),
-      in_progress: filteredTasksByGroup.filter((t) => t.status === 'in_progress'),
-      done: filteredTasksByGroup.filter((t) => t.status === 'done'),
-      delayed: filteredTasksByGroup.filter((t) => t.status === 'delayed'),
-      cancelled: filteredTasksByGroup.filter((t) => t.status === 'cancelled')
-    };
-  }, [filteredTasksByGroup]);
+  // חלוקת משימות לפי סטטוס
+  const tasksByStatus = useMemo(() => ({
+    open: filteredTasksByGroup.filter((t) => t.status === 'open'),
+    in_progress: filteredTasksByGroup.filter((t) => t.status === 'in_progress'),
+    done: filteredTasksByGroup.filter((t) => t.status === 'done'),
+    delayed: filteredTasksByGroup.filter((t) => t.status === 'delayed'),
+    cancelled: filteredTasksByGroup.filter((t) => t.status === 'cancelled')
+  }), [filteredTasksByGroup]);
 
-  // לקוחות לעמודות הלוח: סינון לפי קבוצה/לקוח, מיון לפי תאריך סיום קרוב
+  // לקוחות לעמודות הלוח
   const filteredCustomersForColumns = useMemo(() => {
     let list = allCustomers.filter((c) => {
       if (groupFilter === 'all') return true;
@@ -274,10 +220,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     if (customerFilter !== 'all') {
       list = list.filter((c) => c.email === customerFilter);
     }
-    const taskCountByEmail = {};
-    filteredTasksByGroup.forEach((t) => {
-      taskCountByEmail[t.customer_email] = (taskCountByEmail[t.customer_email] || 0) + 1;
-    });
     const getNearestEndDate = (email) => {
       const tasks = filteredTasksByGroup.filter((t) => t.customer_email === email);
       if (!tasks.length) return null;
@@ -294,21 +236,18 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     });
   }, [allCustomers, groupFilter, customerFilter, filteredTasksByGroup]);
 
-  // סדר וכותרת לכל סוג סטטוס (פעיל) – להפרדה ויזואלית בעמודה (בוטל לא מוצג)
+  // סדר סטטוסים בעמודה
   const ACTIVE_STATUS_SECTIONS = [
-    { key: 'delayed', label: 'באיחור', colorClass: 'border-red-500/50 bg-red-500/10 text-red-700' },
-    { key: 'in_progress', label: 'בביצוע', colorClass: 'border-yellow-500/50 bg-yellow-500/10 text-yellow-700' },
-    { key: 'open', label: 'לביצוע', colorClass: 'border-blue-500/50 bg-blue-500/10 text-blue-700' }
+    { key: 'delayed', label: 'באיחור', colorClass: 'border-rose-200 bg-rose-50 text-rose-600' },
+    { key: 'in_progress', label: 'בביצוע', colorClass: 'border-amber-200 bg-amber-50 text-amber-600' },
+    { key: 'open', label: 'לביצוע', colorClass: 'border-slate-200 bg-slate-50 text-slate-500' }
   ];
 
-  // קיבוץ משימות לפי לקוח ולפי סטטוס: delayed, in_progress, open, cancelled, completed – ממוין לפי תאריך בכל קבוצה
+  // קיבוץ משימות לפי לקוח ולפי סטטוס
   const tasksByCustomer = useMemo(() => {
     const byEmail = {};
     filteredCustomersForColumns.forEach((c) => {
-      byEmail[c.email] = {
-        delayed: [], in_progress: [], open: [],
-        completed: []
-      };
+      byEmail[c.email] = { delayed: [], in_progress: [], open: [], completed: [] };
     });
     const sortByEndDate = (a, b) => {
       if (!a.end_date) return 1;
@@ -328,7 +267,6 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     return byEmail;
   }, [filteredTasksByGroup, filteredCustomersForColumns]);
 
-  // כל המשימות שהושלמו (לא משנה תאריך)
   const completedTasks = useMemo(() => {
     return (goals || []).filter((t) => t.status === 'done');
   }, [goals]);
@@ -337,86 +275,38 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const { data: allRecommendations = [] } = useQuery({
     queryKey: ['allRecommendationsForStats', currentUser.email, isAdmin],
     queryFn: async () => {
-      const filter = isAdmin ?
-        { status: { $ne: 'archived' } } :
-        {
-          assignee_email: currentUser.email,
-          status: { $ne: 'archived' }
-        };
+      const filter = isAdmin
+        ? { status: { $ne: 'archived' } }
+        : { assignee_email: currentUser.email, status: { $ne: 'archived' } };
       return await Recommendation.filter(filter);
     },
-    staleTime: 5 * 60 * 1000, // 5 דקות cache
+    staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: 1
   });
 
-  const todayDate = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
+  // סטטיסטיקות — רק משימות פעילות (בלי done)
+  const stats = useMemo(() => ({
+    totalTasks: filteredTasksByGroup.filter(t => t.status !== 'done').length,
+    open: tasksByStatus.open.length,
+    in_progress: tasksByStatus.in_progress.length,
+    done: completedTasks.length,
+    delayed: tasksByStatus.delayed.length
+  }), [filteredTasksByGroup, tasksByStatus, completedTasks]);
 
-  const weekFromNowDate = useMemo(() => {
-    const d = new Date(todayDate);
-    d.setDate(d.getDate() + 7);
-    d.setHours(23, 59, 59, 999); // Include the entire 7th day
-    return d;
-  }, [todayDate]);
-
-  // All tasks for today, regardless of status, used for stats calculation
-  const allTodaysTasksForStats = useMemo(() => {
-    return (goals || []).filter((task) => {
-      if (!task.end_date) return false;
-      const endDate = new Date(task.end_date);
-      endDate.setHours(0, 0, 0, 0);
-      return endDate.getTime() === todayDate.getTime();
-    });
-  }, [goals, todayDate]);
-
-  // Tasks for today (for tabs), excluding done/cancelled
-  const todayTasksForTabs = useMemo(() => {
-    return (allTodaysTasksForStats || []).filter((task) =>
-    task.status !== 'done' && task.status !== 'cancelled'
-    );
-  }, [allTodaysTasksForStats]);
-
-  // Tasks for this week (for tabs), excluding done/cancelled
-  const thisWeekTasksForTabs = useMemo(() => {
-    return (goals || []).filter((task) => {
-      if (!task.end_date) return false;
-      const endDate = new Date(task.end_date);
-      endDate.setHours(0, 0, 0, 0); // Compare dates without time
-      return endDate >= todayDate && endDate <= weekFromNowDate &&
-      task.status !== 'done' && task.status !== 'cancelled';
-    });
-  }, [goals, todayDate, weekFromNowDate]);
-
-  // חישוב סטטיסטיקות כוללות לשורת סיכום
-  const overallStats = useMemo(() => {
-    const totalPotentialProfit = allRecommendations.reduce((sum, rec) =>
-    sum + (rec.expected_profit || 0), 0
-    );
-
-    return {
-      totalClients: allCustomers.length,
-      totalRecommendations: allRecommendations.length,
-      totalPotentialProfit: totalPotentialProfit
-    };
-  }, [allCustomers, allRecommendations]);
-
+  // === Mutations ===
 
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, updateData }) => {
-      // 🔒 קריאת המשימה המקורית לשמירת is_active
       const originalTask = goals.find(g => g.id === taskId);
       return CustomerGoal.update(taskId, {
         ...updateData,
-        is_active: originalTask?.is_active !== false // שמירת הערך המקורי
+        is_active: originalTask?.is_active !== false
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['allRelevantTasks']); // Invalidate the broader query
+      queryClient.invalidateQueries(['allRelevantTasks']);
       setIsTaskModalOpen(false);
       setSelectedTask(null);
       toast.success('המשימה עודכנה בהצלחה!');
@@ -430,27 +320,20 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
   const markTaskAsDoneMutation = useMutation({
     mutationFn: async (taskId) => {
       const task = goals.find(g => g.id === taskId);
-      
       if (task?.task_type === 'recurring') {
-        // משימה חוזרת - עדכן עם תאריך השלמה
         await CustomerGoal.update(taskId, {
           status: 'done',
           last_completed_at: new Date().toISOString(),
           times_completed: (task.times_completed || 0) + 1,
-          is_active: true // 🔒 תמיד true למשימות חוזרות
+          is_active: true
         });
-        
-        // קרא לפונקציה ליצירת המשימה הבאה
-        try {
-          await generateRecurringTasks({});
-        } catch (error) {
+        try { await generateRecurringTasks({}); } catch (error) {
           console.error('Error generating next occurrence:', error);
         }
       } else {
-        // משימה רגילה - שמור is_active המקורי
-        await CustomerGoal.update(taskId, { 
-          status: 'done', 
-          is_active: task?.is_active !== false // 🔒 שמירת הערך המקורי
+        await CustomerGoal.update(taskId, {
+          status: 'done',
+          is_active: task?.is_active !== false
         });
       }
     },
@@ -464,13 +347,46 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
     }
   });
 
+  // === Drag-and-Drop Handler ===
+  const handleDragEnd = async (result) => {
+    const { draggableId, source, destination } = result;
+    if (!destination) return;
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+
+    // droppableId format: "customer@email.com__status"
+    const newStatus = destination.droppableId.split('__').pop();
+    const taskId = draggableId;
+
+    // Optimistic update — עדכון מיידי ב-UI
+    queryClient.setQueryData(
+      ['allRelevantTasks', currentUser.email, isAdmin],
+      (old) => old?.map(t => t.id === taskId ? { ...t, status: newStatus } : t)
+    );
+
+    try {
+      const task = goals.find(g => g.id === taskId);
+      await CustomerGoal.update(taskId, {
+        status: newStatus,
+        is_active: task?.is_active !== false
+      });
+      toast.success('הסטטוס עודכן');
+    } catch (error) {
+      console.error('Error updating task status via drag:', error);
+      toast.error('שגיאה בעדכון סטטוס');
+      // Revert on failure
+      queryClient.invalidateQueries(['allRelevantTasks']);
+    }
+  };
+
+  // === Event Handlers ===
+
   const handleTaskClick = (task) => {
     setSelectedTask(task);
     setEditedTaskData({
       name: task.name,
       status: task.status,
       notes: task.notes || '',
-      end_date: task.end_date ? format(new Date(task.end_date), 'yyyy-MM-dd') : '', // Format date for input type="date"
+      end_date: task.end_date ? format(new Date(task.end_date), 'yyyy-MM-dd') : '',
       due_time: task.due_time || ''
     });
     setIsTaskModalOpen(true);
@@ -478,18 +394,14 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
 
   const handleSaveTask = () => {
     if (!selectedTask) return;
-    updateTaskMutation.mutate({
-      taskId: selectedTask.id,
-      updateData: editedTaskData
-    });
+    updateTaskMutation.mutate({ taskId: selectedTask.id, updateData: editedTaskData });
   };
 
   const handleMarkAsDone = (taskId) => {
     const task = goals.find(g => g.id === taskId);
-    const confirmMsg = task?.task_type === 'recurring' 
+    const confirmMsg = task?.task_type === 'recurring'
       ? 'המשימה תסומן כהושלמה ותיווצר מחדש למועד הבא. להמשיך?'
       : 'האם אתה בטוח שברצונך לסמן משימה זו כהושלמה?';
-    
     if (confirm(confirmMsg)) {
       markTaskAsDoneMutation.mutate(taskId);
     }
@@ -510,67 +422,37 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
 
   const getStatusDisplay = (status) => {
     const statusConfig = {
-      open: { label: 'פתוח', icon: Circle, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
-      in_progress: { label: 'בביצוע', icon: Clock, color: 'text-yellow-500', bgColor: 'bg-yellow-500/10' },
-      done: { label: 'הושלם', icon: CheckCircle2, color: 'text-green-500', bgColor: 'bg-green-500/10' },
-      delayed: { label: 'באיחור', icon: AlertCircle, color: 'text-red-500', bgColor: 'bg-red-500/10' }
+      open: { label: 'פתוח', icon: Circle, color: 'text-slate-500', bgColor: 'bg-slate-50' },
+      in_progress: { label: 'בביצוע', icon: Clock, color: 'text-amber-500', bgColor: 'bg-amber-50' },
+      done: { label: 'הושלם', icon: CheckCircle2, color: 'text-emerald-500', bgColor: 'bg-emerald-50' },
+      delayed: { label: 'באיחור', icon: AlertCircle, color: 'text-rose-500', bgColor: 'bg-rose-50' }
     };
     return statusConfig[status] || statusConfig.open;
   };
-
-  // סטטיסטיקות מעודכנות
-  const stats = useMemo(() => {
-    return {
-      totalTasks: filteredTasksByGroup.length,
-      open: tasksByStatus.open.length,
-      in_progress: tasksByStatus.in_progress.length,
-      done: completedTasks.length,
-      delayed: tasksByStatus.delayed.length
-    };
-  }, [filteredTasksByGroup, tasksByStatus, completedTasks]);
 
   if (customersLoading || tasksLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-horizon-accent">טוען נתונים...</div>
-      </div>);
-
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6" dir="rtl">
-      {/* כותרת וכפתורים */}
+      {/* כותרת */}
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold text-horizon-text flex items-center gap-2">לוח משימות</h2>
           <p className="text-horizon-accent mt-1">
-            לוח משימות לפי לקוח – גלול לצפייה בכל הלקוחות
+            גרור כרטיסים בין סטטוסים לעדכון מהיר
           </p>
-        </div>
-        <div className="flex gap-2">
-          {(isAdmin || currentUser?.user_type === 'financial_manager') && (
-            <Button
-              onClick={() => setShowGoalBankModal(true)}
-              variant="outline"
-              className="border-horizon-primary text-horizon-primary hover:bg-horizon-primary/10"
-            >
-              <BookOpen className="w-4 h-4 ml-2" />
-              בנק יעדים
-            </Button>
-          )}
-          <Button
-            onClick={() => setShowCompletedModal(true)}
-            className="bg-green-600 hover:bg-green-700 text-white">
-
-            <CheckSquare className="w-4 h-4 ml-2" />
-            משימות שהושלמו ({completedTasks.length})
-          </Button>
         </div>
       </div>
 
       {/* הודעת יום העבודה */}
-      {!isAdmin && todayWorkGroup.groups.length > 0 &&
-      <Card className="card-horizon bg-white">
+      {!isAdmin && todayWorkGroup.groups.length > 0 && (
+        <Card className="card-horizon bg-white">
           <CardContent className="p-4 flex items-center gap-3">
             <CalendarLucide className="w-5 h-5 text-horizon-primary" />
             <span className="text-horizon-text font-medium text-right">
@@ -578,65 +460,48 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
             </span>
           </CardContent>
         </Card>
-      }
+      )}
 
-      {/* פילטרים */}
+      {/* פילטרים — 2 שורות מסודרות */}
       <Card className="card-horizon">
-        <CardContent className="p-4">
+        <CardContent className="p-4 space-y-3">
+          {/* שורה 1: כל הפילטרים */}
           <div className="flex items-center gap-4 flex-wrap">
+            {/* סינון קבוצה */}
             <div className="flex items-center gap-2">
               <Filter className="w-5 h-5 text-horizon-primary" />
-              <span className="text-sm font-medium text-horizon-text">סינון לפי קבוצה:</span>
+              <span className="text-sm font-medium text-horizon-text">קבוצה:</span>
             </div>
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant={groupFilter === 'all' ? 'default' : 'outline'}
+              <Button size="sm" variant={groupFilter === 'all' ? 'default' : 'outline'}
                 onClick={() => setGroupFilter('all')}
                 className={groupFilter === 'all' ? 'bg-horizon-primary text-white' : 'border-horizon text-horizon-accent'}>
-
                 הכל
               </Button>
-              <Button
-                size="sm"
-                variant={groupFilter === 'A' ? 'default' : 'outline'}
+              <Button size="sm" variant={groupFilter === 'A' ? 'default' : 'outline'}
                 onClick={() => setGroupFilter('A')}
                 className={groupFilter === 'A' ? 'bg-[#32acc1] text-white' : 'border-[#32acc1] text-[#32acc1]'}>
-
-                קבוצה A
+                A
               </Button>
-              <Button
-                size="sm"
-                variant={groupFilter === 'B' ? 'default' : 'outline'}
+              <Button size="sm" variant={groupFilter === 'B' ? 'default' : 'outline'}
                 onClick={() => setGroupFilter('B')}
                 className={groupFilter === 'B' ? 'bg-[#fc9f67] text-white' : 'border-[#fc9f67] text-[#fc9f67]'}>
-
-                קבוצה B
+                B
               </Button>
-              <Button
-                size="sm"
-                variant={groupFilter === 'no_group' ? 'default' : 'outline'}
+              <Button size="sm" variant={groupFilter === 'no_group' ? 'default' : 'outline'}
                 onClick={() => setGroupFilter('no_group')}
                 className={groupFilter === 'no_group' ? 'bg-gray-500 text-white' : 'border-gray-400 text-gray-400'}>
-
-                ללא שיוך
+                ללא
               </Button>
             </div>
 
-            <div className="flex items-center gap-2 mr-4">
-              <span className="text-sm font-medium text-horizon-text">מיון יעדים:</span>
-            </div>
-            <p className="text-xs text-horizon-accent">
-              יעדים ממוינים מהקרוב לרחוק לפי תאריך סיום
-            </p>
-
-            {/* סינון לפי לקוח */}
+            {/* סינון לקוח */}
             <div className="flex items-center gap-2 mr-4">
               <Users className="w-4 h-4 text-horizon-primary" />
-              <span className="text-sm font-medium text-horizon-text">סינון לפי לקוח:</span>
+              <span className="text-sm font-medium text-horizon-text">לקוח:</span>
             </div>
             <Select value={customerFilter} onValueChange={setCustomerFilter}>
-              <SelectTrigger className="w-[200px] bg-horizon-card border-horizon text-horizon-text">
+              <SelectTrigger className="w-[180px] bg-horizon-card border-horizon text-horizon-text">
                 <SelectValue placeholder="כל הלקוחות" />
               </SelectTrigger>
               <SelectContent className="bg-horizon-dark border-horizon max-h-[300px]">
@@ -651,15 +516,15 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
               </SelectContent>
             </Select>
 
-            {/* סינון לפי מנהל כספים (אדמין בלבד) */}
+            {/* סינון מנהל כספים (אדמין בלבד) */}
             {isAdmin && financialManagers.length > 0 && (
               <>
                 <div className="flex items-center gap-2 mr-4">
                   <UserIcon className="w-4 h-4 text-horizon-primary" />
-                  <span className="text-sm font-medium text-horizon-text">סינון לפי מנהל כספים:</span>
+                  <span className="text-sm font-medium text-horizon-text">מנהל:</span>
                 </div>
                 <Select value={financialManagerFilter} onValueChange={setFinancialManagerFilter}>
-                  <SelectTrigger className="w-[200px] bg-horizon-card border-horizon text-horizon-text">
+                  <SelectTrigger className="w-[180px] bg-horizon-card border-horizon text-horizon-text">
                     <SelectValue placeholder="כל המנהלים" />
                   </SelectTrigger>
                   <SelectContent className="bg-horizon-dark border-horizon max-h-[300px]">
@@ -673,16 +538,19 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                 </Select>
               </>
             )}
+          </div>
 
-            <div className="mr-auto flex gap-4 text-sm text-horizon-accent">
-              <span>סה"כ משימות פעילות: <span className="font-bold text-horizon-primary">{stats.totalTasks}</span></span>
-              <span>סה"כ לקוחות: <span className="font-bold text-horizon-primary">{filteredCustomersForColumns.length}</span></span>
-            </div>
+          {/* שורה 2: סטטיסטיקות */}
+          <div className="flex gap-4 text-sm text-horizon-accent border-t border-horizon pt-3">
+            <span>משימות פעילות: <span className="font-bold text-horizon-primary">{stats.totalTasks}</span></span>
+            <span>לקוחות: <span className="font-bold text-horizon-primary">{filteredCustomersForColumns.length}</span></span>
+            <span>באיחור: <span className="font-bold text-rose-500">{stats.delayed}</span></span>
+            <span>בביצוע: <span className="font-bold text-amber-500">{stats.in_progress}</span></span>
           </div>
         </CardContent>
       </Card>
 
-      {/* לוח משימות לפי לקוח */}
+      {/* לוח משימות — Kanban עם drag-and-drop */}
       {tasksLoading ? (
         <div className="text-center py-12">
           <Loader2 className="w-12 h-12 animate-spin mx-auto text-horizon-primary mb-4" />
@@ -697,102 +565,137 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
           </CardContent>
         </Card>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {filteredCustomersForColumns.map((customer) => {
-            const bucket = tasksByCustomer[customer.email] || {
-              delayed: [], in_progress: [], open: [], completed: []
-            };
-            const totalCount = bucket.delayed.length + bucket.in_progress.length + bucket.open.length + bucket.completed.length;
-            const headerColor = customer.customer_group === 'A'
-              ? 'bg-[#32acc1] text-white'
-              : customer.customer_group === 'B'
-                ? 'bg-[#fc9f67] text-white'
-                : 'bg-gray-500 text-white';
-            return (
-              <div key={customer.email} className="flex-shrink-0 w-80">
-                <div className="bg-horizon-card/50 rounded-lg border border-horizon">
-                  <div className={`p-4 border-b border-horizon rounded-t-lg flex items-center justify-between ${headerColor}`}>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Users className="w-5 h-5 flex-shrink-0" />
-                      <h3 className="font-bold text-base truncate" title={customer.business_name || customer.full_name}>
-                        {customer.business_name || customer.full_name}
-                      </h3>
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {filteredCustomersForColumns.map((customer) => {
+              const bucket = tasksByCustomer[customer.email] || {
+                delayed: [], in_progress: [], open: [], completed: []
+              };
+              // Badge count — רק משימות פעילות (בלי done)
+              const activeCount = bucket.delayed.length + bucket.in_progress.length + bucket.open.length;
+              const headerColor = customer.customer_group === 'A'
+                ? 'bg-gradient-to-l from-teal-500 to-teal-600 text-white'
+                : customer.customer_group === 'B'
+                  ? 'bg-gradient-to-l from-sky-500 to-indigo-500 text-white'
+                  : 'bg-gradient-to-l from-slate-400 to-slate-500 text-white';
+
+              return (
+                <div key={customer.email} className="flex-shrink-0 w-80">
+                  <div className="bg-horizon-card/50 rounded-lg border border-horizon">
+                    {/* כותרת עמודת לקוח */}
+                    <div className={`p-4 border-b border-horizon rounded-t-lg flex items-center justify-between ${headerColor}`}>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Users className="w-5 h-5 flex-shrink-0" />
+                        <h3 className="font-bold text-base truncate" title={customer.business_name || customer.full_name}>
+                          {customer.business_name || customer.full_name}
+                        </h3>
+                      </div>
+                      <Badge className="bg-white/20 text-white flex-shrink-0">
+                        {activeCount}
+                      </Badge>
                     </div>
-                    <Badge className="bg-white/20 text-white flex-shrink-0">
-                      {totalCount}
-                    </Badge>
-                  </div>
-                  <div className="p-3 border-b border-horizon">
-                    <Button
-                      type="button"
-                      onClick={() => setCustomerForNewTask(customer)}
-                      className="w-full bg-horizon-secondary hover:bg-horizon-secondary/90 text-white"
-                    >
-                      <Plus className="w-4 h-4 ml-2" />
-                      הוסף משימה חדשה
-                    </Button>
-                  </div>
-                  <div className="p-3 space-y-3 min-h-[200px] max-h-[calc(100vh-300px)] overflow-y-auto">
-                    {totalCount === 0 ? (
-                      <p className="text-sm text-horizon-accent text-center py-8">אין משימות</p>
-                    ) : (
-                      <>
-                        {ACTIVE_STATUS_SECTIONS.map(({ key, label, colorClass }) =>
-                          bucket[key].length > 0 ? (
+
+                    {/* כפתור הוספת משימה — צבע primary */}
+                    <div className="p-3 border-b border-horizon">
+                      <Button
+                        type="button"
+                        onClick={() => setCustomerForNewTask(customer)}
+                        className="w-full bg-horizon-primary hover:bg-horizon-primary/90 text-white"
+                      >
+                        <Plus className="w-4 h-4 ml-2" />
+                        הוסף משימה חדשה
+                      </Button>
+                    </div>
+
+                    {/* משימות — Droppable zones לכל סטטוס */}
+                    <div className="p-3 space-y-3 min-h-[200px] max-h-[calc(100vh-300px)] overflow-y-auto">
+                      {activeCount === 0 && bucket.completed.length === 0 ? (
+                        <p className="text-sm text-horizon-accent text-center py-8">אין משימות</p>
+                      ) : (
+                        <>
+                          {ACTIVE_STATUS_SECTIONS.map(({ key, label, colorClass }) => (
                             <div key={key}>
                               <div className={`border rounded px-2 py-1.5 text-center text-xs font-medium ${colorClass}`}>
                                 {label} ({bucket[key].length})
                               </div>
-                              <div className="space-y-2 mt-2">
-                                {bucket[key].map((task) => {
-                                  const parentGoal = task.parent_id ? goals.find((g) => g.id === task.parent_id) : null;
-                                  return (
-                                    <TaskCard
-                                      key={task.id}
-                                      task={task}
-                                      customer={customer}
-                                      parentGoal={parentGoal}
-                                      onTaskClick={handleTaskClick}
-                                      onMarkAsDone={handleMarkAsDone}
-                                      isDragging={false}
-                                    />
-                                  );
-                                })}
+                              <Droppable droppableId={`${customer.email}__${key}`}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                    className={`space-y-2 mt-2 min-h-[40px] rounded-md transition-colors ${
+                                      snapshot.isDraggingOver
+                                        ? 'bg-teal-50 border-2 border-dashed border-teal-300 p-2'
+                                        : ''
+                                    }`}
+                                  >
+                                    {bucket[key].map((task, index) => {
+                                      const parentGoal = task.parent_id ? goals.find((g) => g.id === task.parent_id) : null;
+                                      return (
+                                        <TaskCard
+                                          key={task.id}
+                                          task={task}
+                                          customer={customer}
+                                          parentGoal={parentGoal}
+                                          onTaskClick={handleTaskClick}
+                                          onMarkAsDone={handleMarkAsDone}
+                                          index={index}
+                                        />
+                                      );
+                                    })}
+                                    {provided.placeholder}
+                                  </div>
+                                )}
+                              </Droppable>
+                            </div>
+                          ))}
+
+                          {/* משימות שהושלמו */}
+                          {bucket.completed.length > 0 && (
+                            <>
+                              <div className="border-t-2 border-horizon mt-4 pt-3 bg-horizon-primary/5 rounded px-2 py-2 text-center">
+                                <p className="text-xs font-medium text-horizon-accent">משימות שהושלמו ({bucket.completed.length})</p>
                               </div>
-                            </div>
-                          ) : null
-                        )}
-                        {bucket.completed.length > 0 && (
-                          <>
-                            <div className="border-t-2 border-horizon mt-4 pt-3 bg-horizon-primary/5 rounded px-2 py-2 text-center">
-                              <p className="text-xs font-medium text-horizon-accent">משימות שהושלמו ({bucket.completed.length})</p>
-                            </div>
-                            <div className="space-y-2 mt-2">
-                              {bucket.completed.map((task) => {
-                                const parentGoal = task.parent_id ? goals.find((g) => g.id === task.parent_id) : null;
-                                return (
-                                  <TaskCard
-                                    key={task.id}
-                                    task={task}
-                                    customer={customer}
-                                    parentGoal={parentGoal}
-                                    onTaskClick={handleTaskClick}
-                                    onMarkAsDone={handleMarkAsDone}
-                                    isDragging={false}
-                                  />
-                                );
-                              })}
-                            </div>
-                          </>
-                        )}
-                      </>
-                    )}
+                              <Droppable droppableId={`${customer.email}__done`}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                    className={`space-y-2 mt-2 min-h-[40px] rounded-md transition-colors ${
+                                      snapshot.isDraggingOver
+                                        ? 'bg-emerald-50 border-2 border-dashed border-emerald-300 p-2'
+                                        : ''
+                                    }`}
+                                  >
+                                    {bucket.completed.map((task, index) => {
+                                      const parentGoal = task.parent_id ? goals.find((g) => g.id === task.parent_id) : null;
+                                      return (
+                                        <TaskCard
+                                          key={task.id}
+                                          task={task}
+                                          customer={customer}
+                                          parentGoal={parentGoal}
+                                          onTaskClick={handleTaskClick}
+                                          onMarkAsDone={handleMarkAsDone}
+                                          index={index}
+                                        />
+                                      );
+                                    })}
+                                    {provided.placeholder}
+                                  </div>
+                                )}
+                              </Droppable>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </DragDropContext>
       )}
 
       {/* טבלת לקוחות לעבודה היום */}
@@ -805,16 +708,11 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                 {isAdmin ? `כל הלקוחות (${todaysClients.length})` : `לקוחות לעבודה היום (${todaysClients.length})`}
               </div>
               <Button
-                variant="ghost"
-                size="sm"
+                variant="ghost" size="sm"
                 onClick={() => setIsClientsExpanded(!isClientsExpanded)}
                 className="text-horizon-accent hover:text-horizon-primary"
               >
-                {isClientsExpanded ? (
-                  <ChevronUp className="w-5 h-5" />
-                ) : (
-                  <ChevronDown className="w-5 h-5" />
-                )}
+                {isClientsExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
               </Button>
             </CardTitle>
           </CardHeader>
@@ -842,10 +740,7 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                     </div>
                     <div className="space-y-2">
                       <Link to={createPageUrl('CustomerManagementNew') + `?clientId=${client.id}`}>
-                        <Button
-                          size="sm"
-                          className="w-full bg-[#32acc1] hover:bg-[#32acc1]/90 text-white rounded-lg h-9"
-                        >
+                        <Button size="sm" className="w-full bg-[#32acc1] hover:bg-[#32acc1]/90 text-white rounded-lg h-9">
                           <ArrowLeft className="w-4 h-4 ml-2" />
                           מעבר ללקוח
                         </Button>
@@ -857,11 +752,8 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                           rel="noopener noreferrer"
                           style={{ display: 'block', width: '100%' }}
                         >
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full border-[#32acc1] text-[#32acc1] hover:bg-[#32acc1]/10 rounded-lg h-9"
-                          >
+                          <Button size="sm" variant="outline"
+                            className="w-full border-[#32acc1] text-[#32acc1] hover:bg-[#32acc1]/10 rounded-lg h-9">
                             פתח בפיירברי
                           </Button>
                         </a>
@@ -874,17 +766,8 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
           )}
         </Card>
       )}
-      
-      {/* מודאל משימות שהושלמו */}
-      <CompletedTasksModal
-        isOpen={showCompletedModal}
-        onClose={() => setShowCompletedModal(false)}
-        completedTasks={completedTasks}
-        allCustomers={allCustomers}
-        allGoals={goals}
-        onRestoreTask={handleRestoreTask} />
 
-      {/* מודאל הוספת משימה חדשה (מתוך עמודת לקוח) */}
+      {/* מודאל הוספת משימה חדשה */}
       <CreateTaskModal
         isOpen={!!customerForNewTask}
         onClose={() => setCustomerForNewTask(null)}
@@ -897,22 +780,9 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
         }}
       />
 
-      {/* מודל בנק יעדים */}
-      <Dialog open={showGoalBankModal} onOpenChange={setShowGoalBankModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-horizon-dark text-horizon-text border-horizon" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-xl text-horizon-text flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-horizon-primary" />
-              בנק יעדים
-            </DialogTitle>
-          </DialogHeader>
-          <GoalBankManager currentUser={currentUser} />
-        </DialogContent>
-      </Dialog>
-
       {/* מודאל עריכת משימה */}
-      {selectedTask &&
-      <Dialog open={isTaskModalOpen} onOpenChange={setIsTaskModalOpen}>
+      {selectedTask && (
+        <Dialog open={isTaskModalOpen} onOpenChange={setIsTaskModalOpen}>
           <DialogContent className="sm:max-w-lg bg-horizon-dark text-horizon-text border-horizon" dir="rtl">
             <DialogHeader>
               <DialogTitle className="text-right text-xl">עריכת משימה</DialogTitle>
@@ -921,50 +791,48 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
               <div>
                 <Label className="text-right block mb-2 text-horizon-text">שם המשימה</Label>
                 <input
-                type="text"
-                value={editedTaskData.name || ''}
-                onChange={(e) => setEditedTaskData({ ...editedTaskData, name: e.target.value })}
-                className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text text-right" />
-
+                  type="text"
+                  value={editedTaskData.name || ''}
+                  onChange={(e) => setEditedTaskData({ ...editedTaskData, name: e.target.value })}
+                  className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text text-right"
+                />
               </div>
 
               <div>
                 <Label className="text-right block mb-2 text-horizon-text">סטטוס</Label>
                 <Select
-                value={editedTaskData.status}
-                onValueChange={(value) => setEditedTaskData({ ...editedTaskData, status: value })}>
-
+                  value={editedTaskData.status}
+                  onValueChange={(value) => setEditedTaskData({ ...editedTaskData, status: value })}>
                   <SelectTrigger className="w-full bg-horizon-card border-horizon text-horizon-text text-right">
                     <SelectValue>
                       {(() => {
-                      const display = getStatusDisplay(editedTaskData.status);
-                      const StatusIcon = display.icon;
-                      return (
-                        <div className="flex items-center gap-2 justify-end">
+                        const display = getStatusDisplay(editedTaskData.status);
+                        const StatusIcon = display.icon;
+                        return (
+                          <div className="flex items-center gap-2 justify-end">
                             <span className="font-medium">{display.label}</span>
                             <StatusIcon className={`w-5 h-5 ${display.color}`} />
-                          </div>);
-
-                    })()}
+                          </div>
+                        );
+                      })()}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="bg-horizon-dark border-horizon">
                     {['open', 'in_progress', 'done', 'delayed'].map((statusValue) => {
-                    const display = getStatusDisplay(statusValue);
-                    const StatusIcon = display.icon;
-                    return (
-                      <SelectItem
-                        key={statusValue}
-                        value={statusValue}
-                        className={`text-right cursor-pointer ${display.bgColor} hover:opacity-80 transition-opacity`}>
-
+                      const display = getStatusDisplay(statusValue);
+                      const StatusIcon = display.icon;
+                      return (
+                        <SelectItem
+                          key={statusValue}
+                          value={statusValue}
+                          className={`text-right cursor-pointer ${display.bgColor} hover:opacity-80 transition-opacity`}>
                           <div className="flex items-center gap-3 justify-end w-full py-1">
                             <span className={`font-medium text-base ${display.color}`}>{display.label}</span>
                             <StatusIcon className={`w-5 h-5 ${display.color}`} />
                           </div>
-                        </SelectItem>);
-
-                  })}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -973,10 +841,8 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
                 <Label className="text-right block mb-2 text-horizon-text">תאריך יעד</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-end text-right bg-horizon-card border-horizon text-horizon-text"
-                    >
+                    <Button variant="outline"
+                      className="w-full justify-end text-right bg-horizon-card border-horizon text-horizon-text">
                       {editedTaskData.end_date ? (
                         format(new Date(editedTaskData.end_date), 'dd/MM/yyyy', { locale: he })
                       ) : (
@@ -1005,53 +871,47 @@ export default function DailyTasksDashboard({ currentUser, isAdmin }) {
               <div>
                 <Label className="text-right block mb-2 text-horizon-text">שעת יעד (אופציונלי)</Label>
                 <input
-                type="time"
-                value={editedTaskData.due_time || ''}
-                onChange={(e) => setEditedTaskData({ ...editedTaskData, due_time: e.target.value })}
-                className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text text-right" />
-
+                  type="time"
+                  value={editedTaskData.due_time || ''}
+                  onChange={(e) => setEditedTaskData({ ...editedTaskData, due_time: e.target.value })}
+                  className="w-full px-3 py-2 bg-horizon-card border border-horizon rounded-md text-horizon-text text-right"
+                />
               </div>
 
               <div>
                 <Label className="text-right block mb-2 text-horizon-text">הערות</Label>
                 <Textarea
-                value={editedTaskData.notes || ''}
-                onChange={(e) => setEditedTaskData({ ...editedTaskData, notes: e.target.value })}
-                className="w-full bg-horizon-card border-horizon text-horizon-text text-right min-h-[100px]"
-                placeholder="הוסף הערות למשימה..." />
-
+                  value={editedTaskData.notes || ''}
+                  onChange={(e) => setEditedTaskData({ ...editedTaskData, notes: e.target.value })}
+                  className="w-full bg-horizon-card border-horizon text-horizon-text text-right min-h-[100px]"
+                  placeholder="הוסף הערות למשימה..."
+                />
               </div>
 
-              {selectedTask &&
-            <div className="bg-horizon-card/30 p-3 rounded-lg text-sm text-horizon-accent">
+              {selectedTask && (
+                <div className="bg-horizon-card/30 p-3 rounded-lg text-sm text-horizon-accent">
                   <p><strong>לקוח:</strong> {selectedTask.customer_email}</p>
                   <p><strong>אחראי:</strong> {selectedTask.assignee_email || 'לא שויך'}</p>
                   <p><strong>נוצר ב:</strong> {format(new Date(selectedTask.created_date), 'dd/MM/yyyy HH:mm', { locale: he })}</p>
                 </div>
-            }
+              )}
             </div>
             <DialogFooter className="flex gap-2 justify-end">
-              <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsTaskModalOpen(false)}
-              className="border-horizon text-horizon-text">
-
+              <Button type="button" variant="outline"
+                onClick={() => setIsTaskModalOpen(false)}
+                className="border-horizon text-horizon-text">
                 ביטול
               </Button>
-              <Button
-              type="button"
-              onClick={handleSaveTask}
-              disabled={updateTaskMutation.isLoading}
-              className="btn-horizon-primary">
-
+              <Button type="button" onClick={handleSaveTask}
+                disabled={updateTaskMutation.isLoading}
+                className="btn-horizon-primary">
                 {updateTaskMutation.isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                 שמור שינויים
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      }
-    </div>);
-
+      )}
+    </div>
+  );
 }

@@ -4,6 +4,7 @@
  */
 import analyzeFinancialReport from './_handlers/analyzeFinancialReport.js';
 import analyzeGenericFile from './_handlers/analyzeGenericFile.js';
+import approveNewUser from './_handlers/approveNewUser.js';
 import approveOnboardingRequest from './_handlers/approveOnboardingRequest.js';
 import archiveFireberryClient from './_handlers/archiveFireberryClient.js';
 import autoOnboardingOrchestrator from './_handlers/autoOnboardingOrchestrator.js';
@@ -95,6 +96,7 @@ import uploadManualForecastXlsx from './_handlers/uploadManualForecastXlsx.js';
 const handlers = {
   analyzeFinancialReport,
   analyzeGenericFile,
+  approveNewUser,
   approveOnboardingRequest,
   archiveFireberryClient,
   autoOnboardingOrchestrator,

@@ -1,7 +1,23 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
 import { supabase } from '@/api/supabaseClient';
 
 const AuthContext = createContext();
+
+/**
+ * ממפה את השדות הישנים (role + user_type) ל-role אחיד חדש.
+ * משמש לתאימות לאחור עם פרופילים שלא עברו migration.
+ */
+function mapLegacyRole(u) {
+  if (!u) return null;
+  // role חדש כבר מוגדר — להשתמש בו
+  if (u.role && !['user'].includes(u.role)) return u.role;
+  // fallback מ-user_type
+  if (u.role === 'admin') return 'admin';
+  if (u.user_type === 'financial_manager') return 'financial_manager';
+  if (u.user_type === 'supplier_user') return 'supplier_user';
+  if (u.user_type === 'regular') return 'client';
+  return 'client';
+}
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -75,11 +91,24 @@ export const AuthProvider = ({ children }) => {
     if (session?.user) await loadUserProfile(session.user.id);
   };
 
+  // Role helpers — computed מ-user object
+  const userRole = useMemo(() => mapLegacyRole(user), [user]);
+  const isAdmin = useMemo(() => ['admin', 'super_admin'].includes(userRole), [userRole]);
+  // כל משתמש שלא אושר ע"י admin — חוץ מ-admin/super_admin שלא צריכים אישור
+  const isPendingApproval = useMemo(() => {
+    if (!user) return false;
+    if (['admin', 'super_admin'].includes(userRole)) return false;
+    return !user.is_approved_by_admin;
+  }, [userRole, user?.is_approved_by_admin]);
+
   return (
     <AuthContext.Provider value={{
       user,
       isAuthenticated,
       isLoadingAuth,
+      userRole,
+      isAdmin,
+      isPendingApproval,
       logout,
       navigateToLogin,
       checkAppState,

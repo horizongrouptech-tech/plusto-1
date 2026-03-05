@@ -35,6 +35,7 @@
   --shadow-xl: 0 12px 32px rgba(50, 172, 193, 0.2);
   --shadow-horizon: 0 4px 14px 0 rgba(0, 0, 0, 0.1);
   --shadow-horizon-strong: 0 10px 30px 0 rgba(0, 0, 0, 0.2);
+
 }
 
 /* Dark Mode - Based on Welcome Page */
@@ -93,6 +94,9 @@
 .bg-horizon-dark { background-color: var(--horizon-dark); }
 .bg-horizon-card { background-color: var(--horizon-card-bg); }
 .bg-horizon-surface { background-color: var(--horizon-surface); }
+
+/* Gradient */
+.horizon-gradient { background: var(--gradient-primary); }
 
 /* Text Colors */
 .text-horizon-primary { color: var(--horizon-primary); }
@@ -209,45 +213,16 @@ h1, h2, h3, h4, h5, h6 {
 /* ========================================
    SIDEBAR STYLES
    ======================================== */
-.sidebar-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 40;
+
+/* Hover/focus styles for sidebar navigation links */
+.sidebar-nav-item:hover {
+  background: var(--sidebar-hover) !important;
+  color: #fff !important;
 }
 
-.sidebar {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100vh;
-  width: 280px;
-  background: var(--horizon-dark);
-  border-left: 1px solid var(--horizon-border);
-  transform: translateX(100%);
-  transition: transform 0.3s ease;
-  z-index: 50;
-  overflow-y: auto;
-}
-
-.sidebar.open {
-  transform: translateX(0);
-}
-
-@media (min-width: 1024px) {
-  .sidebar {
-    position: relative;
-    transform: translateX(0);
-    border-left: none;
-    border-right: 1px solid var(--horizon-border);
-  }
-
-  .sidebar-backdrop {
-    display: none;
-  }
+.sidebar-nav-item:focus-visible {
+  outline: 2px solid var(--horizon-primary);
+  outline-offset: -2px;
 }
 
 /* ========================================
@@ -458,4 +433,53 @@ input[type="datetime-local"] {
 [data-theme="dark"] input::placeholder,
 [data-theme="dark"] textarea::placeholder {
   color: var(--horizon-accent);
+}
+
+/* FullCalendar — Horizon theme overrides */
+.fullcalendar-horizon .fc {
+  --fc-border-color: #e2e8f0;
+  --fc-button-bg-color: #0d9488;
+  --fc-button-border-color: #0d9488;
+  --fc-button-hover-bg-color: #0f766e;
+  --fc-button-hover-border-color: #0f766e;
+  --fc-button-active-bg-color: #115e59;
+  --fc-button-active-border-color: #115e59;
+  --fc-today-bg-color: rgba(13, 148, 136, 0.06);
+  --fc-now-indicator-color: #0d9488;
+  --fc-event-border-color: transparent;
+  font-family: inherit;
+}
+.fullcalendar-horizon .fc .fc-toolbar-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+.fullcalendar-horizon .fc .fc-col-header-cell-cushion {
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.fullcalendar-horizon .fc .fc-daygrid-day-number {
+  color: #334155;
+  font-weight: 500;
+}
+.fullcalendar-horizon .fc .fc-event {
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-size: 0.8rem;
+}
+.fullcalendar-horizon .fc .fc-button {
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 4px 12px;
+}
+.fullcalendar-horizon .fc .fc-button-group > .fc-button {
+  border-radius: 0;
+}
+.fullcalendar-horizon .fc .fc-button-group > .fc-button:first-child {
+  border-radius: 6px 0 0 6px;
+}
+.fullcalendar-horizon .fc .fc-button-group > .fc-button:last-child {
+  border-radius: 0 6px 6px 0;
 }

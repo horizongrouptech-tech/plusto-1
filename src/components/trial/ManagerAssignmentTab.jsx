@@ -10,8 +10,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Search, Save, UserPlus, Users, X, Plus } from 'lucide-react';
 
 import { toast } from "sonner";
-import { OnboardingRequest } from '@/api/entities';
-import { getFinancialManagers } from '@/api/functions';
+import { OnboardingRequest, User } from '@/api/entities';
 
 export default function ManagerAssignmentTab({ customer, currentUser }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,12 +44,12 @@ export default function ManagerAssignmentTab({ customer, currentUser }) {
     enabled: isAdmin || isDepartmentManager
   });
 
-  // טעינת רשימת מנהלי כספים דרך backend function
+  // טעינת רשימת מנהלי כספים — query ישיר (לא דרך API שלא עובד ב-dev)
   const { data: financialManagersData } = useQuery({
     queryKey: ['financialManagers'],
     queryFn: async () => {
-      const response = await getFinancialManagers({});
-      return response.data?.managers || [];
+      const allUsers = await User.list();
+      return allUsers.filter(u => u.user_type === 'financial_manager' && u.is_active !== false);
     },
     enabled: (isAdmin || isDepartmentManager) && !!currentUser
   });
