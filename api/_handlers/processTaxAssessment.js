@@ -1,4 +1,4 @@
-import { requireAuth, invokeLLM } from '../_helpers.js';
+import { requireAuth, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -22,7 +22,7 @@ export default async function handler(req, res) {
       recommendations: ['string'],
     };
 
-    const result = await invokeLLM({
+    const result = await openRouterAPI({
       prompt: `נתח שומת מס ישראלית (הודעת שומה) וחלץ את הנתונים הבאים. אם היתרה חיובית - זו חוב, אם שלילית - זה החזר. הוסף 2-3 המלצות בעברית.`,
       response_json_schema: schema,
       file_urls: [file_url],

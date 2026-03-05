@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 import * as XLSX from 'xlsx';
 
 export default async function handler(req, res) {

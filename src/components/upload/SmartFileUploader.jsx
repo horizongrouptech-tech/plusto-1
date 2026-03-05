@@ -27,7 +27,7 @@ import {
 import { toast } from "sonner";
 import { parseXlsx, processESNAReport, processPurchaseDocument, processSmartDocument } from '@/api/functions';
 import { FileUpload } from '@/api/entities';
-import { InvokeLLM, UploadFile } from '@/api/integrations';
+import { openRouterAPI, UploadFile } from '@/api/integrations';
 
 const FILE_CATEGORIES = [
   { value: 'inventory_report', label: 'דוח מלאי', icon: Package },
@@ -984,7 +984,7 @@ export default function SmartFileUploader({ customerEmail, onUploadComplete }) {
 ${rawDataForPrompt}
           `;
 
-          parseResult = await InvokeLLM({
+          parseResult = await openRouterAPI({
             prompt: inventoryPrompt,
             response_json_schema: inventoryAnalysisSchema
           });
@@ -1013,7 +1013,7 @@ ${rawDataForPrompt}
 חלץ מוצרים, חשב סיכומים, זהה מובילים, ותן תובנות והמלצות בעברית.
           `;
 
-          parseResult = await InvokeLLM({
+          parseResult = await openRouterAPI({
             prompt: salesPrompt,
             response_json_schema: salesReportSchema
           });
@@ -1042,7 +1042,7 @@ ${rawDataForPrompt}
 חלץ מבצעים, חשב סיכומים, ותן תובנות בעברית.
           `;
 
-          parseResult = await InvokeLLM({
+          parseResult = await openRouterAPI({
             prompt: promotionsPrompt,
             response_json_schema: promotionsReportSchema
           });
@@ -1102,7 +1102,7 @@ ${rawDataForPrompt}
 חלץ נכסים, התחייבויות, הון עצמי, הכנסות והוצאות, חשב את יחסי הרווחיות בדיוק לפי הנוסחאות למעלה, ותן תובנות בעברית.
           `;
 
-          parseResult = await InvokeLLM({
+          parseResult = await openRouterAPI({
             prompt: balanceSheetPrompt,
             response_json_schema: detailedBalanceSheetSchema
           });
@@ -1154,7 +1154,7 @@ ${rawDataForPrompt}
 ${rawDataForPrompt}
           `;
 
-          parseResult = await InvokeLLM({
+          parseResult = await openRouterAPI({
             prompt: profitLossPrompt,
             response_json_schema: detailedProfitLossSchema
           });
@@ -1291,14 +1291,14 @@ The report language is Hebrew.
           throw new Error("Unsupported PDF category for analysis.");
         }
 
-        parseResult = await InvokeLLM({
+        parseResult = await openRouterAPI({
           prompt: prompt,
           file_urls: [file_url],
           response_json_schema: targetSchema
         });
 
       } else if (['jpg', 'jpeg', 'png'].includes(fileType)) {
-        // Handle image files same as PDF - use InvokeLLM with file_urls
+        // Handle image files same as PDF - use openRouterAPI with file_urls
         setProcessingStatus('מנתח תמונה באמצעות AI...');
         
         let targetSchema = {};
@@ -1321,7 +1321,7 @@ The report language is Hebrew.
           prompt = 'נתח את התמונה ותחלץ את כל המידע הרלוונטי בעברית';
         }
         
-        parseResult = await InvokeLLM({
+        parseResult = await openRouterAPI({
           prompt: prompt,
           file_urls: [file_url],
           response_json_schema: targetSchema
@@ -1331,7 +1331,7 @@ The report language is Hebrew.
         analysisNotes = 'Successfully analyzed image file.';
         
       } else if (['jpg', 'jpeg', 'png'].includes(fileType)) {
-        // Handle image files same as PDF - use InvokeLLM with file_urls
+        // Handle image files same as PDF - use openRouterAPI with file_urls
         setProcessingStatus('מנתח תמונה באמצעות AI...');
         
         let targetSchema = {};
@@ -1386,7 +1386,7 @@ The report language is Hebrew.
           prompt = 'נתח את התמונה ותחלץ את כל המידע הרלוונטי בעברית';
         }
         
-        parseResult = await InvokeLLM({
+        parseResult = await openRouterAPI({
           prompt: prompt,
           file_urls: [file_url],
           response_json_schema: targetSchema

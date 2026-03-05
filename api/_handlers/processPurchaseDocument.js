@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 
 const purchaseDocumentSchema = {
   type: 'object',
@@ -51,7 +51,7 @@ Analyze the provided document (invoice, delivery note, etc.) and extract the dat
 4. Parse the table of line items meticulously.
 5. Dates in YYYY-MM-DD, numbers as floats without symbols.`;
 
-    const analysisResult = await invokeLLM({
+    const analysisResult = await openRouterAPI({
       prompt,
       file_urls: [file_url],
       response_json_schema: purchaseDocumentSchema,

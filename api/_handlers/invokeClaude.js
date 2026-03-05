@@ -1,4 +1,4 @@
-import { requireAuth, invokeLLM } from '../_helpers.js';
+import { requireAuth, openRouterAPI } from '../_helpers.js';
 
 /**
  * POST /api/invokeClaude
@@ -17,7 +17,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing prompt or response_json_schema' });
     }
 
-    const result = await invokeLLM({
+    const result = await openRouterAPI({
       prompt,
       response_json_schema,
       model: 'anthropic/claude-sonnet-4-5',

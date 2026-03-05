@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     // Use AI to clean product names and fill missing data
     const productList = products.slice(0, 50).map((p, i) => `${i + 1}. "${p.product_name}" - עלות: ${p.cost_price}, מחיר: ${p.selling_price}, קטגוריה: ${p.category}`).join('\n');
 
-    const cleanedData = await invokeLLM({
+    const cleanedData = await openRouterAPI({
       prompt: `אתה מומחה ניהול מלאי ישראלי. נקה ושפר את נתוני המוצרים הבאים:
 ${productList}
 

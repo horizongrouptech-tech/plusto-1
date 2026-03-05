@@ -1,5 +1,5 @@
 import { ProductCatalog } from '@/api/entities';
-import { InvokeLLM } from '@/api/integrations';
+import { openRouterAPI } from '@/api/integrations';
 
 
 
@@ -305,7 +305,7 @@ export const suggestCatalogEnhancements = async (customerEmail, customer, setSta
       4. מוצרים מגמתיים הרלוונטיים לעסק
     `;
 
-    const result = await InvokeLLM({
+    const result = await openRouterAPI({
       prompt,
       add_context_from_internet: true,
       response_json_schema: {
@@ -456,7 +456,7 @@ export const enrichProductCategories = async (products, setStatusCallback = null
           דוגמאות לקטגוריות: אלקטרוניקה, ביגוד ואופנה, מוצרי מזון, ספרים וציוד משרדי, כלי בית, צעצועים, קוסמטיקה וטיפוח
         `;
         
-        const categoryResponse = await InvokeLLM({
+        const categoryResponse = await openRouterAPI({
           prompt: categoryPrompt,
           add_context_from_internet: false // Context not needed for simple category lookup
         });
@@ -520,7 +520,7 @@ export const findRealSupplierForProduct = async (productName, category, business
     `;
 
     // תיקון: שינוי סכמת ה-JSON כך שהיא תהיה אובייקט ולא מערך
-    const response = await InvokeLLM({
+    const response = await openRouterAPI({
       prompt,
       add_context_from_internet: true,
       response_json_schema: {
@@ -580,7 +580,7 @@ export const findSuppliersForCategories = async (categories, businessType, setSt
         החזר רשימה של שמות ספקים בישראל עבור קטגוריה זו.
       `;
 
-      const response = await InvokeLLM({
+      const response = await openRouterAPI({
         prompt,
         add_context_from_internet: true,
         response_json_schema: {

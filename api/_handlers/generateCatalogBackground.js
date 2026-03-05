@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     for (let batch = 0; batch < batches; batch++) {
       const batchCount = Math.min(batchSize, target_count - totalInserted);
 
-      const generated = await invokeLLM({
+      const generated = await openRouterAPI({
         prompt: `Generate ${batchCount} realistic products for a catalog.
 Business: ${business_description || 'general retail business'}
 Category: ${category || 'general'}

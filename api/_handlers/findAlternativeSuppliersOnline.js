@@ -1,4 +1,4 @@
-import { requireAuth, invokeLLM } from '../_helpers.js';
+import { requireAuth, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -22,7 +22,7 @@ export default async function handler(req, res) {
       search_notes: 'string',
     };
 
-    const result = await invokeLLM({
+    const result = await openRouterAPI({
       prompt: `מצא 3-5 ספקים חלופיים ב${location} עבור: ${product_name || category}.
 ${current_supplier ? `ספק נוכחי: ${current_supplier}.` : ''}
 ${budget ? `תקציב: ${budget}.` : ''}

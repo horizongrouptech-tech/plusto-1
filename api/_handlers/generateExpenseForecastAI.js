@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
       ? target_revenue * (1 - target_profit_margin / 100)
       : null;
 
-    const result = await invokeLLM({
+    const result = await openRouterAPI({
       prompt: `צור תחזית הוצאות ל-12 חודשים עבור עסק מסוג "${profile?.business_type || 'כללי'}".
 סוג תחזית: ${forecast_type}. ${maxExpenses ? `מגבלת הוצאות מרבית: ${maxExpenses} ₪/חודש.` : ''}
 שעור מס חברות בישראל: 23%. פרק לשיווק/מכירות ואדמין/כללי.`,

@@ -4,7 +4,7 @@
  */
 import extractData from './_handlers/extract-data.js';
 import generateImage from './_handlers/generate-image.js';
-import invokeLLM from './_handlers/invoke-llm.js';
+import openRouterAPI from './_handlers/openrouter-api.js';
 import sendEmail from './_handlers/send-email.js';
 import sendSMS from './_handlers/send-sms.js';
 import uploadFile from './_handlers/upload-file.js';
@@ -12,7 +12,8 @@ import uploadFile from './_handlers/upload-file.js';
 const handlers = {
   'extract-data': extractData,
   'generate-image': generateImage,
-  'invoke-llm': invokeLLM,
+  'openrouter-api': openRouterAPI,
+  'invoke-llm': openRouterAPI,  // backward compat — remove after full deploy
   'send-email': sendEmail,
   'send-sms': sendSMS,
   'upload-file': uploadFile,

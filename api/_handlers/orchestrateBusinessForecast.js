@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     const year = forecast_year || new Date().getFullYear() + 1;
     const { data: profile } = await supabaseAdmin.from('profiles').select('*').eq('email', customer_email).single();
 
-    const forecastData = await invokeLLM({
+    const forecastData = await openRouterAPI({
       prompt: `אתה מנתח פיננסי מומחה. צור תחזית עסקית מלאה לשנת ${year} עבור העסק "${profile?.business_name || customer_email}".
 סוג עסק: ${profile?.business_type || 'לא צוין'}
 מחזור חודשי נוכחי: ${profile?.monthly_revenue ? `₪${profile.monthly_revenue.toLocaleString()}` : 'לא צוין'}

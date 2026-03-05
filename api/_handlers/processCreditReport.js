@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     const { file_url, customer_id, customer_email } = req.body ?? {};
     if (!file_url) return res.status(400).json({ error: 'file_url is required' });
 
-    const extracted = await invokeLLM({
+    const extracted = await openRouterAPI({
       prompt: `You are an Israeli credit report analyst. Analyze this credit report document and extract all relevant financial information.
 Extract: credit score, total debt, monthly payments, credit lines, late payments, bankruptcies, financial summary.
 Return structured data.`,

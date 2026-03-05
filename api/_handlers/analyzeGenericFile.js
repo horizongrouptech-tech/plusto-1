@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     const prompt = analysis_prompt ||
       'Analyze this file and extract all relevant business data. Provide a structured summary including key figures, trends, and any actionable insights. Respond in Hebrew.';
 
-    const result = await invokeLLM({
+    const result = await openRouterAPI({
       prompt,
       file_urls: [file_url],
       response_json_schema: {

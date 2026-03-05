@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -22,7 +22,7 @@ export default async function handler(req, res) {
       companyName = data?.business_name;
     }
 
-    const firmographicData = await invokeLLM({
+    const firmographicData = await openRouterAPI({
       prompt: `Research and provide firmographic data for this company:
 Company: ${companyName || 'Unknown'}
 Website: ${website || 'Unknown'}

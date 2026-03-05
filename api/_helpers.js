@@ -5,7 +5,7 @@
  *   - supabaseAdmin    : service-role client (bypasses RLS)
  *   - supabaseUser(tok): user-scoped client
  *   - requireAuth      : verifies Supabase JWT and returns the profile row
- *   - invokeLLM        : calls OpenRouter (replaces base44.integrations.Core.InvokeLLM)
+ *   - openRouterAPI        : calls OpenRouter (calls OpenRouter for AI chat/vision/JSON responses)
  *   - extractDataFromFile : calls OpenRouter with a file URL (vision)
  *   - entity helpers   : thin wrappers over supabaseAdmin for the patterns used in Deno functions
  */
@@ -67,7 +67,7 @@ function getOpenRouterClient() {
 }
 
 /**
- * Replaces base44.integrations.Core.InvokeLLM / base44.asServiceRole.integrations.Core.InvokeLLM
+ * OpenRouter API — AI chat with optional vision and JSON schema
  *
  * @param {object} opts
  * @param {string}  opts.prompt
@@ -75,7 +75,7 @@ function getOpenRouterClient() {
  * @param {string}  [opts.model]
  * @param {string[]} [opts.file_urls]  — image/file URLs passed as vision messages
  */
-export async function invokeLLM({ prompt, response_json_schema, model, file_urls }) {
+export async function openRouterAPI({ prompt, response_json_schema, model, file_urls }) {
   const client = getOpenRouterClient();
 
   const messages = [];
@@ -118,7 +118,7 @@ export async function invokeLLM({ prompt, response_json_schema, model, file_urls
         }
       } catch (fetchErr) {
         // אם לא הצלחנו לגשת לקובץ, שלח את ה-URL כ-image_url ותן למודל לנסות
-        console.error(`[invokeLLM] Failed to fetch ${url}:`, fetchErr.message);
+        console.error(`[openRouterAPI] Failed to fetch ${url}:`, fetchErr.message);
         parts.push({ type: 'image_url', imageUrl: { url } });
         useVisionModel = true;
       }
@@ -151,10 +151,10 @@ export async function invokeLLM({ prompt, response_json_schema, model, file_urls
 }
 
 /**
- * Replaces base44.integrations.Core.ExtractDataFromUploadedFile
+ * Extracts structured data from a file URL via OpenRouter vision
  */
 export async function extractDataFromFile({ file_url, json_schema }) {
-  const result = await invokeLLM({
+  const result = await openRouterAPI({
     prompt: 'Extract all structured data from this file according to the provided JSON schema. Return only valid JSON.',
     response_json_schema: json_schema,
     file_urls: [file_url],

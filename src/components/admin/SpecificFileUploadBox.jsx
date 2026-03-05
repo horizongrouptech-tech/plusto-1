@@ -9,7 +9,7 @@ import { Upload, RefreshCw, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { FileUpload } from '@/api/entities';
 import { parseXlsx, processESNAReport, processPurchaseDocument } from '@/api/functions';
-import { InvokeLLM, UploadFile } from '@/api/integrations';
+import { openRouterAPI, UploadFile } from '@/api/integrations';
  // ADDED: New function import
 
 // JSON Schemas for PDF analysis - ENHANCED FOR INSIGHTS
@@ -914,7 +914,7 @@ export default function SpecificFileUploadBox({
                         ${rawDataForPrompt}
                     `;
 
-                    parseResult = await InvokeLLM({
+                    parseResult = await openRouterAPI({
                         prompt: inventoryPrompt,
                         response_json_schema: inventoryAnalysisSchema
                     });
@@ -987,7 +987,7 @@ export default function SpecificFileUploadBox({
                         ${rawDataForPrompt}
                     `;
 
-                    parseResult = await InvokeLLM({
+                    parseResult = await openRouterAPI({
                         prompt: salesPrompt,
                         response_json_schema: salesReportSchema
                     });
@@ -1056,7 +1056,7 @@ export default function SpecificFileUploadBox({
                         ${rawDataForPrompt}
                     `;
 
-                    parseResult = await InvokeLLM({
+                    parseResult = await openRouterAPI({
                         prompt: promotionsPrompt,
                         response_json_schema: promotionsReportSchema
                     });
@@ -1142,7 +1142,7 @@ export default function SpecificFileUploadBox({
                         ${rawDataForPrompt}
                     `;
 
-                    parseResult = await InvokeLLM({
+                    parseResult = await openRouterAPI({
                         prompt: balanceSheetPrompt,
                         response_json_schema: detailedBalanceSheetSchema
                     });
@@ -1202,7 +1202,7 @@ export default function SpecificFileUploadBox({
                         ${rawDataForPrompt}
                     `;
 
-                    parseResult = await InvokeLLM({
+                    parseResult = await openRouterAPI({
                         prompt: profitLossPrompt,
                         response_json_schema: detailedProfitLossSchema
                     });
@@ -1385,8 +1385,8 @@ export default function SpecificFileUploadBox({
             }
 
             try {
-                // This block is for categories processed by InvokeLLM
-                parseResult = await InvokeLLM({
+                // This block is for categories processed by openRouterAPI
+                parseResult = await openRouterAPI({
                     prompt: prompt,
                     file_urls: [file_url],
                     response_json_schema: targetSchema

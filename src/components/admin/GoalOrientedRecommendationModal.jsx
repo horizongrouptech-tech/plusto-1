@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Trophy, AlertCircle } from "lucide-react";
 import { FileUpload, ProductCatalog, Recommendation } from '@/api/entities';
-import { InvokeLLM } from '@/api/integrations';
+import { openRouterAPI } from '@/api/integrations';
 
 
 export default function GoalOrientedRecommendationModal({ customer, isOpen, onClose, onSuccess }) {
@@ -114,7 +114,7 @@ export default function GoalOrientedRecommendationModal({ customer, isOpen, onCl
         required: ["title", "description", "action_steps", "expected_profit", "implementation_effort", "timeframe"]
       };
 
-      const aiResponse = await InvokeLLM({
+      const aiResponse = await openRouterAPI({
         prompt: prompt,
         response_json_schema: recommendationSchema
       });

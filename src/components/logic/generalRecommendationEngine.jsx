@@ -1,5 +1,5 @@
 import { Recommendation } from '@/api/entities';
-import { InvokeLLM } from '@/api/integrations';
+import { openRouterAPI } from '@/api/integrations';
 
 
 /**
@@ -44,7 +44,7 @@ ${description}
 צור המלצה אחת מפורטת ואיכותית.
 `;
 
-    const response = await InvokeLLM({
+    const response = await openRouterAPI({
       prompt: generalRecommendationPrompt,
       add_context_from_internet: true,
       response_json_schema: {

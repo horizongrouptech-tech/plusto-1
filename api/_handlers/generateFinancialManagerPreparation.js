@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -36,7 +36,7 @@ ${(goals || []).map((g) => `- ${g.name} (${g.status})`).join('\n') || 'אין י
 3. המלצות לדיון
 4. יעדים להשיג בפגישה`;
 
-    const preparation = await invokeLLM({
+    const preparation = await openRouterAPI({
       prompt,
       response_json_schema: {
         type: 'object',

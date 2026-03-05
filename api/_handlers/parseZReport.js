@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     const { file_url, file_id, customer_email } = req.body ?? {};
     if (!file_url) return res.status(400).json({ error: 'file_url is required' });
 
-    const result = await invokeLLM({
+    const result = await openRouterAPI({
       prompt: `Analyze this Z-Report (Israeli POS daily report) and extract structured data.
 Extract: report date, total sales, VAT amount, net sales, number of transactions, payment methods breakdown (cash/credit/checks), category/department breakdown if available, voids/refunds if present. All amounts in ILS.`,
       file_urls: [file_url],

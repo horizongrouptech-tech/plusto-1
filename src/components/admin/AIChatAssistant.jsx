@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 
 import { toast } from "sonner";
 import { Recommendation } from '@/api/entities';
-import { InvokeLLM } from '@/api/integrations';
+import { openRouterAPI } from '@/api/integrations';
 export default function AIChatAssistant({ customer, currentUser, onRecommendationApproved }) {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
@@ -82,7 +82,7 @@ export default function AIChatAssistant({ customer, currentUser, onRecommendatio
       `;
 
       // קריאה ל-AI
-      const response = await InvokeLLM({
+      const response = await openRouterAPI({
         prompt: prompt,
         response_json_schema: {
           type: "object",

@@ -1,5 +1,5 @@
 import { Recommendation } from '@/api/entities';
-import { InvokeLLM } from '@/api/integrations';
+import { openRouterAPI } from '@/api/integrations';
 
 
 
@@ -35,8 +35,8 @@ export const generateUnifiedRecommendations = async (
 
     // Removed the getRecommendationSchema function as the schema is now dynamic.
 
-    // קריאה ל-InvokeLLM עם הסכימה המתאימה - חדש
-    const response = await InvokeLLM({ // Changed variable name from llmResponse to response
+    // קריאה ל-openRouterAPI עם הסכימה המתאימה - חדש
+    const response = await openRouterAPI({ // Changed variable name from llmResponse to response
       prompt: prompt,
       add_context_from_internet: !hasSufficientInternalData, // Only add context if internal data is insufficient
       response_json_schema: selectedSchema || { // Use selectedSchema if provided, otherwise fallback to a simplified schema

@@ -1,5 +1,5 @@
 import { Product, ProductCatalog, Recommendation } from '@/api/entities';
-import { InvokeLLM } from '@/api/integrations';
+import { openRouterAPI } from '@/api/integrations';
 
 
 
@@ -210,7 +210,7 @@ ${productsSummary}
 צור המלצה אחת מפורטת ואיכותית.
 `;
 
-    const response = await InvokeLLM({
+    const response = await openRouterAPI({
       prompt: catalogBasedPrompt,
       response_json_schema: {
         type: "object",
@@ -282,7 +282,7 @@ const conductExternalResearch = async (productName, productDescription, business
 התמקד בשוק הישראלי ובמידע עדכני.
 `;
 
-    const researchResponse = await InvokeLLM({
+    const researchResponse = await openRouterAPI({
       prompt: researchPrompt,
       add_context_from_internet: true,
       response_json_schema: {
@@ -369,7 +369,7 @@ ${researchData.market_insights || 'לא זמין'}
 צור המלצה אחת מפורטת ואיכותית.
 `;
 
-    const response = await InvokeLLM({
+    const response = await openRouterAPI({
       prompt: researchBasedPrompt,
       response_json_schema: {
         type: "object",
@@ -470,7 +470,7 @@ export const enhanceRecommendationWithPrompt = async (originalRecommendation, us
       5.  The output must be a valid JSON object matching the provided schema. Do not add any text outside the JSON structure.
     `;
 
-    const enhancedRec = await InvokeLLM({
+    const enhancedRec = await openRouterAPI({
       prompt: prompt,
       response_json_schema: {
         type: "object",

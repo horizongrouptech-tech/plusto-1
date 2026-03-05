@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, openRouterAPI } from '../_helpers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       notes: 'string',
     };
 
-    const result = await invokeLLM({
+    const result = await openRouterAPI({
       prompt: `צור תחזית כוח אדם ל-12 חודשים הקרובים עבור עסק מסוג "${profile?.business_type || 'כללי'}".
 גודל חברה: ${profile?.company_size || 'לא ידוע'}. סוג תחזית: ${forecast_type}.
 יעדים אסטרטגיים: ${JSON.stringify(strategic_goals || {})}.

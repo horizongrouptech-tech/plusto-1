@@ -8,7 +8,7 @@ import { Bot, User, Send, Loader2, ShieldAlert, CalendarPlus, Maximize2, Minimiz
 import { useAuth } from '@/lib/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import { Product, Sale } from '@/api/entities';
-import { InvokeLLM, SendEmail } from '@/api/integrations';
+import { openRouterAPI, SendEmail } from '@/api/integrations';
 
 
 
@@ -95,7 +95,7 @@ const EmergencyChat = ({ isOpen, onClose }) => {
     try {
         const fullPrompt = `${systemPrompt}\n\n**הקשר על המשתמש:**\n- סוג עסק: ${userContext?.businessType}\n- קטלוג מוצרים הועלה: ${userContext?.hasProducts ? 'כן' : 'לא'}\n- דוחות מכירה הועלו: ${userContext?.hasSales ? 'כן' : 'לא'}\n\n**היסטוריית שיחה:**\n${JSON.stringify(messages.slice(-5))}\n\n**הודעת המשתמש:** "${messageText}"`;
 
-        const response = await InvokeLLM({ prompt: fullPrompt });
+        const response = await openRouterAPI({ prompt: fullPrompt });
         setMessages(prev => [...prev, { sender: 'ai', text: response }]);
     } catch (error) {
         console.error("Error calling LLM:", error);

@@ -1,4 +1,4 @@
-import { requireAuth, supabaseAdmin, extractDataFromFile, invokeLLM } from '../_helpers.js';
+import { requireAuth, supabaseAdmin, extractDataFromFile, openRouterAPI } from '../_helpers.js';
 
 const esnaJsonSchema = {
   type: 'object',
@@ -66,7 +66,7 @@ export default async function handler(req, res) {
 
     let aiInsights = {};
     try {
-      aiInsights = await invokeLLM({
+      aiInsights = await openRouterAPI({
         prompt: `אתה מנתח מומחה לדוחות מע"מ ישראליים. נתח את הנתונים הבאים מדוח ESNA ותן תובנות עסקיות:
 חברה: ${esnaData.metadata?.companyName || 'לא זוהה'}, מספר עוסק: ${esnaData.metadata?.businessId || ''}, שנת דוח: ${esnaData.metadata?.reportYear || ''}
 סך עסקאות חייבות: ₪${esnaData.annualSummary?.totalTaxableTransactions?.toLocaleString() || '0'}

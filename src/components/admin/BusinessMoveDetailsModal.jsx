@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Target, CheckCircle2, TrendingUp, Building2, DollarSign, Lightbulb 
 } from "lucide-react";
-import { InvokeLLM } from '@/api/integrations';
+import { openRouterAPI } from '@/api/integrations';
 
 
 const BusinessMoveDetailsModal = ({ move, isOpen, onClose, customer, moveComplexityTranslations, moveTimeframeTranslations }) => {
@@ -41,7 +41,7 @@ const BusinessMoveDetailsModal = ({ move, isOpen, onClose, customer, moveComplex
       הדגש הוא על רלוונטיות לעסק הלקוח ועל איכות ועומק הדוגמאות. אל תכלול קישורים או מקורות בטקסט.
       `;
 
-      const examplesResponse = await InvokeLLM({
+      const examplesResponse = await openRouterAPI({
         prompt: examplesPrompt,
         add_context_from_internet: true,
         response_json_schema: {
