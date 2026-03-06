@@ -10,21 +10,28 @@ import { formatMarginPercentage } from "@/components/utils/formatMarginPercentag
 
 const currencyFormatter = new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS' });
 
-export function FinancialReportViewer({ reportData, isOpen, onClose, fileData }) { // Added fileData prop
-  const [showDeeperInsightsModal, setShowDeeperInsightsModal] = useState(false); // NEW STATE
-  const [localFileData, setLocalFileData] = useState(fileData); // NEW STATE
+export function FinancialReportViewer({ reportData: rawReportData, isOpen, onClose, fileData }) {
+  // parsed_data עשוי להגיע כ-string מ-DB — פרסר אם צריך
+  const reportData = React.useMemo(() => {
+    if (typeof rawReportData === 'string') {
+      try { return JSON.parse(rawReportData); } catch { return rawReportData; }
+    }
+    return rawReportData;
+  }, [rawReportData]);
 
-  // Update localFileData when the fileData prop changes
+  const [showDeeperInsightsModal, setShowDeeperInsightsModal] = useState(false);
+  const [localFileData, setLocalFileData] = useState(fileData);
+
   useEffect(() => {
     setLocalFileData(fileData);
   }, [fileData]);
 
-  const handleInsightsUpdated = (updatedFile) => { // NEW FUNCTION
+  const handleInsightsUpdated = (updatedFile) => {
       setLocalFileData(updatedFile);
   };
 
   // Detect report type and extract data accordingly for Dialog Header
-  const isBalanceSheet = reportData?.report_metadata?.report_type?.includes('מאזן') || 
+  const isBalanceSheet = reportData?.report_metadata?.report_type?.includes('מאזן') ||
                         reportData?.report_metadata?.report_type?.includes('Balance');
   
   const isProfitLoss = (reportData?.report_metadata?.report_type?.includes('רווח') ||
@@ -484,3 +491,5 @@ export function FinancialReportViewer({ reportData, isOpen, onClose, fileData })
     </Dialog>
   );
 }
+
+export default FinancialReportViewer;

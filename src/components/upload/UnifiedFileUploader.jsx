@@ -128,21 +128,29 @@ export default function UnifiedFileUploader({ customerEmail, onUploadComplete })
     return <Badge className={cat.color}>{cat.label}</Badge>;
   };
 
+  // parsed_data / ai_insights עשויים להגיע כ-string מ-Supabase — פרסר אם צריך
+  const safeParse = (data) => {
+    if (typeof data === 'string') {
+      try { return JSON.parse(data); } catch { return data; }
+    }
+    return data;
+  };
+
   const handleViewFile = (file) => {
     if (file.data_category === 'credit_report' && file.ai_insights) {
-      setCreditReportData(file.ai_insights);
+      setCreditReportData(safeParse(file.ai_insights));
       setShowCreditReportViewer(true);
     } else if ((file.data_category === 'balance_sheet' || file.data_category === 'profit_loss_statement') && file.parsed_data) {
-      setFinancialReportData(file.parsed_data);
+      setFinancialReportData(safeParse(file.parsed_data));
       setShowFinancialReportViewer(true);
     } else if (file.data_category === 'inventory_report' && file.ai_insights) {
-      setInventoryReportData(file.ai_insights);
+      setInventoryReportData(safeParse(file.ai_insights));
       setShowInventoryReportViewer(true);
     } else if (file.data_category === 'sales_report' && file.ai_insights) {
-      setSalesReportData(file.ai_insights);
+      setSalesReportData(safeParse(file.ai_insights));
       setShowSalesReportViewer(true);
     } else if (file.data_category === 'promotions_report' && file.ai_insights) {
-      setPromotionsReportData(file.ai_insights);
+      setPromotionsReportData(safeParse(file.ai_insights));
       setShowPromotionsReportViewer(true);
     } else if (file.data_category === 'esna_report') {
       setSelectedFileForViewing(file);
