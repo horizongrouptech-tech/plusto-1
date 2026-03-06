@@ -89,9 +89,10 @@ export async function openRouterAPI({ prompt, response_json_schema, model, file_
     });
   }
 
-  // Build user content — handle file_urls by detecting type (image vs text)
+  // Build user content — handle file_urls by detecting type (image / PDF / text)
   let userContent = prompt;
   let useVisionModel = false;
+  let usePdfModel = false;
 
   if (file_urls && file_urls.length > 0) {
     const parts = [{ type: 'text', text: prompt }];
@@ -102,23 +103,34 @@ export async function openRouterAPI({ prompt, response_json_schema, model, file_
         const head = await fetch(url, { method: 'HEAD' });
         const contentType = head.headers.get('content-type') || '';
         const isImage = contentType.startsWith('image/');
+        const isPdf = contentType.includes('pdf') || url.toLowerCase().endsWith('.pdf');
 
         if (isImage) {
-          // תמונה — שלח כ-image_url (camelCase for SDK v0.8+)
+          // תמונה — שלח כ-image_url ל-gpt-4o
           parts.push({ type: 'image_url', imageUrl: { url } });
           useVisionModel = true;
+        } else if (isPdf) {
+          // PDF — המר ל-base64 ושלח כ-document block ל-Claude (תומך ב-PDF natively)
+          const fileResponse = await fetch(url);
+          const buffer = await fileResponse.arrayBuffer();
+          const base64 = Buffer.from(buffer).toString('base64');
+          parts.push({
+            type: 'document',
+            source: { type: 'base64', media_type: 'application/pdf', data: base64 },
+          });
+          usePdfModel = true;
         } else {
-          // קובץ טקסט/CSV/PDF — הורד את התוכן והוסף ל-prompt
+          // CSV / טקסט רגיל — הורד כטקסט והוסף ל-prompt
           const fileResponse = await fetch(url);
           const fileText = await fileResponse.text();
           const truncated = fileText.length > 15000
             ? fileText.slice(0, 15000) + '\n...[truncated]'
             : fileText;
-          parts.push({ type: 'text', text: `\n\nFile content from ${url}:\n\n${truncated}` });
+          parts.push({ type: 'text', text: `\n\nFile content:\n\n${truncated}` });
         }
       } catch (fetchErr) {
-        // אם לא הצלחנו לגשת לקובץ, שלח את ה-URL כ-image_url ותן למודל לנסות
         console.error(`[openRouterAPI] Failed to fetch ${url}:`, fetchErr.message);
+        // fallback: שלח כ-image_url ותן למודל לנסות
         parts.push({ type: 'image_url', imageUrl: { url } });
         useVisionModel = true;
       }
@@ -129,14 +141,25 @@ export async function openRouterAPI({ prompt, response_json_schema, model, file_
 
   messages.push({ role: 'user', content: userContent });
 
-  // אם יש תמונות, השתמש במודל vision (gpt-4o). אחרת — מודל ברירת מחדל
-  const defaultModel = useVisionModel ? 'openai/gpt-4o' : (process.env.OPENROUTER_DEFAULT_MODEL || 'openai/gpt-4o-mini');
+  // בחירת מודל לפי סוג הקובץ:
+  //   PDF  → claude-3-5-haiku (תומך ב-PDF document blocks)
+  //   תמונה → gpt-4o (vision)
+  //   טקסט  → gpt-4o-mini (ברירת מחדל)
+  let defaultModel;
+  if (usePdfModel) {
+    defaultModel = 'anthropic/claude-3-5-haiku';
+  } else if (useVisionModel) {
+    defaultModel = 'openai/gpt-4o';
+  } else {
+    defaultModel = process.env.OPENROUTER_DEFAULT_MODEL || 'openai/gpt-4o-mini';
+  }
   const selectedModel = model || defaultModel;
 
+  // תיקון: chatParams מועבר ישירות ל-send(), לא עטוף ב-{ chatGenerationParams }
   const chatParams = { model: selectedModel, messages };
   if (response_json_schema) chatParams.responseFormat = { type: 'json_object' };
 
-  const completion = await client.chat.send({ chatGenerationParams: chatParams });
+  const completion = await client.chat.send(chatParams);
   const content = completion.choices[0].message.content;
 
   if (response_json_schema) {
