@@ -109,10 +109,24 @@ export default function CustomerFileUploadManager({ customer, isAdmin = false })
   const [showFileViewer, setShowFileViewer] = useState(false);
   const [fileToView, setFileToView] = useState(null);
 
+  // פרסר JSON string ל-object אם צריך (parsed_data / ai_insights עשויים להגיע כ-string)
+  const safeParse = (data) => {
+    if (!data) return null;
+    if (typeof data === 'string') {
+      try { return JSON.parse(data); } catch { return data; }
+    }
+    return data;
+  };
+
   const handleViewFile = (file) => {
-    // אם יש viewer מיוחד - השתמש בו
-    if (file.ai_insights && (file.data_category === 'profit_loss' || file.data_category === 'profit_loss_statement' || file.data_category === 'balance_sheet')) {
-      setFinancialReportData(file.ai_insights);
+    // ai_insights = תגובת AI גולמית; parsed_data = נתונים ממופים כראוי לviewer
+    // תמיד העדף parsed_data, עם fallback ל-ai_insights
+    const viewData = (field) => safeParse(file.parsed_data?.[field] !== undefined
+      ? file.parsed_data
+      : (file.parsed_data || file.ai_insights));
+
+    if ((file.parsed_data || file.ai_insights) && (file.data_category === 'profit_loss' || file.data_category === 'profit_loss_statement' || file.data_category === 'balance_sheet')) {
+      setFinancialReportData(safeParse(file.parsed_data || file.ai_insights));
       setShowFinancialReportViewer(true);
       setShowDataViewer(false);
       setShowCreditReportViewer(false);
@@ -121,7 +135,7 @@ export default function CustomerFileUploadManager({ customer, isAdmin = false })
       setShowPromotionsReportViewer(false);
       setSelectedFile(null);
     } else if (file.data_category === 'credit_report' && file.ai_insights) {
-      setCreditReportData(file.ai_insights);
+      setCreditReportData(safeParse(file.ai_insights));
       setShowCreditReportViewer(true);
       setShowDataViewer(false);
       setShowFinancialReportViewer(false);
@@ -130,7 +144,7 @@ export default function CustomerFileUploadManager({ customer, isAdmin = false })
       setShowPromotionsReportViewer(false);
       setSelectedFile(null);
     } else if (file.data_category === 'inventory_report' && file.ai_insights) {
-      setInventoryReportData(file.ai_insights);
+      setInventoryReportData(safeParse(file.ai_insights));
       setShowInventoryReportViewer(true);
       setShowDataViewer(false);
       setShowFinancialReportViewer(false);
@@ -139,7 +153,7 @@ export default function CustomerFileUploadManager({ customer, isAdmin = false })
       setShowPromotionsReportViewer(false);
       setSelectedFile(null);
     } else if (file.data_category === 'sales_report' && file.ai_insights) {
-      setSalesReportData(file.ai_insights);
+      setSalesReportData(safeParse(file.ai_insights));
       setShowSalesReportViewer(true);
       setShowDataViewer(false);
       setShowFinancialReportViewer(false);
@@ -148,7 +162,7 @@ export default function CustomerFileUploadManager({ customer, isAdmin = false })
       setShowPromotionsReportViewer(false);
       setSelectedFile(null);
     } else if (file.data_category === 'promotions_report' && file.ai_insights) {
-      setPromotionsReportData(file.ai_insights);
+      setPromotionsReportData(safeParse(file.ai_insights));
       setShowPromotionsReportViewer(true);
       setShowDataViewer(false);
       setShowFinancialReportViewer(false);
