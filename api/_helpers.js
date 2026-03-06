@@ -110,13 +110,13 @@ export async function openRouterAPI({ prompt, response_json_schema, model, file_
           parts.push({ type: 'image_url', imageUrl: { url } });
           useVisionModel = true;
         } else if (isPdf) {
-          // PDF — המר ל-base64 ושלח כ-document block ל-Claude (תומך ב-PDF natively)
-          const fileResponse = await fetch(url);
-          const buffer = await fileResponse.arrayBuffer();
-          const base64 = Buffer.from(buffer).toString('base64');
+          // PDF — OpenRouter תומך ב-file content type עם URL ישיר
           parts.push({
-            type: 'document',
-            source: { type: 'base64', media_type: 'application/pdf', data: base64 },
+            type: 'file',
+            file: {
+              filename: url.split('/').pop() || 'document.pdf',
+              file_data: url,
+            },
           });
           usePdfModel = true;
         } else {
@@ -155,12 +155,39 @@ export async function openRouterAPI({ prompt, response_json_schema, model, file_
   }
   const selectedModel = model || defaultModel;
 
-  // תיקון: chatParams מועבר ישירות ל-send(), לא עטוף ב-{ chatGenerationParams }
   const chatParams = { model: selectedModel, messages };
   if (response_json_schema) chatParams.responseFormat = { type: 'json_object' };
 
-  const completion = await client.chat.send(chatParams);
-  const content = completion.choices[0].message.content;
+  let content;
+
+  if (usePdfModel) {
+    // ה-SDK לא תומך ב-document blocks — שולחים fetch ישיר ל-OpenRouter
+    const apiKey = process.env.OPENROUTER_API_KEY || process.env.VITE_OPENROUTER_API_KEY;
+    const apiRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': process.env.SITE_URL || 'https://plusto-1.vercel.app',
+        'X-Title': process.env.SITE_NAME || 'Plusto',
+      },
+      body: JSON.stringify({
+        model: selectedModel,
+        messages,
+        ...(response_json_schema ? { response_format: { type: 'json_object' } } : {}),
+      }),
+    });
+    if (!apiRes.ok) {
+      const errText = await apiRes.text();
+      throw new Error(`OpenRouter PDF API error ${apiRes.status}: ${errText}`);
+    }
+    const json = await apiRes.json();
+    content = json.choices?.[0]?.message?.content;
+  } else {
+    // ה-SDK של OpenRouter מצפה ל-{ chatGenerationParams: ... } כ-wrapper
+    const completion = await client.chat.send({ chatGenerationParams: chatParams });
+    content = completion.choices[0].message.content;
+  }
 
   if (response_json_schema) {
     try {
