@@ -166,17 +166,27 @@ export function FinancialReportViewer({ reportData: rawReportData, isOpen, onClo
     const metadata = reportData.report_metadata || {};
     const financialSummary = reportData.financial_summary || {};
     const profitabilityRatios = reportData.profitability_ratios || {};
-    const keyInsights = reportData.key_insights || [];
     const alertsAndInsights = reportData.alerts_and_insights || {};
     const revenueAnalysis = reportData.revenue_analysis || {};
     const costStructure = reportData.cost_structure_analysis || {};
     const annualProjections = reportData.annual_projections || {};
     const expenseEfficiency = reportData.expense_efficiency_analysis || {};
     const kpis = reportData.key_performance_indicators || {};
-    
-    const positiveInights = alertsAndInsights.positive_trends || [];
-    const attentionAreas = alertsAndInsights.areas_for_attention || [];
-    const recommendations = alertsAndInsights.recommendations || [];
+
+    // תמיכה בשני מבני שמות שדות: balance_sheet ו-P&L (detailedProfitLossSchema)
+    const keyInsights = reportData.key_insights
+      || alertsAndInsights.cost_alerts
+      || alertsAndInsights.efficiency_insights
+      || [];
+    const positiveInights = alertsAndInsights.positive_trends
+      || alertsAndInsights.growth_opportunities
+      || [];
+    const attentionAreas = alertsAndInsights.areas_for_attention
+      || alertsAndInsights.risk_factors
+      || [];
+    const recommendations = alertsAndInsights.recommendations
+      || alertsAndInsights.efficiency_insights
+      || [];
 
     // מחלץ ערך מספרי — תומך גם ב-{amount: N} וגם ב-N ישיר
     const getAmount = (field) => {
@@ -232,44 +242,50 @@ export function FinancialReportViewer({ reportData: rawReportData, isOpen, onClo
           )}
         </div>
 
-        {/* Profitability Ratios */}
-        {(profitabilityRatios.gross_profit_margin || profitabilityRatios.net_profit_margin || profitabilityRatios.operating_profit_margin) && (
-          <Card className="card-horizon">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-horizon-primary">
-                <BarChart /> יחסי רווחיות
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {profitabilityRatios.gross_profit_margin && (
-                  <div className="text-center p-3 bg-horizon-card rounded-lg">
-                    <p className="text-2xl font-bold text-green-400">
-                      {formatMarginPercentage(profitabilityRatios.gross_profit_margin)}%
-                    </p>
-                    <p className="text-sm text-horizon-accent">רווח גולמי</p>
-                  </div>
-                )}
-                {profitabilityRatios.operating_profit_margin && (
-                  <div className="text-center p-3 bg-horizon-card rounded-lg">
-                    <p className="text-2xl font-bold text-blue-400">
-                      {formatMarginPercentage(profitabilityRatios.operating_profit_margin)}%
-                    </p>
-                    <p className="text-sm text-horizon-accent">רווח תפעולי</p>
-                  </div>
-                )}
-                {profitabilityRatios.net_profit_margin && (
-                  <div className="text-center p-3 bg-horizon-card rounded-lg">
-                    <p className="text-2xl font-bold text-purple-400">
-                      {formatMarginPercentage(profitabilityRatios.net_profit_margin)}%
-                    </p>
-                    <p className="text-sm text-horizon-accent">רווח נקי</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Profitability Ratios — תומך בשני schema: balance_sheet ו-P&L */}
+        {(() => {
+          const gross = profitabilityRatios.gross_profit_margin ?? profitabilityRatios.gross_margin;
+          const operating = profitabilityRatios.operating_profit_margin ?? profitabilityRatios.operating_margin;
+          const net = profitabilityRatios.net_profit_margin ?? profitabilityRatios.net_margin;
+          if (!gross && !operating && !net) return null;
+          return (
+            <Card className="card-horizon">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-horizon-primary">
+                  <BarChart /> יחסי רווחיות
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {gross != null && (
+                    <div className="text-center p-3 bg-horizon-card rounded-lg">
+                      <p className="text-2xl font-bold text-green-400">
+                        {formatMarginPercentage(gross)}%
+                      </p>
+                      <p className="text-sm text-horizon-accent">רווח גולמי</p>
+                    </div>
+                  )}
+                  {operating != null && (
+                    <div className="text-center p-3 bg-horizon-card rounded-lg">
+                      <p className="text-2xl font-bold text-blue-400">
+                        {formatMarginPercentage(operating)}%
+                      </p>
+                      <p className="text-sm text-horizon-accent">רווח תפעולי</p>
+                    </div>
+                  )}
+                  {net != null && (
+                    <div className="text-center p-3 bg-horizon-card rounded-lg">
+                      <p className="text-2xl font-bold text-purple-400">
+                        {formatMarginPercentage(net)}%
+                      </p>
+                      <p className="text-sm text-horizon-accent">רווח נקי</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Expense Breakdown */}
         {financialSummary.total_expenses?.breakdown && (
