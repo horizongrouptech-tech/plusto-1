@@ -1430,7 +1430,7 @@ The report language is Hebrew.
       } else if (category === 'profit_loss_statement') {
         if (parseResult.report_metadata && parseResult.financial_summary) {
           dataToSaveInParsedData = {
-            summary: JSON.stringify(parseResult.financial_summary),
+            summary: parseResult.financial_summary,
             rows: [],
             headers: ['קטגוריה', 'סכום', 'אחוז מההכנסות'],
             flags: parseResult.alerts_and_insights?.areas_for_attention || [],

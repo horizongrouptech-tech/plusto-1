@@ -141,16 +141,22 @@ export function FinancialReportViewer({ reportData: rawReportData, isOpen, onClo
     }
 
     // ORIGINAL LOGIC FOR FULL AI-PARSED REPORTS
-    if (!reportData.report_metadata || !reportData.financial_summary) {
+    // בודק שיש נתונים אמיתיים — לא רק אובייקטים ריקים/null
+    const fs = reportData.financial_summary || {};
+    const revenue = fs.total_revenue?.amount ?? fs.total_revenue;
+    const netProfit = fs.net_profit?.amount ?? fs.net_profit;
+    const hasRealData = revenue != null || netProfit != null;
+
+    if (!reportData.report_metadata || !reportData.financial_summary || !hasRealData) {
       return (
         <div className="text-center py-10">
           <XCircle className="w-16 h-16 mx-auto mb-4 text-red-400" />
-          <h3 className="text-xl font-semibold text-horizon-text mb-2">נתונים לא מלאים</h3>
+          <h3 className="text-xl font-semibold text-horizon-text mb-2">לא ניתן היה לחלץ נתונים מהקובץ</h3>
           <p className="text-horizon-accent mb-4">
-            הדוח לא הכיל מספיק נתונים כדי להציג ניתוח פיננסי מקיף.
+            ה-AI לא הצליח לקרוא נתונים פיננסיים מהקובץ. ייתכן שה-PDF סרוק (תמונה) ולא טקסט.
           </p>
           <p className="text-sm text-horizon-accent">
-            {reportData.analysis_notes || "יתכן וחסרים נתוני ליבה בדוח. אנא בדוק את פורמט הקובץ."}
+            המלצה: העלה קובץ Excel / CSV, או PDF שנוצר דיגיטלית (לא סריקה).
           </p>
         </div>
       );
@@ -172,44 +178,55 @@ export function FinancialReportViewer({ reportData: rawReportData, isOpen, onClo
     const attentionAreas = alertsAndInsights.areas_for_attention || [];
     const recommendations = alertsAndInsights.recommendations || [];
 
+    // מחלץ ערך מספרי — תומך גם ב-{amount: N} וגם ב-N ישיר
+    const getAmount = (field) => {
+      if (field == null) return null;
+      if (typeof field === 'object') return field.amount ?? null;
+      return typeof field === 'number' ? field : null;
+    };
+    const fmt = (field) => {
+      const val = getAmount(field);
+      return val != null ? currencyFormatter.format(val) : '—';
+    };
+
     return (
       <div className="flex-1 overflow-y-auto pr-2 space-y-6">
         {/* Financial Summary Stats */}
         <div className={`grid grid-cols-1 md:grid-cols-2 ${isProfitLoss ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4`}>
-          {financialSummary.total_revenue && (
+          {getAmount(financialSummary.total_revenue) != null && (
             <StatCard 
               title="סך הכנסות" 
-              value={currencyFormatter.format(financialSummary.total_revenue.amount || financialSummary.total_revenue)} 
+              value={fmt(financialSummary.total_revenue)} 
               icon={DollarSign} 
               color="green" 
             />
           )}
           
-          {financialSummary.total_expenses && (
+          {getAmount(financialSummary.total_expenses) != null && (
             <StatCard 
               title="סך הוצאות" 
-              value={currencyFormatter.format(financialSummary.total_expenses.amount || financialSummary.total_expenses)} 
+              value={fmt(financialSummary.total_expenses)} 
               icon={TrendingUp} 
               color="red" 
             />
           )}
 
-          {financialSummary.gross_profit && (
+          {getAmount(financialSummary.gross_profit) != null && (
             <StatCard 
               title="רווח גולמי" 
-              value={currencyFormatter.format(financialSummary.gross_profit.amount || financialSummary.gross_profit)} 
+              value={fmt(financialSummary.gross_profit)} 
               icon={PieChart} 
               color="blue"
               description={`${formatMarginPercentage(profitabilityRatios.gross_margin || profitabilityRatios.gross_profit_margin || 0)}% מההכנסות`}
             />
           )}
 
-          {financialSummary.net_profit && (
+          {getAmount(financialSummary.net_profit) != null && (
             <StatCard 
               title="רווח נקי" 
-              value={currencyFormatter.format(financialSummary.net_profit.amount || financialSummary.net_profit)} 
-              icon={financialSummary.net_profit.amount >= 0 ? TrendingUp : TrendingDown} 
-              color={financialSummary.net_profit.amount >= 0 ? "green" : "red"}
+              value={fmt(financialSummary.net_profit)} 
+              icon={(getAmount(financialSummary.net_profit) ?? 0) >= 0 ? TrendingUp : TrendingDown} 
+              color={(getAmount(financialSummary.net_profit) ?? 0) >= 0 ? "green" : "red"}
               description={`${formatMarginPercentage(profitabilityRatios.net_margin || profitabilityRatios.net_profit_margin || 0)}% מההכנסות`}
             />
           )}
