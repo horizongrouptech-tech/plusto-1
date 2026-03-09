@@ -27,6 +27,10 @@ export default async function handler(req, res) {
     // שימוש ב-openRouterAPI המשותף מ-_helpers.js — תומך ב-file_urls, vision, JSON schema
     const result = await openRouterAPI({ prompt, response_json_schema, model, file_urls });
 
+    // Log לדיבאג — מה ה-AI החזיר
+    console.log('[invoke-llm] model used, file_urls:', model || 'default', file_urls?.length || 0);
+    console.log('[invoke-llm] result type:', typeof result, result ? Object.keys(result).join(', ') : 'null');
+
     // openRouterAPI מחזיר object אם יש schema, או string אם אין
     if (typeof result === 'string') {
       return res.status(200).json({ result });
