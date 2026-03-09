@@ -27,7 +27,7 @@ export default function FileDataViewer({ isOpen, onClose, file }) {
   const renderContent = () => {
     switch (localFile?.data_category) {
       case 'esna_report':
-        return <ESNAReportViewer fileData={localFile} reportData={localFile.esna_report_data} />;
+        return <ESNAReportViewer fileData={localFile} />;
       case 'profit_loss':
       case 'profit_loss_statement':
       case 'balance_sheet':
