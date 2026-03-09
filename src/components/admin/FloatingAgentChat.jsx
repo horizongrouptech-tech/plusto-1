@@ -224,11 +224,11 @@ const CHAT_SIZES = {
   fullscreen: { width: '100vw', height: '100vh' }
 };
 
-export default function FloatingAgentChat({ 
-  currentUser, 
-  agentName = "customer_business_advisor_agent", 
-  currentPageName, 
-  selectedCustomer, 
+export default function FloatingAgentChat({
+  currentUser: currentUserProp,
+  agentName = "customer_business_advisor_agent",
+  currentPageName,
+  selectedCustomer,
   pageContext,
   position = "right",
   title = "יועץ עסקי AI"
@@ -248,8 +248,9 @@ export default function FloatingAgentChat({
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  // שימוש ב-Context
-  const { allUsers: assignedCustomers = [], isAdmin, isFinancialManager } = useUsers();
+  // שימוש ב-Context — אם לא הועבר currentUser כ-prop, נשתמש ב-context
+  const { allUsers: assignedCustomers = [], isAdmin, isFinancialManager, currentUser: contextUser } = useUsers();
+  const currentUser = currentUserProp || contextUser;
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
