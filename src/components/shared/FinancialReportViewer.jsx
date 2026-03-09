@@ -399,8 +399,10 @@ export function FinancialReportViewer({ reportData: rawReportData, isOpen, onClo
         {/* NEW: Detailed sections for P&L reports */}
         {isProfitLoss && (
           <>
-            {/* KPIs & Annual Projections */}
+            {/* KPIs & Annual Projections — הצג רק אם יש נתונים */}
+            {(kpis.monthly_burn_rate || kpis.break_even_revenue || annualProjections.projected_revenue || annualProjections.projected_net_profit != null) && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {(kpis.monthly_burn_rate || kpis.break_even_revenue) && (
                 <Card className="card-horizon">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-horizon-primary"><Target /> מדדי ביצוע מרכזיים (KPIs)</CardTitle>
@@ -408,8 +410,11 @@ export function FinancialReportViewer({ reportData: rawReportData, isOpen, onClo
                   <CardContent className="space-y-3">
                     {kpis.monthly_burn_rate && <div className="flex justify-between"><span>קצב שריפת מזומנים חודשי:</span><Badge variant="secondary">{currencyFormatter.format(kpis.monthly_burn_rate)}</Badge></div>}
                     {kpis.break_even_revenue && <div className="flex justify-between"><span>הכנסה נדרשת לאיזון:</span><Badge variant="secondary">{currencyFormatter.format(kpis.break_even_revenue)}</Badge></div>}
+                    {kpis.revenue_per_employee && <div className="flex justify-between"><span>הכנסה לעובד:</span><Badge variant="secondary">{currencyFormatter.format(kpis.revenue_per_employee)}</Badge></div>}
                   </CardContent>
                 </Card>
+                )}
+                {(annualProjections.projected_revenue || annualProjections.projected_net_profit != null) && (
                  <Card className="card-horizon">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-horizon-primary"><ArrowUpRight /> תחזיות שנתיות</CardTitle>
@@ -417,25 +422,29 @@ export function FinancialReportViewer({ reportData: rawReportData, isOpen, onClo
                   <CardContent className="space-y-3">
                      {annualProjections.projected_revenue && <div className="flex justify-between"><span>הכנסות צפויות:</span><Badge variant="secondary">{currencyFormatter.format(annualProjections.projected_revenue)}</Badge></div>}
                      {annualProjections.projected_gross_profit && <div className="flex justify-between"><span>רווח גולמי צפוי:</span><Badge variant="secondary">{currencyFormatter.format(annualProjections.projected_gross_profit)}</Badge></div>}
-                     {annualProjections.projected_net_profit !== undefined && <div className={`flex justify-between ${annualProjections.projected_net_profit < 0 ? 'text-red-400' : 'text-green-400'}`}><span>רווח נקי צפוי:</span><Badge variant={annualProjections.projected_net_profit < 0 ? 'destructive' : 'default'}>{currencyFormatter.format(annualProjections.projected_net_profit)}</Badge></div>}
+                     {annualProjections.projected_net_profit != null && <div className={`flex justify-between ${annualProjections.projected_net_profit < 0 ? 'text-red-400' : 'text-green-400'}`}><span>רווח נקי צפוי:</span><Badge variant={annualProjections.projected_net_profit < 0 ? 'destructive' : 'default'}>{currencyFormatter.format(annualProjections.projected_net_profit)}</Badge></div>}
                   </CardContent>
                 </Card>
+                )}
             </div>
+            )}
 
-             {/* Expense Efficiency */}
+             {/* Expense Efficiency — הצג רק אם יש לפחות ערך אחד */}
+            {(expenseEfficiency.salary_to_revenue_ratio != null || expenseEfficiency.admin_to_revenue_ratio != null || expenseEfficiency.financing_cost_ratio != null || costStructure?.cost_of_goods_sold?.percentage_of_revenue != null) && (
             <Card className="card-horizon">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-horizon-primary"><SlidersHorizontal /> יעילות הוצאות (% מההכנסות)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {expenseEfficiency.salary_to_revenue_ratio !== undefined && <div className="text-center p-2 rounded-lg bg-horizon-card/50"><h4>שכר</h4><p className="font-bold text-lg text-blue-400">{formatMarginPercentage(expenseEfficiency.salary_to_revenue_ratio)}%</p></div>}
-                      {expenseEfficiency.admin_to_revenue_ratio !== undefined && <div className="text-center p-2 rounded-lg bg-horizon-card/50"><h4>הנהלה וכלליות</h4><p className="font-bold text-lg text-yellow-400">{formatMarginPercentage(expenseEfficiency.admin_to_revenue_ratio)}%</p></div>}
-                      {expenseEfficiency.financing_cost_ratio !== undefined && <div className="text-center p-2 rounded-lg bg-horizon-card/50"><h4>מימון</h4><p className="font-bold text-lg text-purple-400">{formatMarginPercentage(expenseEfficiency.financing_cost_ratio)}%</p></div>}
-                      {costStructure?.cost_of_goods_sold?.percentage_of_revenue !== undefined && <div className="text-center p-2 rounded-lg bg-horizon-card/50"><h4>עלות מכר</h4><p className="font-bold text-lg text-red-400">{formatMarginPercentage(costStructure.cost_of_goods_sold.percentage_of_revenue)}%</p></div>}
+                      {expenseEfficiency.salary_to_revenue_ratio != null && <div className="text-center p-2 rounded-lg bg-horizon-card/50"><h4>שכר</h4><p className="font-bold text-lg text-blue-400">{formatMarginPercentage(expenseEfficiency.salary_to_revenue_ratio)}%</p></div>}
+                      {expenseEfficiency.admin_to_revenue_ratio != null && <div className="text-center p-2 rounded-lg bg-horizon-card/50"><h4>הנהלה וכלליות</h4><p className="font-bold text-lg text-yellow-400">{formatMarginPercentage(expenseEfficiency.admin_to_revenue_ratio)}%</p></div>}
+                      {expenseEfficiency.financing_cost_ratio != null && <div className="text-center p-2 rounded-lg bg-horizon-card/50"><h4>מימון</h4><p className="font-bold text-lg text-purple-400">{formatMarginPercentage(expenseEfficiency.financing_cost_ratio)}%</p></div>}
+                      {costStructure?.cost_of_goods_sold?.percentage_of_revenue != null && <div className="text-center p-2 rounded-lg bg-horizon-card/50"><h4>עלות מכר</h4><p className="font-bold text-lg text-red-400">{formatMarginPercentage(costStructure.cost_of_goods_sold.percentage_of_revenue)}%</p></div>}
                   </div>
                 </CardContent>
             </Card>
+            )}
           </>
         )}
 
