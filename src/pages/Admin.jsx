@@ -81,7 +81,6 @@ import LeadManagementSystem from "@/components/leads/LeadManagementSystem";
 // import ManagerChatSystem from '../components/admin/ManagerChatSystem'; // Removed duplicate import
 // import FloatingNotificationCenter from '../components/shared/FloatingNotificationCenter'; // Removed duplicate import
 import CustomerInitiatedRecommendationsModal from "@/components/admin/CustomerInitiatedRecommendationsModal";
-import FloatingAgentChat from "../components/admin/FloatingAgentChat";
 // import CustomerSuppliersTab from "../components/admin/CustomerSuppliersTab"; // Removed unused import
 // import SupplierPartnershipManager from "../components/admin/SupplierPartnershipManager"; // Removed unused import
 import EditSupplierModal from "@/components/shared/EditSupplierModal";
@@ -3990,17 +3989,6 @@ export default function AdminPage() {
           customerEmail={selectedCustomer.email}
         />
       )}
-    <FloatingAgentChat
-      currentUser={currentUser}
-      agentName="plusto_user_guide_agent"
-      title="יועץ עסקי AI"
-    />
-    <FloatingAgentChat
-      currentUser={currentUser}
-      agentName="timool_recommendations_agent"
-      title="סוכן המלצות"
-      position="left"
-    />
     </div> 
   );
 }
