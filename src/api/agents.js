@@ -8,7 +8,7 @@ export const listConversations = async ({ agent_name } = {}) => {
   let q = supabase
     .from('manager_conversation')
     .select('*')
-    .order('created_at', { ascending: false });
+    .order('created_date', { ascending: false });
   if (agent_name) q = q.eq('agent_name', agent_name);
   const { data, error } = await q;
   if (error) throw error;
