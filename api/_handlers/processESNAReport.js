@@ -91,7 +91,7 @@ export default async function handler(req, res) {
       await supabaseAdmin.from('file_upload').update({
         status: 'analyzed',
         data_category: 'esna_report',
-        esna_report_data: esnaData,
+        parsed_data: esnaData,
         ai_insights: aiInsights,
         analysis_notes: `דוח מע"מ (ESNA) עובד בהצלחה עבור ${esnaData.metadata?.companyName || 'חברה לא ידועה'}`,
       }).eq('id', file_id);

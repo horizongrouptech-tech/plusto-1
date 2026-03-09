@@ -153,7 +153,13 @@ export default function UnifiedFileUploader({ customerEmail, onUploadComplete })
       setPromotionsReportData(safeParse(file.ai_insights));
       setShowPromotionsReportViewer(true);
     } else if (file.data_category === 'esna_report') {
-      setSelectedFileForViewing(file);
+      // parsed_data הוא JSONB (מפורסר אוטומטית), esna_report_data הוא TEXT (legacy) — safeParse לביטחון
+      const parsedFile = {
+        ...file,
+        parsed_data: safeParse(file.parsed_data) || safeParse(file.esna_report_data),
+        ai_insights: safeParse(file.ai_insights),
+      };
+      setSelectedFileForViewing(parsedFile);
       setFileViewerType('esna');
       setFileViewerOpen(true);
     } else {

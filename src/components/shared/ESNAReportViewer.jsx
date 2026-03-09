@@ -21,11 +21,11 @@ const safeFormatDate = (dateValue, fallback = 'לא זמין') => {
 
 export default function ESNAReportViewer({ fileData }) {
 
-  // The main issue is likely here. The component might not be finding the data.
-  // The backend log shows the data is nested under a `data` key. Let's ensure we look there.
-  // The backend saves the processed data into `fileData.esna_report_data`.
-  const esnaData = fileData?.esna_report_data;
-  const insights = fileData?.ai_insights;
+  // קריאת נתוני ESNA — parsed_data (JSONB) או esna_report_data (TEXT, legacy) עם fallback ל-JSON.parse
+  const rawEsna = fileData?.parsed_data || fileData?.esna_report_data;
+  const esnaData = typeof rawEsna === 'string' ? (() => { try { return JSON.parse(rawEsna); } catch { return null; } })() : rawEsna;
+  const rawInsights = fileData?.ai_insights;
+  const insights = typeof rawInsights === 'string' ? (() => { try { return JSON.parse(rawInsights); } catch { return null; } })() : rawInsights;
 
   if (!esnaData || !esnaData.metadata || !esnaData.annualSummary || !esnaData.monthlyBreakdown) {
     return (
@@ -44,8 +44,11 @@ export default function ESNAReportViewer({ fileData }) {
   const summaryCards = [
     { title: "סה\"כ עסקאות חייבות", value: annualSummary.totalTaxableTransactions, icon: TrendingUp, color: "text-green-400" },
     { title: "סה\"כ מס תשומות", value: annualSummary.totalInputTax, icon: TrendingDown, color: "text-red-400" },
-    { title: "שיעור ערך מוסף", value: `${annualSummary.addedValueRate}%`, icon: BarChart2, color: "text-blue-400" },
-    { title: "סה\"כ גבייה מתשלומים", value: collectionsAndPayments.annualSummary.totalPayments, icon: Landmark, color: "text-purple-400" },
+    { title: "שיעור ערך מוסף", value: `${annualSummary.addedValueRate ?? 0}%`, icon: BarChart2, color: "text-blue-400" },
+    // collectionsAndPayments לא תמיד קיים — הצג רק אם יש
+    ...(collectionsAndPayments?.annualSummary?.totalPayments != null ? [{
+      title: "סה\"כ גבייה מתשלומים", value: collectionsAndPayments.annualSummary.totalPayments, icon: Landmark, color: "text-purple-400"
+    }] : []),
   ];
 
   return (
