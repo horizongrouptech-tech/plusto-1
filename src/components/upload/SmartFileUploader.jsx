@@ -25,7 +25,7 @@ import {
 
 
 import { toast } from "sonner";
-import { parseXlsx, processESNAReport, processPurchaseDocument, processSmartDocument } from '@/api/functions';
+import { parseXlsx, processESNAReport, processCreditReport, processPurchaseDocument, processSmartDocument } from '@/api/functions';
 import { FileUpload } from '@/api/entities';
 import { openRouterAPI, UploadFile } from '@/api/integrations';
 
@@ -952,6 +952,36 @@ export default function SmartFileUploader({ customerEmail, onUploadComplete }) {
         return;
       }
 
+      // Handle credit report (דוח ריכוז נתונים) — uses dedicated API handler
+      if (category === 'credit_report') {
+        setProcessingStatus('מעבד דוח ריכוז נתונים...');
+
+        const { data: creditResult, error: creditError } = await processCreditReport({
+          file_url,
+          file_id: fileRecordId,
+          customer_email: customerEmail,
+        });
+
+        if (creditError || !creditResult?.success) {
+          throw new Error(creditError?.message || creditResult?.error || 'עיבוד דוח אשראי נכשל');
+        }
+
+        setProcessingStatus('דוח ריכוז נתונים עובד בהצלחה!');
+        setUploadProgress(100);
+        setFinalStatus('success');
+
+        if (onUploadComplete) {
+          onUploadComplete();
+        }
+
+        setTimeout(() => {
+          setSelectedCategory('');
+          setCustomFileName('');
+        }, 2000);
+
+        return;
+      }
+
       // XLSX/CSV files - exact copy from SpecificFileUploadBox
       if (['xls', 'xlsx', 'csv'].includes(fileType)) {
         if (category === 'inventory_report') {
@@ -1149,6 +1179,12 @@ ${rawDataForPrompt}
 *   כל הטקסט בתגובה (תובנות, המלצות) חייב להיות בעברית.
 *   הפלט חייב להיות אובייקט JSON שתואם במדויק לסכימה שסופקה.
 *   אם אינך מוצא נתון מספרי ספציפי, השתמש ב-null או 0.
+*   חובה לחשב נתונים נגזרים גם אם לא מופיעים בדוח:
+    - profitability_ratios: gross_margin, operating_margin, net_margin (אחוזים 0-100)
+    - annual_projections: הכפל נתונים חודשיים/רבעוניים לתחזית שנתית
+    - key_performance_indicators: monthly_burn_rate (סך הוצאות חודשי), break_even_revenue
+    - expense_efficiency_analysis: salary_to_revenue_ratio, admin_to_revenue_ratio, financing_cost_ratio (אחוזים)
+    - alerts_and_insights: cost_alerts, efficiency_insights, growth_opportunities, risk_factors (3-5 פריטים כל אחד)
 
 **נתוני האקסל הגולמיים:**
 ${rawDataForPrompt}
@@ -1203,64 +1239,6 @@ All text fields MUST be in Hebrew.
           finalMetadata = { analysis_status: 'partial', pages_analyzed: 10 };
           analysisNotes = 'Analyzed first 10 pages of credit card report PDF.';
 
-        } else if (category === 'credit_report') {
-          targetSchema = creditReportSchema;
-          prompt = `
-אתה מומחה בניתוח דוחות ריכוז נתונים מבנק ישראל. משימתך: חילוץ **מלא ומקיף** של כל הנתונים מהדוח.
-
-📍 **סעיפים לחילוץ:**
-
-**1. מטא-דטה (עמ' 1-2):**
-- שם נושא הדוח, ת.ז., תאריך הפקה, תאריך תחילת איסוף
-
-**2. סיכום (עמ' 3-4):**
-- סה"כ חוב כולל ללא משכנתא
-- מספר עסקאות פעילות (חייב + ערב)
-- מספר הלוואות, משכנתאות
-- רשימת מלווים
-
-**3. חשבונות עו"ש (עמ' 5-11) - קריטי:**
-חלץ **כל** חשבון (גם כחייב וגם כערב):
-- פרטי חשבון (בנק, מזהה, סניף, מסגרת, יתרה)
-- האם זה כערב? (isGuarantor: true/false)
-- מסלולי ריבית מפורטים
-- **החזרות שיקים והוראות קבע** - ספור לפי חודש!
-
-**4. הלוואות (עמ' 12-27):**
-חלץ **כל** הלוואה - חייב או ערב:
-- זהה ערבות לפי: "מספר הלקוחות הערבים בעסקה" > 0
-- סכום מקורי, יתרה, תשלום חודשי
-- מסלולי ריבית, בטחונות
-- פרטי תאגיד קשור (אם יש)
-
-**5. משכנתאות (עמ' 14-16):**
-- כל המשכנתאות עם מסלולי ריבית מלאים
-- בטחונות מקרקעין
-
-**6. ערבויות (עמ' 22-24):**
-- כל הערבויות שניתנו לטובת הלקוח
-
-**7. פניות לשכות אשראי (עמ' 67):**
-- כל הפניות ב-3 שנים אחרונות
-
-**8. ניתוח מעמיק:**
-- ציון סיכון 1-10 (שקלל: החזרות, ניצול מסגרות, חשיפה כערב)
-- ספור סה"כ החזרות הוראות קבע ב-12 חודשים
-- חשב אחוז ניצול מסגרות
-- חשב חשיפה כערב
-- זהה דגלים אדומים
-
-⚠️ **חשוב מאוד:**
-- אל תדלג על עסקאות כערב!
-- חלץ את כל ההחזרות מהטבלאות
-- כל הטקסט בעברית
-- נתונים מדויקים בלבד
-
-החזר JSON תקני בלבד!
-          `;
-          finalMetadata = { analysis_status: 'full', comprehensive: true };
-          analysisNotes = 'Successfully analyzed Bank of Israel Credit Report PDF with full extraction.';
-
         } else if (category === 'balance_sheet') {
           targetSchema = detailedBalanceSheetSchema;
           prompt = `
@@ -1275,13 +1253,21 @@ The report language is Hebrew.
         } else if (category === 'profit_loss_statement') {
           targetSchema = detailedProfitLossSchema;
           prompt = `
-You are an expert financial analyst. Analyze the provided Profit & Loss (P&L) statement PDF.
-Extract ALL data accurately into the provided JSON schema. Ensure all numeric values are parsed correctly without commas.
-Calculate all financial ratios and projections as defined in the schema.
-Provide concise and actionable alerts and insights based on the data.
-IMPORTANT: All text fields including key_insights, positive_trends, areas_for_attention, and recommendations MUST be in Hebrew.
-Translate all insights and recommendations to Hebrew.
-If a field is not present in the document, return null for that field.
+You are an expert financial analyst specializing in Israeli business reports. Analyze the provided Profit & Loss (P&L) statement.
+
+INSTRUCTIONS:
+1. Extract ALL financial data into the JSON schema — revenue, expenses, profits at all levels.
+2. Parse all numeric values WITHOUT commas (e.g., 1234567 not 1,234,567).
+3. CALCULATE the following even if not explicitly in the document:
+   - profitability_ratios: gross_margin, operating_margin, net_margin (as percentages 0-100)
+   - annual_projections: multiply monthly/quarterly figures to project annual revenue, gross profit, net profit
+   - key_performance_indicators: monthly_burn_rate (total monthly expenses), break_even_revenue (fixed costs / gross margin ratio)
+   - expense_efficiency_analysis: salary_to_revenue_ratio, admin_to_revenue_ratio, financing_cost_ratio (as percentages 0-100)
+   - cost_structure_analysis: break down each cost category with amount and percentage_of_revenue
+4. Provide actionable alerts_and_insights: cost_alerts, efficiency_insights, growth_opportunities, risk_factors (3-5 items each)
+5. ALL text fields MUST be in Hebrew.
+6. If a specific data point truly cannot be determined, return null — but ALWAYS calculate derived fields like ratios and projections.
+
 The report language is Hebrew.
           `;
           finalMetadata = { analysis_status: 'full' };
@@ -1354,12 +1340,6 @@ IMPORTANT: All text fields including key_insights, risk_flags, and top_expenses 
           prompt = `
 Please analyze the credit card statement image and extract information.
 All text fields MUST be in Hebrew.
-          `;
-        } else if (category === 'credit_report') {
-          targetSchema = creditReportSchema;
-          prompt = `
-אתה Extractor & Analyst פיננסי מומחה. קבל תמונה בעברית של "דוח ריכוז נתונים" מבנק ישראל ומשימתך היא למצות את כל הנתונים הפיננסיים הרלוונטיים ולהפיק ניתוח ותובנות.
-**כל התובנות וטקסט חופשי אחר שתפיק חייבים להיות בעברית בלבד.**
           `;
         } else if (category === 'balance_sheet') {
           targetSchema = detailedBalanceSheetSchema;
