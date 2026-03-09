@@ -92,7 +92,7 @@ export async function openRouterAPI({ prompt, response_json_schema, model, file_
   // Build user content — handle file_urls by detecting type (image / PDF / text)
   let userContent = prompt;
   let useVisionModel = false;
-  let usePdfModel = false;
+  let hasPdf = false;
 
   if (file_urls && file_urls.length > 0) {
     const parts = [{ type: 'text', text: prompt }];
@@ -106,11 +106,11 @@ export async function openRouterAPI({ prompt, response_json_schema, model, file_
         const isPdf = contentType.includes('pdf') || url.toLowerCase().endsWith('.pdf');
 
         if (isImage) {
-          // תמונה — שלח כ-image_url ל-gpt-4o
-          parts.push({ type: 'image_url', imageUrl: { url } });
+          // תמונה — שלח כ-image_url
+          parts.push({ type: 'image_url', image_url: { url } });
           useVisionModel = true;
         } else if (isPdf) {
-          // PDF — OpenRouter תומך ב-file content type עם URL ישיר
+          // PDF — OpenRouter דורש type: "file" עם file_data (URL ישיר)
           parts.push({
             type: 'file',
             file: {
@@ -118,7 +118,7 @@ export async function openRouterAPI({ prompt, response_json_schema, model, file_
               file_data: url,
             },
           });
-          usePdfModel = true;
+          hasPdf = true;
         } else {
           // CSV / טקסט רגיל — הורד כטקסט והוסף ל-prompt
           const fileResponse = await fetch(url);
@@ -131,7 +131,7 @@ export async function openRouterAPI({ prompt, response_json_schema, model, file_
       } catch (fetchErr) {
         console.error(`[openRouterAPI] Failed to fetch ${url}:`, fetchErr.message);
         // fallback: שלח כ-image_url ותן למודל לנסות
-        parts.push({ type: 'image_url', imageUrl: { url } });
+        parts.push({ type: 'image_url', image_url: { url } });
         useVisionModel = true;
       }
     }
@@ -142,12 +142,12 @@ export async function openRouterAPI({ prompt, response_json_schema, model, file_
   messages.push({ role: 'user', content: userContent });
 
   // בחירת מודל לפי סוג הקובץ:
-  //   PDF  → claude-3-5-haiku (תומך ב-PDF document blocks)
-  //   תמונה → gpt-4o (vision)
-  //   טקסט  → gpt-4o-mini (ברירת מחדל)
+  //   PDF       → gemini-2.5-pro (הכי טוב לניתוח מסמכים, טבלאות, ודוחות)
+  //   תמונה     → gpt-4o (vision)
+  //   טקסט      → gpt-4o-mini (ברירת מחדל)
   let defaultModel;
-  if (usePdfModel) {
-    defaultModel = 'anthropic/claude-3-5-haiku';
+  if (hasPdf) {
+    defaultModel = 'google/gemini-2.5-pro';
   } else if (useVisionModel) {
     defaultModel = 'openai/gpt-4o';
   } else {
@@ -155,13 +155,10 @@ export async function openRouterAPI({ prompt, response_json_schema, model, file_
   }
   const selectedModel = model || defaultModel;
 
-  const chatParams = { model: selectedModel, messages };
-  if (response_json_schema) chatParams.responseFormat = { type: 'json_object' };
-
   let content;
 
-  if (usePdfModel) {
-    // ה-SDK לא תומך ב-document blocks — שולחים fetch ישיר ל-OpenRouter
+  if (hasPdf) {
+    // ה-SDK לא תומך בפורמט file — שולחים fetch ישיר ל-OpenRouter API
     const apiKey = process.env.OPENROUTER_API_KEY || process.env.VITE_OPENROUTER_API_KEY;
     const apiRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -179,12 +176,14 @@ export async function openRouterAPI({ prompt, response_json_schema, model, file_
     });
     if (!apiRes.ok) {
       const errText = await apiRes.text();
-      throw new Error(`OpenRouter PDF API error ${apiRes.status}: ${errText}`);
+      throw new Error(`OpenRouter API error ${apiRes.status}: ${errText}`);
     }
     const json = await apiRes.json();
     content = json.choices?.[0]?.message?.content;
   } else {
-    // ה-SDK של OpenRouter מצפה ל-{ chatGenerationParams: ... } כ-wrapper
+    // תמונות וטקסט — דרך ה-SDK
+    const chatParams = { model: selectedModel, messages };
+    if (response_json_schema) chatParams.responseFormat = { type: 'json_object' };
     const completion = await client.chat.send({ chatGenerationParams: chatParams });
     content = completion.choices[0].message.content;
   }
@@ -202,13 +201,17 @@ export async function openRouterAPI({ prompt, response_json_schema, model, file_
 
 /**
  * Extracts structured data from a file URL via OpenRouter vision
+ * @param {string} file_url
+ * @param {object} json_schema
+ * @param {string} [prompt] — optional custom prompt (default: generic extraction)
  */
-export async function extractDataFromFile({ file_url, json_schema }) {
+export async function extractDataFromFile({ file_url, json_schema, prompt, model }) {
+  const defaultPrompt = 'Extract all structured data from this file according to the provided JSON schema. Return only valid JSON.';
   const result = await openRouterAPI({
-    prompt: 'Extract all structured data from this file according to the provided JSON schema. Return only valid JSON.',
+    prompt: prompt || defaultPrompt,
     response_json_schema: json_schema,
     file_urls: [file_url],
-    model: 'openai/gpt-4o',
+    ...(model ? { model } : {}),
   });
   return { status: 'success', output: result };
 }
