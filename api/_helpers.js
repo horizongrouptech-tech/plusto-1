@@ -110,12 +110,16 @@ export async function openRouterAPI({ prompt, response_json_schema, model, file_
           parts.push({ type: 'image_url', image_url: { url } });
           useVisionModel = true;
         } else if (isPdf) {
-          // PDF — OpenRouter דורש type: "file" עם file_data (URL ישיר)
+          // PDF — OpenRouter + Gemini דורש base64 data URI, לא URL ישיר
+          const pdfRes = await fetch(url);
+          const pdfBuffer = await pdfRes.arrayBuffer();
+          const base64 = Buffer.from(pdfBuffer).toString('base64');
+          const dataUri = `data:application/pdf;base64,${base64}`;
           parts.push({
             type: 'file',
             file: {
               filename: url.split('/').pop() || 'document.pdf',
-              file_data: url,
+              file_data: dataUri,
             },
           });
           hasPdf = true;
