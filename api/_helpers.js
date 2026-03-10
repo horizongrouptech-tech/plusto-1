@@ -164,6 +164,7 @@ export async function openRouterAPI({ prompt, response_json_schema, model, file_
   if (hasPdf) {
     // ה-SDK לא תומך בפורמט file — שולחים fetch ישיר ל-OpenRouter API
     const apiKey = process.env.OPENROUTER_API_KEY || process.env.VITE_OPENROUTER_API_KEY;
+    console.log(`[openRouterAPI] PDF path — model: ${selectedModel}, messages: ${messages.length}, schema: ${!!response_json_schema}`);
     const apiRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -180,10 +181,12 @@ export async function openRouterAPI({ prompt, response_json_schema, model, file_
     });
     if (!apiRes.ok) {
       const errText = await apiRes.text();
+      console.error(`[openRouterAPI] PDF API error ${apiRes.status}:`, errText.slice(0, 500));
       throw new Error(`OpenRouter API error ${apiRes.status}: ${errText}`);
     }
     const json = await apiRes.json();
     content = json.choices?.[0]?.message?.content;
+    console.log(`[openRouterAPI] PDF response — content length: ${content?.length || 0}, preview: ${(content || '').slice(0, 200)}`);
   } else {
     // תמונות וטקסט — דרך ה-SDK
     const chatParams = { model: selectedModel, messages };
@@ -211,13 +214,23 @@ export async function openRouterAPI({ prompt, response_json_schema, model, file_
  */
 export async function extractDataFromFile({ file_url, json_schema, prompt, model }) {
   const defaultPrompt = 'Extract all structured data from this file according to the provided JSON schema. Return only valid JSON.';
-  const result = await openRouterAPI({
-    prompt: prompt || defaultPrompt,
-    response_json_schema: json_schema,
-    file_urls: [file_url],
-    ...(model ? { model } : {}),
-  });
-  return { status: 'success', output: result };
+  try {
+    const result = await openRouterAPI({
+      prompt: prompt || defaultPrompt,
+      response_json_schema: json_schema,
+      file_urls: [file_url],
+      ...(model ? { model } : {}),
+    });
+    // בדיקה שהתוצאה לא ריקה ולא generic fallback
+    if (!result || (typeof result === 'object' && result.result && Object.keys(result).length === 1)) {
+      console.error('[extractDataFromFile] Got empty or fallback result:', JSON.stringify(result).slice(0, 300));
+      return { status: 'error', error: 'AI returned empty or invalid data' };
+    }
+    return { status: 'success', output: result };
+  } catch (err) {
+    console.error('[extractDataFromFile] Error:', err.message);
+    return { status: 'error', error: err.message };
+  }
 }
 
 // ─── Entity helpers (thin Supabase wrappers matching Base44 patterns) ─────────
