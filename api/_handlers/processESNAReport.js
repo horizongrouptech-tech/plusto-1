@@ -52,7 +52,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: 'Missing required parameters: file_url, customer_email' });
     }
 
-    const extractionResult = await extractDataFromFile({ file_url, json_schema: esnaJsonSchema });
+    const esnaPrompt = `אתה מומחה לדוחות מע"מ ישראליים (ESNA / אס"נ).
+חלץ את כל הנתונים מהדוח בהתאם ל-JSON schema שסופק.
+שים לב ל:
+- metadata: שם חברה, מספר עוסק, שנת דוח, סוג דוח (ESNA), תאריך הפקה, משרד מייצג
+- annualSummary: סך עסקאות חייבות, עסקאות פטורות, מס תשומות, שיעור מס
+- monthlyBreakdown: פירוט חודשי — תקופה, סך עסקאות, מס תשומות, שיעור מע"מ
+החזר רק JSON תקין בלבד.`;
+
+    const extractionResult = await extractDataFromFile({ file_url, json_schema: esnaJsonSchema, prompt: esnaPrompt });
 
     if (extractionResult.status !== 'success' || !extractionResult.output) {
       const msg = 'Failed to extract data from ESNA report';
