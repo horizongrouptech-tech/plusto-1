@@ -251,12 +251,16 @@ function detectToolNeed(content) {
 
   // מילות מפתח שמרמזות על צורך ב-tools
   const toolKeywords = [
+    // קריאה
     'לקוח', 'לקוחות', 'יעד', 'יעדים', 'המלצ', 'קובץ', 'קבצים', 'תחזית',
     'פגישה', 'פעולה', 'חיפוש', 'חפש', 'הראה', 'רשימ', 'סטטוס', 'דוח',
-    'צור', 'עדכן', 'מחק', 'שייך', 'נתח', 'העלה', 'הורד',
-    'customer', 'goal', 'file', 'forecast', 'meeting', 'report',
     'כמה', 'מי', 'איזה', 'מה ה', 'תן לי', 'הצג',
     'משימ', 'פגיש', 'אימייל', 'email',
+    'customer', 'goal', 'file', 'forecast', 'meeting', 'report',
+    // כתיבה
+    'צור', 'עדכן', 'מחק', 'שייך', 'נתח', 'העלה', 'הורד',
+    'תיעד', 'רשום', 'קבע', 'הוסף', 'שנה', 'הגדר',
+    'create', 'update', 'schedule', 'assign', 'analyze',
   ];
 
   return toolKeywords.some(kw => lower.includes(kw));
