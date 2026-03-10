@@ -220,12 +220,12 @@ const MessageBubble = React.memo(({ message, isUser }) => {
         <div
           className={`rounded-2xl px-4 py-3 text-right relative group ${
             isUser
-              ? 'bg-gradient-to-br from-horizon-primary to-[#1a7a96] text-white rounded-tr-sm shadow-lg'
+              ? 'bg-horizon-primary text-white rounded-tr-sm shadow-lg'
               : 'bg-horizon-card text-horizon-text border border-horizon rounded-tl-sm shadow-md'
           }`}
         >
           {isUser ? (
-            <p className="text-sm leading-relaxed text-white font-medium" dir="rtl">{message.content}</p>
+            <p className="text-sm leading-relaxed font-medium" dir="rtl">{message.content}</p>
           ) : (
             <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none text-right text-horizon-text [&_p]:text-horizon-text [&_li]:text-horizon-text" dir="rtl">
               <ReactMarkdown components={markdownComponents}>
