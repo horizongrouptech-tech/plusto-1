@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,9 @@ import {
   Trash2,
   Download,
   Upload,
+  Paperclip,
+  Image,
+  Table,
   Sparkles,
   Zap,
   Calendar,
@@ -42,6 +46,7 @@ import {
 import ReactMarkdown from 'react-markdown';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUsers } from '../shared/UsersContext';
+import { useAgentContext } from '../agent/AgentContextProvider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,15 +55,22 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import * as agents from '@/api/agents';
+import { UploadFile } from '@/api/integrations';
+import { supabase } from '@/api/supabaseClient';
 
 // תצוגת Tool Call
 const ToolCallDisplay = ({ toolCall }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   
+  const isWriteTool = (name) =>
+    name?.includes('create') || name?.includes('update') || name?.includes('schedule') || name?.includes('associate');
+
   const getToolIcon = (name) => {
     if (name?.includes('search') || name?.includes('filter')) return Search;
-    if (name?.includes('read') || name?.includes('list')) return Database;
-    if (name?.includes('create') || name?.includes('update')) return FileText;
+    if (name?.includes('read') || name?.includes('list') || name?.includes('get_file')) return Database;
+    if (name?.includes('analyze')) return Sparkles;
+    if (name?.includes('create') || name?.includes('update') || name?.includes('schedule')) return FileText;
+    if (name?.includes('associate')) return Upload;
     return Zap;
   };
   
@@ -98,20 +110,29 @@ const ToolCallDisplay = ({ toolCall }) => {
       'BusinessForecast.read': 'קריאת תחזית עסקית',
       'OnboardingRequest.read': 'קריאת בקשות הצטרפות',
       'CustomerAction.create': 'תיעוד פעולה',
+      'Meeting.create': 'קביעת פגישה',
+      'analyze_file': 'ניתוח קובץ',
+      'associate_file_with_customer': 'שיוך קובץ ללקוח',
+      'get_file_analysis': 'שליפת ניתוח קובץ',
       'web_search': 'חיפוש באינטרנט',
     };
     
     return translations[name] || name.split('.').reverse().join(' ');
   };
   
+  // כתיבה = כתום, קריאה = כחול/טיל
+  const writeMode = isWriteTool(toolCall?.name);
+  const borderActive = writeMode ? 'border-amber-500/50' : 'border-horizon-primary/50';
+  const borderHover = writeMode ? 'hover:border-amber-500/30' : 'hover:border-horizon-primary/30';
+
   return (
     <div className="my-2">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-xs w-full
-          ${isExpanded ? 'bg-horizon-card border-horizon-primary/50' : 'bg-horizon-card/50 border-horizon hover:border-horizon-primary/30'}`}
+          ${isExpanded ? `bg-horizon-card ${borderActive}` : `bg-horizon-card/50 border-horizon ${borderHover}`}`}
       >
-        <ToolIcon className={`w-3 h-3 ${statusConfig.color}`} />
+        <ToolIcon className={`w-3 h-3 ${writeMode ? 'text-amber-400' : statusConfig.color}`} />
         <span className="text-horizon-text flex-1 text-right">{getToolDisplayName(toolCall?.name)}</span>
         <StatusIcon className={`w-3 h-3 ${statusConfig.color} ${statusConfig.spin ? 'animate-spin' : ''}`} />
         {(toolCall?.arguments_string || toolCall?.results) && (
@@ -156,10 +177,40 @@ const ToolCallDisplay = ({ toolCall }) => {
   );
 };
 
-// בועת הודעה משופרת
-const MessageBubble = ({ message, isUser }) => {
+// Markdown components — מוגדרים מחוץ ל-render למניעת re-creation
+const markdownComponents = {
+  p: ({ children }) => <p className="my-1 last:mb-0 first:mt-0 text-right">{children}</p>,
+  ul: ({ children }) => <ul className="list-disc mr-4 my-2 space-y-1 text-right pr-4">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal mr-4 my-2 space-y-1 text-right pr-4">{children}</ol>,
+  li: ({ children }) => <li className="my-0.5">{children}</li>,
+  strong: ({ children }) => <strong className="font-bold text-horizon-primary">{children}</strong>,
+  em: ({ children }) => <em className="italic text-horizon-accent">{children}</em>,
+  code: ({ children }) => <code className="bg-horizon-dark px-1.5 py-0.5 rounded text-xs">{children}</code>,
+  h1: ({ children }) => <h1 className="text-lg font-bold mt-3 mb-2 text-horizon-text">{children}</h1>,
+  h2: ({ children }) => <h2 className="text-base font-bold mt-3 mb-2 text-horizon-text">{children}</h2>,
+  h3: ({ children }) => <h3 className="text-sm font-bold mt-2 mb-1 text-horizon-text">{children}</h3>,
+};
+
+// בועת הודעה משופרת — עם timestamp on hover + copy button
+const MessageBubble = React.memo(({ message, isUser }) => {
+  const [showActions, setShowActions] = useState(false);
+
+  const copyMessage = () => {
+    navigator.clipboard.writeText(message.content || '');
+    toast.success('הועתק ללוח');
+  };
+
+  // פורמט שעה
+  const timeStr = message.created_date
+    ? new Date(message.created_date).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+    : '';
+
   return (
-    <div className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div
+      className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-200`}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
+    >
       {!isUser && (
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-horizon-primary to-horizon-secondary flex items-center justify-center flex-shrink-0 mt-1 shadow-lg">
           <Bot className="w-4 h-4 text-white" />
@@ -167,36 +218,62 @@ const MessageBubble = ({ message, isUser }) => {
       )}
       <div className={`max-w-[85%] space-y-1`}>
         <div
-          className={`rounded-2xl px-4 py-3 text-right ${
+          className={`rounded-2xl px-4 py-3 text-right relative group ${
             isUser
-              ? 'bg-gradient-to-br from-horizon-primary to-horizon-primary/80 text-white rounded-tr-sm'
-              : 'bg-horizon-card text-horizon-text border border-horizon rounded-tl-sm'
+              ? 'bg-gradient-to-br from-horizon-primary to-[#1a7a96] text-white rounded-tr-sm shadow-lg'
+              : 'bg-horizon-card text-horizon-text border border-horizon rounded-tl-sm shadow-md'
           }`}
         >
           {isUser ? (
-            <p className="text-sm leading-relaxed" dir="rtl">{message.content}</p>
+            <p className="text-sm leading-relaxed text-white font-medium" dir="rtl">{message.content}</p>
           ) : (
-            <div className="text-sm leading-relaxed prose prose-sm prose-invert max-w-none text-right" dir="rtl">
-              <ReactMarkdown
-                components={{
-                  p: ({ children }) => <p className="my-1 last:mb-0 first:mt-0 text-right">{children}</p>,
-                  ul: ({ children }) => <ul className="list-disc mr-4 my-2 space-y-1 text-right pr-4">{children}</ul>,
-                  ol: ({ children }) => <ol className="list-decimal mr-4 my-2 space-y-1 text-right pr-4">{children}</ol>,
-                  li: ({ children }) => <li className="my-0.5">{children}</li>,
-                  strong: ({ children }) => <strong className="font-bold text-horizon-primary">{children}</strong>,
-                  em: ({ children }) => <em className="italic text-horizon-accent">{children}</em>,
-                  code: ({ children }) => <code className="bg-horizon-dark px-1.5 py-0.5 rounded text-xs">{children}</code>,
-                  h1: ({ children }) => <h1 className="text-lg font-bold mt-3 mb-2 text-horizon-text">{children}</h1>,
-                  h2: ({ children }) => <h2 className="text-base font-bold mt-3 mb-2 text-horizon-text">{children}</h2>,
-                  h3: ({ children }) => <h3 className="text-sm font-bold mt-2 mb-1 text-horizon-text">{children}</h3>,
-                }}
-              >
+            <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none text-right text-horizon-text [&_p]:text-horizon-text [&_li]:text-horizon-text" dir="rtl">
+              <ReactMarkdown components={markdownComponents}>
                 {message.content}
               </ReactMarkdown>
             </div>
           )}
+
+          {/* Copy + timestamp — מוצגים ב-hover */}
+          {showActions && (
+            <div className={`absolute -bottom-5 flex items-center gap-2 text-[10px] text-horizon-accent ${isUser ? 'left-0' : 'right-0'}`}>
+              {timeStr && <span>{timeStr}</span>}
+              {!isUser && message.content && (
+                <button onClick={copyMessage} className="hover:text-horizon-primary transition-colors" title="העתק">
+                  <Download className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
         
+        {/* File Attachments — קבצים מצורפים להודעה */}
+        {message.file_attachments?.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            {message.file_attachments.map((file, idx) => {
+              const Icon = file.file_type?.includes('pdf') ? FileText
+                : (file.file_type?.includes('sheet') || file.file_type?.includes('csv')) ? Table
+                : file.file_type?.includes('image') ? Image : FileText;
+              return (
+                <a
+                  key={idx}
+                  href={file.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors
+                    ${isUser
+                      ? 'bg-white/20 hover:bg-white/30 text-white'
+                      : 'bg-horizon-dark/50 hover:bg-horizon-dark/70 text-horizon-text border border-horizon'
+                    }`}
+                >
+                  <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate max-w-[120px]">{file.filename}</span>
+                </a>
+              );
+            })}
+          </div>
+        )}
+
         {/* Tool Calls */}
         {message.tool_calls?.length > 0 && (
           <div className="space-y-1">
@@ -213,7 +290,7 @@ const MessageBubble = ({ message, isUser }) => {
       )}
     </div>
   );
-};
+});
 
 // גדלי חלון
 const CHAT_SIZES = {
@@ -227,10 +304,9 @@ const CHAT_SIZES = {
 export default function FloatingAgentChat({
   currentUser: currentUserProp,
   agentName = "customer_business_advisor_agent",
-  currentPageName,
-  selectedCustomer,
-  pageContext,
-  position = "right",
+  currentPageName: currentPageNameProp,
+  selectedCustomer: selectedCustomerProp,
+  pageContext: pageContextProp,
   title = "יועץ עסקי AI"
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -245,12 +321,20 @@ export default function FloatingAgentChat({
   const [unsubscribe, setUnsubscribe] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState([]); // קבצים שהמשתמש בחר לצרף
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // שימוש ב-Context — אם לא הועבר currentUser כ-prop, נשתמש ב-context
   const { allUsers: assignedCustomers = [], isAdmin, isFinancialManager, currentUser: contextUser } = useUsers();
   const currentUser = currentUserProp || contextUser;
+
+  // AgentContext — מודעות לעמוד הנוכחי ולקוח נבחר (props מקבלים עדיפות)
+  const agentCtx = useAgentContext();
+  const currentPageName = currentPageNameProp || agentCtx.currentPageName;
+  const selectedCustomer = selectedCustomerProp || agentCtx.selectedCustomer;
+  const pageContext = pageContextProp || agentCtx.pageContext;
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -336,16 +420,19 @@ export default function FloatingAgentChat({
             activeConversation.id,
             (data) => {
               setMessages(data.messages || []);
-              // Check if AI is typing
+              // כשמגיעה תשובה מה-assistant — סמן שהוא סיים "לחשוב"
               const lastMessage = data.messages?.[data.messages.length - 1];
-              setIsTyping(lastMessage?.role === 'user');
+              if (lastMessage?.role === 'assistant') {
+                setIsTyping(false);
+              }
             }
           );
           setUnsubscribe(() => unsubscribeFunc);
 
           setIsInitialized(true);
         } catch (error) {
-          console.error("Error initializing chat:", error);
+          console.error("[FloatingAgentChat] init error:", error);
+          toast.error('שגיאה בטעינת הצ\'אט — נסה לרענן את העמוד');
         } finally {
           setIsLoading(false);
         }
@@ -370,37 +457,163 @@ export default function FloatingAgentChat({
     }
   }, [isOpen, isMinimized]);
 
-  const sendMessage = async () => {
-    if (!inputMessage.trim() || !currentConversation || isLoading) return;
+  const sendMessage = async (overrideText) => {
+    const textToSend = overrideText || inputMessage.trim();
+    if ((!textToSend && attachedFiles.length === 0) || !currentConversation || isLoading) return;
 
-    const messageText = inputMessage.trim();
+    const messageText = textToSend;
+    const filesToUpload = [...attachedFiles];
     setInputMessage('');
+    setAttachedFiles([]);
     setIsLoading(true);
     setIsTyping(true);
 
+    // הוספת ההודעה של המשתמש לרשימה מיד (optimistic update)
+    const optimisticUserMsg = {
+      role: 'user',
+      content: messageText || 'קובץ מצורף',
+      created_date: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, optimisticUserMsg]);
+
     try {
-      await agents.addMessage(currentConversation, {
+      // העלאת קבצים מצורפים אם יש
+      let fileAttachments = [];
+      if (filesToUpload.length > 0) {
+        try {
+          fileAttachments = await uploadAttachedFiles();
+        } catch (uploadErr) {
+          console.error("[FloatingAgentChat] upload error:", uploadErr);
+          toast.error('שגיאה בהעלאת הקובץ — נסה שוב');
+          setInputMessage(messageText);
+          setAttachedFiles(filesToUpload);
+          setIsLoading(false);
+          setIsTyping(false);
+          return;
+        }
+      }
+
+      const result = await agents.addMessage(currentConversation, {
         role: "user",
-        content: messageText
+        content: messageText || 'קובץ מצורף',
+        file_attachments: fileAttachments.length > 0 ? fileAttachments : undefined,
       });
+
+      // ה-API מחזיר את הודעת ה-assistant — נוסיף ישירות
+      if (result?.message) {
+        setIsTyping(false);
+        setMessages(prev => {
+          // אם Realtime כבר הוסיף את ההודעה — לא נוסיף שוב
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg?.role === 'assistant' && lastMsg?.content === result.message.content) return prev;
+          return [...prev, result.message];
+        });
+      } else {
+        // API הצליח אבל לא החזיר message — מצב לא צפוי
+        setIsTyping(false);
+      }
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error("[FloatingAgentChat] send error:", error);
+      // לא מחזירים את ההודעה ל-input — ההודעה כבר נשמרה ב-DB
+      setIsTyping(false);
+      const isTimeout = error.message?.includes('timeout') || error.message?.includes('aborted');
+      toast.error(
+        isTimeout
+          ? 'הבקשה לקחה יותר מדי זמן — נסה שוב עם שאלה קצרה יותר'
+          : 'שגיאה בשליחת ההודעה — נסה שוב',
+        { action: { label: 'נסה שוב', onClick: () => sendMessage() } }
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   };
 
+  // --- File upload helpers ---
+  const ALLOWED_FILE_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv', 'image/jpeg', 'image/png'];
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  const MAX_FILES = 3;
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    // ולידציה — סוג קובץ + גודל + מספר מקסימלי
+    const validFiles = files.filter(f => {
+      if (!ALLOWED_FILE_TYPES.includes(f.type) && !f.name.endsWith('.csv')) {
+        toast.error(`סוג קובץ לא נתמך: ${f.name}`);
+        return false;
+      }
+      if (f.size > MAX_FILE_SIZE) {
+        toast.error(`הקובץ ${f.name} גדול מ-10MB`);
+        return false;
+      }
+      return true;
+    });
+    setAttachedFiles(prev => {
+      const combined = [...prev, ...validFiles].slice(0, MAX_FILES);
+      if (prev.length + validFiles.length > MAX_FILES) {
+        toast.error(`ניתן לצרף עד ${MAX_FILES} קבצים`);
+      }
+      return combined;
+    });
+    // reset input כדי שאפשר לבחור אותו קובץ שוב
+    e.target.value = '';
+  };
+
+  const removeAttachedFile = (index) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  /** העלאת קבצים ל-Storage + יצירת רשומות file_upload */
+  const uploadAttachedFiles = async () => {
+    const results = [];
+    for (const file of attachedFiles) {
+      // העלאה ל-Supabase Storage
+      const { file_url } = await UploadFile({ file });
+      // יצירת רשומת file_upload ב-DB
+      const { data: record, error } = await supabase
+        .from('file_upload')
+        .insert({
+          file_url,
+          filename: file.name,
+          file_type: file.type || 'application/octet-stream',
+          uploaded_by: currentUser?.email,
+          status: 'uploaded',
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      results.push({
+        file_id: record.id,
+        file_url,
+        filename: file.name,
+        file_type: file.type,
+      });
+    }
+    return results;
+  };
+
+  // אייקון לפי סוג קובץ
+  const getFileIcon = (fileType) => {
+    if (fileType?.includes('pdf')) return FileText;
+    if (fileType?.includes('sheet') || fileType?.includes('csv')) return Table;
+    if (fileType?.includes('image')) return Image;
+    return FileText;
+  };
+
   const toggleOpen = () => {
     setIsOpen(!isOpen);
     if (!isOpen) {
       setIsMinimized(false);
+      // מובייל — פתיחה אוטומטית במסך מלא
+      if (window.innerWidth < 640) {
+        setChatSize('fullscreen');
+      }
     }
   };
 
@@ -455,7 +668,8 @@ export default function FloatingAgentChat({
       setUnsubscribe(() => unsubscribeFunc);
 
     } catch (error) {
-      console.error("Error creating new conversation:", error);
+      console.error("[FloatingAgentChat] new conversation error:", error);
+      toast.error('שגיאה ביצירת שיחה חדשה');
     } finally {
       setIsLoading(false);
     }
@@ -578,21 +792,22 @@ export default function FloatingAgentChat({
     };
   };
 
-  const positionClass = position === "left" ? "left-6" : "right-6";
-
+  // מיקום הכפתור — RTL: sidebar בצד ימין, לכן הכפתור בצד שמאל (תוכן)
+  // דסקטופ: bottom-6 left-6 | מובייל: bottom-20 left-4 (מעל bottom nav 64px)
   if (!isOpen) {
     return (
-      <div 
-        className={`fixed bottom-6 ${positionClass} z-50`}
+      <div
+        className="fixed z-[60] lg:bottom-6 lg:left-6 bottom-20 left-4"
         style={{ direction: 'ltr' }}
       >
         <Button
           onClick={toggleOpen}
-          className="bg-gradient-to-br from-horizon-primary to-horizon-secondary hover:opacity-90 text-white rounded-full h-16 w-16 shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center justify-center group relative"
+          className="bg-gradient-to-br from-horizon-primary to-horizon-secondary hover:opacity-90 text-white rounded-full h-14 w-14 shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center justify-center group relative"
           title={`פתח צ'אט עם ${title} (Ctrl+/)`}
+          aria-label={`פתח צ'אט עם ${title}`}
         >
-          <MessageCircle className="w-8 h-8 group-hover:scale-110 transition-transform" />
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white animate-pulse" />
+          <MessageCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
+          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white animate-pulse" aria-hidden="true" />
         </Button>
       </div>
     );
@@ -601,16 +816,16 @@ export default function FloatingAgentChat({
   const sizeStyles = getSizeStyles();
 
   return (
-    <div 
-      className={`fixed z-50 transition-all duration-300 ${chatSize === 'fullscreen' ? '' : `bottom-6 ${positionClass}`}`}
-      style={{ 
+    <div
+      className={`fixed z-[60] transition-all duration-300 ${chatSize === 'fullscreen' ? '' : 'lg:bottom-6 lg:left-6 bottom-20 left-4'}`}
+      style={{
         ...sizeStyles,
         direction: 'rtl'
       }}
     >
       <Card className={`w-full h-full bg-horizon-dark shadow-2xl border border-horizon flex flex-col ${chatSize === 'fullscreen' ? 'rounded-none' : 'rounded-2xl'}`}>
         {/* Header */}
-        <CardHeader className={`pb-2 px-4 py-3 text-white flex-shrink-0 ${chatSize === 'fullscreen' ? 'rounded-none' : 'rounded-t-2xl'} ${isAdmin ? 'bg-gradient-to-l from-purple-600 to-purple-500' : 'bg-gradient-to-l from-horizon-primary to-horizon-primary/80'}`}>
+        <CardHeader className={`pb-2 px-4 py-3 text-white flex-shrink-0 backdrop-blur-md ${chatSize === 'fullscreen' ? 'rounded-none' : 'rounded-t-2xl'} ${isAdmin ? 'bg-gradient-to-l from-purple-600/95 to-purple-500/95' : 'bg-gradient-to-l from-horizon-primary/95 to-horizon-primary/80'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
@@ -686,16 +901,18 @@ export default function FloatingAgentChat({
                 size="icon"
                 onClick={toggleMinimize}
                 className="h-8 w-8 text-white hover:bg-white/10"
+                aria-label={isMinimized ? 'הרחב צ\'אט' : 'מזער צ\'אט'}
               >
                 {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
               </Button>
-              
+
               {/* Close */}
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={toggleOpen}
                 className="h-8 w-8 text-white hover:bg-white/10"
+                aria-label="סגור צ'אט"
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -704,7 +921,7 @@ export default function FloatingAgentChat({
         </CardHeader>
 
         {!isMinimized && (
-          <CardContent className="flex-1 overflow-hidden flex flex-col p-0 bg-horizon-dark">
+          <CardContent className="flex-1 overflow-hidden flex flex-col p-0 bg-horizon-surface">
             {/* Messages Area */}
             <ScrollArea className="flex-1 p-4">
               {isLoading && messages.length === 0 ? (
@@ -772,10 +989,7 @@ export default function FloatingAgentChat({
                             key={idx}
                             variant="ghost"
                             className="w-full text-right justify-start text-sm border border-horizon hover:bg-horizon-card hover:border-horizon-primary/50 text-horizon-text px-3 py-2.5 h-auto transition-all"
-                            onClick={() => {
-                              setInputMessage(action.prompt);
-                              setTimeout(() => sendMessage(), 100);
-                            }}
+                            onClick={() => sendMessage(action.prompt)}
                           >
                             <Icon className="w-4 h-4 ml-2 text-horizon-primary flex-shrink-0" />
                             <span>{action.label}</span>
@@ -786,10 +1000,10 @@ export default function FloatingAgentChat({
                   </div>
                   </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-4" role="log" aria-live="polite" aria-label="הודעות צ'אט">
                   {messages.map((message, index) => (
-                    <MessageBubble 
-                      key={index} 
+                    <MessageBubble
+                      key={`${message.created_date || index}-${message.role}`}
                       message={message} 
                       isUser={message.role === 'user'} 
                     />
@@ -816,21 +1030,63 @@ export default function FloatingAgentChat({
             </ScrollArea>
 
             {/* Input Area */}
-            <div className="p-4 border-t border-horizon flex-shrink-0 bg-horizon-dark/80 backdrop-blur-sm">
+            <div className="p-4 border-t border-horizon flex-shrink-0 bg-horizon-card backdrop-blur-sm">
+              {/* קבצים מצורפים — chips מעל שדה הקלט */}
+              {attachedFiles.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {attachedFiles.map((file, idx) => {
+                    const Icon = getFileIcon(file.type);
+                    return (
+                      <div key={idx} className="flex items-center gap-1.5 bg-horizon-card border border-horizon rounded-lg px-2.5 py-1 text-xs text-horizon-text">
+                        <Icon className="w-3.5 h-3.5 text-horizon-primary flex-shrink-0" />
+                        <span className="truncate max-w-[120px]">{file.name}</span>
+                        <button
+                          onClick={() => removeAttachedFile(idx)}
+                          className="text-horizon-accent hover:text-red-400 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               <div className="flex gap-2">
+                {/* כפתור צירוף קובץ */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.xlsx,.csv,.jpg,.jpeg,.png"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoading}
+                  className="text-horizon-accent hover:text-horizon-primary hover:bg-horizon-card h-11 w-11 flex-shrink-0"
+                  title="צרף קובץ (PDF, Excel, CSV, תמונה)"
+                >
+                  <Paperclip className="w-5 h-5" />
+                </Button>
+
                 <Textarea
                   ref={inputRef}
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="הקלד שאלה או בקשה..."
+                  onKeyDown={handleKeyDown}
+                  placeholder={attachedFiles.length > 0 ? "הוסף הוראה לקובץ..." : "הקלד שאלה או בקשה..."}
                   disabled={isLoading}
                   className="flex-1 bg-horizon-card border-horizon text-horizon-text placeholder:text-horizon-accent resize-none min-h-[44px] max-h-32"
                   rows={1}
                 />
                 <Button
                   onClick={sendMessage}
-                  disabled={!inputMessage.trim() || isLoading}
+                  disabled={(!inputMessage.trim() && attachedFiles.length === 0) || isLoading}
                   size="icon"
                   className="bg-gradient-to-br from-horizon-primary to-horizon-secondary hover:opacity-90 text-white h-11 w-11 flex-shrink-0"
                 >
