@@ -792,12 +792,12 @@ export default function FloatingAgentChat({
     };
   };
 
-  // מיקום הכפתור — RTL: sidebar בצד ימין, לכן הכפתור בצד שמאל (תוכן)
-  // דסקטופ: bottom-6 left-6 | מובייל: bottom-20 left-4 (מעל bottom nav 64px)
+  // מיקום הכפתור — bottom-right (סטנדרטי לצ'אט floating, מונע התנגשות עם toasts ב-bottom-left)
+  // דסקטופ: bottom-6 right-6 | מובייל: bottom-20 right-4 (מעל bottom nav 64px)
   if (!isOpen) {
     return (
       <div
-        className="fixed z-[60] lg:bottom-6 lg:left-6 bottom-20 left-4"
+        className="fixed z-[60] lg:bottom-6 lg:right-6 bottom-20 right-4"
         style={{ direction: 'ltr' }}
       >
         <Button
@@ -817,7 +817,7 @@ export default function FloatingAgentChat({
 
   return (
     <div
-      className={`fixed z-[60] transition-all duration-300 ${chatSize === 'fullscreen' ? '' : 'lg:bottom-6 lg:left-6 bottom-20 left-4'}`}
+      className={`fixed z-[60] transition-all duration-300 ${chatSize === 'fullscreen' ? '' : 'lg:bottom-6 lg:right-6 bottom-20 right-4'}`}
       style={{
         ...sizeStyles,
         direction: 'rtl'
@@ -825,7 +825,7 @@ export default function FloatingAgentChat({
     >
       <Card className={`w-full h-full bg-horizon-dark shadow-2xl border border-horizon flex flex-col ${chatSize === 'fullscreen' ? 'rounded-none' : 'rounded-2xl'}`}>
         {/* Header */}
-        <CardHeader className={`pb-2 px-4 py-3 text-white flex-shrink-0 backdrop-blur-md ${chatSize === 'fullscreen' ? 'rounded-none' : 'rounded-t-2xl'} ${isAdmin ? 'bg-gradient-to-l from-purple-600/95 to-purple-500/95' : 'bg-gradient-to-l from-horizon-primary/95 to-horizon-primary/80'}`}>
+        <CardHeader className={`pb-2 px-4 py-3 flex-shrink-0 backdrop-blur-md ${chatSize === 'fullscreen' ? 'rounded-none' : 'rounded-t-2xl'} bg-horizon-primary text-white`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
@@ -837,11 +837,11 @@ export default function FloatingAgentChat({
                   {isAdmin && <Badge className="bg-white/20 text-white text-xs py-0">אדמין</Badge>}
                 </div>
                 {selectedCustomer ? (
-                  <p className="text-xs text-white/70 truncate max-w-[150px]">
+                  <p className="text-xs text-white/80 truncate max-w-[220px]">
                     {selectedCustomer.business_name || selectedCustomer.email}
                   </p>
                 ) : (
-                  <p className="text-xs text-white/70">
+                  <p className="text-xs text-white/80">
                     {isAdmin ? 'גישה לכל המערכת' : `${assignedCustomers.length} לקוחות`}
                   </p>
                 )}

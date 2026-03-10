@@ -1,11 +1,11 @@
 "use client";
-import { useTheme } from "next-themes"
+import { useTheme } from "@/components/shared/ThemeContext"
 import { Toaster as Sonner } from "sonner"
 
 const Toaster = ({
   ...props
 }) => {
-  const { theme = "system" } = useTheme()
+  const { theme = "light" } = useTheme()
 
   return (
     (<Sonner
