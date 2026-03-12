@@ -43,6 +43,7 @@ import {
   Filter
 } from "lucide-react";
 
+import { useQueryClient } from '@tanstack/react-query';
 import ReactMarkdown from 'react-markdown';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUsers } from '../shared/UsersContext';
@@ -207,27 +208,27 @@ const MessageBubble = React.memo(({ message, isUser }) => {
 
   return (
     <div
-      className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-200`}
+      className={`flex gap-2 ${isUser ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-200`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
       {!isUser && (
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-horizon-primary to-horizon-secondary flex items-center justify-center flex-shrink-0 mt-1 shadow-lg">
-          <Bot className="w-4 h-4 text-white" />
+        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-horizon-primary to-horizon-secondary flex items-center justify-center flex-shrink-0 mt-1">
+          <Bot className="w-3.5 h-3.5 text-white" />
         </div>
       )}
-      <div className={`max-w-[85%] space-y-1`}>
+      <div className="max-w-[80%] min-w-0 space-y-1">
         <div
-          className={`rounded-2xl px-4 py-3 text-right relative group ${
+          className={`rounded-2xl px-3 py-2.5 text-right relative group ${
             isUser
               ? 'bg-horizon-primary text-white rounded-tr-sm shadow-lg'
               : 'bg-horizon-card text-horizon-text border border-horizon rounded-tl-sm shadow-md'
           }`}
         >
           {isUser ? (
-            <p className="text-sm leading-relaxed font-medium" dir="rtl">{message.content}</p>
+            <p className="text-sm leading-relaxed font-medium break-words overflow-wrap-anywhere" dir="rtl">{message.content}</p>
           ) : (
-            <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none text-right text-horizon-text [&_p]:text-horizon-text [&_li]:text-horizon-text" dir="rtl">
+            <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none text-right text-horizon-text [&_p]:text-horizon-text [&_li]:text-horizon-text break-words overflow-wrap-anywhere" dir="rtl">
               <ReactMarkdown components={markdownComponents}>
                 {message.content}
               </ReactMarkdown>
@@ -284,8 +285,8 @@ const MessageBubble = React.memo(({ message, isUser }) => {
         )}
       </div>
       {isUser && (
-        <div className="w-8 h-8 rounded-full bg-horizon-primary flex items-center justify-center flex-shrink-0 mt-1">
-          <UserIcon className="w-4 h-4 text-white" />
+        <div className="w-6 h-6 rounded-full bg-horizon-primary flex items-center justify-center flex-shrink-0 mt-1">
+          <UserIcon className="w-3.5 h-3.5 text-white" />
         </div>
       )}
     </div>
@@ -322,6 +323,7 @@ export default function FloatingAgentChat({
   const [showHistory, setShowHistory] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState([]); // קבצים שהמשתמש בחר לצרף
+  const queryClient = useQueryClient();
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -508,6 +510,19 @@ export default function FloatingAgentChat({
           if (lastMsg?.role === 'assistant' && lastMsg?.content === result.message.content) return prev;
           return [...prev, result.message];
         });
+
+        // רענון אוטומטי של נתונים ב-UI אחרי פעולות כתיבה בצ'אטבוט
+        if (result.message.tool_calls?.length) {
+          const writeTools = ['create_goal', 'update_goal', 'update_goal_status',
+            'create_goal_from_template', 'add_subtasks_to_goal',
+            'create_recommendation', 'log_action', 'schedule_meeting'];
+          const hasWriteOp = result.message.tool_calls.some(tc => writeTools.includes(tc.name));
+          if (hasWriteOp) {
+            queryClient.invalidateQueries({ queryKey: ['customerGoals'] });
+            queryClient.invalidateQueries({ queryKey: ['allRelevantTasks'] });
+            queryClient.invalidateQueries({ queryKey: ['customerRecommendations'] });
+          }
+        }
       } else {
         // API הצליח אבל לא החזיר message — מצב לא צפוי
         setIsTyping(false);
@@ -1000,7 +1015,7 @@ export default function FloatingAgentChat({
                   </div>
                   </div>
               ) : (
-                <div className="space-y-4" role="log" aria-live="polite" aria-label="הודעות צ'אט">
+                <div className="space-y-4 w-full overflow-hidden" role="log" aria-live="polite" aria-label="הודעות צ'אט">
                   {messages.map((message, index) => (
                     <MessageBubble
                       key={`${message.created_date || index}-${message.role}`}
