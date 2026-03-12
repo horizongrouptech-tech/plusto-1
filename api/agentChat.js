@@ -116,7 +116,13 @@ export default async function handler(req, res) {
     ];
 
     // 4. Detect if tools are needed — simple messages don't need tools
-    const needsTools = detectToolNeed(content);
+    // אם ההודעה האחרונה של ה-assistant ביקשה אישור (multi-turn), תמיד שלח tools
+    const lastAssistantMsg = [...existingMessages].reverse().find(m => m.role === 'assistant');
+    const previouslyUsedTools = lastAssistantMsg?.tool_calls?.length > 0;
+    const assistantAskedConfirmation = lastAssistantMsg?.content && /מאשר|אישור|ליצור|לעדכן|לבצע|שאוסיף|שאצור|שאבצע|האם תרצה|האם אתה/.test(lastAssistantMsg.content);
+    // הודעה קצרה אחרי assistant (כמו "כן", "מאשר", "בצע") — כנראה אישור, שלח tools
+    const isShortReply = content.length < 20 && lastAssistantMsg;
+    const needsTools = detectToolNeed(content) || previouslyUsedTools || assistantAskedConfirmation || isShortReply;
 
     const apiKey = process.env.OPENROUTER_API_KEY || process.env.VITE_OPENROUTER_API_KEY;
     const model = process.env.OPENROUTER_AGENT_MODEL
@@ -261,6 +267,8 @@ function detectToolNeed(content) {
     'צור', 'עדכן', 'מחק', 'שייך', 'נתח', 'העלה', 'הורד',
     'תיעד', 'רשום', 'קבע', 'הוסף', 'שנה', 'הגדר',
     'create', 'update', 'schedule', 'assign', 'analyze',
+    // תבניות יעדים
+    'תבנית', 'תבניות', 'בנק יעדים', 'בנק היעדים', 'template',
   ];
 
   return toolKeywords.some(kw => lower.includes(kw));
@@ -270,7 +278,7 @@ function buildSystemPrompt(user, metadata) {
   const parts = [
     'אתה יועץ עסקי חכם של Horizon Group עם גישה למערכת ניהול הלקוחות.',
     'יש לך כלים (tools) לשליפת נתונים מהמערכת — השתמש בהם כשהמשתמש שואל על לקוחות, יעדים, המלצות, קבצים או תחזיות.',
-    'יש לך גם כלי כתיבה: יצירת יעדים, המלצות, רישום פעולות וקביעת פגישות.',
+    'יש לך גם כלי כתיבה: יצירת יעדים (כולל תת-משימות), יצירה מתבנית מבנק היעדים, עדכון יעדים (סטטוס, תאריכים, אחראי, הערות, הוספת תת-משימות), המלצות, רישום פעולות וקביעת פגישות.',
     '**חשוב מאוד**: לפני כל פעולת כתיבה (יצירה/עדכון), הצג למשתמש בדיוק מה אתה מתכנן לעשות ובקש אישור מפורש. אל תבצע פעולות כתיבה בלי אישור.',
     'ענה תמיד בעברית אלא אם כן המשתמש פונה אליך בשפה אחרת.',
     'היה ממוקד, מועיל ומקצועי. הצג נתונים בצורה מסודרת. תשובות קצרות ולעניין.',

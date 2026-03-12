@@ -34,7 +34,7 @@ export const createConversation = async ({ agent_name, metadata = {} }) => {
  * Sends to /api/agentChat which appends the user message, calls the LLM,
  * and saves the assistant reply — updating the row to trigger Realtime.
  */
-export const addMessage = async (conversation, { role, content }) => {
+export const addMessage = async (conversation, { role, content, file_attachments }) => {
   const { data: { session } } = await supabase.auth.getSession();
   const res = await fetch('/api/agentChat', {
     method: 'POST',
@@ -46,8 +46,8 @@ export const addMessage = async (conversation, { role, content }) => {
       conversation_id: conversation.id,
       role,
       content,
-      agent_name: conversation.agent_name,
       metadata: conversation.metadata,
+      ...(file_attachments?.length ? { file_attachments } : {}),
     }),
   });
   if (!res.ok) {

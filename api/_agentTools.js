@@ -8,7 +8,8 @@
  *
  * כולל כלי קריאה וכתיבה:
  *   - קריאה: list_customers, search_customers, get_customer_details, list_goals, list_recommendations, list_files, get_business_forecast, list_actions
- *   - כתיבה: create_goal, update_goal_status, create_recommendation, create_action, schedule_meeting
+ *   - כתיבה: create_goal (+ subtasks), update_goal, add_subtasks_to_goal, create_recommendation, create_action, schedule_meeting
+ *   - תבניות: list_goal_templates, create_goal_from_template
  *   - קבצים: associate_file_with_customer, analyze_file, get_file_analysis
  */
 
@@ -146,7 +147,7 @@ export const TOOL_DEFINITIONS = [
         type: 'object',
         properties: {
           customer_email: { type: 'string', description: 'אימייל לקוח לסינון (אופציונלי)' },
-          status: { type: 'string', description: 'סינון לפי סטטוס: pending, in_progress, completed, overdue' },
+          status: { type: 'string', description: 'סינון לפי סטטוס: open, in_progress, done, delayed, cancelled' },
           limit: { type: 'number', description: 'מספר תוצאות מקסימלי (ברירת מחדל: 30)' },
         },
       },
@@ -215,33 +216,66 @@ export const TOOL_DEFINITIONS = [
     type: 'function',
     function: {
       name: 'create_goal',
-      description: 'יצירת יעד/משימה חדשה ללקוח. דורש הרשאת admin או מנהל פיננסי.',
+      description: 'יצירת יעד/משימה חדשה ללקוח, כולל אפשרות ליצור תת-משימות. דורש הרשאת admin או מנהל פיננסי.',
       parameters: {
         type: 'object',
         properties: {
           customer_email: { type: 'string', description: 'אימייל הלקוח' },
-          title: { type: 'string', description: 'כותרת היעד' },
-          task_type: { type: 'string', description: 'סוג: goal, task, milestone' },
+          name: { type: 'string', description: 'שם היעד/משימה' },
+          task_type: { type: 'string', description: 'סוג: goal, one_time, recurring (ברירת מחדל: goal)' },
           priority: { type: 'string', description: 'עדיפות: low, medium, high, urgent' },
-          due_date: { type: 'string', description: 'תאריך יעד (YYYY-MM-DD)' },
-          description: { type: 'string', description: 'תיאור מפורט (אופציונלי)' },
+          end_date: { type: 'string', description: 'תאריך יעד (YYYY-MM-DD)' },
+          start_date: { type: 'string', description: 'תאריך התחלה (YYYY-MM-DD, אופציונלי)' },
+          notes: { type: 'string', description: 'תיאור/הערות (אופציונלי)' },
+          assignee_email: { type: 'string', description: 'אימייל האחראי על היעד (אופציונלי)' },
+          success_metrics: { type: 'string', description: 'מדדי הצלחה (אופציונלי)' },
+          subtasks: {
+            type: 'array',
+            description: 'רשימת תת-משימות ליצירה יחד עם היעד (אופציונלי)',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string', description: 'שם התת-משימה' },
+                end_date: { type: 'string', description: 'תאריך יעד (YYYY-MM-DD, אופציונלי)' },
+              },
+              required: ['name'],
+            },
+          },
         },
-        required: ['customer_email', 'title'],
+        required: ['customer_email', 'name'],
       },
     },
   },
   {
     type: 'function',
     function: {
-      name: 'update_goal_status',
-      description: 'עדכון סטטוס של יעד/משימה קיימת',
+      name: 'update_goal',
+      description: 'עדכון יעד/משימה קיימת — סטטוס, תאריכים, אחראי, הערות, או הוספת תת-משימות',
       parameters: {
         type: 'object',
         properties: {
           goal_id: { type: 'string', description: 'מזהה היעד' },
-          status: { type: 'string', description: 'סטטוס חדש: pending, in_progress, completed, overdue' },
+          status: { type: 'string', description: 'סטטוס חדש: open, in_progress, done, delayed, cancelled (אופציונלי)' },
+          name: { type: 'string', description: 'שם חדש (אופציונלי)' },
+          notes: { type: 'string', description: 'הערות (אופציונלי)' },
+          end_date: { type: 'string', description: 'תאריך יעד חדש YYYY-MM-DD (אופציונלי)' },
+          start_date: { type: 'string', description: 'תאריך התחלה חדש YYYY-MM-DD (אופציונלי)' },
+          assignee_email: { type: 'string', description: 'אימייל אחראי חדש (אופציונלי)' },
+          priority: { type: 'string', description: 'עדיפות: low, medium, high, urgent (אופציונלי)' },
+          add_subtasks: {
+            type: 'array',
+            description: 'תת-משימות חדשות להוספה ליעד (אופציונלי)',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string', description: 'שם התת-משימה' },
+                end_date: { type: 'string', description: 'תאריך יעד (YYYY-MM-DD, אופציונלי)' },
+              },
+              required: ['name'],
+            },
+          },
         },
-        required: ['goal_id', 'status'],
+        required: ['goal_id'],
       },
     },
   },
@@ -295,6 +329,70 @@ export const TOOL_DEFINITIONS = [
           notes: { type: 'string', description: 'הערות (אופציונלי)' },
         },
         required: ['customer_email', 'title', 'meeting_date'],
+      },
+    },
+  },
+
+  // ── Subtask tool ──
+  {
+    type: 'function',
+    function: {
+      name: 'add_subtasks_to_goal',
+      description: 'הוספת תת-משימות ליעד קיים. מוצא את היעד אוטומטית לפי שם או מזהה — אין צורך לחפש את ה-ID בנפרד.',
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_email: { type: 'string', description: 'אימייל הלקוח שהיעד שייך אליו' },
+          goal_name: { type: 'string', description: 'שם היעד שאליו רוצים להוסיף משימות (חיפוש לפי שם)' },
+          goal_id: { type: 'string', description: 'מזהה היעד (אופציונלי — אם ידוע, עדיף על חיפוש לפי שם)' },
+          subtasks: {
+            type: 'array',
+            description: 'רשימת תת-משימות להוספה',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string', description: 'שם התת-משימה' },
+                end_date: { type: 'string', description: 'תאריך יעד (YYYY-MM-DD, אופציונלי)' },
+              },
+              required: ['name'],
+            },
+          },
+        },
+        required: ['customer_email', 'subtasks'],
+      },
+    },
+  },
+
+  // ── Goal template tools ──
+  {
+    type: 'function',
+    function: {
+      name: 'list_goal_templates',
+      description: 'רשימת תבניות יעדים זמינות מבנק היעדים. מחזיר שם, קטגוריה, משך, שלבי ביצוע ומדדי הצלחה.',
+      parameters: {
+        type: 'object',
+        properties: {
+          category: { type: 'string', description: 'סינון לפי קטגוריה: financial, operational, marketing, sales, hr, strategic, other (אופציונלי)' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'create_goal_from_template',
+      description: 'יצירת יעד חדש ללקוח מתוך תבנית מבנק היעדים, כולל תת-משימות אוטומטיות מהתבנית',
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_email: { type: 'string', description: 'אימייל הלקוח' },
+          template_id: { type: 'string', description: 'מזהה התבנית (מ-list_goal_templates)' },
+          custom_name: { type: 'string', description: 'שם מותאם ליעד (אופציונלי — ברירת מחדל: שם התבנית)' },
+          duration_days: { type: 'number', description: 'משך בימים (אופציונלי — ברירת מחדל: מהתבנית)' },
+          notes: { type: 'string', description: 'הערות נוספות (אופציונלי)' },
+          assignee_email: { type: 'string', description: 'אימייל האחראי (אופציונלי)' },
+        },
+        required: ['customer_email', 'template_id'],
       },
     },
   },
@@ -410,7 +508,7 @@ async function _executeTool(toolName, args, user) {
       // שליפת נתונים מקבילית
       const [customer, goals, recs, files, forecast] = await Promise.all([
         supabaseAdmin.from('onboarding_request').select('*').eq('email', email).single(),
-        supabaseAdmin.from('customer_goal').select('id, title, status, task_type, due_date, priority').eq('customer_email', email).order('created_date', { ascending: false }).limit(10),
+        supabaseAdmin.from('customer_goal').select('id, name, status, task_type, end_date, priority, parent_id, assignee_email').eq('customer_email', email).order('created_date', { ascending: false }).limit(10),
         supabaseAdmin.from('recommendation').select('id, title, status, category, created_date').eq('customer_email', email).order('created_date', { ascending: false }).limit(10),
         supabaseAdmin.from('file_upload').select('id, file_name, file_type, status, created_date').eq('customer_email', email).order('created_date', { ascending: false }).limit(5),
         supabaseAdmin.from('business_forecast').select('*').eq('customer_email', email).order('created_date', { ascending: false }).limit(1),
@@ -429,7 +527,7 @@ async function _executeTool(toolName, args, user) {
       const limit = clampLimit(args.limit, 30);
       let q = supabaseAdmin
         .from('customer_goal')
-        .select('id, title, status, task_type, due_date, priority, customer_email, created_date')
+        .select('id, name, status, task_type, end_date, start_date, priority, customer_email, parent_id, assignee_email, notes, created_date')
         .order('created_date', { ascending: false })
         .limit(limit);
       if (args.customer_email) q = q.eq('customer_email', args.customer_email);
@@ -510,17 +608,30 @@ async function _executeTool(toolName, args, user) {
         return JSON.stringify({ error: 'אין לך הרשאה ליצור יעד ללקוח זה' });
       }
 
+      // חישוב order_index — ספירת יעדים ראשיים קיימים
+      const { data: existingGoals } = await supabaseAdmin
+        .from('customer_goal')
+        .select('id')
+        .eq('customer_email', email)
+        .is('parent_id', null);
+      const orderIndex = (existingGoals || []).length;
+
       const payload = {
         customer_email: email,
-        title: args.title,
+        name: args.name,
         task_type: args.task_type || 'goal',
         priority: args.priority || 'medium',
-        status: 'pending',
+        status: 'open',
+        is_active: true,
+        order_index: orderIndex,
         created_by: user.email,
         created_date: new Date().toISOString(),
       };
-      if (args.due_date) payload.due_date = args.due_date;
-      if (args.description) payload.description = args.description;
+      if (args.end_date) payload.end_date = args.end_date;
+      if (args.start_date) payload.start_date = args.start_date;
+      if (args.notes) payload.notes = args.notes;
+      if (args.assignee_email) payload.assignee_email = args.assignee_email;
+      if (args.success_metrics) payload.success_metrics = args.success_metrics;
 
       const { data, error } = await supabaseAdmin
         .from('customer_goal')
@@ -528,22 +639,52 @@ async function _executeTool(toolName, args, user) {
         .select()
         .single();
       if (error) return toolError('create_goal', error);
-      return JSON.stringify({ message: `יעד "${args.title}" נוצר בהצלחה`, goal: data });
+
+      // יצירת תת-משימות אם צוינו
+      let subtasksCreated = 0;
+      if (args.subtasks?.length && data?.id) {
+        const subtaskRows = args.subtasks.map((st, idx) => ({
+          customer_email: email,
+          parent_id: data.id,
+          name: typeof st === 'string' ? st : st.name,
+          status: 'open',
+          task_type: 'one_time',
+          end_date: (typeof st === 'object' && st.end_date) ? st.end_date : (args.end_date || null),
+          order_index: idx,
+          is_active: true,
+          created_by: user.email,
+          created_date: new Date().toISOString(),
+        }));
+        const { data: subs, error: subErr } = await supabaseAdmin
+          .from('customer_goal')
+          .insert(subtaskRows)
+          .select();
+        if (subErr) console.error('[create_goal/subtasks]', subErr.message);
+        subtasksCreated = subs?.length || 0;
+      }
+
+      const msg = subtasksCreated > 0
+        ? `יעד "${args.name}" נוצר בהצלחה עם ${subtasksCreated} תת-משימות`
+        : `יעד "${args.name}" נוצר בהצלחה`;
+      return JSON.stringify({ message: msg, goal: data, subtasks_created: subtasksCreated });
     }
 
+    case 'update_goal':
     case 'update_goal_status': {
       if (!canWrite(user)) {
         return JSON.stringify({ error: 'אין לך הרשאה לעדכן יעדים' });
       }
-      const validStatuses = ['pending', 'in_progress', 'completed', 'overdue'];
-      if (!validStatuses.includes(args.status)) {
+
+      // בדיקת סטטוס תקין אם סופק
+      const validStatuses = ['open', 'in_progress', 'done', 'delayed', 'cancelled'];
+      if (args.status && !validStatuses.includes(args.status)) {
         return JSON.stringify({ error: `סטטוס לא תקין. אפשרויות: ${validStatuses.join(', ')}` });
       }
 
       // בדיקה שהיעד קיים ושיש הרשאה
       const { data: goal } = await supabaseAdmin
         .from('customer_goal')
-        .select('id, customer_email, title')
+        .select('id, customer_email, name')
         .eq('id', args.goal_id)
         .single();
       if (!goal) return JSON.stringify({ error: 'יעד לא נמצא' });
@@ -551,14 +692,63 @@ async function _executeTool(toolName, args, user) {
         return JSON.stringify({ error: 'אין לך הרשאה לעדכן יעד זה' });
       }
 
+      // בניית payload עדכון — רק שדות שסופקו
+      const updatePayload = { updated_date: new Date().toISOString() };
+      if (args.status) updatePayload.status = args.status;
+      if (args.name) updatePayload.name = args.name;
+      if (args.notes !== undefined) updatePayload.notes = args.notes;
+      if (args.end_date) updatePayload.end_date = args.end_date;
+      if (args.start_date) updatePayload.start_date = args.start_date;
+      if (args.assignee_email) updatePayload.assignee_email = args.assignee_email;
+      if (args.priority) updatePayload.priority = args.priority;
+
       const { data, error } = await supabaseAdmin
         .from('customer_goal')
-        .update({ status: args.status, updated_date: new Date().toISOString() })
+        .update(updatePayload)
         .eq('id', args.goal_id)
         .select()
         .single();
-      if (error) return toolError('update_goal_status', error);
-      return JSON.stringify({ message: `יעד "${goal.title}" עודכן לסטטוס ${args.status}`, goal: data });
+      if (error) return toolError('update_goal', error);
+
+      // הוספת תת-משימות חדשות אם צוינו
+      let subtasksCreated = 0;
+      if (args.add_subtasks?.length) {
+        // ספירת תת-משימות קיימות לצורך order_index
+        const { data: existingSubs } = await supabaseAdmin
+          .from('customer_goal')
+          .select('id')
+          .eq('parent_id', args.goal_id);
+        const startIdx = (existingSubs || []).length;
+
+        const subtaskRows = args.add_subtasks.map((st, idx) => ({
+          customer_email: goal.customer_email,
+          parent_id: args.goal_id,
+          name: typeof st === 'string' ? st : st.name,
+          status: 'open',
+          task_type: 'one_time',
+          end_date: (typeof st === 'object' && st.end_date) ? st.end_date : null,
+          order_index: startIdx + idx,
+          is_active: true,
+          created_by: user.email,
+          created_date: new Date().toISOString(),
+        }));
+        const { data: subs, error: subErr } = await supabaseAdmin
+          .from('customer_goal')
+          .insert(subtaskRows)
+          .select();
+        if (subErr) console.error('[update_goal/subtasks]', subErr.message);
+        subtasksCreated = subs?.length || 0;
+      }
+
+      // הודעת תוצאה
+      const changes = [];
+      if (args.status) changes.push(`סטטוס: ${args.status}`);
+      if (args.name) changes.push(`שם: ${args.name}`);
+      if (args.end_date) changes.push(`תאריך יעד: ${args.end_date}`);
+      if (args.assignee_email) changes.push(`אחראי: ${args.assignee_email}`);
+      if (subtasksCreated > 0) changes.push(`${subtasksCreated} תת-משימות נוספו`);
+      const changesSummary = changes.length > 0 ? ` (${changes.join(', ')})` : '';
+      return JSON.stringify({ message: `יעד "${goal.name}" עודכן בהצלחה${changesSummary}`, goal: data, subtasks_created: subtasksCreated });
     }
 
     case 'create_recommendation': {
@@ -647,6 +837,199 @@ async function _executeTool(toolName, args, user) {
         .single();
       if (error) return toolError('schedule_meeting', error);
       return JSON.stringify({ message: `פגישה "${args.title}" נקבעה בהצלחה`, meeting: data });
+    }
+
+    // ── Subtask tool ──
+
+    case 'add_subtasks_to_goal': {
+      if (!canWrite(user)) {
+        return JSON.stringify({ error: 'אין לך הרשאה להוסיף משימות' });
+      }
+      const email = args.customer_email;
+      if (allowedEmails !== null && !allowedEmails.includes(email)) {
+        return JSON.stringify({ error: 'אין לך הרשאה להוסיף משימות ללקוח זה' });
+      }
+      if (!args.subtasks?.length) {
+        return JSON.stringify({ error: 'יש לציין לפחות תת-משימה אחת' });
+      }
+
+      // חיפוש היעד — לפי goal_id (אם סופק) או לפי שם
+      let goal = null;
+      if (args.goal_id) {
+        const { data } = await supabaseAdmin
+          .from('customer_goal')
+          .select('id, customer_email, name, end_date')
+          .eq('id', args.goal_id)
+          .single();
+        goal = data;
+      }
+      if (!goal && args.goal_name) {
+        // חיפוש לפי שם — ilike לתמיכה בהתאמה חלקית
+        const { data } = await supabaseAdmin
+          .from('customer_goal')
+          .select('id, customer_email, name, end_date')
+          .eq('customer_email', email)
+          .is('parent_id', null) // רק יעדים ראשיים, לא תתי-משימות
+          .ilike('name', `%${sanitizeSearch(args.goal_name)}%`)
+          .limit(1)
+          .single();
+        goal = data;
+      }
+      if (!goal) {
+        return JSON.stringify({ error: `לא נמצא יעד בשם "${args.goal_name || args.goal_id}" עבור הלקוח ${email}` });
+      }
+      // וידוא שהיעד שייך ללקוח הנכון
+      if (goal.customer_email !== email) {
+        return JSON.stringify({ error: 'היעד לא שייך ללקוח שצוין' });
+      }
+
+      // ספירת תת-משימות קיימות לצורך order_index
+      const { data: existingSubs } = await supabaseAdmin
+        .from('customer_goal')
+        .select('id')
+        .eq('parent_id', goal.id);
+      const startIdx = (existingSubs || []).length;
+
+      const subtaskRows = args.subtasks.map((st, idx) => ({
+        customer_email: email,
+        parent_id: goal.id,
+        name: typeof st === 'string' ? st : st.name,
+        status: 'open',
+        task_type: 'one_time',
+        end_date: (typeof st === 'object' && st.end_date) ? st.end_date : (goal.end_date || null),
+        order_index: startIdx + idx,
+        is_active: true,
+        created_by: user.email,
+        created_date: new Date().toISOString(),
+      }));
+
+      const { data: subs, error: subErr } = await supabaseAdmin
+        .from('customer_goal')
+        .insert(subtaskRows)
+        .select();
+      if (subErr) return toolError('add_subtasks_to_goal', subErr);
+
+      const names = (subs || []).map(s => s.name).join(', ');
+      return JSON.stringify({
+        message: `${subs?.length || 0} תת-משימות נוספו ליעד "${goal.name}": ${names}`,
+        goal_id: goal.id,
+        goal_name: goal.name,
+        subtasks_created: subs?.length || 0,
+        subtasks: subs,
+      });
+    }
+
+    // ── Goal template tools ──
+
+    case 'list_goal_templates': {
+      let q = supabaseAdmin
+        .from('goal_template')
+        .select('id, name, description, category, estimated_duration_days, success_metrics, action_steps, usage_count')
+        .eq('is_active', true)
+        .order('usage_count', { ascending: false })
+        .limit(30);
+      if (args.category) q = q.eq('category', args.category);
+      const { data, error } = await q;
+      if (error) return toolError('list_goal_templates', error);
+      if (!data?.length) return JSON.stringify({ message: 'לא נמצאו תבניות יעדים', count: 0 });
+      return JSON.stringify({ count: data.length, templates: data });
+    }
+
+    case 'create_goal_from_template': {
+      if (!canWrite(user)) {
+        return JSON.stringify({ error: 'אין לך הרשאה ליצור יעדים' });
+      }
+      const email = args.customer_email;
+      if (allowedEmails !== null && !allowedEmails.includes(email)) {
+        return JSON.stringify({ error: 'אין לך הרשאה ליצור יעד ללקוח זה' });
+      }
+
+      // שליפת התבנית
+      const { data: template } = await supabaseAdmin
+        .from('goal_template')
+        .select('*')
+        .eq('id', args.template_id)
+        .eq('is_active', true)
+        .single();
+      if (!template) return JSON.stringify({ error: 'תבנית לא נמצאה או לא פעילה' });
+
+      // חישוב order_index
+      const { data: existingGoals } = await supabaseAdmin
+        .from('customer_goal')
+        .select('id')
+        .eq('customer_email', email)
+        .is('parent_id', null);
+      const orderIndex = (existingGoals || []).length;
+
+      // חישוב תאריך יעד
+      const durationDays = args.duration_days || template.estimated_duration_days || 30;
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + durationDays);
+
+      // יצירת היעד הראשי
+      const goalPayload = {
+        customer_email: email,
+        name: (args.custom_name || template.name || '').trim(),
+        notes: args.notes || template.description || '',
+        status: 'open',
+        end_date: endDate.toISOString().split('T')[0],
+        success_metrics: template.success_metrics || '',
+        order_index: orderIndex,
+        task_type: 'goal',
+        is_active: true,
+        created_by: user.email,
+        created_date: new Date().toISOString(),
+      };
+      if (args.assignee_email) goalPayload.assignee_email = args.assignee_email;
+
+      const { data: newGoal, error: goalErr } = await supabaseAdmin
+        .from('customer_goal')
+        .insert(goalPayload)
+        .select()
+        .single();
+      if (goalErr) return toolError('create_goal_from_template', goalErr);
+
+      // יצירת תת-משימות מ-action_steps של התבנית
+      let subtasksCreated = 0;
+      const actionSteps = template.action_steps || template.suggested_tasks || [];
+      if (actionSteps.length > 0 && newGoal?.id) {
+        const startDate = new Date();
+        const subtaskRows = actionSteps.map((step, idx) => {
+          const taskDate = new Date(startDate);
+          taskDate.setDate(taskDate.getDate() + Math.floor((durationDays / actionSteps.length) * idx));
+          return {
+            customer_email: email,
+            parent_id: newGoal.id,
+            name: typeof step === 'string' ? step : (step.name || step.title || ''),
+            status: 'open',
+            task_type: 'one_time',
+            end_date: taskDate.toISOString().split('T')[0],
+            order_index: idx,
+            is_active: true,
+            created_by: user.email,
+            created_date: new Date().toISOString(),
+          };
+        });
+        const { data: subs, error: subErr } = await supabaseAdmin
+          .from('customer_goal')
+          .insert(subtaskRows)
+          .select();
+        if (subErr) console.error('[create_goal_from_template/subtasks]', subErr.message);
+        subtasksCreated = subs?.length || 0;
+      }
+
+      // עדכון מונה שימוש בתבנית
+      await supabaseAdmin
+        .from('goal_template')
+        .update({ usage_count: (template.usage_count || 0) + 1 })
+        .eq('id', args.template_id);
+
+      return JSON.stringify({
+        message: `יעד "${newGoal.name}" נוצר בהצלחה מתבנית "${template.name}" עם ${subtasksCreated} תת-משימות`,
+        goal: newGoal,
+        template_name: template.name,
+        subtasks_created: subtasksCreated,
+      });
     }
 
     // ── File tools ──
